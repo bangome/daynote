@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1774" height="887" viewBox="0 0 1774 887">
+  <title>Daynote logo with opaque calendar interior</title>
+  <g fill="#FFFFFF">
+    <rect x="365" y="320" width="254" height="155" />
+    <rect x="365" y="486" width="176" height="92" />
+    <path d="M548 510H615L548 577Z" />
+  </g>
+  <image href="daynote-logo-transparent-v1.png" width="1774" height="887" />
+</svg>

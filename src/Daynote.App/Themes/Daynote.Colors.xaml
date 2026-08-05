@@ -1,0 +1,62 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <Color x:Key="Daynote.Color.Canvas">#FFF7F8FA</Color>
+    <Color x:Key="Daynote.Color.Surface.Primary">#FFFFFFFF</Color>
+    <Color x:Key="Daynote.Color.Surface.Secondary">#FFF2F4F7</Color>
+    <Color x:Key="Daynote.Color.Surface.Hover">#FFECEFF3</Color>
+    <Color x:Key="Daynote.Color.Surface.Pressed">#FFE4E8EE</Color>
+    <Color x:Key="Daynote.Color.Surface.Selected">#FFEAF3FB</Color>
+    <Color x:Key="Daynote.Color.Surface.Disabled">#FFEFF1F5</Color>
+    <Color x:Key="Daynote.Color.Text.Primary">#FF21262E</Color>
+    <Color x:Key="Daynote.Color.Text.Secondary">#FF575F6C</Color>
+    <Color x:Key="Daynote.Color.Text.Muted">#FF5D6470</Color>
+    <Color x:Key="Daynote.Color.Text.Disabled">#FF8E96A3</Color>
+    <Color x:Key="Daynote.Color.Border.Subtle">#FFE3E6EB</Color>
+    <Color x:Key="Daynote.Color.Border.Strong">#FFC8CED8</Color>
+    <Color x:Key="Daynote.Color.Border.Control">#FF6C7583</Color>
+    <Color x:Key="Daynote.Color.Accent.100">#FFEAF3FB</Color>
+    <Color x:Key="Daynote.Color.Accent.500">#FF0067C0</Color>
+    <Color x:Key="Daynote.Color.Accent.600">#FF005A9E</Color>
+    <Color x:Key="Daynote.Color.Accent.700">#FF004B83</Color>
+    <Color x:Key="Daynote.Color.Text.OnAccent">#FFFFFFFF</Color>
+    <Color x:Key="Daynote.Color.Focus">#FF005FB8</Color>
+    <Color x:Key="Daynote.Color.Focus.Gap">#FFFFFFFF</Color>
+    <Color x:Key="Daynote.Color.Status.Success">#FF2F6F3E</Color>
+    <Color x:Key="Daynote.Color.Status.Success.Surface">#FFEDF3EC</Color>
+    <Color x:Key="Daynote.Color.Status.Warning">#FF8A5A00</Color>
+    <Color x:Key="Daynote.Color.Status.Warning.Surface">#FFFBF3DB</Color>
+    <Color x:Key="Daynote.Color.Status.Error">#FFB42318</Color>
+    <Color x:Key="Daynote.Color.Status.Error.Surface">#FFFDEBEC</Color>
+    <Color x:Key="Daynote.Color.Transparent">#00FFFFFF</Color>
+
+    <SolidColorBrush x:Key="Daynote.Brush.Canvas" Color="{StaticResource Daynote.Color.Canvas}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Primary" Color="{StaticResource Daynote.Color.Surface.Primary}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Secondary" Color="{StaticResource Daynote.Color.Surface.Secondary}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Hover" Color="{StaticResource Daynote.Color.Surface.Hover}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Pressed" Color="{StaticResource Daynote.Color.Surface.Pressed}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Selected" Color="{StaticResource Daynote.Color.Surface.Selected}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Surface.Disabled" Color="{StaticResource Daynote.Color.Surface.Disabled}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Text.Primary" Color="{StaticResource Daynote.Color.Text.Primary}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Text.Secondary" Color="{StaticResource Daynote.Color.Text.Secondary}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Text.Muted" Color="{StaticResource Daynote.Color.Text.Muted}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Text.Disabled" Color="{StaticResource Daynote.Color.Text.Disabled}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Border.Subtle" Color="{StaticResource Daynote.Color.Border.Subtle}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Border.Strong" Color="{StaticResource Daynote.Color.Border.Strong}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Border.Control" Color="{StaticResource Daynote.Color.Border.Control}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Accent.100" Color="{StaticResource Daynote.Color.Accent.100}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Accent.500" Color="{StaticResource Daynote.Color.Accent.500}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Accent.600" Color="{StaticResource Daynote.Color.Accent.600}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Accent.700" Color="{StaticResource Daynote.Color.Accent.700}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Text.OnAccent" Color="{StaticResource Daynote.Color.Text.OnAccent}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Focus" Color="{StaticResource Daynote.Color.Focus}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Focus.Gap" Color="{StaticResource Daynote.Color.Focus.Gap}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Success" Color="{StaticResource Daynote.Color.Status.Success}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Success.Surface" Color="{StaticResource Daynote.Color.Status.Success.Surface}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Warning" Color="{StaticResource Daynote.Color.Status.Warning}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Warning.Surface" Color="{StaticResource Daynote.Color.Status.Warning.Surface}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Error" Color="{StaticResource Daynote.Color.Status.Error}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Status.Error.Surface" Color="{StaticResource Daynote.Color.Status.Error.Surface}" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Brush.Transparent" Color="{StaticResource Daynote.Color.Transparent}" po:Freeze="True" />
+</ResourceDictionary>

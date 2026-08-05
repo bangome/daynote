@@ -1,0 +1,73 @@
+name: windows
+
+# Plan Todo 11 CI. Locked restore, Release build (warnings-as-errors), full test
+# suite, format verification, and UNSIGNED/development artifact production.
+#
+# Production inputs are intentionally NOT here and NOT committed: the production
+# publisher identity, the code-signing certificate/secret, and any App Installer
+# update URI are external inputs supplied out-of-band when a real release is cut
+# (see docs/PACKAGING.md). This workflow never signs and never installs a package.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked)
+        run: dotnet restore Daynote.sln --locked-mode
+
+      - name: Build (Release, warnings as errors)
+        run: dotnet build Daynote.sln -c Release --no-restore -warnaserror
+
+      # Run the full suite with nothing else competing (subprocess-spawning showcase
+      # tests have wall-clock hang-guards and go flaky under CPU contention).
+      - name: Test (full solution)
+        run: >
+          dotnet test Daynote.sln -c Release --no-build
+          --report-trx --report-trx-filename ci.trx
+          --results-directory artifacts/test-results
+          --minimum-expected-tests 1
+
+      # Format verification runs AFTER tests, never concurrently with them.
+      - name: Format verification
+        run: dotnet format Daynote.sln --verify-no-changes --no-restore
+
+      - name: Produce unsigned development artifact
+        run: >
+          pwsh -File scripts/Build-Package.ps1
+          -Configuration Release -Architecture x64
+          -EvidenceDir artifacts/task-11
+          -OutputDirectory artifacts/package
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daynote-windows-x64
+          path: |
+            artifacts/package/**
+            artifacts/test-results/**
+            artifacts/task-11/**
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,17 @@
+<Application
+    x:Class="Daynote.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="clr-namespace:Daynote.App.Shell"
+    xmlns:loc="clr-namespace:Daynote.App.Localization">
+    <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="Daynote.Convert.BoolToVisibility" />
+        <loc:LanguageLogoConverter x:Key="Daynote.Convert.LanguageLogo" />
+        <shell:InverseBooleanConverter x:Key="Daynote.Convert.InverseBool" />
+        <shell:EqualsToVisibilityConverter x:Key="Daynote.Convert.EqualsToVisibility" />
+        <shell:EqualsToBooleanConverter x:Key="Daynote.Convert.EqualsToBool" />
+        <shell:NullToVisibilityConverter x:Key="Daynote.Convert.NullToVisibility" />
+        <shell:NullToVisibilityConverter x:Key="Daynote.Convert.NullToCollapsed" Invert="True" />
+        <shell:InverseBoolToVisibilityConverter x:Key="Daynote.Convert.InverseBoolToVisibility" />
+    </Application.Resources>
+</Application>

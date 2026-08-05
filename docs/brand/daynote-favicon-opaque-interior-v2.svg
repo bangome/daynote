@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254">
+  <title>Daynote favicon with opaque calendar interior</title>
+  <g fill="#FFFFFF">
+    <rect x="280" y="266" width="694" height="421" />
+    <rect x="280" y="705" width="499" height="260" />
+    <path d="M780 770H948L780 938Z" />
+  </g>
+  <image href="daynote-favicon-v1.png" width="1254" height="1254" />
+</svg>

@@ -1,0 +1,160 @@
+<Window
+    x:Class="Daynote.App.Shell.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="clr-namespace:Daynote.App.Shell"
+    xmlns:sidebar="clr-namespace:Daynote.App.Sidebar"
+    xmlns:notes="clr-namespace:Daynote.App.Notes"
+    xmlns:search="clr-namespace:Daynote.App.Search"
+    xmlns:settings="clr-namespace:Daynote.App.Settings"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance shell:MainWindowViewModel}"
+    Title="Daynote"
+    MinWidth="{DynamicResource Daynote.Size.Window.MinWidth}"
+    MinHeight="{DynamicResource Daynote.Size.Window.MinHeight}"
+    Width="1200"
+    Height="800"
+    Background="{DynamicResource Daynote.Brush.Canvas}"
+    FontFamily="{DynamicResource Daynote.FontFamily.UI}"
+    Foreground="{DynamicResource Daynote.Brush.Text.Primary}"
+    SizeChanged="OnWindowSizeChanged">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Command region -->
+        <Border Grid.Row="0" Height="{DynamicResource Daynote.Size.CommandRow}" Background="{DynamicResource Daynote.Brush.Surface.Primary}" BorderBrush="{DynamicResource Daynote.Brush.Border.Subtle}" BorderThickness="0,0,0,1" Padding="{DynamicResource Daynote.Inset.CommandRow}" AutomationProperties.Name="{loc:Tr CommandRegion}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Search box: fixed comfortable width, leading icon, quiet Korean watermark hint -->
+                <Grid Grid.Column="0" Width="{DynamicResource Daynote.Size.SearchBox.Width}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBox
+                        x:Name="SearchBox"
+                        Style="{DynamicResource Daynote.Style.SearchBox}"
+                        MinHeight="{DynamicResource Daynote.Size.Target.Secondary}"
+                        Height="{DynamicResource Daynote.Size.Target.Secondary}"
+                        Padding="36,6,12,6"
+                        Text="{Binding Search.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        GotKeyboardFocus="OnSearchBoxFocused"
+                        KeyDown="OnSearchBoxKeyDown"
+                        AutomationProperties.Name="{loc:Tr SearchAutomation}" />
+                    <Path
+                        Style="{DynamicResource Daynote.Style.IconPresenter.Small}"
+                        Data="{DynamicResource Daynote.Icon.Geometry.Search}"
+                        Fill="{DynamicResource Daynote.Brush.Text.Muted}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0"
+                        IsHitTestVisible="False" />
+                    <TextBlock
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="36,0,0,0"
+                        IsHitTestVisible="False"
+                        Text="{loc:Tr SearchHint}">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Daynote.Style.Type.Label}">
+                                <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Muted}" />
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Text, ElementName=SearchBox}" Value="" />
+                                            <Condition Binding="{Binding IsKeyboardFocused, ElementName=SearchBox}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <Button Grid.Column="4" Margin="8,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Command="{Binding ToggleSettingsCommand}" ToolTip="{loc:Tr Settings}" AutomationProperties.Name="{loc:Tr OpenSettings}">
+                    <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Settings}" IsHitTestVisible="False" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Workspace -->
+        <Grid Grid.Row="1">
+            <!-- Regular and Wide: sidebar + editor + drawer -->
+            <Grid Visibility="{Binding IsSidebarLayout, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="SidebarColumn" Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="RailColumn" Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <sidebar:SidebarView
+                    Grid.Column="0"
+                    x:Name="Sidebar"
+                    DataContext="{Binding Sidebar}"
+                    MinWidth="{DynamicResource Daynote.Size.Sidebar.Min}"
+                    MaxWidth="{DynamicResource Daynote.Size.Sidebar.Max}"
+                    Width="{DynamicResource Daynote.Size.Sidebar.Default}" />
+
+                <GridSplitter
+                    Grid.Column="1"
+                    Style="{DynamicResource Daynote.Style.PaneSplitter}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    ResizeBehavior="PreviousAndCurrent"
+                    ResizeDirection="Columns"
+                    AutomationProperties.Name="Sidebar and editor splitter" />
+
+                <notes:NoteWorkspaceView Grid.Column="2" DataContext="{Binding Notes}" />
+            </Grid>
+
+            <!-- Compact: one view at a time -->
+            <Grid Visibility="{Binding IsCompact, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" AutomationProperties.Name="{loc:Tr CompactWorkspaceSwitch}">
+                    <Button Style="{DynamicResource Daynote.Style.Button.Secondary}" Content="{loc:Tr CompactNavigate}" Command="{Binding SelectCompactViewCommand}" CommandParameter="{x:Static shell:CompactWorkspaceView.Navigate}" AutomationProperties.Name="{loc:Tr CompactNavigateAutomation}" />
+                    <Button Style="{DynamicResource Daynote.Style.Button.Secondary}" Content="{loc:Tr CompactNotes}" Command="{Binding SelectCompactViewCommand}" CommandParameter="{x:Static shell:CompactWorkspaceView.Notes}" AutomationProperties.Name="{loc:Tr CompactNotesAutomation}" />
+                </StackPanel>
+                <Grid Grid.Row="1">
+                    <sidebar:SidebarView DataContext="{Binding Sidebar}" Visibility="{Binding DataContext.SelectedCompactView, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Navigate}" />
+                    <notes:NoteWorkspaceView DataContext="{Binding Notes}" Visibility="{Binding DataContext.SelectedCompactView, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Notes}" />
+                </Grid>
+            </Grid>
+
+            <!-- Unified search overlay: bounded within AppShell; its result list owns overlay scroll -->
+            <search:SearchOverlay
+                x:Name="SearchOverlayHost"
+                DataContext="{Binding Search}"
+                Margin="{DynamicResource Daynote.Inset.Pane.Wide}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Visibility="{Binding IsOpen, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+
+            <!-- Settings overlay: bounded within AppShell; opened from the command row or tray -->
+            <settings:SettingsView
+                x:Name="SettingsHost"
+                DataContext="{Binding Settings}"
+                Visibility="{Binding DataContext.IsSettingsOpen, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+        </Grid>
+
+        <!-- Status region: quiet selected-date, capture, and save summary -->
+        <Border Grid.Row="2" Background="{DynamicResource Daynote.Brush.Surface.Primary}" BorderBrush="{DynamicResource Daynote.Brush.Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,8" AutomationProperties.Name="{loc:Tr StatusRegion}">
+            <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Text="{Binding StatusLine}" />
+        </Border>
+    </Grid>
+</Window>

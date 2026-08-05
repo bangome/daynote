@@ -1,0 +1,161 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:showcase="clr-namespace:Daynote.App.Showcase">
+    <ControlTemplate x:Key="Daynote.Template.TextInput" TargetType="{x:Type TextBox}">
+        <Border x:Name="FocusRing" BorderBrush="{DynamicResource Daynote.Brush.Transparent}" BorderThickness="{DynamicResource Daynote.Thickness.Border.Focus}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+            <Border x:Name="FocusGap" BorderBrush="{DynamicResource Daynote.Brush.Transparent}" BorderThickness="{DynamicResource Daynote.Thickness.Border.FocusGap}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}" />
+                </Border>
+            </Border>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus}" /><Setter TargetName="FocusGap" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus.Gap}" /></Trigger>
+            <Trigger Property="showcase:ShowcaseForcedState.State" Value="focus"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus}" /><Setter TargetName="FocusGap" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus.Gap}" /></Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="Daynote.Style.AppShell" TargetType="{x:Type ContentControl}">
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Canvas}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type ContentControl}"><Border Background="{TemplateBinding Background}"><ContentPresenter /></Border></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="Daynote.Style.DateHeader" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.Display}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.DateTitle.FontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Daynote.Type.DateTitle.FontWeight}" />
+        <Setter Property="LineHeight" Value="{DynamicResource Daynote.Type.DateTitle.LineHeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Daynote.Style.NoteTabStrip" TargetType="{x:Type ItemsControl}">
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+        <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type ItemsControl}"><Border Background="{TemplateBinding Background}"><ItemsPresenter /></Border></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <!-- Full-pane note surface: no resting/hover/focus border; caret indicates focus (DESIGN Section 5 MarkdownEditor). -->
+    <ControlTemplate x:Key="Daynote.Template.EditorSurface" TargetType="{x:Type TextBox}">
+        <Border Background="{TemplateBinding Background}">
+            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}" />
+        </Border>
+    </ControlTemplate>
+    <Style x:Key="Daynote.Style.MarkdownEditor" TargetType="{x:Type TextBox}">
+        <Setter Property="Template" Value="{StaticResource Daynote.Template.EditorSurface}" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Transparent}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Daynote.Thickness.Border.Thin}" />
+        <Setter Property="Padding" Value="{DynamicResource Daynote.Inset.Pane.Regular}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.Body.FontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Daynote.Type.Body.FontWeight}" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="AcceptsTab" Value="True" />
+        <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="MaxWidth" Value="{DynamicResource Daynote.Size.EditorMeasure.Max}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Style.Triggers>
+            <Trigger Property="IsReadOnly" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Disabled}" /><Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Disabled}" /></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Disabled}" /><Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Disabled}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Style.EditorToolbar" TargetType="{x:Type ToolBar}">
+        <Setter Property="Height" Value="{DynamicResource Daynote.Size.CommandRow}" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="Template">
+            <Setter.Value><ControlTemplate TargetType="{x:Type ToolBar}"><Grid Background="{TemplateBinding Background}"><Border Height="{DynamicResource Daynote.Border.Thin}" Background="{DynamicResource Daynote.Brush.Border.Subtle}" VerticalAlignment="Top" /><ItemsPresenter VerticalAlignment="Center" /></Grid></ControlTemplate></Setter.Value>
+        </Setter>
+    </Style>
+
+    <ControlTemplate x:Key="Daynote.Template.ListItem" TargetType="{x:Type ListBoxItem}">
+        <Border x:Name="FocusRing" BorderBrush="{DynamicResource Daynote.Brush.Transparent}" BorderThickness="{DynamicResource Daynote.Thickness.Border.Focus}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+            <Border x:Name="FocusGap" BorderBrush="{DynamicResource Daynote.Brush.Transparent}" BorderThickness="{DynamicResource Daynote.Thickness.Border.FocusGap}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Daynote.Radius.Control}" Padding="{TemplateBinding Padding}">
+                    <Grid><ContentPresenter /><Border x:Name="SelectionMarker" Width="{DynamicResource Daynote.Border.SelectionMarker}" Background="{DynamicResource Daynote.Brush.Accent.500}" HorizontalAlignment="Left" Visibility="Collapsed" /></Grid>
+                </Border>
+            </Border>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True"><Setter TargetName="SelectionMarker" Property="Visibility" Value="Visible" /></Trigger>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus}" /><Setter TargetName="FocusGap" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus.Gap}" /></Trigger>
+            <Trigger Property="showcase:ShowcaseForcedState.State" Value="focus"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus}" /><Setter TargetName="FocusGap" Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Focus.Gap}" /></Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+    <Style x:Key="Daynote.Style.ClipboardItem" TargetType="{x:Type ListBoxItem}">
+        <Setter Property="Template" Value="{StaticResource Daynote.Template.ListItem}" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Border.Subtle}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Daynote.Thickness.Border.Thin}" />
+        <Setter Property="Padding" Value="{DynamicResource Daynote.Inset.Control}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.Label.FontSize}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Hover}" /></Trigger>
+            <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Selected}" /></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Disabled}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Daynote.Style.ClipboardPreview" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.Label.FontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Daynote.Type.Label.FontWeight}" />
+        <Setter Property="LineHeight" Value="{DynamicResource Daynote.Type.Label.LineHeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="MaxHeight" Value="{DynamicResource Daynote.Size.ClipboardPreview.MaxHeight}" />
+    </Style>
+
+    <Style x:Key="Daynote.Style.SearchBox" TargetType="{x:Type TextBox}">
+        <Setter Property="Template" Value="{StaticResource Daynote.Template.TextInput}" />
+        <Setter Property="MinHeight" Value="{DynamicResource Daynote.Size.Target.Primary}" />
+        <Setter Property="Padding" Value="{DynamicResource Daynote.Inset.Control}" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Border.Control}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Daynote.Thickness.Border.Thin}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.Body.FontSize}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Hover}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" /></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Disabled}" /><Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Disabled}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Daynote.Style.SearchResult" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Daynote.Style.ClipboardItem}" />
+    <Style x:Key="Daynote.Style.SidebarNoteRow" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource Daynote.Style.ClipboardItem}">
+        <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Transparent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Transparent}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Daynote.Thickness.SelectionMarker.Left}" />
+        <Setter Property="Padding" Value="0,4" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="MinHeight" Value="{DynamicResource Daynote.Size.Target.Primary}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Hover}" /></Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Selected}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Brush.Accent.500}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Disabled}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Daynote.Style.SearchSnippet" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.FontFamily.UI}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Type.Label.FontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Daynote.Type.Label.FontWeight}" />
+        <Setter Property="LineHeight" Value="{DynamicResource Daynote.Type.Label.LineHeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Primary}" />
+        <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="MaxHeight" Value="{DynamicResource Daynote.Size.SearchSnippet.MaxHeight}" />
+    </Style>
+</ResourceDictionary>

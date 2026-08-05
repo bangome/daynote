@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  Daynote MSIX manifest — Microsoft Store configuration.
+
+  This is a full-trust WPF desktop package (Windows.FullTrustApplication + the
+  runFullTrust restricted capability, the standard Desktop Bridge path the Store
+  allows for Win32 apps).
+
+  STORAGE: standard packaged storage. File-system virtualization is LEFT ENABLED,
+  so the app's writes to %LocalAppData%\Daynote are transparently redirected by the
+  OS into this package's per-app store. No app code change is needed. NOTE this is
+  a deliberate change from the earlier sideload build (which disabled virtualization
+  + declared unvirtualizedResources to keep the real path across uninstall): Store
+  policy avoids that restricted capability, and uninstalling now removes the data —
+  the in-app Backup/Restore covers migration and recovery (see docs/DATA_AND_RECOVERY.md).
+
+  The windows.startupTask is DISABLED by default; the app never auto-enables it — the
+  user opts in from Settings (Store-compliant).
+
+  IDENTITY: this is the MICROSOFT STORE identity reserved in Partner Center for this app
+  (Product identity page). The Store re-signs the package at ingestion, so the sideload
+  Build-Package.ps1 -Sign path (self-signed Daynote.Dev cert) will NO LONGER install this
+  build locally — use `Build-Package.ps1 -Store` to produce the .msixupload for Partner
+  Center. Keep the 4th version part 0 (Store requires revision = 0). See docs/STORE.md.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap rescap desktop">
+
+  <Identity
+    Name="BreadJinhwaJeong.-Daynote"
+    Publisher="CN=7FDB7ABF-3343-4BA9-9F0C-C601ABED42EE"
+    Version="1.2.4.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <!-- Must EXACTLY match a name reserved in Partner Center (Product identity). The app tile can still
+         show a shorter name via Application/VisualElements/DisplayName below. -->
+    <DisplayName>데이노트 - Daynote</DisplayName>
+    <PublisherDisplayName>Bread Jinhwa Jeong</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily
+      Name="Windows.Desktop"
+      MinVersion="10.0.19041.0"
+      MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application
+      Id="Daynote"
+      Executable="Daynote.App\Daynote.App.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Daynote"
+        Description="A local daily-notes desk with a calendar, to-dos, and day files."
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile
+          Wide310x150Logo="Images\Wide310x150Logo.png"
+          Square71x71Logo="Images\Square71x71Logo.png"
+          Square310x310Logo="Images\Square310x310Logo.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo" />
+            <uap:ShowOn Tile="wide310x150Logo" />
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+        <uap:SplashScreen Image="Images\SplashScreen.png" BackgroundColor="#F7F8FA" />
+      </uap:VisualElements>
+      <Extensions>
+        <desktop:Extension
+          Category="windows.startupTask"
+          Executable="Daynote.App\Daynote.App.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask
+            TaskId="DaynoteStartupTask"
+            Enabled="false"
+            DisplayName="Daynote" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

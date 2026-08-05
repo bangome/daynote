@@ -1,0 +1,28 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <sys:Double x:Key="Daynote.Motion.Offset.Subtle">4</sys:Double>
+    <sys:Double x:Key="Daynote.Motion.Offset.Standard">8</sys:Double>
+    <Duration x:Key="Daynote.Motion.Instant">0:0:0</Duration>
+    <Duration x:Key="Daynote.Motion.Micro">0:0:0.120</Duration>
+    <Duration x:Key="Daynote.Motion.Standard">0:0:0.180</Duration>
+    <Duration x:Key="Daynote.Motion.Scope">0:0:0.200</Duration>
+    <Duration x:Key="Daynote.Motion.Panel">0:0:0.180</Duration>
+    <Duration x:Key="Daynote.Motion.Evidence.Midpoint">0:0:0.100</Duration>
+    <CubicEase x:Key="Daynote.Motion.Micro.Easing" EasingMode="EaseOut" po:Freeze="True" />
+    <CubicEase x:Key="Daynote.Motion.Standard.Easing" EasingMode="EaseInOut" po:Freeze="True" />
+    <CubicEase x:Key="Daynote.Motion.Scope.Easing" EasingMode="EaseInOut" po:Freeze="True" />
+    <CubicEase x:Key="Daynote.Motion.Panel.Easing" EasingMode="EaseOut" po:Freeze="True" />
+    <Storyboard x:Key="Daynote.Storyboard.MicroAppear">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="{StaticResource Daynote.Motion.Micro}" EasingFunction="{StaticResource Daynote.Motion.Micro.Easing}" />
+    </Storyboard>
+    <Storyboard x:Key="Daynote.Storyboard.ScopeCrossfade">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="{StaticResource Daynote.Motion.Scope}" EasingFunction="{StaticResource Daynote.Motion.Scope.Easing}" />
+    </Storyboard>
+    <Storyboard x:Key="Daynote.Storyboard.PanelEnter">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="{StaticResource Daynote.Motion.Panel}" EasingFunction="{StaticResource Daynote.Motion.Panel.Easing}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="{StaticResource Daynote.Motion.Offset.Subtle}" To="0" Duration="{StaticResource Daynote.Motion.Panel}" EasingFunction="{StaticResource Daynote.Motion.Panel.Easing}" />
+    </Storyboard>
+</ResourceDictionary>

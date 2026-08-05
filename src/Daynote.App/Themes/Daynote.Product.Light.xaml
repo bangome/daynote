@@ -1,0 +1,37 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+
+    <!--
+      Product Light theme brushes (calendar-notes.dc.html tokens). Same keys as Daynote.Product.Dark.xaml
+      so the shell swaps a single dictionary at runtime. Translucent design tokens (panel/stroke/hover/
+      input) keep their alpha channel — WPF composites them over the window gradient, approximating the
+      design's backdrop-blur surfaces (no real blur in WPF). Consumed via DynamicResource.
+    -->
+    <Color x:Key="Daynote.Product.Color.Bg1">#FFE8ECF4</Color>
+    <Color x:Key="Daynote.Product.Color.Bg2">#FFDFE9F0</Color>
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FFE8ECF4" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FFDFE9F0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#B8FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#14000000" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FF1B1B1B" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF6A6A6A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Accent" Color="#FF0067C0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#1A0067C0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Hover" Color="#0B000000" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#D9FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FFFFF2B8" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.StickyStroke" Color="#FFD9BC63" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.CloseHover" Color="#FFC42B1C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFD13438" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF0067C0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFD13438" po:Freeze="True" />
+
+    <DropShadowEffect x:Key="Daynote.Product.Effect.CardShadow" BlurRadius="8" ShadowDepth="1" Direction="270" Opacity="0.10" Color="#000000" />
+    <DropShadowEffect x:Key="Daynote.Product.Effect.DropdownShadow" BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.18" Color="#000000" />
+</ResourceDictionary>

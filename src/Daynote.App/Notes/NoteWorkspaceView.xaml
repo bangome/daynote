@@ -1,0 +1,233 @@
+<UserControl
+    x:Class="Daynote.App.Notes.NoteWorkspaceView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:notes="clr-namespace:Daynote.App.Notes"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    d:DataContext="{d:DesignInstance notes:NoteWorkspaceViewModel}"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="{DynamicResource Daynote.Brush.Surface.Primary}">
+    <Grid Margin="{DynamicResource Daynote.Inset.Pane.Wide}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            Style="{DynamicResource Daynote.Style.DateHeader}"
+            Text="{Binding DateDisplay}"
+            AutomationProperties.Name="{loc:Tr DateHeadingAutomation}" />
+
+        <!-- Note tab strip: single bordered tab units above the editor with a bottom hairline -->
+        <Border Grid.Row="1" Margin="0,12,0,0" BorderBrush="{DynamicResource Daynote.Brush.Border.Subtle}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <Button
+                    DockPanel.Dock="Right"
+                    VerticalAlignment="Bottom"
+                    MinWidth="{DynamicResource Daynote.Size.Target.Secondary}"
+                    MinHeight="{DynamicResource Daynote.Size.Target.Secondary}"
+                    Style="{DynamicResource Daynote.Style.IconButton.Ghost}"
+                    Command="{Binding AddNoteCommand}"
+                    ToolTip="{loc:Tr AddNote}"
+                    AutomationProperties.Name="{loc:Tr AddNote}">
+                    <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Add}" IsHitTestVisible="False" />
+                </Button>
+                <ItemsControl ItemsSource="{Binding Tabs}" VerticalAlignment="Bottom" Margin="0,0,4,0" AutomationProperties.Name="{loc:Tr OrderedNoteTabs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type notes:NoteTabViewModel}">
+                            <Border x:Name="TabRoot" Margin="0,0,2,0" Background="{DynamicResource Daynote.Brush.Transparent}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        x:Name="SelectButton"
+                                        Grid.Column="0"
+                                        Style="{DynamicResource Daynote.Style.Button.Ghost}"
+                                        Background="{DynamicResource Daynote.Brush.Transparent}"
+                                        MinHeight="{DynamicResource Daynote.Size.Target.Secondary}"
+                                        Command="{Binding DataContext.SelectNoteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        AutomationProperties.Name="{Binding Title}"
+                                        ToolTip="{Binding Title}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                MaxWidth="{DynamicResource Daynote.Size.NoteTab.TitleMax}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="NoWrap"
+                                                Text="{Binding Title}" />
+                                            <Path
+                                                x:Name="DirtyCue"
+                                                Margin="6,0,0,0"
+                                                Style="{DynamicResource Daynote.Style.IconPresenter.Small}"
+                                                Data="{DynamicResource Daynote.Icon.Geometry.Warning}"
+                                                Fill="{DynamicResource Daynote.Brush.Status.Warning}"
+                                                Visibility="Collapsed"
+                                                IsHitTestVisible="False" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button
+                                        x:Name="CloseButton"
+                                        Grid.Column="1"
+                                        MinWidth="{DynamicResource Daynote.Size.Target.Secondary}"
+                                        MinHeight="{DynamicResource Daynote.Size.Target.Secondary}"
+                                        Style="{DynamicResource Daynote.Style.IconButton.Ghost}"
+                                        Visibility="Collapsed"
+                                        Command="{Binding DataContext.DeleteNoteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip="{Binding CloseLabel}"
+                                        AutomationProperties.Name="{Binding CloseLabel}">
+                                        <Path Style="{DynamicResource Daynote.Style.IconPresenter.Small}" Data="{DynamicResource Daynote.Icon.Geometry.Close}" IsHitTestVisible="False" />
+                                    </Button>
+                                    <Border
+                                        x:Name="TabMarker"
+                                        Grid.ColumnSpan="2"
+                                        Height="{DynamicResource Daynote.Border.SelectionMarker}"
+                                        Background="{DynamicResource Daynote.Brush.Accent.500}"
+                                        VerticalAlignment="Bottom"
+                                        Visibility="Collapsed" />
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="TabRoot" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TabRoot" Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Hover}" />
+                                    <Setter TargetName="CloseButton" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                                <Trigger SourceName="TabRoot" Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter TargetName="CloseButton" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="TabRoot" Property="Background" Value="{DynamicResource Daynote.Brush.Surface.Primary}" />
+                                    <Setter TargetName="TabMarker" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="CloseButton" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SaveState}" Value="Dirty">
+                                    <Setter TargetName="DirtyCue" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="SelectButton" Property="Foreground" Value="{DynamicResource Daynote.Brush.Status.Warning}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SaveState}" Value="Error">
+                                    <Setter TargetName="DirtyCue" Property="Data" Value="{DynamicResource Daynote.Icon.Geometry.Error}" />
+                                    <Setter TargetName="DirtyCue" Property="Fill" Value="{DynamicResource Daynote.Brush.Status.Error}" />
+                                    <Setter TargetName="DirtyCue" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="SelectButton" Property="Foreground" Value="{DynamicResource Daynote.Brush.Status.Error}" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <!-- Editor: borderless full-pane surface, left-aligned at the pane inset with a quiet empty-state hint -->
+        <Grid Grid.Row="2">
+            <TextBox
+                x:Name="Editor"
+                Style="{DynamicResource Daynote.Style.MarkdownEditor}"
+                Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                HorizontalAlignment="Left"
+                Padding="0"
+                Margin="0,12,0,0"
+                AutomationProperties.Name="{loc:Tr MarkdownEditor}" />
+            <TextBlock
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="0,12,0,0"
+                IsHitTestVisible="False"
+                Text="{loc:Tr EditorEmptyHint}">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Daynote.Style.Type.Body}">
+                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Brush.Text.Muted}" />
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsEditorEmpty}" Value="True" />
+                                    <Condition Binding="{Binding IsKeyboardFocused, ElementName=Editor}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <!-- Editor toolbar: plain fixed row (no ToolBar overflow chrome) with save status + formatting -->
+        <Border Grid.Row="3" Height="{DynamicResource Daynote.Size.Target.Primary}" Background="{DynamicResource Daynote.Brush.Surface.Primary}" AutomationProperties.Name="{loc:Tr EditorToolbar}">
+            <Grid>
+                <Border Height="{DynamicResource Daynote.Border.Thin}" Background="{DynamicResource Daynote.Brush.Border.Subtle}" VerticalAlignment="Top" />
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" VerticalAlignment="Center" AutomationProperties.Name="{loc:Tr SaveStatusAutomation}">
+                        <ContentControl Style="{DynamicResource Daynote.Style.SaveStatus.Dirty}" Visibility="{Binding SaveStatus, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Dirty}">
+                            <TextBlock Text="{loc:Tr SaveDirty}" />
+                        </ContentControl>
+                        <ContentControl Style="{DynamicResource Daynote.Style.SaveStatus.Saving}" Visibility="{Binding SaveStatus, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Saving}">
+                            <TextBlock Text="{loc:Tr SaveSaving}" />
+                        </ContentControl>
+                        <ContentControl Style="{DynamicResource Daynote.Style.SaveStatus.Saved}" Visibility="{Binding SaveStatus, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Saved}">
+                            <TextBlock Text="{loc:Tr SaveSaved}" />
+                        </ContentControl>
+                        <ContentControl Style="{DynamicResource Daynote.Style.SaveStatus.Error}" Visibility="{Binding SaveStatus, Converter={StaticResource Daynote.Convert.EqualsToVisibility}, ConverterParameter=Error}">
+                            <TextBlock Text="{loc:Tr SaveFailed}" />
+                        </ContentControl>
+                    </Grid>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" AutomationProperties.Name="{loc:Tr FormattingCommands}">
+                        <Button Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Click="OnBold" ToolTip="{loc:Tr Bold}" AutomationProperties.Name="{loc:Tr Bold}">
+                            <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Bold}" IsHitTestVisible="False" />
+                        </Button>
+                        <Button Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Click="OnItalic" ToolTip="{loc:Tr Italic}" AutomationProperties.Name="{loc:Tr Italic}">
+                            <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Italic}" IsHitTestVisible="False" />
+                        </Button>
+                        <Button Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Click="OnBulletedList" ToolTip="{loc:Tr BulletedList}" AutomationProperties.Name="{loc:Tr BulletedList}">
+                            <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.BulletedList}" IsHitTestVisible="False" />
+                        </Button>
+                        <Button Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Click="OnNumberedList" ToolTip="{loc:Tr NumberedList}" AutomationProperties.Name="{loc:Tr NumberedList}">
+                            <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.NumberedList}" IsHitTestVisible="False" />
+                        </Button>
+                        <Button Style="{DynamicResource Daynote.Style.IconButton.Ghost}" Click="OnInlineCode" ToolTip="{loc:Tr InlineCode}" AutomationProperties.Name="{loc:Tr InlineCode}">
+                            <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.InlineCode}" IsHitTestVisible="False" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <ContentControl
+            Grid.Row="4"
+            Margin="0,8,0,0"
+            Style="{DynamicResource Daynote.Style.StatusBanner.Error}"
+            Visibility="{Binding HasSaveError, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+            AutomationProperties.Name="{loc:Tr SaveFailed}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding SaveErrorMessage}" />
+                <Button Grid.Column="1" Style="{DynamicResource Daynote.Style.Button.Secondary}" Command="{Binding RetryCommand}" AutomationProperties.Name="{loc:Tr RetrySave}">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Retry}" IsHitTestVisible="False" />
+                        <TextBlock Text="{loc:Tr Retry}" Margin="4,0,0,0" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </ContentControl>
+    </Grid>
+</UserControl>

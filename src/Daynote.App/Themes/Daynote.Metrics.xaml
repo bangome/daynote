@@ -1,0 +1,71 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <sys:Double x:Key="Daynote.Space.1">4</sys:Double>
+    <sys:Double x:Key="Daynote.Space.2">8</sys:Double>
+    <sys:Double x:Key="Daynote.Space.3">12</sys:Double>
+    <sys:Double x:Key="Daynote.Space.4">16</sys:Double>
+    <sys:Double x:Key="Daynote.Space.5">20</sys:Double>
+    <sys:Double x:Key="Daynote.Space.6">24</sys:Double>
+    <sys:Double x:Key="Daynote.Space.8">32</sys:Double>
+    <sys:Double x:Key="Daynote.Space.10">40</sys:Double>
+    <sys:Double x:Key="Daynote.Space.12">48</sys:Double>
+
+    <Thickness x:Key="Daynote.Inset.Control">12,8</Thickness>
+    <Thickness x:Key="Daynote.Inset.Pane.Compact">16</Thickness>
+    <Thickness x:Key="Daynote.Inset.Pane.Regular">20</Thickness>
+    <Thickness x:Key="Daynote.Inset.Pane.Wide">24</Thickness>
+    <Thickness x:Key="Daynote.Inset.Calendar.Cues">0,0,0,4</Thickness>
+    <Thickness x:Key="Daynote.Inset.CommandRow">16,0</Thickness>
+
+    <sys:Double x:Key="Daynote.Border.Thin">1</sys:Double>
+    <sys:Double x:Key="Daynote.Border.Focus">2</sys:Double>
+    <sys:Double x:Key="Daynote.Border.FocusGap">1</sys:Double>
+    <sys:Double x:Key="Daynote.Border.SelectionMarker">2</sys:Double>
+    <Thickness x:Key="Daynote.Thickness.Border.Thin">1</Thickness>
+    <Thickness x:Key="Daynote.Thickness.Border.Focus">2</Thickness>
+    <Thickness x:Key="Daynote.Thickness.Border.FocusGap">1</Thickness>
+    <Thickness x:Key="Daynote.Thickness.SelectionMarker.Left">2,0,0,0</Thickness>
+    <CornerRadius x:Key="Daynote.Radius.None">0</CornerRadius>
+    <CornerRadius x:Key="Daynote.Radius.Control">4</CornerRadius>
+    <CornerRadius x:Key="Daynote.Radius.Panel">6</CornerRadius>
+    <CornerRadius x:Key="Daynote.Radius.Dialog">8</CornerRadius>
+
+    <sys:Double x:Key="Daynote.Size.Target.Primary">44</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Target.Secondary">36</sys:Double>
+    <sys:Double x:Key="Daynote.Size.CommandRow">48</sys:Double>
+    <sys:Double x:Key="Daynote.Size.SearchBox.Width">320</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Sidebar.Min">300</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Sidebar.Default">340</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Sidebar.Max">380</sys:Double>
+    <sys:Double x:Key="Daynote.Size.ClipboardRail.Min">300</sys:Double>
+    <sys:Double x:Key="Daynote.Size.ClipboardRail.Default">320</sys:Double>
+    <sys:Double x:Key="Daynote.Size.ClipboardRail.Max">340</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Splitter.Visual">4</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Splitter.HitTarget">44</sys:Double>
+    <sys:Double x:Key="Daynote.Size.NoteTab.TitleMax">320</sys:Double>
+    <sys:Double x:Key="Daynote.Size.NoteTab.TitleMaxHeight">40</sys:Double>
+    <sys:Double x:Key="Daynote.Size.StatusText.MaxHeight">32</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Editor.Min">480</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Window.MinWidth">760</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Window.MinHeight">600</sys:Double>
+    <sys:Double x:Key="Daynote.Size.EditorMeasure.PreferredMin">544</sys:Double>
+    <sys:Double x:Key="Daynote.Size.EditorMeasure.Max">608</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Calendar.TodayMarker">6</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Calendar.ContentMarker">4</sys:Double>
+    <sys:Double x:Key="Daynote.Size.Calendar.CueGap">4</sys:Double>
+    <sys:Double x:Key="Daynote.Size.PaneTitle.MaxHeight">56</sys:Double>
+    <sys:Double x:Key="Daynote.Size.ClipboardPreview.MaxHeight">80</sys:Double>
+    <sys:Double x:Key="Daynote.Size.SearchSnippet.MaxHeight">60</sys:Double>
+    <sys:Double x:Key="Daynote.Icon.Size.Small">16</sys:Double>
+    <sys:Double x:Key="Daynote.Icon.Size.Standard">20</sys:Double>
+    <sys:Double x:Key="Daynote.Icon.Size.Large">24</sys:Double>
+    <sys:Double x:Key="Daynote.Icon.Stroke">0</sys:Double>
+
+    <sys:Double x:Key="Daynote.Layout.CompactMax">819</sys:Double>
+    <sys:Double x:Key="Daynote.Layout.RegularMin">820</sys:Double>
+    <sys:Double x:Key="Daynote.Layout.RegularMax">1199</sys:Double>
+    <sys:Double x:Key="Daynote.Layout.WideMin">1200</sys:Double>
+    <sys:Double x:Key="Daynote.Layout.Hysteresis">8</sys:Double>
+</ResourceDictionary>

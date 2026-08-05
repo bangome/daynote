@@ -1,0 +1,44 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Packaging / publish artifacts
+/artifacts/
+/dist/
+**/BundleArtifacts/
+*.msix
+*.msixbundle
+*.msixupload
+*.appx
+*.appxbundle
+*.cer
+*.pfx
+
+# Test results
+[Tt]est[Rr]esults/
+
+# Visual Studio / user-specific
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+# (packages.lock.json IS tracked for reproducible restore)
+
+# Local tooling / harness state (not source)
+/.omo/
+/.omc/
+/.codegraph
+/tmp/
+
+# OS
+Thumbs.db
+Desktop.ini

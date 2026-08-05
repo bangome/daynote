@@ -1,0 +1,102 @@
+<UserControl
+    x:Class="Daynote.App.Onboarding.TutorialView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+    xmlns:onboarding="clr-namespace:Daynote.App.Onboarding"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance onboarding:TutorialViewModel}"
+    Background="Transparent"
+    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+    <!-- Full-window coaching overlay: a dimming scrim with a cut-out around the current target, an
+         accent highlight ring on the target, and a floating callout. Positions are set in code-behind. -->
+    <Canvas x:Name="OverlayCanvas" ClipToBounds="True">
+        <!-- Scrim: covers everything; the current target is punched out (even-odd) so real UI shows through. -->
+        <Path x:Name="Scrim" Fill="#8C000000" />
+
+        <!-- Highlight ring around the target (hidden on centered steps). -->
+        <Border x:Name="HighlightRing" Visibility="Collapsed"
+                BorderBrush="{DynamicResource Daynote.Product.Brush.Accent}" BorderThickness="2"
+                CornerRadius="{DynamicResource Daynote.Product.Radius.Control}" IsHitTestVisible="False" />
+
+        <!-- Callout card (product-themed, matches the search dropdown elevation). -->
+        <Border x:Name="Callout" Width="360" Style="{DynamicResource Daynote.Product.Style.Card}"
+                Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}"
+                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+            <StackPanel Margin="22,20">
+                <TextBlock FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Accent}" Text="{Binding ProgressText}" />
+                <TextBlock Margin="0,4,0,0" FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="15" FontWeight="Bold"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text}" TextWrapping="Wrap" Text="{Binding CurrentStep.Title}" />
+                <TextBlock Margin="0,8,0,0" FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="12.5"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" TextWrapping="Wrap" Text="{Binding CurrentStep.Body}" />
+
+                <!-- Shortcut table (shortcuts step only) -->
+                <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Shortcuts}"
+                              Visibility="{Binding CurrentStep.IsShortcuts, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="12"
+                                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" TextWrapping="Wrap" Text="{Binding Label}" />
+                                <Border Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                        Background="{DynamicResource Daynote.Product.Brush.AccentSoft}"
+                                        CornerRadius="{DynamicResource Daynote.Product.Radius.Chip}" Padding="7,2">
+                                    <TextBlock FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="11.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Daynote.Product.Brush.Accent}" Text="{Binding Gesture}" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Closing card: opt into "start with Windows" -->
+                <CheckBox Margin="0,16,0,0" VerticalContentAlignment="Center"
+                          Foreground="{DynamicResource Daynote.Product.Brush.Text}"
+                          FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="12.5"
+                          Content="{loc:Tr SettingsStartupRow}"
+                          IsChecked="{Binding StartupIsOn, Mode=OneWay}"
+                          IsEnabled="{Binding StartupToggleEnabled}"
+                          Command="{Binding ToggleStartupCommand}"
+                          Visibility="{Binding IsLast, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                          AutomationProperties.Name="{loc:Tr SettingsStartupAutomation}" />
+
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.GhostButton}" Padding="8,4"
+                            Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                            Content="{loc:Tr TutorialSkip}" Command="{Binding SkipCommand}"
+                            AutomationProperties.Name="{loc:Tr TutorialSkip}" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{DynamicResource Daynote.Product.Style.Button.Secondary}"
+                                Content="{loc:Tr TutorialBack}"
+                                IsEnabled="{Binding IsFirst, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                                Command="{Binding BackCommand}"
+                                AutomationProperties.Name="{loc:Tr TutorialBack}" />
+                        <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                Content="{loc:Tr TutorialNext}"
+                                Visibility="{Binding IsLast, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
+                                Command="{Binding NextCommand}"
+                                AutomationProperties.Name="{loc:Tr TutorialNext}" />
+                        <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                Content="{loc:Tr TutorialFinish}"
+                                Visibility="{Binding IsLast, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                Command="{Binding FinishCommand}"
+                                AutomationProperties.Name="{loc:Tr TutorialFinish}" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Canvas>
+</UserControl>

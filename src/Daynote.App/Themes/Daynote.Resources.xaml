@@ -1,0 +1,17 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Daynote.Colors.xaml" />
+        <ResourceDictionary Source="Daynote.Metrics.xaml" />
+        <ResourceDictionary Source="Daynote.Typography.xaml" />
+        <ResourceDictionary Source="Daynote.Motion.xaml" />
+        <ResourceDictionary Source="Daynote.Icons.xaml" />
+        <ResourceDictionary Source="Daynote.Foundations.xaml" />
+        <ResourceDictionary Source="Daynote.Buttons.xaml" />
+        <ResourceDictionary Source="Daynote.Navigation.xaml" />
+        <ResourceDictionary Source="Daynote.Content.xaml" />
+        <ResourceDictionary Source="Daynote.Panels.xaml" />
+        <ResourceDictionary Source="Daynote.Patterns.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

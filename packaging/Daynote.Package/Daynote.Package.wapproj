@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Application Packaging Project (plan Todo 11).
+
+  Produces the x64 development MSIX for Daynote.App. It is intentionally NOT part
+  of Daynote.sln: the .wapproj consumes the DesktopBridge MSBuild targets that ship
+  with the Visual Studio "Windows application packaging" component (or the MSIX
+  Packaging Tools), which the plain `dotnet` SDK does not carry. Building it under
+  `dotnet build` fails to resolve Microsoft.DesktopBridge.targets; build it with
+  MSBuild from a VS Developer prompt or via scripts/Build-Package.ps1 instead.
+
+  Signing is DISABLED by default (AppxPackageSigningEnabled=False) so authoring and
+  CI never touch a certificate store. x64 is the only platform. No bundle, no Store
+  association, no App Installer auto-update file is generated here.
+-->
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <WapProjPath Condition="'$(WapProjPath)'==''">$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\</WapProjPath>
+  </PropertyGroup>
+  <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.props" />
+  <PropertyGroup>
+    <ProjectGuid>{D2B0F4E7-3C4A-4B9E-9C1D-8F0A6E5B2C31}</ProjectGuid>
+    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <EntryPointProjectUniqueName>..\..\src\Daynote.App\Daynote.App.csproj</EntryPointProjectUniqueName>
+  </PropertyGroup>
+
+  <!-- x64 only: no x86 / Arm64 artifact is produced (Todo 11 Must NOT). -->
+  <PropertyGroup>
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <AppxBundle>Never</AppxBundle>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppInstallerUpdateFrequency>0</AppInstallerUpdateFrequency>
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+    <GenerateTestArtifacts>False</GenerateTestArtifacts>
+    <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <!-- No production signing claim during authoring/CI; sign later in a VM. -->
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\**\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daynote.App\Daynote.App.csproj">
+      <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" />
+</Project>
