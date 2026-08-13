@@ -8,7 +8,7 @@ x64/
 x86/
 
 # Packaging / publish artifacts
-/artifacts/
+**/artifacts/
 /dist/
 **/BundleArtifacts/
 *.msix
