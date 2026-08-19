@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phase 1 built; the app is not wired up yet.** The auth Worker lives in
+> Status: **Phases 1–2 built; the app is not wired up yet.** The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -92,11 +92,13 @@ kek        = HKDF-SHA256(master_key, info = "daynote-v1-kek",  32)   -- NEVER le
 - An email-derived salt is used because the client must derive `master_key` at login *before* it can
   authenticate to fetch anything. This is the standard trade-off; it means the salt is not secret,
   which is fine — Argon2id's cost, not salt secrecy, is what defends the password.
-- Argon2id needs a NuGet dependency (`Konscious.Security.Cryptography.Argon2` or `Isopoh.Cryptography.Argon2`).
-  If adding one to the Store-packaged app is unacceptable, the fallback is
-  `Rfc2898DeriveBytes.Pbkdf2(SHA-256, 600 000 iterations)`, which is built into .NET. Argon2id is
-  the better choice here because this key now guards ciphertext held by someone else, so
-  GPU-hardness matters more than in a server-side-only design.
+- **Decided: `Konscious.Security.Cryptography.Argon2` 1.3.1.** It ships `lib/net8.0` only — pure
+  managed, no `runtimes/` folder, ~36 KB — so it adds nothing to the MSIX per-architecture payload,
+  which is what ruled against a native Argon2 build. `KdfParameters` also supports a
+  `Rfc2898DeriveBytes.Pbkdf2(SHA-256, 600 000)` fallback for a build that cannot take the
+  dependency; the wire format carries the choice, so accounts created either way keep working.
+  Argon2id is preferred because this key guards ciphertext held by someone else, so GPU-hardness
+  matters more than it would in a server-side-only design.
 - The stored server verifier is prefixed with its parameters (`argon2id$m=65536,t=3,p=4$…`) so the
   cost can be raised later and re-derived on the next successful login.
 
@@ -139,9 +141,11 @@ failed tag check is a hard error surfaced to the user, never a silent skip.
 
 ### 4.6 Recovery key
 
-- 128 random bits rendered as 26 Crockford-base32 characters in groups of four
-  (`K7QM-3XPV-9ZTR-4BHN-6WYD-2F`). 128 bits of true randomness needs no stretching, and base32
-  avoids shipping a BIP-39 wordlist. (A wordlist rendering is a later UX upgrade; the stored format
+- 128 random bits rendered as 26 Crockford-base32 characters in groups of four — seven groups, the
+  last holding two (`K7QM-3XPV-9ZTR-4BHN-6WYD-2FGH-J0`). 128 bits of true randomness needs no
+  stretching, and base32 avoids shipping a BIP-39 wordlist. Because 128 is not a multiple of 5, the
+  final character carries two padding bits that the parser requires to be zero — otherwise 4
+  different strings decode to the same key and a mistyped last character is accepted silently. (A wordlist rendering is a later UX upgrade; the stored format
   is the raw key, so switching the presentation is non-breaking.)
 - Shown **once**, at registration, on a screen that requires an explicit "I have saved this"
   confirmation and offers copy-to-clipboard and save-to-file.
@@ -518,7 +522,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | Phase | Deliverable | Done when |
 | --- | --- | --- |
 | 1 ✅ | Worker skeleton + D1 schema + register/login/refresh/logout, with Vitest coverage | **Done.** `cloud/worker/`: 40 tests green in workerd against a real local D1; `wrangler deploy --dry-run` validates config and build |
-| 2 | `AesGcmSyncCrypto`: Argon2id, HKDF split, DEK wrap/unwrap, envelope with AAD | Known-answer tests; a tampered blob and a swapped-slot blob both fail loudly |
+| 2 ✅ | `AesGcmSyncCrypto`: Argon2id, HKDF split, DEK wrap/unwrap, envelope with AAD | **Done.** `Daynote.Core/Sync` + `Daynote.Infrastructure/Sync`; 49 crypto cases and 14 recovery-key cases green. Tampered ciphertext, tampered tag, spliced nonce, swapped note, swapped user, swapped entity kind, and swapped DEK purpose all fail as `CiphertextAuthenticationFailed` |
 | 3 | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | Migration tests pass on a fresh **and** on a v3 database; deletes leave tombstones |
 | 4 | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | Two local data roots converge across create/edit/delete/reorder/favorite/tag, including the §6.1 collision; server never sees plaintext (asserted in a test) |
 | 5 | Sign-in UI, recovery-key screen, account settings, status chip, DPAPI store, ko/en strings | Sign in → sync → sign out → sign in on a clean data root restores content |
@@ -577,12 +581,10 @@ At Cloudflare's current published tiers — verify against the live pricing page
 
 ## 13. Open questions
 
-1. **Argon2id dependency.** `Konscious` vs `Isopoh` vs falling back to built-in PBKDF2 — decide
-   before Phase 2, since it changes the packaged binary set.
-2. **Email verification at registration.** The sender dependency now exists anyway, so this is
+1. **Email verification at registration.** The sender dependency now exists anyway, so this is
    nearly free — include it in Phase 6 or skip?
-3. **Device limit** per account, and whether remote device revoke ships in v1.
-4. **Recovery key opt-out.** If a user declines to save one, `wrapped_dek_rk` is NULL and only
+2. **Device limit** per account, and whether remote device revoke ships in v1.
+3. **Recovery key opt-out.** If a user declines to save one, `wrapped_dek_rk` is NULL and only
    §4.8(b) can save them. Allow the opt-out with a blunt warning, or make it mandatory?
-5. **Legacy table cleanup.** `clipboard_items` and `image_assets` are dead; drop them in a separate
+4. **Legacy table cleanup.** `clipboard_items` and `image_assets` are dead; drop them in a separate
    migration before `004` so the sync code never has to reason about them.
