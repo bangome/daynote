@@ -1,0 +1,29 @@
+name = "daynote-cloud"
+main = "src/index.ts"
+compatibility_date = "2025-09-15"
+workers_dev = false
+
+# JWT_SECRET is a secret, not a var. Set it with:
+#   wrangler secret put JWT_SECRET
+# Generate one with:
+#   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+
+[vars]
+ACCESS_TOKEN_TTL_SECONDS = "900"
+REFRESH_TOKEN_TTL_DAYS = "60"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "daynote"
+# Fill in after: wrangler d1 create daynote
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# R2 arrives with Phase 7 (encrypted attachments); left commented so the binding is not silently
+# created before the code that uses it exists.
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "daynote-assets"
+
+[observability]
+enabled = true
