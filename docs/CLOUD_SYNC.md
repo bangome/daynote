@@ -1,6 +1,9 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–6 built. The app is wired up**, behind a configured sync endpoint. The auth Worker lives in
+> Status: **Phases 1–6 built and verified against a real deployment.** The Worker is deployed with
+> no route attached and an empty D1; see [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md) for
+> what is still needed (hostname, MailChannels key, DKIM). The app is wired up behind a configured
+> sync endpoint. The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.

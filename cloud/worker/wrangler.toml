@@ -1,7 +1,12 @@
 name = "daynote-cloud"
 main = "src/index.ts"
 compatibility_date = "2025-09-15"
+
+# No *.workers.dev hostname and no preview URLs: the service accepts account registrations, so it
+# should only be reachable on a domain that is deliberately attached. Flip workers_dev to true for a
+# throwaway verification run, then flip it back.
 workers_dev = false
+preview_urls = false
 
 # JWT_SECRET is a secret, not a var. Set it with:
 #   wrangler secret put JWT_SECRET
@@ -26,8 +31,7 @@ DKIM_SELECTOR = "mailchannels"
 [[d1_databases]]
 binding = "DB"
 database_name = "daynote"
-# Fill in after: wrangler d1 create daynote
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "4226d475-a071-44c0-a2c7-4a953cbaa44e"
 migrations_dir = "migrations"
 
 # R2 arrives with Phase 7 (encrypted attachments); left commented so the binding is not silently
