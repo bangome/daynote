@@ -380,6 +380,26 @@ internal static class KoreanStrings
         ["AccountErrorOffline"] = "동기화 서비스에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
         ["AccountErrorServer"] = "동기화 서비스에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
 
+        // Cloud sync: password reset and unlock
+        ["AccountForgotPassword"] = "비밀번호를 잊으셨나요?",
+        ["AccountResetSend"] = "재설정 코드 받기",
+        // {0} = the email address the code was sent to.
+        ["AccountResetSentFormat"] = "{0} 으로 코드를 보냈습니다. 등록된 주소가 아니면 메일은 오지 않습니다.",
+        ["AccountResetCode"] = "재설정 코드",
+        ["AccountResetNewPassword"] = "새 비밀번호",
+        ["AccountResetConfirm"] = "비밀번호 변경",
+        ["AccountResetCancel"] = "취소",
+        ["AccountResetWarning"] = "비밀번호를 바꾸면 계정에는 다시 들어올 수 있지만, 클라우드에 있는 노트는 복구 키가 있어야 열립니다. 이 PC에서 재설정하는 경우에는 자동으로 열립니다.",
+        ["AccountUnlockWithRecoveryKey"] = "복구 키로 잠금 해제",
+        ["AccountUnlockKeyLabel"] = "복구 키",
+        ["AccountUnlockConfirm"] = "잠금 해제",
+        ["AccountUnlockPasswordLabel"] = "현재 비밀번호",
+        ["AccountDiscardCloudCopy"] = "클라우드 사본 폐기",
+        ["AccountDiscardCloudCopyBlurb"] = "복구 키도 이전 기기도 없다면, 클라우드 사본을 버리고 이 PC의 노트로 다시 시작할 수 있습니다. 이 PC의 노트는 그대로입니다.",
+        ["AccountErrorInvalidResetCode"] = "재설정 코드가 올바르지 않습니다. 새 코드를 요청하세요.",
+        ["AccountErrorInvalidRecoveryKeyEntered"] = "이 계정의 복구 키가 아닙니다.",
+        ["AccountErrorNoWayToUnlock"] = "이 기기에서는 클라우드 사본을 열 수 없습니다. 이전에 사용한 기기에서 로그인하거나, 클라우드 사본을 폐기하세요.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

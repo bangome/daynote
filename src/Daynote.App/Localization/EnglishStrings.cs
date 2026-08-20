@@ -389,6 +389,26 @@ internal static class EnglishStrings
         ["AccountErrorOffline"] = "Daynote could not reach the sync service. Check your connection and try again.",
         ["AccountErrorServer"] = "The sync service reported a problem. Try again in a moment.",
 
+        // Cloud sync: password reset and unlock
+        ["AccountForgotPassword"] = "Forgot your password?",
+        ["AccountResetSend"] = "Email me a code",
+        // {0} = the email address the code was sent to.
+        ["AccountResetSentFormat"] = "A code has been sent to {0}. If that address is not registered, no email will arrive.",
+        ["AccountResetCode"] = "Reset code",
+        ["AccountResetNewPassword"] = "New password",
+        ["AccountResetConfirm"] = "Change password",
+        ["AccountResetCancel"] = "Cancel",
+        ["AccountResetWarning"] = "Changing your password gets you back into the account, but the notes in your cloud copy need your recovery key to open. If you are resetting on a PC you already used, they open automatically.",
+        ["AccountUnlockWithRecoveryKey"] = "Unlock with recovery key",
+        ["AccountUnlockKeyLabel"] = "Recovery key",
+        ["AccountUnlockConfirm"] = "Unlock",
+        ["AccountUnlockPasswordLabel"] = "Current password",
+        ["AccountDiscardCloudCopy"] = "Discard the cloud copy",
+        ["AccountDiscardCloudCopyBlurb"] = "With no recovery key and no earlier device, you can discard the cloud copy and start again from the notes on this PC. The notes on this PC are untouched.",
+        ["AccountErrorInvalidResetCode"] = "That reset code is not valid. Request a new one.",
+        ["AccountErrorInvalidRecoveryKeyEntered"] = "That recovery key does not match this account.",
+        ["AccountErrorNoWayToUnlock"] = "This device cannot open the cloud copy. Sign in on a device you used before, or discard the cloud copy.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

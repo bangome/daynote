@@ -23,6 +23,7 @@ public sealed record SessionResponse(
     DateTimeOffset AccessExpiresUtc,
     string RefreshToken,
     string WrappedDekPassword,
+    string? WrappedDekRecovery,
     string KdfParametersJson,
     int DekGeneration,
     bool RewrapPending,
@@ -34,9 +35,21 @@ public sealed record AccountSummary(
     bool RecoveryKeySet,
     bool RewrapPending,
     int DekGeneration,
-    IReadOnlyList<DeviceSummary> Devices);
+    IReadOnlyList<DeviceSummary> Devices,
+    /// <summary>The recovery envelope, so an unlock can open it without rotating the session.</summary>
+    string? WrappedDekRecovery = null);
 
 public sealed record DeviceSummary(string Name, DateTimeOffset SignedInUtc, DateTimeOffset ExpiresUtc);
+
+/// <summary>
+/// What the client must supply to finish a reset. The new auth key and the KDF parameters come from
+/// the new password; the code came from the email.
+/// </summary>
+public sealed record ResetConfirmRequest(
+    string Email,
+    string Code,
+    string NewAuthKey,
+    string KdfParametersJson);
 
 /// <summary>
 /// The account endpoints. Separate from <see cref="ISyncApiClient"/> because they are used at
@@ -55,5 +68,26 @@ public interface IAuthApiClient
 
     ValueTask<AccountSummary> GetAccountAsync(
         string accessToken,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asks for a reset code. Always succeeds, whether or not the address is registered: the server
+    /// deliberately will not say, and neither will this.
+    /// </summary>
+    ValueTask RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes the password. Does not unlock the data — the server cannot re-wrap a key it cannot
+    /// read, so the account comes back locked until <see cref="RewrapAsync"/> runs.
+    /// </summary>
+    ValueTask ConfirmPasswordResetAsync(
+        ResetConfirmRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Supplies a data key wrapped under the new password, clearing the locked state.</summary>
+    ValueTask<int> RewrapAsync(
+        string accessToken,
+        string wrappedDekPassword,
+        int dekGeneration,
         CancellationToken cancellationToken = default);
 }

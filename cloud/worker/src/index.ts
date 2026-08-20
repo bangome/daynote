@@ -2,6 +2,7 @@ import { ApiError, errorResponse, json } from './http';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
 import * as auth from './auth';
+import * as reset from './reset';
 import * as sync from './sync';
 import type { Env } from './env';
 
@@ -22,6 +23,9 @@ const ROUTES: Record<string, Handler> = {
   'POST /v1/auth/logout': auth.logout,
   'POST /v1/auth/password': auth.changePassword,
   'GET /v1/auth/me': auth.me,
+  'POST /v1/auth/reset/request': reset.requestReset,
+  'POST /v1/auth/reset/confirm': reset.confirmReset,
+  'POST /v1/auth/rewrap': reset.rewrap,
   'POST /v1/sync/push': sync.push,
   'GET /v1/sync/pull': sync.pull,
 };

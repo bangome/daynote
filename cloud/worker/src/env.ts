@@ -8,6 +8,22 @@ export interface Env {
   /** Optional overrides, provided as strings because Workers vars are always strings. */
   ACCESS_TOKEN_TTL_SECONDS?: string;
   REFRESH_TOKEN_TTL_DAYS?: string;
+
+  /**
+   * Transactional email for password resets. Absent means the reset endpoints return a server error
+   * rather than pretending to have sent something.
+   */
+  MAILCHANNELS_API_KEY?: string;
+  EMAIL_FROM?: string;
+  EMAIL_FROM_NAME?: string;
+
+  /** Without DKIM the reset code lands in spam, which users read as "reset is broken". */
+  DKIM_DOMAIN?: string;
+  DKIM_SELECTOR?: string;
+  DKIM_PRIVATE_KEY?: string;
+
+  /** Test seam: an in-memory sender, so the reset flow can be exercised without sending mail. */
+  EMAIL_SENDER?: import('./email').EmailSender;
 }
 
 export const DEFAULT_ACCESS_TTL_SECONDS = 15 * 60;

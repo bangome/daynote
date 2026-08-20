@@ -38,6 +38,18 @@ internal sealed class FakeAccounts
     /// <summary>Set when the server reports that the stored envelope no longer opens.</summary>
     internal bool RewrapPending { get; set; }
 
+    /// <summary>Simulates resetting on a device that never held the key, which lands locked.</summary>
+    internal bool LockAfterReset
+    {
+        get => crypto.FailUnwrap;
+        set => crypto.FailUnwrap = value;
+    }
+
+    /// <summary>How many times a recovery key actually reached the unlock path.</summary>
+    internal int UnlockAttempts { get; private set; }
+
+    internal void RecordUnlockAttempt() => UnlockAttempts += 1;
+
     private sealed class StubAuth(FakeAccounts owner) : IAuthApiClient
     {
         public ValueTask<string> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
@@ -67,6 +79,31 @@ internal sealed class FakeAccounts
         public ValueTask<AccountSummary> GetAccountAsync(string accessToken, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(new AccountSummary("u", "alice@example.test", true, false, 1, []));
 
+        public ValueTask RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
+        {
+            Throw();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask ConfirmPasswordResetAsync(ResetConfirmRequest request, CancellationToken cancellationToken = default)
+        {
+            Throw();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<int> RewrapAsync(
+            string accessToken,
+            string wrappedDekPassword,
+            int dekGeneration,
+            CancellationToken cancellationToken = default)
+        {
+            owner.RecordUnlockAttempt();
+            Throw();
+            // A successful re-wrap means the envelope now opens with the current password.
+            owner.LockAfterReset = false;
+            return ValueTask.FromResult(dekGeneration + 1);
+        }
+
         private void Throw()
         {
             if (owner.NextFailure is { } failure)
@@ -82,6 +119,7 @@ internal sealed class FakeAccounts
             DateTimeOffset.UtcNow.AddMinutes(15),
             "refresh",
             // The wrapped-DEK envelope the instant crypto below knows how to open.
+            InstantCrypto.Envelope,
             InstantCrypto.Envelope,
             KdfParameters.Argon2idDefault.ToJson(),
             1,
@@ -132,11 +170,17 @@ internal sealed class FakeAccounts
             ValueTask.FromResult(current is null
                 ? null
                 // A copy, because the caller disposes what it is handed and the store keeps its own.
-                : current with { DataKey = KeyMaterial.CopyFrom(current.DataKey.Span) });
+                : current with
+                {
+                    DataKey = current.DataKey is { } key ? KeyMaterial.CopyFrom(key.Span) : null,
+                });
 
         public ValueTask SaveAsync(SyncCredentials credentials, CancellationToken cancellationToken = default)
         {
-            current = credentials with { DataKey = KeyMaterial.CopyFrom(credentials.DataKey.Span) };
+            current = credentials with
+            {
+                DataKey = credentials.DataKey is { } key ? KeyMaterial.CopyFrom(key.Span) : null,
+            };
             return ValueTask.CompletedTask;
         }
 

@@ -83,13 +83,17 @@ public static class SyncRegistration
     /// </summary>
     private static async ValueTask<SyncReport> RunSyncAsync(IServiceProvider provider)
     {
-        SyncSession? session = await provider
+        ResumedSession resumed = await provider
             .GetRequiredService<AccountService>()
-            .TryResumeAsync()
+            .ResumeAsync()
             .ConfigureAwait(false);
-        if (session is null)
+
+        if (resumed.Session is not { } session)
         {
-            return SyncReport.For(SyncOutcome.SignedOut);
+            // Locked is not signed out. Collapsing them would hide the status chip and with it the
+            // only route to the unlock screen.
+            return SyncReport.For(
+                resumed.State == ResumeState.Locked ? SyncOutcome.Locked : SyncOutcome.SignedOut);
         }
 
         using (session.DataKey)

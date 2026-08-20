@@ -124,17 +124,10 @@ public sealed partial class AccountService
             session.WrappedDekPassword,
             keys.Kek,
             CipherScope.DataKey(DataKeyPurpose.Password, normalized));
-        if (!opened.IsSuccess)
-        {
-            // The password authenticated, so it is right — but the envelope predates a reset and was
-            // never re-wrapped. Content stays unreadable until §4.8 unlock runs.
-            await store.SetLockedAsync(true, cancellationToken).ConfigureAwait(false);
-            throw new AccountException(
-                AccountFailure.RewrapRequired,
-                "Your notes are locked. Enter your recovery key, or sign in on a device you used before.");
-        }
-
-        KeyMaterial dataKey = opened.Value;
+        // The password authenticated, so it is right — but if the envelope predates a reset it was
+        // never re-wrapped, and the content stays unreadable until §4.8 unlock runs. The session is
+        // persisted either way: without it there would be no valid token left to unlock with, and
+        // closing the app would strand the user.
         await sessions.SaveAsync(
             new SyncCredentials(
                 session.UserId,
@@ -143,8 +136,18 @@ public sealed partial class AccountService
                 session.AccessExpiresUtc,
                 session.RefreshToken,
                 session.DekGeneration,
-                dataKey),
+                opened.IsSuccess ? opened.Value : null),
             cancellationToken).ConfigureAwait(false);
+
+        if (!opened.IsSuccess)
+        {
+            await store.SignInAsync(session.UserId, session.DekGeneration, cancellationToken)
+                .ConfigureAwait(false);
+            await store.SetLockedAsync(true, cancellationToken).ConfigureAwait(false);
+            throw new AccountException(
+                AccountFailure.RewrapRequired,
+                "Your notes are locked. Enter your recovery key, or sign in on a device you used before.");
+        }
 
         await store.SignInAsync(session.UserId, session.DekGeneration, cancellationToken).ConfigureAwait(false);
         if (session.RewrapPending)
@@ -185,11 +188,30 @@ public sealed partial class AccountService
         await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>The session to hand <see cref="SyncEngine"/>, or null when signed out.</summary>
-    public async ValueTask<SyncSession?> TryResumeAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Resolves what this device can currently do.
+    /// </summary>
+    /// <remarks>
+    /// The three states are genuinely different and collapsing them is a real bug: a locked account
+    /// reported as signed out makes the status chip disappear, which takes away the only route the
+    /// user has to the unlock screen.
+    /// </remarks>
+    public async ValueTask<ResumedSession> ResumeAsync(CancellationToken cancellationToken = default)
     {
         SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
-        return credentials is null ? null : new SyncSession(credentials.UserId, credentials.DataKey);
+        if (credentials is null)
+        {
+            return ResumedSession.SignedOut;
+        }
+
+        if (credentials.DataKey is not { } dataKey)
+        {
+            // Signed in, but nothing here opens the content. Syncing would be worse than waiting.
+            credentials.Dispose();
+            return ResumedSession.Locked;
+        }
+
+        return new ResumedSession(ResumeState.Ready, new SyncSession(credentials.UserId, dataKey));
     }
 
     private static string ValidateEmail(string? email)

@@ -32,9 +32,16 @@ service, and not anyone who obtains a copy of its database.
 filed under, or their order. All of that is inside the encrypted payload. The service cannot even tell
 which days you write on.
 
-**If you forget your password**, the recovery key shown once when you create your account is the only
-way to open the cloud copy again. Daynote cannot recover it for you — that is the direct consequence
-of the service not holding your key. The notes already on this PC are never affected.
+**If you forget your password**, you can reset it by email. Resetting gets you back into the account,
+but it does not by itself open the cloud copy: the key comes from your password, and the service does
+not hold it. What happens next depends on where you are:
+
+- **On a PC you already used**, the notes open automatically — the key is still on that machine.
+- **On a new PC**, you are asked for the recovery key shown once when you created the account.
+- **With neither**, the cloud copy cannot be opened by anyone, including us. You can discard it and
+  start again from the notes on your PC, which are never affected either way.
+
+Reset emails come from `no-reply@daynote.arachat.cc` and carry a code that expires in 30 minutes.
 
 **Cloud sync is not a backup.** It copies changes, including deletions: a note you delete on one
 device is deleted on the others. Use Settings → **백업 및 복원 / Backup and restore** for a real

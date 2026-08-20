@@ -373,6 +373,26 @@ public static class AppStrings
     public static string AccountErrorOffline => LocalizationService.Instance[nameof(AccountErrorOffline)];
     public static string AccountErrorServer => LocalizationService.Instance[nameof(AccountErrorServer)];
 
+    // Cloud sync: password reset and unlock
+    public static string AccountForgotPassword => LocalizationService.Instance[nameof(AccountForgotPassword)];
+    public static string AccountResetSend => LocalizationService.Instance[nameof(AccountResetSend)];
+    /// <summary>{0} = the email address the code was sent to.</summary>
+    public static string AccountResetSentFormat => LocalizationService.Instance[nameof(AccountResetSentFormat)];
+    public static string AccountResetCode => LocalizationService.Instance[nameof(AccountResetCode)];
+    public static string AccountResetNewPassword => LocalizationService.Instance[nameof(AccountResetNewPassword)];
+    public static string AccountResetConfirm => LocalizationService.Instance[nameof(AccountResetConfirm)];
+    public static string AccountResetCancel => LocalizationService.Instance[nameof(AccountResetCancel)];
+    public static string AccountResetWarning => LocalizationService.Instance[nameof(AccountResetWarning)];
+    public static string AccountUnlockWithRecoveryKey => LocalizationService.Instance[nameof(AccountUnlockWithRecoveryKey)];
+    public static string AccountUnlockKeyLabel => LocalizationService.Instance[nameof(AccountUnlockKeyLabel)];
+    public static string AccountUnlockConfirm => LocalizationService.Instance[nameof(AccountUnlockConfirm)];
+    public static string AccountUnlockPasswordLabel => LocalizationService.Instance[nameof(AccountUnlockPasswordLabel)];
+    public static string AccountDiscardCloudCopy => LocalizationService.Instance[nameof(AccountDiscardCloudCopy)];
+    public static string AccountDiscardCloudCopyBlurb => LocalizationService.Instance[nameof(AccountDiscardCloudCopyBlurb)];
+    public static string AccountErrorInvalidResetCode => LocalizationService.Instance[nameof(AccountErrorInvalidResetCode)];
+    public static string AccountErrorInvalidRecoveryKeyEntered => LocalizationService.Instance[nameof(AccountErrorInvalidRecoveryKeyEntered)];
+    public static string AccountErrorNoWayToUnlock => LocalizationService.Instance[nameof(AccountErrorNoWayToUnlock)];
+
     /// <summary>Win32 file-dialog filter for backup archives.</summary>
     public static string BackupZipFilter => LocalizationService.Instance[nameof(BackupZipFilter)];
 }

@@ -24,6 +24,24 @@ public partial class AccountSection : System.Windows.Controls.UserControl
     private void OnRegister(object sender, RoutedEventArgs e) => Invoke(static (vm, password) =>
         vm.RegisterCommand.Execute(password));
 
+    private void OnConfirmReset(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is AccountViewModel viewModel)
+        {
+            viewModel.ConfirmResetCommand.Execute(ResetPasswordBox.Password);
+            ResetPasswordBox.Clear();
+        }
+    }
+
+    private void OnUnlock(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is AccountViewModel viewModel)
+        {
+            viewModel.UnlockCommand.Execute(UnlockPasswordBox.Password);
+            UnlockPasswordBox.Clear();
+        }
+    }
+
     private void Invoke(Action<AccountViewModel, string> action)
     {
         if (DataContext is not AccountViewModel viewModel)

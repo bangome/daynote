@@ -40,6 +40,71 @@
                             IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
                             AutomationProperties.Name="{loc:Tr AccountCreate}" />
                 </StackPanel>
+                <Button Margin="0,8,0,0" HorizontalAlignment="Left"
+                        Style="{DynamicResource Daynote.Product.Style.GhostButton}"
+                        Command="{Binding BeginResetCommand}" Content="{loc:Tr AccountForgotPassword}"
+                        AutomationProperties.Name="{loc:Tr AccountForgotPassword}" />
+            </StackPanel>
+
+            <!-- Reset. Two steps in one panel: ask for a code, then use it. The warning appears
+                 before the change, not after, because afterwards is too late to be useful. -->
+            <StackPanel Margin="0,12,0,0"
+                        Visibility="{Binding IsResetting, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr AccountForgotPassword}" />
+                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr AccountResetWarning}" />
+                <TextBox Margin="0,8,0,0" Padding="8"
+                         Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{loc:Tr AccountEmail}" />
+                <Button Margin="0,8,0,0" HorizontalAlignment="Left"
+                        Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                        Command="{Binding RequestResetCodeCommand}" Content="{loc:Tr AccountResetSend}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                        AutomationProperties.Name="{loc:Tr AccountResetSend}" />
+                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding ResetSentMessage}"
+                           Visibility="{Binding ResetSentTo, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+                <TextBlock Margin="0,10,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountResetCode}" />
+                <TextBox Margin="0,4,0,0" Padding="8" FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
+                         Text="{Binding ResetCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{loc:Tr AccountResetCode}" />
+                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountResetNewPassword}" />
+                <PasswordBox x:Name="ResetPasswordBox" Margin="0,4,0,0" Padding="8"
+                             AutomationProperties.Name="{loc:Tr AccountResetNewPassword}" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Style="{DynamicResource Daynote.Style.Button.Primary}" Click="OnConfirmReset"
+                            Content="{loc:Tr AccountResetConfirm}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr AccountResetConfirm}" />
+                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                            Command="{Binding CancelResetCommand}" Content="{loc:Tr AccountResetCancel}"
+                            AutomationProperties.Name="{loc:Tr AccountResetCancel}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Unlock. Only reached when the reset happened somewhere the key was not cached. -->
+            <StackPanel Margin="0,12,0,0"
+                        Visibility="{Binding IsUnlocking, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr AccountUnlockWithRecoveryKey}" />
+                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountUnlockKeyLabel}" />
+                <TextBox Margin="0,4,0,0" Padding="8" FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
+                         Text="{Binding RecoveryKeyEntry, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{loc:Tr AccountUnlockKeyLabel}" />
+                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountUnlockPasswordLabel}" />
+                <PasswordBox x:Name="UnlockPasswordBox" Margin="0,4,0,0" Padding="8"
+                             AutomationProperties.Name="{loc:Tr AccountUnlockPasswordLabel}" />
+                <Button Margin="0,10,0,0" HorizontalAlignment="Left"
+                        Style="{DynamicResource Daynote.Style.Button.Primary}" Click="OnUnlock"
+                        Content="{loc:Tr AccountUnlockConfirm}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                        AutomationProperties.Name="{loc:Tr AccountUnlockConfirm}" />
+
+                <TextBlock Margin="0,14,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr AccountDiscardCloudCopyBlurb}" />
+                <Button Margin="0,6,0,0" HorizontalAlignment="Left"
+                        Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                        Command="{Binding DiscardCloudCopyCommand}" Content="{loc:Tr AccountDiscardCloudCopy}"
+                        AutomationProperties.Name="{loc:Tr AccountDiscardCloudCopy}" />
             </StackPanel>
 
             <!-- Shown once, immediately after registering. Dismissal is gated on the confirmation

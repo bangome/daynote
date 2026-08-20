@@ -384,10 +384,11 @@ public sealed class AccountLifecycleTests
 
         internal async ValueTask<SyncReport> Sync()
         {
-            SyncSession? session = await Accounts.TryResumeAsync();
-            if (session is null)
+            ResumedSession resumed = await Accounts.ResumeAsync();
+            if (resumed.Session is not { } session)
             {
-                return SyncReport.For(SyncOutcome.SignedOut);
+                return SyncReport.For(
+                    resumed.State == ResumeState.Locked ? SyncOutcome.Locked : SyncOutcome.SignedOut);
             }
 
             using (session.DataKey)

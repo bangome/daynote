@@ -3,7 +3,7 @@
 The auth and sync API for Daynote's optional cloud sync. Read
 [`docs/CLOUD_SYNC.md`](../../docs/CLOUD_SYNC.md) first — this README only covers running the thing.
 
-**Phase 1 (current): accounts and sessions.** No note, file, or asset endpoints exist yet.
+**Current: accounts, sessions, note sync, and password reset.** Attachments (R2) are not built yet.
 
 ## The one rule
 
@@ -28,9 +28,34 @@ reason — if you add a column, that test fails on purpose and you have to justi
 | POST | `/v1/auth/logout` | refresh token in body |
 | POST | `/v1/auth/password` | Bearer + `current_auth_key` |
 | GET | `/v1/auth/me` | Bearer |
+| POST | `/v1/auth/reset/request` | — |
+| POST | `/v1/auth/reset/confirm` | reset code in body |
+| POST | `/v1/auth/rewrap` | Bearer |
+| POST | `/v1/sync/push` | Bearer |
+| GET | `/v1/sync/pull` | Bearer |
 
 `/v1/auth/password` requires `current_auth_key` on top of the Bearer token: without it, a stolen
 15-minute access token would be enough to change the password and lock the owner out.
+
+## Password reset email
+
+`/v1/auth/reset/*` needs MailChannels. Its free Workers integration ended in June 2024, so this
+requires an account and an API key like any other provider; `EmailSender` in `src/email.ts` is the
+whole surface if you move to something else.
+
+```sh
+npx wrangler secret put MAILCHANNELS_API_KEY
+npx wrangler secret put DKIM_PRIVATE_KEY
+```
+
+DNS on `daynote.arachat.cc`, both required — without DKIM the code lands in spam, which users read as
+a broken reset:
+
+- `mailchannels._domainkey.daynote.arachat.cc` TXT — the DKIM public key
+- SPF on `daynote.arachat.cc` permitting MailChannels
+
+With no sender configured the reset endpoints fail loudly rather than returning success for mail that
+was never sent.
 
 ## Local development
 
@@ -91,6 +116,5 @@ fails with `ERESOLVE`.
 
 ## Not yet built
 
-Phases 4–7 from the design doc: sync push/pull, password reset (needs a transactional-email
-provider), DEK re-wrap after reset, and R2 attachments. `wrangler.toml` keeps the R2 binding
-commented out so a bucket is not created before the code that uses it exists.
+Phase 7: R2 attachments. `wrangler.toml` keeps the R2 binding commented out so a bucket is not
+created before the code that uses it exists.

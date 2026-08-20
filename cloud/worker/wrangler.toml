@@ -8,9 +8,20 @@ workers_dev = false
 # Generate one with:
 #   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
+# Password-reset email. MAILCHANNELS_API_KEY and DKIM_PRIVATE_KEY are secrets:
+#   wrangler secret put MAILCHANNELS_API_KEY
+#   wrangler secret put DKIM_PRIVATE_KEY
+# DKIM is not optional in practice — without it the reset code goes to spam. Publish the public half
+# as a TXT record at mailchannels._domainkey.daynote.arachat.cc, and an SPF record permitting
+# MailChannels on daynote.arachat.cc.
+
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "60"
+EMAIL_FROM = "no-reply@daynote.arachat.cc"
+EMAIL_FROM_NAME = "Daynote"
+DKIM_DOMAIN = "daynote.arachat.cc"
+DKIM_SELECTOR = "mailchannels"
 
 [[d1_databases]]
 binding = "DB"

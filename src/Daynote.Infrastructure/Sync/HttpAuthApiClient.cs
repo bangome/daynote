@@ -155,7 +155,90 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             body.RecoveryKeySet,
             body.RewrapPending,
             body.DekGeneration,
-            devices);
+            devices,
+            body.WrappedDekRk);
+    }
+
+    public async ValueTask RequestPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        using HttpResponseMessage response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/reset/request")
+            {
+                Content = JsonContent.Create(new { email }, options: Json),
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        // 204 whether or not the address exists. Nothing here may reveal which.
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask ConfirmPasswordResetAsync(
+        ResetConfirmRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using HttpResponseMessage response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/reset/confirm")
+            {
+                Content = JsonContent.Create(
+                    new
+                    {
+                        email = request.Email,
+                        reset_token = request.Code,
+                        new_auth_key = request.NewAuthKey,
+                        kdf_params = JsonNode.Parse(request.KdfParametersJson),
+                    },
+                    options: Json),
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.BadRequest)
+        {
+            // A wrong, expired, used, or burned-out code all arrive here, and the server will not say
+            // which. Reporting one specific reason would be inventing detail we do not have.
+            throw new AccountException(
+                AccountFailure.InvalidResetCode,
+                "That reset code is not valid. Request a new one.");
+        }
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask<int> RewrapAsync(
+        string accessToken,
+        string wrappedDekPassword,
+        int dekGeneration,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(wrappedDekPassword);
+
+        using HttpResponseMessage response = await SendAsync(
+            () =>
+            {
+                var message = new HttpRequestMessage(HttpMethod.Post, "v1/auth/rewrap")
+                {
+                    Content = JsonContent.Create(
+                        new { new_wrapped_dek_pw = wrappedDekPassword, dek_generation = dekGeneration },
+                        options: Json),
+                };
+                message.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                return message;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        RewrapBody? body = await response.Content
+            .ReadFromJsonAsync<RewrapBody>(Json, cancellationToken)
+            .ConfigureAwait(false);
+        return body?.DekGeneration
+            ?? throw new AccountException(AccountFailure.ServerError, "The re-wrap returned no generation.");
     }
 
     private async ValueTask<HttpResponseMessage> SendAsync(
@@ -224,6 +307,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         DateTimeOffset.FromUnixTimeSeconds(body.AccessExpiresEpoch),
         body.RefreshToken,
         body.WrappedDekPw,
+        body.WrappedDekRk,
         body.KdfParams?.ToJsonString()
             ?? throw new AccountException(AccountFailure.ServerError, "The session response had no KDF parameters."),
         body.DekGeneration,
@@ -242,12 +326,15 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 
     private sealed record RegisterBody(string UserId, bool RecoveryKeySet);
 
+    private sealed record RewrapBody(int DekGeneration, bool RewrapPending);
+
     private sealed record SessionBody(
         string UserId,
         string AccessToken,
         long AccessExpiresEpoch,
         string RefreshToken,
         string WrappedDekPw,
+        string? WrappedDekRk,
         JsonNode? KdfParams,
         int DekGeneration,
         bool RewrapPending,
@@ -259,7 +346,8 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         IReadOnlyList<DeviceBody>? Devices,
         bool RecoveryKeySet,
         bool RewrapPending,
-        int DekGeneration);
+        int DekGeneration,
+        string? WrappedDekRk);
 
     private sealed record DeviceBody(string DeviceName, string IssuedUtc, string ExpiresUtc);
 }

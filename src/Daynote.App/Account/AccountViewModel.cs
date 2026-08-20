@@ -75,7 +75,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
 
     public bool IsSignedIn => SignedInEmail is not null;
 
-    public bool IsSignedOut => SignedInEmail is null && RecoveryKeyDisplay is null;
+    public bool IsSignedOut => SignedInEmail is null && RecoveryKeyDisplay is null && !IsResetting;
 
     /// <summary>True while the one-time recovery key is on screen and unacknowledged.</summary>
     public bool IsShowingRecoveryKey => RecoveryKeyDisplay is not null;
@@ -85,7 +85,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     public SyncStatusView Status
     {
         get => status;
-        private set
+        internal set
         {
             if (status == value)
             {
@@ -114,10 +114,10 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     public async Task InitializeAsync()
     {
         SyncStateSnapshot state = await store.ReadStateAsync().ConfigureAwait(true);
-        SyncSession? session = await accounts.TryResumeAsync().ConfigureAwait(true);
-        session?.DataKey.Dispose();
+        ResumedSession resumed = await accounts.ResumeAsync().ConfigureAwait(true);
+        resumed.Session?.DataKey.Dispose();
 
-        SignedInEmail = state.IsSignedIn && session is not null ? Email : null;
+        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? Email : null;
         IsLocked = state.IsLocked;
         ApplyLastSync(state.LastSyncUtc);
         RefreshStatus(state);

@@ -98,6 +98,9 @@ async function sessionPayload(
     // of it; it is storage-and-forward only. See docs/CLOUD_SYNC.md §4.4.
     kdf_params: JSON.parse(user.kdf_params),
     wrapped_dek_pw: user.wrapped_dek_pw,
+    // Also sealed against us. The client needs it to unlock after a password reset, and withholding
+    // it would make the recovery key useless on a fresh device.
+    wrapped_dek_rk: user.wrapped_dek_rk,
     dek_generation: user.dek_generation,
     rewrap_pending: user.rewrap_pending === 1,
     server_utc: canonicalUtc(now),
@@ -185,6 +188,7 @@ export async function refresh(request: Request, env: Env, now: Date): Promise<Re
     refresh_expires_utc: rotated.session.expiresUtc,
     kdf_params: JSON.parse(user.kdf_params),
     wrapped_dek_pw: user.wrapped_dek_pw,
+    wrapped_dek_rk: user.wrapped_dek_rk,
     dek_generation: user.dek_generation,
     rewrap_pending: user.rewrap_pending === 1,
     server_utc: canonicalUtc(now),
@@ -205,6 +209,9 @@ export async function me(request: Request, env: Env, now: Date): Promise<Respons
     email: user.email,
     devices: await listDevices(env, user.id, now),
     recovery_key_set: user.wrapped_dek_rk !== null,
+    // Returned here too, so unlocking after a reset does not have to spend a refresh-token rotation
+    // just to read an envelope the server cannot open anyway.
+    wrapped_dek_rk: user.wrapped_dek_rk,
     rewrap_pending: user.rewrap_pending === 1,
     dek_generation: user.dek_generation,
     server_utc: canonicalUtc(now),

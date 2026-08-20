@@ -71,7 +71,9 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
                 credentials.AccessExpiresUtc,
                 credentials.RefreshToken,
                 credentials.DekGeneration,
-                Base64Url.EncodeToString(credentials.DataKey.Span)));
+                // Null while the account is locked: the session must still persist, so the record
+                // carries no key rather than not existing.
+                credentials.DataKey is { } key ? Base64Url.EncodeToString(key.Span) : null));
         }
         finally
         {
@@ -136,13 +138,19 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
             return null;
         }
 
-        byte[]? key = Base64Url.IsValid(persisted.DataKey)
-            ? Base64Url.DecodeFromChars(persisted.DataKey)
-            : null;
-        if (key is null || key.Length != KeyMaterial.Length)
+        KeyMaterial? dataKey = null;
+        if (persisted.DataKey is { } encoded)
         {
-            CryptographicOperations.ZeroMemory(key ?? []);
-            return null;
+            byte[]? key = Base64Url.IsValid(encoded) ? Base64Url.DecodeFromChars(encoded) : null;
+            if (key is null || key.Length != KeyMaterial.Length)
+            {
+                // A stored key of the wrong shape is corruption, not a locked account. Treating it as
+                // "signed out" is safer than handing a malformed key to the crypto layer.
+                CryptographicOperations.ZeroMemory(key ?? []);
+                return null;
+            }
+
+            dataKey = KeyMaterial.Adopt(key);
         }
 
         return new SyncCredentials(
@@ -152,7 +160,7 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
             persisted.AccessExpiresUtc,
             persisted.RefreshToken,
             persisted.DekGeneration,
-            KeyMaterial.Adopt(key));
+            dataKey);
     }
 
     private Persisted? ReadPersistedUnsynchronized()
@@ -218,5 +226,5 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
         DateTimeOffset AccessExpiresUtc,
         string RefreshToken,
         int DekGeneration,
-        string DataKey);
+        string? DataKey);
 }

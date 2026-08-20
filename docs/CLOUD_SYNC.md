@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–5 built. The app is wired up**, behind a configured sync endpoint. The auth Worker lives in
+> Status: **Phases 1–6 built. The app is wired up**, behind a configured sync endpoint. The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -216,13 +216,45 @@ still using their own PC. It is cleared only on explicit sign-out or on path (c)
 While LOCKED the UI must be unambiguous — a persistent banner, no silent partial sync, and no
 new local content pushed as plaintext-shaped-blank.
 
+**A locked session must still be persisted.** The first implementation threw before writing
+`credentials.dat`, on the reasoning that a session with no usable key is not a session. That left
+nothing to unlock *with*: the reset had already revoked every token, so there was no valid credential
+left and the unlock could not authenticate. The record is now written with a null data key, and
+"signed in but locked" is a state the store and the UI both understand.
+
+**Locked is not signed out.** Collapsing the two made the status chip disappear after a reset, which
+removed the only route the user had to the unlock screen. `AccountService.ResumeAsync` returns three
+states — signed out, locked, ready — and the sync entry point maps locked to `SyncOutcome.Locked`
+rather than `SignedOut`.
+
+**A reset on the user's own PC asks for nothing.** `credentials.dat` still holds the data key, so the
+client reads it before the reset revokes the session and re-wraps it under the new password
+automatically. This is the common case, and demanding a recovery key for it would be a needless
+demand at the worst moment.
+
 ### 4.9 Transactional email
 
-`/v1/auth/reset/request` and email verification need an email sender with a verified domain.
-**Resend** (simple API, generous free tier) or **MailChannels** (Workers-native) are the candidates.
-This adds an external dependency and a DNS/SPF/DKIM setup step to the deployment checklist; it was
-accepted deliberately so that a forgotten password does not mean a lost account. Reset tokens are
-single-use, 30-minute TTL, stored hashed.
+**Decided: MailChannels, on `daynote.arachat.cc`.** One correction to the earlier framing: MailChannels'
+free Cloudflare Workers integration ended in June 2024, so this needs an account and an API key like
+any other provider — it is not the zero-setup option that description implied. It is still a
+reasonable choice, and `EmailSender` in `cloud/worker/src/email.ts` is the whole surface, so moving to
+Resend or SES is one file.
+
+**DKIM is not optional in practice.** Without it the reset code lands in spam, which the user reads as
+"the reset is broken" rather than "check your junk folder". Deployment needs a DKIM key pair with the
+public half at `mailchannels._domainkey.daynote.arachat.cc`, plus an SPF record permitting
+MailChannels. The Worker refuses to send at all when the sender is unconfigured, rather than returning
+success for mail it never sent.
+
+**The code, not a link.** A desktop app cannot receive a browser callback, so the email carries a code
+the user types in. Six digits would be brute-forceable, so it is eight Crockford-base32 characters
+(~40 bits) in two groups, accepted in any case and with the confusable letters mapped. Single use,
+30-minute TTL, stored only as a SHA-256, one live code per account, and a five-attempt cap on top of
+the per-IP rate limit.
+
+**The email says what a reset costs.** It states up front that resetting does not by itself unlock the
+cloud copy and that the recovery key will be needed. Someone resetting a password is not expecting to
+lose access to their notes, and after the fact is the worst possible moment to find out.
 
 ### 4.10 Tokens
 
@@ -604,7 +636,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
 | 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
 | 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on `DAYNOTE_SYNC_ENDPOINT`: with no endpoint nothing is registered, no `HttpClient` exists, and the section is absent. PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
-| 6 | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | All three §4.8 unlock paths pass end-to-end, including the "discard cloud copy" path |
+| 6 ✅ | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | **Done.** MailChannels behind an `EmailSender` interface, an 8-character Crockford code with a five-attempt cap, and all three §4.8 unlock paths tested end-to-end including "discard the cloud copy". 19 Worker cases and 23 client cases |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |
 
