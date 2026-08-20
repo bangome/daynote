@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–4 built; the app is not wired up yet.** The auth Worker lives in
+> Status: **Phases 1–5a built; the app is not wired up yet.** The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -101,6 +101,19 @@ kek        = HKDF-SHA256(master_key, info = "daynote-v1-kek",  32)   -- NEVER le
   matters more than it would in a server-side-only design.
 - The stored server verifier is prefixed with its parameters (`argon2id$m=65536,t=3,p=4$…`) so the
   cost can be raised later and re-derived on the next successful login.
+
+### 4.2.1 Which profile does login derive with?
+
+A client has to derive `auth_key` *before* it can authenticate, so it cannot ask the server which
+KDF parameters an account uses — an endpoint that answered that question would also answer "does this
+email exist?", undoing the account-enumeration protection in §4.3.
+
+So the profile is **pinned to the protocol version**: `daynote-v1` is Argon2id m=64 MiB, t=3, p=4, and
+every v1 client derives with it. The account's parameters are still stored and returned at login, as
+forward-looking metadata: a build that meets parameters it does not recognise reports "this account
+was created by a newer version of Daynote" rather than deriving a key that would silently fail to
+unwrap. Introducing a v2 profile later means either trying both on sign-in or adding a prelogin
+endpoint and accepting the enumeration trade-off then, deliberately, rather than now by accident.
 
 ### 4.3 Server-side verifier
 
@@ -589,7 +602,8 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 2 ✅ | `AesGcmSyncCrypto`: Argon2id, HKDF split, DEK wrap/unwrap, envelope with AAD | **Done.** `Daynote.Core/Sync` + `Daynote.Infrastructure/Sync`; 49 crypto cases and 14 recovery-key cases green. Tampered ciphertext, tampered tag, spliced nonce, swapped note, swapped user, swapped entity kind, and swapped DEK purpose all fail as `CiphertextAuthenticationFailed` |
 | 3 ✅ | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | **Done.** Trigger-maintained outbox, tombstones, merge with dense re-ordering, cursor/account state. 51 tests green, including a seeded v3 → v4 upgrade and the §6.1 collision cases |
 | 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
-| 5 | Sign-in UI, recovery-key screen, account settings, status chip, DPAPI store, ko/en strings | Sign in → sync → sign out → sign in on a clean data root restores content |
+| 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
+| 5b | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | The visible surface. **Not started.** Until it exists the WPF app references none of the sync layer and makes no network calls, so PRIVACY.md is still accurate |
 | 6 | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | All three §4.8 unlock paths pass end-to-end, including the "discard cloud copy" path |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |

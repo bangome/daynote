@@ -6,10 +6,12 @@ namespace Daynote.Infrastructure.Tests.Persistence;
 internal sealed class TestDatabase : IAsyncDisposable
 {
     private readonly string _directory;
+    private readonly bool _ownsDirectory;
 
-    private TestDatabase(string directory, SqliteDatabase database)
+    private TestDatabase(string directory, SqliteDatabase database, bool ownsDirectory = true)
     {
         _directory = directory;
+        _ownsDirectory = ownsDirectory;
         Database = database;
     }
 
@@ -28,6 +30,18 @@ internal sealed class TestDatabase : IAsyncDisposable
         return new TestDatabase(directory, new SqliteDatabase(options, capabilityProbe, integrityProbe));
     }
 
+    /// <summary>
+    /// Opens a database inside a caller-owned directory, so a test can put the database and
+    /// credentials.dat in one data root the way the shipping app does. The caller owns cleanup.
+    /// </summary>
+    public static TestDatabase CreateIn(string directory, int writerCapacity = 32)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        Directory.CreateDirectory(directory);
+        var options = new SqliteDatabaseOptions(Path.Combine(directory, "daynote.db"), writerCapacity);
+        return new TestDatabase(directory, new SqliteDatabase(options), ownsDirectory: false);
+    }
+
     public static long ScalarInt64(SqliteConnection connection, string sql)
     {
         using var command = connection.CreateCommand();
@@ -38,7 +52,7 @@ internal sealed class TestDatabase : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await Database.DisposeAsync();
-        if (Directory.Exists(_directory))
+        if (_ownsDirectory && Directory.Exists(_directory))
         {
             Directory.Delete(_directory, recursive: true);
         }

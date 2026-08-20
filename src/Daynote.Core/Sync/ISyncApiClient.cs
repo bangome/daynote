@@ -92,4 +92,10 @@ public interface ISyncStore
     ValueTask<SyncStateSnapshot> ReadStateAsync(CancellationToken cancellationToken = default);
 
     ValueTask AdvanceCursorAsync(long cursor, CancellationToken cancellationToken = default);
+
+    ValueTask SignInAsync(string userId, int dekGeneration, CancellationToken cancellationToken = default);
+
+    ValueTask SignOutAsync(CancellationToken cancellationToken = default);
+
+    ValueTask SetLockedAsync(bool locked, CancellationToken cancellationToken = default);
 }
