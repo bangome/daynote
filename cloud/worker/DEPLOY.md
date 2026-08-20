@@ -44,14 +44,23 @@ openssl rsa -in dkim.key -pubout -outform der | openssl base64 -A   # the TXT re
 npx wrangler secret put DKIM_PRIVATE_KEY < dkim.key                 # then delete dkim.key
 ```
 
-Two DNS records on `daynote.arachat.cc`, both required:
+Three DNS records on `daynote.arachat.cc`. All three matter, and they fail differently:
 
-- `mailchannels._domainkey` TXT → `v=DKIM1; p=<the base64 above>`
-- SPF TXT → `v=spf1 a mx include:relay.mailchannels.net ~all`
+| Record | Value | What happens without it |
+| --- | --- | --- |
+| `_mailchannels` TXT | from the MailChannels console — **do not** copy the value from here | MailChannels rejects the send outright |
+| `mailchannels._domainkey` TXT | `v=DKIM1; p=<the base64 above>` | delivered but unsigned → spam folder |
+| `@` TXT (SPF) | `v=spf1 a mx include:relay.mailchannels.net ~all` | weakens alignment → spam folder |
 
-Without DKIM the reset code lands in spam, which users read as a broken reset rather than a junk
-folder. Verify by requesting a reset for a real address you control and checking the headers say
-`dkim=pass`.
+**Domain Lockdown** (`_mailchannels`) is MailChannels authorising *your* account to send as this
+domain. Its exact value is account-specific and the syntax has changed across their plan changes, so
+take it verbatim from their console rather than from this document or from anyone's recollection.
+
+The other two are ordinary email authentication and the values above are correct as written.
+
+Verify by requesting a reset for an address you control and checking the received headers say
+`dkim=pass` and `spf=pass`. A message that arrives but fails either one will reach most inboxes today
+and start silently failing later, so treat a partial pass as not done.
 
 Until the sender is configured, `/v1/auth/reset/request` returns 500 rather than reporting success
 for mail it never sent. That is deliberate.
