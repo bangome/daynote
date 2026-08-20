@@ -44,7 +44,7 @@ public sealed class Migration003Tests
             DatabaseInitializationResult initialized = database.Initialize();
             var search = new SearchService(new SqliteSearchRepository(database));
 
-            Assert.AreEqual(3, initialized.SchemaVersion);
+            Assert.AreEqual(4, initialized.SchemaVersion);
             Assert.AreEqual(Id(20), (await search.SearchAsync("CAFÉ")).Results.Single().SourceId);
             Assert.AreEqual(Id(21), (await search.SearchAsync("migration-clip")).Results.Single().SourceId);
 

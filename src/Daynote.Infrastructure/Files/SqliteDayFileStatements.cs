@@ -52,16 +52,27 @@ internal static class SqliteDayFileStatements
         return files;
     }
 
+    /// <summary>
+    /// Deletes a day file. <paramref name="deletedUtc"/> records the cloud-sync tombstone from the
+    /// app's clock rather than letting the AFTER DELETE trigger stamp it from SQLite's <c>'now'</c>;
+    /// see the note on <see cref="Notes.SqliteNoteStatements"/>.
+    /// </summary>
     public static DayFileDeleteResult Delete(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        Guid id)
+        Guid id,
+        string deletedUtc)
     {
         (bool exists, string? hash, string? path) = ReadAssetIdentity(connection, transaction, id);
         if (!exists)
         {
             return new DayFileDeleteResult(false, null);
         }
+
+        Execute(connection, transaction,
+            "INSERT INTO sync_tombstones(entity,entity_id,deleted_utc) VALUES('file',$id,$utc) " +
+            "ON CONFLICT(entity,entity_id) DO UPDATE SET deleted_utc=excluded.deleted_utc;",
+            ("$id", FormatId(id)), ("$utc", deletedUtc));
 
         Execute(connection, transaction,
             "DELETE FROM search_documents WHERE source_type='file' AND source_id=$id;", ("$id", FormatId(id)));

@@ -124,7 +124,7 @@ public sealed class SqliteNoteRepository : INoteRepository
                     _interceptor?.BeforeWrite(NoteWriteOperation.Delete);
                     List<StoredNote> before = SqliteNoteStatements.ReadRows(connection, transaction, localDate);
                     if (!before.Any(row => row.Id == noteId)) throw new ArgumentException("The note does not exist.", nameof(noteId));
-                    SqliteNoteStatements.Delete(connection, transaction, noteId);
+                    SqliteNoteStatements.Delete(connection, transaction, noteId, FormatUtc(_utcNow()));
                     StoredNote[] remaining = before.Where(row => row.Id != noteId).ToArray();
                     SqliteNoteStatements.ApplyOrder(
                         connection,

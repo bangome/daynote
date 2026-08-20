@@ -24,6 +24,7 @@ public enum DomainErrorCode
     InvalidKdfParameters,
     MalformedCiphertext,
     CiphertextAuthenticationFailed,
+    InvalidSyncTimestamp,
 }
 
 public readonly record struct DomainError(DomainErrorCode Code, string Message)

@@ -151,7 +151,7 @@ public sealed class UnifiedSearchTests
             DatabaseInitializationResult initialized = database.Initialize();
             var service = new SearchService(new SqliteSearchRepository(database));
 
-            Assert.AreEqual(3, initialized.SchemaVersion);
+            Assert.AreEqual(4, initialized.SchemaVersion);
             Assert.AreEqual(Id(20), (await service.SearchAsync("CAFÉ")).Results.Single().SourceId);
             Assert.AreEqual(Id(21), (await service.SearchAsync("migration-clipboard")).Results.Single().SourceId);
             DatabaseIntegrityResult integrity = database.CheckIntegrity();

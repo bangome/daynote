@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–2 built; the app is not wired up yet.** The auth Worker lives in
+> Status: **Phases 1–3 built; the app is not wired up yet.** The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -360,57 +360,101 @@ object body is `nonce || AES-256-GCM(k_asset, plaintext_bytes)`.
 ## 6. Local schema migration `004_cloud_sync.sql`
 
 ```sql
--- Sync bookkeeping.
-ALTER TABLE notes     ADD COLUMN sync_dirty INTEGER NOT NULL DEFAULT 1 CHECK (sync_dirty IN (0,1));
-ALTER TABLE day_files ADD COLUMN sync_dirty INTEGER NOT NULL DEFAULT 1 CHECK (sync_dirty IN (0,1));
+-- What still needs pushing. Replaced on each further edit, so a note edited fifty times between
+-- syncs is pushed once.
+CREATE TABLE sync_outbox (
+    entity     TEXT NOT NULL CHECK (entity IN ('note', 'file')),
+    entity_id  TEXT NOT NULL,
+    queued_utc TEXT NOT NULL,
+    PRIMARY KEY (entity, entity_id)
+) WITHOUT ROWID;
 
 -- Deletes must survive as tombstones or a delete on device A resurrects from device B.
 CREATE TABLE sync_tombstones (
-    entity      TEXT NOT NULL CHECK (entity IN ('note','file')),
+    entity      TEXT NOT NULL CHECK (entity IN ('note', 'file')),
     entity_id   TEXT NOT NULL,
     deleted_utc TEXT NOT NULL,
-    sync_dirty  INTEGER NOT NULL DEFAULT 1 CHECK (sync_dirty IN (0,1)),
     PRIMARY KEY (entity, entity_id)
-);
+) WITHOUT ROWID;
 
--- Single-row sync state. No key material here — keys live in credentials.dat (§4.11).
+-- Single row. No key material: keys live in credentials.dat under DPAPI (§4.11), because this
+-- database is copied verbatim into the plaintext backup .zip.
 CREATE TABLE sync_state (
     id             INTEGER PRIMARY KEY CHECK (id = 1),
     user_id        TEXT,
-    server_cursor  INTEGER NOT NULL DEFAULT 0,
-    dek_generation INTEGER NOT NULL DEFAULT 0,
-    locked         INTEGER NOT NULL DEFAULT 0 CHECK (locked IN (0,1)),
+    server_cursor  INTEGER NOT NULL DEFAULT 0 CHECK (server_cursor >= 0),
+    dek_generation INTEGER NOT NULL DEFAULT 0 CHECK (dek_generation >= 0),
+    locked         INTEGER NOT NULL DEFAULT 0 CHECK (locked IN (0, 1)),
     last_sync_utc  TEXT
 );
-INSERT INTO sync_state(id, server_cursor) VALUES (1, 0);
+INSERT INTO sync_state(id) VALUES (1);
 
 CREATE TABLE sync_asset_queue (
-    asset_hash TEXT PRIMARY KEY,   -- local plaintext content hash; blinded at upload time
-    direction  TEXT NOT NULL CHECK (direction IN ('up','down')),
-    attempts   INTEGER NOT NULL DEFAULT 0,
+    asset_hash TEXT PRIMARY KEY,
+    direction  TEXT NOT NULL CHECK (direction IN ('up', 'down')),
+    attempts   INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
     last_error TEXT
-);
+) WITHOUT ROWID;
 ```
 
-`sync_dirty` defaults to `1` so pre-existing local content is pushed on first sign-in with no
-separate backfill pass.
+**An outbox table, not `sync_dirty` columns.** A column has to be set by every writer and is silently
+forgotten by the next writer someone adds; and a trigger maintaining it would have to `UPDATE` the
+table it fires on. Writing to a separate table keeps the triggers non-recursive and makes the
+bookkeeping impossible for a writer to skip — including the MCP server, which shares this database.
+Triggers on `notes` and `day_files` enqueue on insert/update and clear on delete, taking `queued_utc`
+from the row's own app-clock timestamp so enqueueing needs no clock of its own.
+
+No trigger on `note_tags` is needed: a tag edit already bumps `notes.updated_utc`, so the note
+triggers cover it. A test pins that, so if a future writer stops bumping the note, it fails there
+rather than tag edits silently never syncing.
+
+**Tombstone timestamps come from the app clock, not from SQL.** The `AFTER DELETE` triggers can stamp
+a tombstone with `strftime('now')`, and they do — but only as a safety net for a writer that bypasses
+the repository. The delete path records its own tombstone first, using the injected `IClock`, and the
+trigger's `INSERT OR IGNORE` leaves it alone. This matters because last-write-wins has to order a
+delete against an edit: with only the SQL clock, any test using a fake clock becomes flaky against
+real wall-clock time, which is exactly how this was found.
+
+**Enrolment is explicit.** Because the outbox is trigger-maintained, content written before migration
+004 has no queue entry. `SqliteSyncStore.EnrollExistingContentAsync` queues it at first sign-in
+rather than a column default doing it implicitly, so a user who never signs in gets no bookkeeping
+churn at all. It is idempotent.
 
 ### 6.1 The `UNIQUE (local_date, sort_order)` hazard
 
 `notes` carries `UNIQUE (local_date, sort_order)` (`001_initial.sql`). Two devices that each add a
 note to the same date will both claim the same `sort_order`, so a naive merge insert **fails with a
-constraint violation**. SQLite cannot defer a table `UNIQUE`, so the merge must:
+constraint violation**. SQLite cannot defer a table `UNIQUE`, so the merge:
 
-1. shift local rows for the affected date out of the way
-   (`UPDATE notes SET sort_order = sort_order + 1000 WHERE local_date = ?`),
-2. insert or update the incoming rows,
-3. **resequence the whole date to a dense `0..n-1` range**, ordering by `(created_utc, id)` so every
-   device converges on the same order deterministically,
-4. all inside one transaction — and resequencing must **not** bump `updated_utc`, or every merge
-   would ping-pong as a fresh change.
+1. shifts every row on the affected date by a large uniform offset, which preserves uniqueness within
+   the date and cannot collide with an unshifted row (sort orders are dense `0..n-1` at rest),
+2. writes the incoming rows into the freed high slots,
+3. re-orders the whole date to a dense `0..n-1` range,
+4. all inside one transaction.
 
-This is the most likely source of merge bugs and needs dedicated tests. Note that the server cannot
-help here: `sort_order` is inside the encrypted payload, so ordering is purely a client concern.
+Two corrections to the first draft of this section, both found while implementing it:
+
+**Order by claimed slot first, not by creation time.** Sorting the date by `(created_utc, id)` would
+be deterministic but would silently undo every manual reordering the user ever made, on every merge.
+The comparison is `(claimed sort_order, created_utc, id)`: each side keeps the slot it claims, and the
+tie-breakers exist only so two devices resolve a *contested* slot identically.
+
+**A row that moves must get a newer `updated_utc`.** The first draft said resequencing must not bump
+the timestamp, to avoid merge ping-pong. That is backwards: the server rejects a push whose
+`updated_utc` is not newer than its copy, so a sort-order change carrying its old timestamp can never
+propagate — the note would sit in the queue forever, re-pushed on every sync and never accepted.
+Rows that move are stamped with the merge instant; rows that end up where they started keep their
+timestamp, so a merge never manufactures an edit. Convergence comes from the ordering being
+deterministic, not from withholding the bump.
+
+**Cleaning up after the shift must not eat a real pending edit.** Re-ordering rewrites every row on
+the date, which fires the outbox trigger for notes the merge did not actually change. Those spurious
+entries are removed afterwards — but only the spurious ones: the queue is snapshotted before the
+shift, so a sibling note that was genuinely waiting to be pushed keeps its entry. Without that
+snapshot, merging one note discards another note's unpushed local edit and nothing ever notices.
+
+This remains the most bug-prone part of the design and has dedicated tests for the collision, the
+contested slot, manual ordering, cross-date moves, the timestamp rules, and the queue snapshot.
 
 ## 7. Sync protocol
 
@@ -523,7 +567,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | --- | --- | --- |
 | 1 ✅ | Worker skeleton + D1 schema + register/login/refresh/logout, with Vitest coverage | **Done.** `cloud/worker/`: 40 tests green in workerd against a real local D1; `wrangler deploy --dry-run` validates config and build |
 | 2 ✅ | `AesGcmSyncCrypto`: Argon2id, HKDF split, DEK wrap/unwrap, envelope with AAD | **Done.** `Daynote.Core/Sync` + `Daynote.Infrastructure/Sync`; 49 crypto cases and 14 recovery-key cases green. Tampered ciphertext, tampered tag, spliced nonce, swapped note, swapped user, swapped entity kind, and swapped DEK purpose all fail as `CiphertextAuthenticationFailed` |
-| 3 | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | Migration tests pass on a fresh **and** on a v3 database; deletes leave tombstones |
+| 3 ✅ | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | **Done.** Trigger-maintained outbox, tombstones, merge with dense re-ordering, cursor/account state. 51 tests green, including a seeded v3 → v4 upgrade and the §6.1 collision cases |
 | 4 | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | Two local data roots converge across create/edit/delete/reorder/favorite/tag, including the §6.1 collision; server never sees plaintext (asserted in a test) |
 | 5 | Sign-in UI, recovery-key screen, account settings, status chip, DPAPI store, ko/en strings | Sign in → sync → sign out → sign in on a clean data root restores content |
 | 6 | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | All three §4.8 unlock paths pass end-to-end, including the "discard cloud copy" path |

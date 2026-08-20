@@ -56,7 +56,7 @@ public sealed class SqliteDayFileRepository : IDayFileRepository
             (connection, transaction, token) =>
             {
                 token.ThrowIfCancellationRequested();
-                return SqliteDayFileStatements.Delete(connection, transaction, id);
+                return SqliteDayFileStatements.Delete(connection, transaction, id, FormatUtc(utcNow()));
             },
             cancellationToken);
     }

@@ -16,7 +16,7 @@ public sealed class MigrationTests
         var initialized = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(3, initialized.SchemaVersion);
+        Assert.AreEqual(4, initialized.SchemaVersion);
         using var connection = fixture.Database.OpenReadConnection();
         var objects = ReadSchemaObjects(connection);
         CollectionAssert.AreEquivalent(
@@ -27,6 +27,11 @@ public sealed class MigrationTests
                 "table:schema_versions", "table:search_documents", "table:search_fts",
                 "table:settings", "trigger:search_documents_ad", "trigger:search_documents_ai",
                 "trigger:search_documents_au",
+                // Cloud sync (004). No content columns: only what still needs sending.
+                "table:sync_asset_queue", "table:sync_outbox", "table:sync_state",
+                "table:sync_tombstones",
+                "trigger:sync_files_ad", "trigger:sync_files_ai",
+                "trigger:sync_notes_ad", "trigger:sync_notes_ai", "trigger:sync_notes_au",
             },
             objects.Where(static value => !value.Contains("search_fts_", StringComparison.Ordinal)).ToArray());
         CollectionAssert.AreEqual(
@@ -84,9 +89,9 @@ public sealed class MigrationTests
         var reopened = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(3, reopened.SchemaVersion);
+        Assert.AreEqual(4, reopened.SchemaVersion);
         using var verification = fixture.Database.OpenReadConnection();
-        Assert.AreEqual(3L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
+        Assert.AreEqual(4L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM settings WHERE key='sentinel' AND value='preserved';"));
     }
 
