@@ -22,23 +22,6 @@ public interface ISyncTokenProvider
     ValueTask<bool> TryRefreshAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class SyncTransportException : Exception
-{
-    public SyncTransportException(string message, HttpStatusCode? status = null, Exception? inner = null)
-        : base(message, inner)
-    {
-        Status = status;
-    }
-
-    public HttpStatusCode? Status { get; }
-
-    /// <summary>
-    /// True when the caller should stop and ask the user to sign in, rather than retrying. Anything
-    /// else is treated as "offline for now" and retried on the next cycle.
-    /// </summary>
-    public bool RequiresSignIn => Status is HttpStatusCode.Unauthorized;
-}
-
 public sealed class HttpSyncApiClient : ISyncApiClient
 {
     private static readonly JsonSerializerOptions Json = new()
@@ -158,7 +141,7 @@ public sealed class HttpSyncApiClient : ISyncApiClient
                     {
                         throw new SyncTransportException(
                             "The session expired and could not be renewed.",
-                            HttpStatusCode.Unauthorized);
+                            (int)HttpStatusCode.Unauthorized);
                     }
 
                     continue;
@@ -168,7 +151,7 @@ public sealed class HttpSyncApiClient : ISyncApiClient
                 {
                     throw new SyncTransportException(
                         $"The sync service rejected the request ({(int)response.StatusCode}).",
-                        response.StatusCode);
+                        (int)response.StatusCode);
                 }
 
                 T? parsed = await response.Content
@@ -180,7 +163,7 @@ public sealed class HttpSyncApiClient : ISyncApiClient
 
         throw new SyncTransportException(
             "The session expired and could not be renewed.",
-            HttpStatusCode.Unauthorized);
+            (int)HttpStatusCode.Unauthorized);
     }
 
     /// <summary>

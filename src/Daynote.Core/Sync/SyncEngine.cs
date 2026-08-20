@@ -20,6 +20,15 @@ public enum SyncOutcome
     /// clock would let last-write-wins pick the wrong winner, which is worse than not syncing.
     /// </summary>
     ClockSkew,
+
+    /// <summary>
+    /// The service could not be reached. Ordinary and temporary, so callers show it as a state rather
+    /// than an error and let the next cycle retry.
+    /// </summary>
+    Offline,
+
+    /// <summary>The session is gone; only a fresh sign-in will help.</summary>
+    SignInRequired,
 }
 
 public sealed record SyncReport(
@@ -109,11 +118,29 @@ public sealed class SyncEngine
 
         var tally = new Tally { Cursor = state.ServerCursor };
 
+        try
+        {
+            return await RunAsync(session, tally, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SyncTransportException transport)
+        {
+            // Being offline is the normal state of a laptop, not a fault to report. Anything the
+            // engine already wrote stays written; the queue and cursor make the next run resume.
+            return tally.ToReport(
+                transport.RequiresSignIn ? SyncOutcome.SignInRequired : SyncOutcome.Offline);
+        }
+    }
+
+    private async ValueTask<SyncReport> RunAsync(
+        SyncSession session,
+        Tally tally,
+        CancellationToken cancellationToken)
+    {
         // Establish the server's clock before writing anything. Checking skew only on the push
         // response would be too late: the data is already stored by then. A pull is read-only and
         // does not move the cursor by itself, so it is safe to spend one on the question.
         PullResult probe = await api
-            .PullAsync(state.ServerCursor, 1, cancellationToken)
+            .PullAsync(tally.Cursor, 1, cancellationToken)
             .ConfigureAwait(false);
         if (!WithinSkew(probe.ServerUtc))
         {

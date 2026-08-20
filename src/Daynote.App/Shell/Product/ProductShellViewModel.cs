@@ -235,6 +235,12 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     [RelayCommand]
     private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
 
+    /// <summary>
+    /// The account view model the command-row chip binds to. The same instance the settings section
+    /// uses, so there is one answer to what sync is doing. Null when no endpoint is configured.
+    /// </summary>
+    public Account.AccountViewModel? Account => SettingsViewModel?.Account;
+
     public void OpenSettings() => IsSettingsOpen = true;
 
     public void CloseSettings() => IsSettingsOpen = false;

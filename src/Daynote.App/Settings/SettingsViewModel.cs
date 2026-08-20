@@ -31,6 +31,12 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
     private readonly Action _showTutorial;
     private ShortcutRowViewModel? _capturingRow;
 
+    /// <summary>
+    /// The cloud-sync section, or null when this build has no sync endpoint configured. Null keeps the
+    /// whole section out of the panel rather than showing a feature that cannot work.
+    /// </summary>
+    public Account.AccountViewModel? Account { get; init; }
+
     public SettingsViewModel(
         IStartupTaskService startup,
         IGlobalHotkeyService hotkeys,

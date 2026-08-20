@@ -116,6 +116,10 @@ public static class ServiceRegistration
         services.AddSingleton(sp => new Shell.Product.ProductWindow(
             sp.GetRequiredService<Shell.Product.ProductShellViewModel>()));
 
+        // Optional cloud sync. Registers nothing when no endpoint is configured, so a build without
+        // one has no HttpClient and makes no network calls.
+        services.AddDaynoteCloudSync(options);
+
         return services;
     }
 

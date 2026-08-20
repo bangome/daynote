@@ -7,6 +7,7 @@
     xmlns:lifecycle="clr-namespace:Daynote.App.Lifecycle"
     xmlns:onboarding="clr-namespace:Daynote.App.Onboarding"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:account="clr-namespace:Daynote.App.Account"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -171,6 +172,7 @@
                               Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                     </Grid>
                 </Button>
+                <account:SyncStatusChip DataContext="{Binding Account}" VerticalAlignment="Center" Margin="0,0,4,0" />
                 <Button x:Name="TutSettings" Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
                         Command="{Binding ToggleSettingsCommand}" ToolTip="{loc:Tr SettingsTitle}"
                         AutomationProperties.Name="{loc:Tr SettingsTitle}">

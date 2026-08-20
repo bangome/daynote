@@ -340,6 +340,55 @@ internal static class EnglishStrings
         // Default display title for a note the user never named ({0} = note number)
         ["UntitledNoteFormat"] = "Note {0}",
 
+        // Cloud sync: account section and the command-row status chip
+        ["CloudSyncTitle"] = "Cloud sync",
+        ["CloudSyncBlurb"] = "Optional. When you sign in, your notes are encrypted on this PC before they are uploaded, then synced to your other devices. What is stored cannot be read on the server.",
+        ["CloudSyncPrivacyNote"] = "The server keeps the ciphertext, plus your email address, when each note was last edited, and how many notes you have. Titles, bodies, tags, and dates are not stored.",
+        ["CloudSyncLocalNote"] = "The database on this PC stays unencrypted. Sync is not a substitute for a backup.",
+        ["AccountEmail"] = "Email",
+        ["AccountPassword"] = "Password",
+        ["AccountSignIn"] = "Sign in",
+        ["AccountCreate"] = "Create account",
+        ["AccountSignOut"] = "Sign out",
+        ["AccountSyncNow"] = "Sync now",
+        ["AccountBusy"] = "Working…",
+        // {0} = the signed-in email address.
+        ["AccountSignedInAsFormat"] = "Signed in as {0}",
+        // {0} = a formatted local time.
+        ["AccountLastSyncFormat"] = "Last synced {0}",
+        ["AccountNeverSynced"] = "Not synced yet",
+        // {0} = the minimum password length.
+        ["AccountPasswordHint"] = "Use at least {0} characters. If you forget it, your recovery key is the only way back in.",
+        ["RecoveryKeyTitle"] = "Recovery key",
+        ["RecoveryKeyBlurb"] = "Write this down somewhere safe. It is the only way to recover the notes in your cloud copy if you forget your password, and it cannot be shown again.",
+        ["RecoveryKeyCopy"] = "Copy",
+        ["RecoveryKeyCopied"] = "Copied",
+        ["RecoveryKeySaveToFile"] = "Save to file",
+        ["RecoveryKeyConfirm"] = "I have saved my recovery key",
+        ["RecoveryKeyDone"] = "Done",
+        ["RecoveryKeyFileFilter"] = "Text file (*.txt)|*.txt",
+        ["AccountLockedTitle"] = "Your notes are locked",
+        ["AccountLockedBlurb"] = "Your password was reset, so this device cannot open the cloud copy. Enter your recovery key, or sign in on a device you used before. The notes already on this PC are untouched.",
+        // {0} = number of notes replaced by a newer version from another device.
+        ["AccountConflictsFormat"] = "{0} notes were replaced by a newer version from another device. The earlier text was kept as a copy.",
+        ["AccountOpenConflicts"] = "Open the copies folder",
+        ["SyncChipSynced"] = "Synced",
+        ["SyncChipSyncing"] = "Syncing",
+        ["SyncChipPending"] = "Pending",
+        ["SyncChipOffline"] = "Offline",
+        ["SyncChipLocked"] = "Locked",
+        ["SyncChipError"] = "Sync problem",
+        ["SyncStatusAutomation"] = "Cloud sync status",
+        ["AccountErrorInvalidCredentials"] = "That email address or password is incorrect.",
+        ["AccountErrorEmailTaken"] = "That email address is already registered.",
+        ["AccountErrorInvalidEmail"] = "That does not look like an email address.",
+        // {0} = the minimum password length.
+        ["AccountErrorWeakPassword"] = "Use at least {0} characters.",
+        ["AccountErrorRewrapRequired"] = "A recovery key is required.",
+        ["AccountErrorUnsupportedVersion"] = "This account was created by a newer version of Daynote. Update the app to sign in.",
+        ["AccountErrorOffline"] = "Daynote could not reach the sync service. Check your connection and try again.",
+        ["AccountErrorServer"] = "The sync service reported a problem. Try again in a moment.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

@@ -331,6 +331,55 @@ internal static class KoreanStrings
         // Default display title for a note the user never named ({0} = note number)
         ["UntitledNoteFormat"] = "노트 {0}",
 
+        // Cloud sync: account section and the command-row status chip
+        ["CloudSyncTitle"] = "클라우드 동기화",
+        ["CloudSyncBlurb"] = "선택 기능입니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드되어 다른 기기와 동기화됩니다. 저장된 내용은 서버에서 열어볼 수 없습니다.",
+        ["CloudSyncPrivacyNote"] = "서버에는 암호문과 함께 이메일 주소, 각 노트의 수정 시각, 노트 개수가 남습니다. 제목·본문·태그·날짜는 남지 않습니다.",
+        ["CloudSyncLocalNote"] = "이 PC의 데이터베이스는 계속 평문입니다. 동기화는 백업을 대신하지 않습니다.",
+        ["AccountEmail"] = "이메일",
+        ["AccountPassword"] = "비밀번호",
+        ["AccountSignIn"] = "로그인",
+        ["AccountCreate"] = "계정 만들기",
+        ["AccountSignOut"] = "로그아웃",
+        ["AccountSyncNow"] = "지금 동기화",
+        ["AccountBusy"] = "처리 중…",
+        // {0} = the signed-in email address.
+        ["AccountSignedInAsFormat"] = "{0} 계정으로 로그인됨",
+        // {0} = a formatted local time.
+        ["AccountLastSyncFormat"] = "마지막 동기화: {0}",
+        ["AccountNeverSynced"] = "아직 동기화하지 않았습니다",
+        // {0} = the minimum password length.
+        ["AccountPasswordHint"] = "비밀번호는 {0}자 이상이어야 합니다. 비밀번호를 잊으면 복구 키가 유일한 방법입니다.",
+        ["RecoveryKeyTitle"] = "복구 키",
+        ["RecoveryKeyBlurb"] = "이 키를 안전한 곳에 적어 두세요. 비밀번호를 잊었을 때 클라우드에 있는 노트를 되찾을 수 있는 유일한 방법이며, 다시 보여줄 수 없습니다.",
+        ["RecoveryKeyCopy"] = "복사",
+        ["RecoveryKeyCopied"] = "복사했습니다",
+        ["RecoveryKeySaveToFile"] = "파일로 저장",
+        ["RecoveryKeyConfirm"] = "복구 키를 안전한 곳에 저장했습니다",
+        ["RecoveryKeyDone"] = "완료",
+        ["RecoveryKeyFileFilter"] = "텍스트 파일 (*.txt)|*.txt",
+        ["AccountLockedTitle"] = "노트가 잠겨 있습니다",
+        ["AccountLockedBlurb"] = "비밀번호가 재설정되어 이 기기에서는 클라우드 노트를 열 수 없습니다. 복구 키를 입력하거나, 이전에 사용한 기기에서 로그인하세요. 이 PC에 있는 노트는 그대로입니다.",
+        // {0} = number of notes replaced by a newer version from another device.
+        ["AccountConflictsFormat"] = "노트 {0}개가 다른 기기의 최신 버전으로 교체되었습니다. 이전 내용은 사본으로 남겨 두었습니다.",
+        ["AccountOpenConflicts"] = "사본 폴더 열기",
+        ["SyncChipSynced"] = "동기화됨",
+        ["SyncChipSyncing"] = "동기화 중",
+        ["SyncChipPending"] = "대기 중",
+        ["SyncChipOffline"] = "오프라인",
+        ["SyncChipLocked"] = "잠김",
+        ["SyncChipError"] = "동기화 오류",
+        ["SyncStatusAutomation"] = "클라우드 동기화 상태",
+        ["AccountErrorInvalidCredentials"] = "이메일 주소 또는 비밀번호가 올바르지 않습니다.",
+        ["AccountErrorEmailTaken"] = "이미 등록된 이메일 주소입니다.",
+        ["AccountErrorInvalidEmail"] = "이메일 주소 형식이 올바르지 않습니다.",
+        // {0} = the minimum password length.
+        ["AccountErrorWeakPassword"] = "비밀번호는 {0}자 이상이어야 합니다.",
+        ["AccountErrorRewrapRequired"] = "복구 키가 필요합니다.",
+        ["AccountErrorUnsupportedVersion"] = "이 계정은 더 새로운 버전의 Daynote에서 만들어졌습니다. 앱을 업데이트하세요.",
+        ["AccountErrorOffline"] = "동기화 서비스에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+        ["AccountErrorServer"] = "동기화 서비스에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

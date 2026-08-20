@@ -40,6 +40,21 @@ public sealed record PullResult(
     DateTimeOffset ServerUtc);
 
 /// <summary>
+/// The transport could not complete the exchange: offline, a timeout, or a server fault. Distinct
+/// from a protocol disagreement, because the caller's response is different — wait and retry rather
+/// than tell the user something is wrong.
+/// </summary>
+public sealed class SyncTransportException(string message, int? status = null, Exception? inner = null)
+    : Exception(message, inner)
+{
+    /// <summary>HTTP status when there was one; null for "never reached the server".</summary>
+    public int? Status { get; } = status;
+
+    /// <summary>True when the session is gone and only a fresh sign-in will help.</summary>
+    public bool RequiresSignIn => Status == 401;
+}
+
+/// <summary>
 /// The transport contract. Deliberately free of HTTP types so the engine above it can be tested
 /// against an in-memory server, and free of anything that could carry plaintext.
 /// </summary>

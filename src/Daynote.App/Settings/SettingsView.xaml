@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:settings="clr-namespace:Daynote.App.Settings"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:account="clr-namespace:Daynote.App.Account"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -36,6 +37,10 @@
 
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,4,0,0">
               <StackPanel Margin="0,0,4,0">
+            <!-- Cloud sync: absent entirely when this build has no endpoint configured -->
+            <account:AccountSection DataContext="{Binding Account}"
+                                    Visibility="{Binding Account, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+
             <!-- Display language: segments switch the whole UI live, no restart -->
             <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,16,0,0" AutomationProperties.Name="{loc:Tr SettingsLanguageRow}">
                 <Grid>

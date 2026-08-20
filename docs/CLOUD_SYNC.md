@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–5a built; the app is not wired up yet.** The auth Worker lives in
+> Status: **Phases 1–5 built. The app is wired up**, behind a configured sync endpoint. The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -603,7 +603,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 3 ✅ | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | **Done.** Trigger-maintained outbox, tombstones, merge with dense re-ordering, cursor/account state. 51 tests green, including a seeded v3 → v4 upgrade and the §6.1 collision cases |
 | 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
 | 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
-| 5b | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | The visible surface. **Not started.** Until it exists the WPF app references none of the sync layer and makes no network calls, so PRIVACY.md is still accurate |
+| 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on `DAYNOTE_SYNC_ENDPOINT`: with no endpoint nothing is registered, no `HttpClient` exists, and the section is absent. PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
 | 6 | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | All three §4.8 unlock paths pass end-to-end, including the "discard cloud copy" path |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |
