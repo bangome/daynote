@@ -16,7 +16,7 @@ namespace Daynote.Infrastructure.Sync;
 /// local <c>"O"</c> format against the wire format as text gets the ordering wrong (see
 /// <see cref="SyncTimestamps"/>), so conversion happens only here and in the transport.
 /// </remarks>
-public sealed class SqliteSyncStore
+public sealed class SqliteSyncStore : ISyncStore
 {
     /// <summary>
     /// Temporary slot base used while re-ordering a date. Larger than any real note count, so a

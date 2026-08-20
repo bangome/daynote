@@ -1,6 +1,6 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–3 built; the app is not wired up yet.** The auth Worker lives in
+> Status: **Phases 1–4 built; the app is not wired up yet.** The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
 > are still plan, not code.
@@ -483,6 +483,26 @@ sync():
 Ordering matters: a `day_files` row whose R2 object is absent shows as a broken attachment on the
 other device, so assets are pushed **before** their metadata and pulled **after** it.
 
+### 7.2.1 The cursor comes only from a pull
+
+The push response reports the change log's head. Adopting it as the pull cursor **skips every change
+already in the log below it that this device has not read** — a second device that pushes its own note
+gets a cursor past the first device's note and never sees it again. Only a pull advances the cursor,
+and only forwards.
+
+This was caught by two devices each adding a note offline: both pushes succeeded, both devices
+reported a clean sync, and each was permanently missing the other's note. Nothing errored.
+
+### 7.2.2 Skew is checked before the first write
+
+The clock check has to happen before anything is stored, not on the push response — by then the data
+is already on the server under a bad timestamp, poisoning every later comparison for that note. The
+engine spends one read-only pull establishing the server's clock before it writes anything.
+
+Server-side enforcement is the stronger form of this and is still worth adding: a client cannot be
+trusted to police its own clock, and one with a wrong clock can currently still poison its own
+account's ordering if it lies. Tracked as a follow-up.
+
 ### 7.3 LWW rule
 
 For each incoming entity, compare `updated_utc` (ISO-8601 UTC, the format already stored):
@@ -568,7 +588,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 1 ✅ | Worker skeleton + D1 schema + register/login/refresh/logout, with Vitest coverage | **Done.** `cloud/worker/`: 40 tests green in workerd against a real local D1; `wrangler deploy --dry-run` validates config and build |
 | 2 ✅ | `AesGcmSyncCrypto`: Argon2id, HKDF split, DEK wrap/unwrap, envelope with AAD | **Done.** `Daynote.Core/Sync` + `Daynote.Infrastructure/Sync`; 49 crypto cases and 14 recovery-key cases green. Tampered ciphertext, tampered tag, spliced nonce, swapped note, swapped user, swapped entity kind, and swapped DEK purpose all fail as `CiphertextAuthenticationFailed` |
 | 3 ✅ | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | **Done.** Trigger-maintained outbox, tombstones, merge with dense re-ordering, cursor/account state. 51 tests green, including a seeded v3 → v4 upgrade and the §6.1 collision cases |
-| 4 | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | Two local data roots converge across create/edit/delete/reorder/favorite/tag, including the §6.1 collision; server never sees plaintext (asserted in a test) |
+| 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
 | 5 | Sign-in UI, recovery-key screen, account settings, status chip, DPAPI store, ko/en strings | Sign in → sync → sign out → sign in on a clean data root restores content |
 | 6 | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | All three §4.8 unlock paths pass end-to-end, including the "discard cloud copy" path |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |

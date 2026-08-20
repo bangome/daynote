@@ -25,6 +25,7 @@ public enum DomainErrorCode
     MalformedCiphertext,
     CiphertextAuthenticationFailed,
     InvalidSyncTimestamp,
+    MalformedSyncPayload,
 }
 
 public readonly record struct DomainError(DomainErrorCode Code, string Message)

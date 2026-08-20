@@ -34,7 +34,7 @@ export function fakeWrappedDek(): string {
 export const KDF_PARAMS = { kdf: 'argon2id', m: 65536, t: 3, p: 4, v: 1 } as const;
 
 export async function resetDatabase(): Promise<void> {
-  for (const table of ['refresh_tokens', 'users', 'rate_limits']) {
+  for (const table of ['change_log', 'notes', 'refresh_tokens', 'users', 'rate_limits']) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
 }

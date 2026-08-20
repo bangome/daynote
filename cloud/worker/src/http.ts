@@ -1,7 +1,12 @@
 /** JSON request/response plumbing and the single error shape the client parses. */
 
-/** Bodies are tiny (a few hundred bytes); anything larger is a bug or an attack. */
-const MAX_BODY_BYTES = 16 * 1024;
+/**
+ * Auth bodies are a few hundred bytes; anything larger is a bug or an attack. Sync bodies carry
+ * ciphertext and are legitimately far bigger, so the limit is per route: a single cap sized for auth
+ * would 413 every real push and sync would silently never progress.
+ */
+export const AUTH_BODY_LIMIT = 16 * 1024;
+export const SYNC_BODY_LIMIT = 8 * 1024 * 1024;
 
 export type ErrorCode =
   | 'bad_request'
@@ -61,14 +66,17 @@ export function errorResponse(error: ApiError): Response {
   return json({ error: error.code, message: error.message }, error.status, headers);
 }
 
-export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
+export async function readJsonObject(
+  request: Request,
+  maxBytes: number = AUTH_BODY_LIMIT,
+): Promise<Record<string, unknown>> {
   const declaredLength = Number(request.headers.get('content-length') ?? '0');
-  if (declaredLength > MAX_BODY_BYTES) {
+  if (declaredLength > maxBytes) {
     throw new ApiError('payload_too_large', 'The request body is too large.');
   }
 
   const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) {
+  if (raw.length > maxBytes) {
     throw new ApiError('payload_too_large', 'The request body is too large.');
   }
 

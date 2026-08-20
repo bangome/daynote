@@ -2,13 +2,14 @@ import { ApiError, errorResponse, json } from './http';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
 import * as auth from './auth';
+import * as sync from './sync';
 import type { Env } from './env';
 
 /**
- * Daynote cloud sync Worker — Phase 1: accounts and sessions only.
+ * Daynote cloud sync Worker — accounts, sessions, and note sync.
  *
- * The sync and asset routes land in later phases. This Worker holds auth secrets but never a
- * content-encryption key: every note body it will eventually store arrives already encrypted.
+ * The asset routes land with the R2 phase. This Worker holds auth secrets but never a
+ * content-encryption key: every note body it stores arrives already encrypted.
  * See docs/CLOUD_SYNC.md.
  */
 
@@ -21,6 +22,8 @@ const ROUTES: Record<string, Handler> = {
   'POST /v1/auth/logout': auth.logout,
   'POST /v1/auth/password': auth.changePassword,
   'GET /v1/auth/me': auth.me,
+  'POST /v1/sync/push': sync.push,
+  'GET /v1/sync/pull': sync.pull,
 };
 
 /** Chance per request of tidying expired rate-limit rows, in place of a cron trigger. */
