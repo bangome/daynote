@@ -18,6 +18,14 @@
   <ItemGroup>
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
     <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <!--
+      The MCP server shares this app's output folder inside the MSIX (see packaging/Daynote.Package):
+      two apphosts, one copy of the runtime. Referencing it here is what makes that safe - restore
+      then resolves ONE dependency graph for the union of both, so the folder cannot end up holding
+      two different builds of the same assembly name. Without this reference the two publishes
+      resolved 14 shared assemblies differently.
+    -->
+    <ProjectReference Include="..\Daynote.Mcp\Daynote.Mcp.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>

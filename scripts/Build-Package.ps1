@@ -130,6 +130,87 @@ if (-not $msbuild -or -not (Test-Path $msbuild)) {
     return
 }
 
+function Assert-McpServerCoLocated {
+    <#
+    .SYNOPSIS
+        Verifies the packaged MCP server can actually start.
+    .DESCRIPTION
+        The server shares Daynote.App's folder so the package carries one copy of the .NET runtime
+        instead of two (see the _DaynoteCoLocateMcpServer target). That merge is only safe while every
+        assembly Daynote.Mcp.deps.json names is present in that folder, so this re-derives the list
+        from the produced package and fails the build if anything is missing. A missing assembly would
+        otherwise surface as a stdio server that dies on first use, long after release.
+    #>
+    param([Parameter(Mandatory)][string] $PackagePath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+    $scratch = Join-Path ([System.IO.Path]::GetTempPath()) ("daynote-mcp-verify-" + [System.Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $scratch | Out-Null
+    try {
+        # A Store build nests .msix inside .msixbundle inside .msixupload; unwrap to the .msix.
+        $current = $PackagePath
+        foreach ($inner in @('*.msixbundle', '*.msix')) {
+            if ([System.IO.Path]::GetExtension($current) -eq '.msix') { break }
+            $stage = Join-Path $scratch ([System.Guid]::NewGuid().ToString('N'))
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($current, $stage)
+            $next = Get-ChildItem -Path $stage -Filter $inner -File | Select-Object -First 1
+            if (-not $next) { throw "Could not find $inner inside $current." }
+            $current = $next.FullName
+        }
+
+        $package = [System.IO.Compression.ZipFile]::OpenRead($current)
+        try {
+            $entries = @{}
+            foreach ($entry in $package.Entries) { $entries[$entry.FullName.Replace('\', '/')] = $entry }
+
+            # @() keeps a single hit an array; strict mode would otherwise fault on .Count below.
+            $strays = @($entries.Keys | Where-Object { $_ -like 'Daynote.Mcp/*' })
+            if ($strays.Count -gt 0) {
+                throw ("The MCP server was not co-located: {0} file(s) still under Daynote.Mcp/ (e.g. {1})." -f
+                    $strays.Count, ($strays | Select-Object -First 1))
+            }
+
+            $required = @('Daynote.App/Daynote.Mcp.exe', 'Daynote.App/Daynote.Mcp.runtimeconfig.json',
+                'Daynote.App/Daynote.Mcp.deps.json')
+            foreach ($name in $required) {
+                if (-not $entries.ContainsKey($name)) { throw "Package is missing $name." }
+            }
+
+            $reader = New-Object System.IO.StreamReader($entries['Daynote.App/Daynote.Mcp.deps.json'].Open())
+            try { $deps = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+
+            # Every runtime asset the server's host will look for, by file name.
+            $needed = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($target in $deps.targets.PSObject.Properties) {
+                foreach ($library in $target.Value.PSObject.Properties) {
+                    # Strict mode makes a missing member fatal, so look the property up instead.
+                    $runtime = $library.Value.PSObject.Properties['runtime']
+                    if (-not $runtime) { continue }
+                    foreach ($asset in $runtime.Value.PSObject.Properties) {
+                        $leaf = [System.IO.Path]::GetFileName($asset.Name)
+                        if ($leaf) { [void] $needed.Add($leaf) }
+                    }
+                }
+            }
+
+            $missing = @()
+            foreach ($leaf in $needed) {
+                if (-not $entries.ContainsKey("Daynote.App/$leaf")) { $missing += $leaf }
+            }
+            if ($missing.Count -gt 0) {
+                throw ("The co-located MCP server would fail to start: {0} assembly/assemblies named by " +
+                    "Daynote.Mcp.deps.json are absent from Daynote.App/ -> {1}") -f $missing.Count, ($missing -join ', ')
+            }
+
+            Write-Log ("MCP server verified: co-located in Daynote.App/ with all {0} referenced assemblies present." -f $needed.Count)
+        }
+        finally { $package.Dispose() }
+    }
+    finally {
+        try { Remove-Item -Recurse -Force $scratch -ErrorAction Stop } catch {}
+    }
+}
+
 Write-Log "Step 4: MSBuild package via $msbuild"
 
 if ($Store) {
@@ -149,6 +230,7 @@ if ($Store) {
         Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($upload) {
         Write-Log "Produced Store package: $($upload.FullName)"
+        Assert-McpServerCoLocated -PackagePath $upload.FullName
         Write-Log 'Upload this .msixupload in Partner Center. See docs/STORE.md.'
     }
     else {
@@ -182,7 +264,11 @@ if ($LASTEXITCODE -ne 0) { throw 'MSIX packaging failed.' }
 
 $msix = Get-ChildItem -Path $OutputDirectory -Recurse -Filter '*.msix' -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if ($msix) { Write-Log "Produced MSIX: $($msix.FullName)" } else { Write-Log 'No .msix found after packaging.' }
+if ($msix) {
+    Write-Log "Produced MSIX: $($msix.FullName)"
+    Assert-McpServerCoLocated -PackagePath $msix.FullName
+}
+else { Write-Log 'No .msix found after packaging.' }
 
 # 5. Install is DEFERRED and machine-mutating; refuse unless explicitly accepted.
 if ($Install) {

@@ -149,7 +149,8 @@ public sealed class PackageManifestPolicyTests
 
         // Bundling the server here is what makes it see the app's virtualized database; the alias is
         // what an MCP client can actually launch. Both are asserted, plus that it stays hidden.
-        StringAssert.EndsWith((string?)mcp.Attribute("Executable"), "Daynote.Mcp.exe");
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpExecutable, (string?)mcp.Attribute("Executable"),
+            "the server must stay in the app's folder so the package carries one copy of the runtime");
         Assert.AreEqual("Windows.FullTrustApplication", (string?)mcp.Attribute("EntryPoint"));
         Assert.AreEqual("none", (string?)mcp.Descendants()
             .Single(static element => element.Name.LocalName == "VisualElements")

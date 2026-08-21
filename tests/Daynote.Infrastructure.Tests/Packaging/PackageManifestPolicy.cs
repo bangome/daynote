@@ -31,6 +31,9 @@ internal static class PackageManifestPolicy
     /// <summary>The alias MCP clients are configured with; must match McpServerCommand.PackagedAlias.</summary>
     public const string ExpectedMcpAlias = "daynote-mcp.exe";
 
+    /// <summary>The MCP server sits in the app's folder so both share one copy of the .NET runtime.</summary>
+    public const string ExpectedMcpExecutable = @"Daynote.App\Daynote.Mcp.exe";
+
     public const string ExpectedIdentityName = "Daynote.Dev";
     public const string ExpectedPublisher = "CN=Daynote.Dev";
     public const string ExpectedArchitecture = "x64";
@@ -185,10 +188,12 @@ internal static class PackageManifestPolicy
             violations.Add("The MCP server application must be a Windows.FullTrustApplication.");
         }
 
+        // Co-located with the app on purpose: the server shares the app's single copy of the .NET
+        // runtime, which is worth ~64 MB of download. Its own folder would be a silent size doubling.
         string? executable = (string?)mcp.Attribute("Executable");
-        if (executable is null || !executable.EndsWith("Daynote.Mcp.exe", StringComparison.Ordinal))
+        if (executable != ExpectedMcpExecutable)
         {
-            violations.Add("The MCP server application must point at Daynote.Mcp.exe.");
+            violations.Add($"The MCP server application must point at '{ExpectedMcpExecutable}' (co-located with the app).");
         }
 
         string? appListEntry = (string?)mcp.Element(Uap + "VisualElements")?.Attribute("AppListEntry");

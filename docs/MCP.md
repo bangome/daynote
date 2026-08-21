@@ -75,7 +75,27 @@ dotnet publish src\Daynote.Mcp\Daynote.Mcp.csproj -c Release -r win-x64 --self-c
 ```
 
 The MSIX build needs neither: `Daynote.Package.wapproj` references `Daynote.Mcp.csproj`, so packaging
-lays the server down next to the app as `Daynote.Mcp\Daynote.Mcp.exe`.
+publishes the server and lays it into the package as `Daynote.App\Daynote.Mcp.exe`.
+
+### Why it sits in the app's folder
+
+Both projects publish self-contained, and of the server's ~113 MB of output ~109 MB is byte-identical
+to what is already in `Daynote.App\` - the same copy of the .NET runtime. Giving it its own folder
+therefore doubled the download for nothing (131 MB vs 86 MB measured on the Store bundle), so the
+`_DaynoteCoLocateMcpServer` target in the `.wapproj` keeps only the three files that are genuinely the
+server's (`Daynote.Mcp.exe` and its `deps.json` / `runtimeconfig.json`) and drops the 239 duplicates.
+
+Two apphosts sharing one folder is only safe while the folder holds exactly one build of each assembly
+name, so two things enforce that:
+
+- **`Daynote.App` has a `ProjectReference` on `Daynote.Mcp`.** Restore then resolves a single graph for
+  the union of both, and the app's folder gets `Daynote.Mcp.dll` plus the MCP-only packages. Without
+  that reference the two independent restores disagreed on 14 shared assemblies (for instance
+  `System.Diagnostics.EventLog.dll`, 366 KB in the app's publish against 176 KB in the server's).
+- **`Build-Package.ps1` re-checks the produced package.** It reads `Daynote.Mcp.deps.json` out of the
+  package and fails the build unless every assembly it names is present in `Daynote.App/`, and unless
+  the `Daynote.Mcp/` folder is gone. A missing assembly would otherwise show up as a server that dies
+  on first use, long after release.
 
 An unpackaged (dev) run of Daynote has no alias, so Settings offers registration only when a built
 `Daynote.Mcp.exe` sits next to `Daynote.App.exe`; otherwise the row says there is nothing to register.

@@ -16,8 +16,12 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
   (`AppListEntry="none"`), reachable through the app execution alias
   `daynote-mcp.exe`. It ships in the same package on purpose: only then does the
   server inherit the package identity, and with it the redirected data path below, so
-  it opens the very same database as the app. Settings -> AI integration registers the
-  alias with Claude Desktop / Claude Code. See [MCP.md](MCP.md).
+  it opens the very same database as the app. It also shares the app's folder
+  (`Daynote.App\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
+  of the .NET runtime in the package instead of two - 86 MB instead of 131 MB. The
+  `_DaynoteCoLocateMcpServer` target does the merge and `Build-Package.ps1` verifies it.
+  Settings -> AI integration registers the alias with Claude Desktop / Claude Code.
+  See [MCP.md](MCP.md).
 
 No x86/Arm64 artifact and no auto-update feed are produced here. For **Store**
 submission see [STORE.md](STORE.md) (`scripts/Build-Package.ps1 -Store`).

@@ -99,6 +99,13 @@
       from outside the package would instead see the unredirected %LocalAppData%\Daynote and create an
       empty second database.
 
+      It lives in the APP's folder, not its own: two apphosts sharing one copy of the .NET runtime.
+      Its own publish output is 113 MB of which 109 MB is byte-identical to the app's, so a separate
+      folder would double the download for nothing. Daynote.App references Daynote.Mcp so restore
+      resolves a single dependency graph for both and the shared folder cannot hold two different
+      builds of one assembly name; the .wapproj target _DaynoteCoLocateMcpServer rewrites the layout,
+      and Build-Package.ps1 verifies every assembly the server needs is actually there.
+
       It is hidden from the Start menu / app list (AppListEntry="none") - it is not something a user
       launches by hand - and is reached through the app execution alias "daynote-mcp.exe", which
       Windows puts on PATH for the user. MCP clients are therefore configured with the bare command
@@ -107,7 +114,7 @@
     -->
     <Application
       Id="DaynoteMcp"
-      Executable="Daynote.Mcp\Daynote.Mcp.exe"
+      Executable="Daynote.App\Daynote.Mcp.exe"
       EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         AppListEntry="none"
@@ -119,7 +126,7 @@
       <Extensions>
         <uap3:Extension
           Category="windows.appExecutionAlias"
-          Executable="Daynote.Mcp\Daynote.Mcp.exe"
+          Executable="Daynote.App\Daynote.Mcp.exe"
           EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias>
             <desktop:ExecutionAlias Alias="daynote-mcp.exe" />
