@@ -110,6 +110,10 @@ public static class AppStrings
     public static string SettingsStartupDisabledByUserText => LocalizationService.Instance[nameof(SettingsStartupDisabledByUserText)];
     public static string SettingsStartupUnavailableText => LocalizationService.Instance[nameof(SettingsStartupUnavailableText)];
     public static string SettingsPrivacyText => LocalizationService.Instance[nameof(SettingsPrivacyText)];
+    /// <summary>Appended to the privacy statement because the MCP server ships in every build.</summary>
+    public static string SettingsPrivacyMcp => LocalizationService.Instance[nameof(SettingsPrivacyMcp)];
+    /// <summary>Appended only when this build has a sync endpoint, i.e. when the section is shown.</summary>
+    public static string SettingsPrivacySync => LocalizationService.Instance[nameof(SettingsPrivacySync)];
 
     // AI integration / MCP (settings)
     public static string SettingsMcpRow => LocalizationService.Instance[nameof(SettingsMcpRow)];

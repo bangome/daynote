@@ -347,7 +347,25 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
         }
     }
 
-    public string PrivacyText => Localization.AppStrings.SettingsPrivacyText;
+    /// <summary>
+    /// The privacy statement, assembled from what this build can actually do. It used to be one fixed
+    /// sentence claiming Daynote never syncs or sends anything over the network, which stopped being
+    /// true twice over: cloud sync uploads notes, and the MCP server hands them to an AI client that
+    /// may forward them to its own service. Both are opt-in, but silence about them is still a promise
+    /// the app cannot keep - and the Store listing has to match this text.
+    /// </summary>
+    public string PrivacyText => ComposePrivacyText(cloudSyncAvailable: Account is not null);
+
+    /// <summary>
+    /// The sync sentence is omitted when this build has no sync endpoint, because such a build makes no
+    /// network calls at all and describing an absent feature would be its own inaccuracy.
+    /// </summary>
+    public static string ComposePrivacyText(bool cloudSyncAvailable)
+    {
+        string text = Localization.AppStrings.SettingsPrivacyText
+            + " " + Localization.AppStrings.SettingsPrivacyMcp;
+        return cloudSyncAvailable ? text + " " + Localization.AppStrings.SettingsPrivacySync : text;
+    }
 
     // ── AI integration (MCP) ──
 

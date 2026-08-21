@@ -101,8 +101,13 @@ internal static class EnglishStrings
         ["SettingsStartupDisabledByUserText"] = "Turned off in Windows startup app settings. Re-enable it there.",
         ["SettingsStartupUnavailableText"] = "Startup app settings are unavailable on this device.",
         ["SettingsPrivacyText"] =
-            "Notes are stored in a plain-text SQLite database, and attachments as local files. " +
-            "Daynote does not encrypt, sync, or send them over the network.",
+            "Notes are stored in a plain-text SQLite database on this PC, and attachments as local " +
+            "files. Daynote itself has no analytics and no telemetry.",
+        ["SettingsPrivacyMcp"] =
+            "If you register the AI integration (MCP), the AI client you connect can read and write " +
+            "your notes, and that client may send their content to its own service.",
+        ["SettingsPrivacySync"] =
+            "Cloud sync is off by default. When you sign in, notes are encrypted on this PC before they are uploaded.",
 
         // AI integration / MCP (settings)
         ["SettingsMcpRow"] = "AI integration",

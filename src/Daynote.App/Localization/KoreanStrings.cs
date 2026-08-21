@@ -104,8 +104,13 @@ internal static class KoreanStrings
         ["SettingsStartupDisabledByUserText"] = "Windows 시작 프로그램 설정에서 꺼져 있습니다. 그곳에서 다시 켜세요.",
         ["SettingsStartupUnavailableText"] = "이 기기에서는 시작 프로그램 설정을 사용할 수 없습니다.",
         ["SettingsPrivacyText"] =
-            "노트는 평문 SQLite 데이터베이스에, 첨부 파일은 로컬 파일로 저장됩니다. " +
-            "Daynote가 암호화하거나 동기화하거나 네트워크로 전송하지 않습니다.",
+            "노트는 이 PC의 평문 SQLite 데이터베이스에, 첨부 파일은 로컬 파일로 저장됩니다. " +
+            "Daynote 자체에는 분석 도구나 원격 측정이 없습니다.",
+        ["SettingsPrivacyMcp"] =
+            "AI 연동(MCP)을 등록하면 연결한 AI 클라이언트가 노트를 읽고 쓸 수 있습니다. " +
+            "그 클라이언트가 노트 내용을 자체 서비스로 전송할 수 있습니다.",
+        ["SettingsPrivacySync"] =
+            "클라우드 동기화는 기본적으로 꺼져 있습니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드됩니다.",
 
         // AI integration / MCP (settings)
         ["SettingsMcpRow"] = "AI 연동",

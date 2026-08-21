@@ -9,7 +9,32 @@ Daynote has **no analytics and no telemetry**, ever. Nothing about how you use t
 anywhere.
 
 Daynote makes **no network calls at all** unless you turn on cloud sync and sign in. Cloud sync is
-off by default; with it off, the app behaves exactly as it always has — everything stays on this PC.
+off by default.
+
+There are exactly two ways note content can leave this PC, and you have to switch each of them on:
+**cloud sync**, which uploads it (encrypted here first), and the **AI integration (MCP)**, which hands
+it to an AI client that may forward it to that client's own service. Both are described below. With
+neither enabled, everything stays on this PC.
+
+## AI integration (MCP, optional, off by default)
+
+Daynote ships an MCP server that lets an AI client — Claude Desktop, Claude Code, or any other MCP
+host — read and write your notes. **Nothing is connected until you register it** from Settings →
+**AI 연동 / AI integration**; before that the server is never started.
+
+Once registered, understand what the AI client can see:
+
+- It has the **same access to your notes as the app does**: search, read any day, create, edit, and
+  delete. It reads the same local database; there is no separate copy.
+- **What the client then does with that content is the client's business, not Daynote's.** A
+  cloud-based assistant will send the notes it reads to its own service to answer you. Daynote cannot
+  see or control that, and this page cannot describe it — check your AI client's own privacy terms.
+- The server itself makes **no network calls**. It speaks to the client over stdin/stdout on this PC.
+
+To disconnect it, remove the `daynote` entry from your MCP client's configuration (for Claude Desktop
+that is `%AppData%\Claude\claude_desktop_config.json`). Uninstalling Daynote also removes the server.
+
+See [MCP.md](MCP.md) for the tool list and setup details.
 
 ## Cloud sync (optional, off by default)
 
