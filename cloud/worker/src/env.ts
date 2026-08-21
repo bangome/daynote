@@ -10,17 +10,15 @@ export interface Env {
   REFRESH_TOKEN_TTL_DAYS?: string;
 
   /**
-   * Transactional email for password resets. Absent means the reset endpoints return a server error
-   * rather than pretending to have sent something.
+   * Transactional email for password resets, over Resend. Absent means the reset endpoints return a
+   * server error rather than pretending to have sent something.
+   *
+   * There is no DKIM key here on purpose: Resend holds the private half and gives you a public key to
+   * publish, so this Worker never stores a signing key.
    */
-  MAILCHANNELS_API_KEY?: string;
+  RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_FROM_NAME?: string;
-
-  /** Without DKIM the reset code lands in spam, which users read as "reset is broken". */
-  DKIM_DOMAIN?: string;
-  DKIM_SELECTOR?: string;
-  DKIM_PRIVATE_KEY?: string;
 
   /** Test seam: an in-memory sender, so the reset flow can be exercised without sending mail. */
   EMAIL_SENDER?: import('./email').EmailSender;

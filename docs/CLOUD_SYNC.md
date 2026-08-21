@@ -2,7 +2,7 @@
 
 > Status: **Phases 1–6 built and verified against a real deployment.** The Worker is deployed with
 > no route attached and an empty D1; see [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md) for
-> what is still needed (hostname, MailChannels key, DKIM). The app is wired up behind a configured
+> what is still needed (hostname, Resend key, DNS). The app is wired up behind a configured
 > sync endpoint. The auth Worker lives in
 > [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
 > no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
@@ -237,17 +237,29 @@ demand at the worst moment.
 
 ### 4.9 Transactional email
 
-**Decided: MailChannels, on `daynote.arachat.cc`.** One correction to the earlier framing: MailChannels'
-free Cloudflare Workers integration ended in June 2024, so this needs an account and an API key like
-any other provider — it is not the zero-setup option that description implied. It is still a
-reasonable choice, and `EmailSender` in `cloud/worker/src/email.ts` is the whole surface, so moving to
-Resend or SES is one file.
+**Decided: Resend, on `daynote.arachat.cc`.** This replaces an earlier choice of MailChannels, for a
+reason that only surfaced at deployment: MailChannels' free Cloudflare Workers integration ended in
+June 2024, and its replacement is a paid account. Resend's free tier (3,000/month, 100/day) covers
+reset traffic here with room to spare. `EmailSender` in `cloud/worker/src/email.ts` is the whole
+surface, which is what made the swap a one-file change.
 
-**DKIM is not optional in practice.** Without it the reset code lands in spam, which the user reads as
-"the reset is broken" rather than "check your junk folder". Deployment needs a DKIM key pair with the
-public half at `mailchannels._domainkey.daynote.arachat.cc`, plus an SPF record permitting
-MailChannels. The Worker refuses to send at all when the sender is unconfigured, rather than returning
-success for mail it never sent.
+**Cloudflare's own `send_email` binding cannot do this.** It looks like the obvious native answer, but
+Email Workers can only send to recipients allowlisted in the account
+(`E_RECIPIENT_NOT_ALLOWED` — "Recipient address not in allowed_destination_addresses"). It is for
+notifying yourself, not for mailing arbitrary users.
+
+**No DKIM key lives in the Worker.** Resend holds the private half and gives you a public key to
+publish, so there is one fewer secret and no signing key in our infrastructure. Deployment needs three
+records on `daynote.arachat.cc` — an MX and an SPF TXT on the `send` subdomain, and a DKIM TXT at
+`resend._domainkey` — all with Cloudflare proxying off. The Worker refuses to send at all when the
+sender is unconfigured, rather than returning success for mail it never sent.
+
+**Considered and rejected: dropping email entirely.** In an end-to-end-encrypted system a reset only
+restores account access, and the recovery key is still needed for the data — so a second verifier
+derived from the recovery key would allow "sign in with recovery key" and remove the email dependency
+outright. Rejected because it makes the recovery key a complete credential on its own: anyone who
+finds the paper copy could then read everything, where today they would also need the password. The
+attacker requirement would drop from "recovery key plus mailbox access" to "recovery key".
 
 **The code, not a link.** A desktop app cannot receive a browser callback, so the email carries a code
 the user types in. Six digits would be brute-forceable, so it is eight Crockford-base32 characters
@@ -639,7 +651,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
 | 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
 | 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on `DAYNOTE_SYNC_ENDPOINT`: with no endpoint nothing is registered, no `HttpClient` exists, and the section is absent. PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
-| 6 ✅ | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | **Done.** MailChannels behind an `EmailSender` interface, an 8-character Crockford code with a five-attempt cap, and all three §4.8 unlock paths tested end-to-end including "discard the cloud copy". 19 Worker cases and 23 client cases |
+| 6 ✅ | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | **Done.** Resend behind an `EmailSender` interface, an 8-character Crockford code with a five-attempt cap, and all three §4.8 unlock paths tested end-to-end including "discard the cloud copy". 19 Worker cases and 23 client cases |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |
 
@@ -689,7 +701,9 @@ At Cloudflare's current published tiers — verify against the live pricing page
 - **R2**: no egress fee; storage and class-A/B operations billed. Per-file size is already capped by
   `FileCapturePolicy.MaxFileBytes`; the `users.quota_bytes` column enforces an account-level cap
   (default 2 GB) so one account cannot run up an unbounded bill.
-- **Email**: Resend/MailChannels free tiers cover reset volume comfortably at this scale.
+- **Email**: Resend's free tier (3,000/month, 100/day) covers reset volume with room to spare. Note
+  that a reset code is not something a user requests often, so the daily cap is not the binding
+  constraint it would be for, say, a notification feature.
 - The client-side Argon2id at 64 MiB is a per-login cost on the user's PC, not ours.
 
 ## 13. Open questions

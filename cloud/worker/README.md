@@ -39,20 +39,16 @@ reason — if you add a column, that test fails on purpose and you have to justi
 
 ## Password reset email
 
-`/v1/auth/reset/*` needs MailChannels. Its free Workers integration ended in June 2024, so this
-requires an account and an API key like any other provider; `EmailSender` in `src/email.ts` is the
-whole surface if you move to something else.
+`/v1/auth/reset/*` needs a Resend API key. `EmailSender` in `src/email.ts` is the whole surface if you
+move to something else.
 
 ```sh
-npx wrangler secret put MAILCHANNELS_API_KEY
-npx wrangler secret put DKIM_PRIVATE_KEY
+npx wrangler secret put RESEND_API_KEY
 ```
 
-DNS on `daynote.arachat.cc`, both required — without DKIM the code lands in spam, which users read as
-a broken reset:
-
-- `mailchannels._domainkey.daynote.arachat.cc` TXT — the DKIM public key
-- SPF on `daynote.arachat.cc` permitting MailChannels
+No DKIM secret: Resend holds the private half and gives you a public key to publish, so no signing key
+lives in this Worker. The three DNS records `daynote.arachat.cc` needs are in
+[DEPLOY.md](DEPLOY.md#2-password-reset-email).
 
 With no sender configured the reset endpoints fail loudly rather than returning success for mail that
 was never sent.

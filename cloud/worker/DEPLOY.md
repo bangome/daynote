@@ -7,7 +7,7 @@ Current state, verified 2026-08-20 against a real deployment:
 | Worker `daynote-cloud` | deployed, **no route attached** |
 | D1 `daynote` | created (`4226d475-a071-44c0-a2c7-4a953cbaa44e`, APAC), migrations 0001–0003 applied, empty |
 | `JWT_SECRET` | set |
-| `MAILCHANNELS_API_KEY`, `DKIM_PRIVATE_KEY` | **not set** — password reset returns 500 until they are |
+| `RESEND_API_KEY` | **not set** — password reset returns 500 until it is |
 | DNS on `daynote.arachat.cc` | **not created** |
 | `workers_dev` | false, `preview_urls` false — the service has no public hostname on purpose |
 
@@ -28,42 +28,54 @@ curl -s https://daynote.arachat.cc/v1/health
 
 ## 2. Password reset email
 
-MailChannels' free Workers integration ended in June 2024, so this needs a MailChannels account and
-an API key. `EmailSender` in `src/email.ts` is the entire surface if you would rather use Resend.
+Resend, free tier: 3,000/month and 100/day at the time of writing, which is far more reset traffic
+than this app will produce. This replaced MailChannels, whose free Workers integration ended in June
+2024 and whose replacement is a paid account.
+
+Cloudflare's own `send_email` binding is not an option, despite looking like the obvious native
+answer: Email Workers can only send to recipients allowlisted in the account, so it cannot mail
+arbitrary users.
+
+### The key
+
+Create a Resend account, add `daynote.arachat.cc` as a domain, and create an API key. Then:
 
 ```sh
-npx wrangler secret put MAILCHANNELS_API_KEY
+npx wrangler secret put RESEND_API_KEY
 ```
 
-DKIM, generated on a machine you trust — this private key signs your outbound mail, so it should not
-pass through anyone else's terminal:
+Paste at the prompt — it reads stdin, so the key does not land in shell history. There is no DKIM
+secret to set: Resend holds the private half and gives you a public key to publish, so no signing key
+lives in this Worker.
 
-```sh
-openssl genrsa -out dkim.key 2048
-openssl rsa -in dkim.key -pubout -outform der | openssl base64 -A   # the TXT record value
-npx wrangler secret put DKIM_PRIVATE_KEY < dkim.key                 # then delete dkim.key
+### The DNS records
+
+Resend shows the exact values for your domain; these are the shapes. All three on
+`daynote.arachat.cc`, and **Cloudflare proxying must be off (DNS only)** on each:
+
+| Type | Name | Value | Purpose |
+| --- | --- | --- | --- |
+| MX | `send` | `feedback-smtp.<region>.amazonses.com`, priority 10 | bounce and complaint handling |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` | SPF |
+| TXT | `resend._domainkey` | the public key Resend gives you | DKIM |
+
+Take the MX host and the DKIM value from the Resend dashboard rather than from this table — the region
+and the key are specific to your domain.
+
+### Verifying it actually works
+
+Request a reset for an address you control and read the received headers. Both of these must say
+`pass`:
+
+```
+Authentication-Results: ... spf=pass ... dkim=pass
 ```
 
-Three DNS records on `daynote.arachat.cc`. All three matter, and they fail differently:
+A message that arrives while failing one of them will reach most inboxes today and start silently
+failing later, so treat a partial pass as not done.
 
-| Record | Value | What happens without it |
-| --- | --- | --- |
-| `_mailchannels` TXT | from the MailChannels console — **do not** copy the value from here | MailChannels rejects the send outright |
-| `mailchannels._domainkey` TXT | `v=DKIM1; p=<the base64 above>` | delivered but unsigned → spam folder |
-| `@` TXT (SPF) | `v=spf1 a mx include:relay.mailchannels.net ~all` | weakens alignment → spam folder |
-
-**Domain Lockdown** (`_mailchannels`) is MailChannels authorising *your* account to send as this
-domain. Its exact value is account-specific and the syntax has changed across their plan changes, so
-take it verbatim from their console rather than from this document or from anyone's recollection.
-
-The other two are ordinary email authentication and the values above are correct as written.
-
-Verify by requesting a reset for an address you control and checking the received headers say
-`dkim=pass` and `spf=pass`. A message that arrives but fails either one will reach most inboxes today
-and start silently failing later, so treat a partial pass as not done.
-
-Until the sender is configured, `/v1/auth/reset/request` returns 500 rather than reporting success
-for mail it never sent. That is deliberate.
+Until the key is set, `/v1/auth/reset/request` returns 500 rather than reporting success for mail it
+never sent. That is deliberate, and it is what a live check against the current deployment confirms.
 
 ## 3. Point the app at it
 

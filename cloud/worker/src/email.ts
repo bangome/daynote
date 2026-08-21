@@ -1,15 +1,17 @@
 import type { Env } from './env';
 
 /**
- * Transactional email for password resets.
+ * Transactional email for password resets, over Resend.
  *
- * MailChannels' free Cloudflare Workers integration ended in June 2024, so this needs a MailChannels
- * account and an API key like any other provider. The interface below is the whole surface, so
- * swapping to Resend or SES is one file.
+ * Chosen over MailChannels because MailChannels' free Cloudflare Workers integration ended in June
+ * 2024 and its replacement is a paid account. Resend's free tier (3,000/month, 100/day at the time of
+ * writing) covers reset traffic for this app with room to spare.
  *
- * DKIM matters more than the provider choice: without it a reset code lands in spam, which reads to
- * the user as "the reset is broken". The DKIM fields are optional here only so a local `wrangler dev`
- * can run without a private key.
+ * A side benefit worth stating: Resend holds the DKIM private key and hands you a public key to
+ * publish, so no signing key lives in this Worker at all. The MailChannels path required us to store
+ * one as a secret.
+ *
+ * The interface below is the whole surface, so moving again is one file.
  */
 export interface EmailSender {
   send(message: OutgoingEmail): Promise<void>;
@@ -23,7 +25,7 @@ export interface OutgoingEmail {
 
 export class EmailNotConfiguredError extends Error {
   constructor() {
-    super('No email sender is configured; set MAILCHANNELS_API_KEY and EMAIL_FROM.');
+    super('No email sender is configured; set RESEND_API_KEY and EMAIL_FROM.');
     this.name = 'EmailNotConfiguredError';
   }
 }
@@ -38,38 +40,27 @@ export class EmailSendError extends Error {
   }
 }
 
-class MailChannelsSender implements EmailSender {
+class ResendSender implements EmailSender {
   constructor(
     private readonly apiKey: string,
     private readonly from: string,
     private readonly fromName: string,
-    private readonly dkim?: { domain: string; selector: string; privateKey: string },
   ) {}
 
   async send(message: OutgoingEmail): Promise<void> {
-    const personalization: Record<string, unknown> = {
-      to: [{ email: message.to }],
-    };
-
-    if (this.dkim !== undefined) {
-      personalization['dkim_domain'] = this.dkim.domain;
-      personalization['dkim_selector'] = this.dkim.selector;
-      personalization['dkim_private_key'] = this.dkim.privateKey;
-    }
-
-    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'X-Api-Key': this.apiKey,
+        authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        personalizations: [personalization],
-        from: { email: this.from, name: this.fromName },
+        from: `${this.fromName} <${this.from}>`,
+        to: [message.to],
         subject: message.subject,
         // Plain text only. An HTML reset email is a phishing template waiting to be copied, and
-        // there is nothing here that benefits from markup.
-        content: [{ type: 'text/plain', value: message.text }],
+        // nothing here benefits from markup.
+        text: message.text,
       }),
     });
 
@@ -86,29 +77,15 @@ export function emailSenderFor(env: Env): EmailSender {
   }
 
   if (
-    typeof env.MAILCHANNELS_API_KEY !== 'string' ||
-    env.MAILCHANNELS_API_KEY.length === 0 ||
+    typeof env.RESEND_API_KEY !== 'string' ||
+    env.RESEND_API_KEY.length === 0 ||
     typeof env.EMAIL_FROM !== 'string' ||
     env.EMAIL_FROM.length === 0
   ) {
     throw new EmailNotConfiguredError();
   }
 
-  const dkim =
-    typeof env.DKIM_PRIVATE_KEY === 'string' && env.DKIM_PRIVATE_KEY.length > 0
-      ? {
-          domain: env.DKIM_DOMAIN ?? 'daynote.arachat.cc',
-          selector: env.DKIM_SELECTOR ?? 'mailchannels',
-          privateKey: env.DKIM_PRIVATE_KEY,
-        }
-      : undefined;
-
-  return new MailChannelsSender(
-    env.MAILCHANNELS_API_KEY,
-    env.EMAIL_FROM,
-    env.EMAIL_FROM_NAME ?? 'Daynote',
-    dkim,
-  );
+  return new ResendSender(env.RESEND_API_KEY, env.EMAIL_FROM, env.EMAIL_FROM_NAME ?? 'Daynote');
 }
 
 /**

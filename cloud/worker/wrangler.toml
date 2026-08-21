@@ -13,20 +13,16 @@ preview_urls = false
 # Generate one with:
 #   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
-# Password-reset email. MAILCHANNELS_API_KEY and DKIM_PRIVATE_KEY are secrets:
-#   wrangler secret put MAILCHANNELS_API_KEY
-#   wrangler secret put DKIM_PRIVATE_KEY
-# DKIM is not optional in practice — without it the reset code goes to spam. Publish the public half
-# as a TXT record at mailchannels._domainkey.daynote.arachat.cc, and an SPF record permitting
-# MailChannels on daynote.arachat.cc.
+# Password-reset email, over Resend. The API key is a secret:
+#   wrangler secret put RESEND_API_KEY
+# No DKIM key lives here: Resend holds the private half and gives you a public key to publish. See
+# DEPLOY.md for the three DNS records daynote.arachat.cc needs.
 
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "60"
 EMAIL_FROM = "no-reply@daynote.arachat.cc"
 EMAIL_FROM_NAME = "Daynote"
-DKIM_DOMAIN = "daynote.arachat.cc"
-DKIM_SELECTOR = "mailchannels"
 
 [[d1_databases]]
 binding = "DB"
