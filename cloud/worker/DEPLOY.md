@@ -32,9 +32,12 @@ Resend, free tier: 3,000/month and 100/day at the time of writing, which is far 
 than this app will produce. This replaced MailChannels, whose free Workers integration ended in June
 2024 and whose replacement is a paid account.
 
-Cloudflare's own `send_email` binding is not an option, despite looking like the obvious native
-answer: Email Workers can only send to recipients allowlisted in the account, so it cannot mail
-arbitrary users.
+Cloudflare Email Sending *is* a viable native option — an earlier note here said otherwise and was
+wrong, having read Email *Routing*'s forwarding rules rather than Email *Sending*'s. It needs no API
+key at all. It is not used yet for two reasons: it is in open beta, and password reset is a bad place
+to depend on a beta; and onboarding the domain needs permissions the deploy token lacks
+(`/email/sending/zones` → `Unauthorized [2036]`). Worth revisiting when it reaches GA — it would
+remove both the vendor and the secret, and it is a one-file change.
 
 ### The key
 

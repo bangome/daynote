@@ -243,10 +243,25 @@ June 2024, and its replacement is a paid account. Resend's free tier (3,000/mont
 reset traffic here with room to spare. `EmailSender` in `cloud/worker/src/email.ts` is the whole
 surface, which is what made the swap a one-file change.
 
-**Cloudflare's own `send_email` binding cannot do this.** It looks like the obvious native answer, but
-Email Workers can only send to recipients allowlisted in the account
-(`E_RECIPIENT_NOT_ALLOWED` — "Recipient address not in allowed_destination_addresses"). It is for
-notifying yourself, not for mailing arbitrary users.
+**Correction — Cloudflare Email Sending *can* do this.** An earlier revision of this document claimed
+the native option was unusable because Workers can only mail allowlisted recipients. That was wrong,
+and the mistake is worth recording because it cost real work: it read Email *Routing*'s
+`send_email` documentation, which covers forwarding and replying to inbound mail, and generalised its
+allowlist behaviour to all Worker email sending. Email *Sending* is a separate product. Its default
+binding has no recipient restriction; `allowed_destination_addresses` is an opt-in restriction and
+`E_RECIPIENT_NOT_ALLOWED` only fires when one is configured.
+
+So the native option is genuinely available: a `send_email` binding needs no API key and no secret,
+and Cloudflare manages the authentication records for a zone it already hosts. Two things argue
+against switching to it right now rather than for it:
+
+- Email Sending is in open beta (`wrangler email sending` says so). Password reset is the path where
+  failure means a user cannot recover their account, which is a poor place to depend on a beta.
+- Onboarding the domain needs permissions beyond the deploy token used here
+  (`/email/sending/zones` returns `Unauthorized [2036]`), so it is a dashboard step either way.
+
+Resend stays for now. If Email Sending reaches GA, moving to it removes a vendor and a secret, and it
+is still a one-file change.
 
 **No DKIM key lives in the Worker.** Resend holds the private half and gives you a public key to
 publish, so there is one fewer secret and no signing key in our infrastructure. Deployment needs three
