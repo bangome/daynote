@@ -241,75 +241,68 @@
                 </StackPanel>
             </ContentControl>
 
-            <!-- AI integration (MCP): how to build + register the stdio server -->
+            <!-- AI integration (MCP): one-click registration of the server bundled in the package -->
             <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsMcpRow}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsMcpLabel}" />
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpDesc}" TextWrapping="Wrap" />
-                    <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}"
-                               Style="{DynamicResource Daynote.Style.Type.Status}"
-                               Text="{loc:Tr SettingsMcpCopied}"
-                               Visibility="{Binding McpCopied, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-
-                    <!-- Step 1: build the server -->
-                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpStep1}" TextWrapping="Wrap" />
-                    <Grid Margin="0,4,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap"
-                                 FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                                 Background="{DynamicResource Daynote.Brush.Surface.Selected}"
-                                 Padding="8" BorderThickness="0" VerticalAlignment="Center"
-                                 Text="{Binding McpBuildCommand, Mode=OneWay}" />
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsMcpLabel}" />
+                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpDesc}" TextWrapping="Wrap" />
+                        </StackPanel>
                         <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
                                 Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                                Content="{loc:Tr SettingsMcpCopy}"
-                                Command="{Binding CopyToClipboardCommand}"
-                                CommandParameter="{Binding McpBuildCommand}"
-                                AutomationProperties.Name="{loc:Tr SettingsMcpCopy}" />
+                                Content="{loc:Tr SettingsMcpRegister}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                                Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                Command="{Binding RegisterMcpCommand}"
+                                AutomationProperties.Name="{loc:Tr SettingsMcpRegister}" />
                     </Grid>
 
-                    <!-- Step 2: register with Claude Desktop -->
-                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpStep2}" TextWrapping="Wrap" />
-                    <Grid Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
-                                 FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                                 Background="{DynamicResource Daynote.Brush.Surface.Selected}"
-                                 Padding="8" BorderThickness="0" VerticalAlignment="Center"
-                                 Text="{Binding McpDesktopConfig, Mode=OneWay}" />
-                        <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
-                                Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                                Content="{loc:Tr SettingsMcpCopy}"
-                                Command="{Binding CopyToClipboardCommand}"
-                                CommandParameter="{Binding McpDesktopConfig}"
-                                AutomationProperties.Name="{loc:Tr SettingsMcpCopy}" />
-                    </Grid>
+                    <!-- Registration result, and the "nothing to register" explanation for a dev run. -->
+                    <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}" Text="{Binding McpStatusText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Daynote.Style.Type.Status}">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+                                    <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Daynote.Style.Type.Status}"
+                               Foreground="{DynamicResource Daynote.Brush.Text.Muted}"
+                               Text="{loc:Tr SettingsMcpUnavailable}" TextWrapping="Wrap"
+                               Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
 
-                    <!-- Step 3: register with Claude Code (optional) -->
-                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpStep3}" TextWrapping="Wrap" />
-                    <Grid Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap"
-                                 FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                                 Background="{DynamicResource Daynote.Brush.Surface.Selected}"
-                                 Padding="8" BorderThickness="0" VerticalAlignment="Center"
-                                 Text="{Binding McpCodeCommand, Mode=OneWay}" />
-                        <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
-                                Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                                Content="{loc:Tr SettingsMcpCopy}"
-                                Command="{Binding CopyToClipboardCommand}"
-                                CommandParameter="{Binding McpCodeCommand}"
-                                AutomationProperties.Name="{loc:Tr SettingsMcpCopy}" />
-                    </Grid>
+                    <!-- Claude Code: the same server, added from a terminal instead. -->
+                    <StackPanel Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                        <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpCodeHint}" TextWrapping="Wrap" />
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap"
+                                     FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
+                                     Background="{DynamicResource Daynote.Brush.Surface.Selected}"
+                                     Padding="8" BorderThickness="0" VerticalAlignment="Center"
+                                     Text="{Binding McpCodeCommand, Mode=OneWay}" />
+                            <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
+                                    Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                                    Content="{loc:Tr SettingsMcpCopy}"
+                                    Command="{Binding CopyToClipboardCommand}"
+                                    CommandParameter="{Binding McpCodeCommand}"
+                                    AutomationProperties.Name="{loc:Tr SettingsMcpCopy}" />
+                        </Grid>
+                        <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}"
+                                   Style="{DynamicResource Daynote.Style.Type.Status}"
+                                   Text="{loc:Tr SettingsMcpCopied}"
+                                   Visibility="{Binding McpCopied, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    </StackPanel>
 
                     <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpFooter}" TextWrapping="Wrap" />
                 </StackPanel>

@@ -138,4 +138,39 @@ public sealed class PackageManifestPolicyTests
             violations.Any(static v => v.Contains("Enabled", StringComparison.Ordinal)),
             "An enabled-by-default StartupTask must be rejected. Got: " + string.Join(" | ", violations));
     }
+
+    [TestMethod]
+    public void Test_manifest_ships_the_mcp_server_behind_an_execution_alias()
+    {
+        XDocument document = LoadManifest();
+        XElement mcp = document.Descendants()
+            .Single(static element => element.Name.LocalName == "Application"
+                && (string?)element.Attribute("Id") == PackageManifestPolicy.ExpectedMcpApplicationId);
+
+        // Bundling the server here is what makes it see the app's virtualized database; the alias is
+        // what an MCP client can actually launch. Both are asserted, plus that it stays hidden.
+        StringAssert.EndsWith((string?)mcp.Attribute("Executable"), "Daynote.Mcp.exe");
+        Assert.AreEqual("Windows.FullTrustApplication", (string?)mcp.Attribute("EntryPoint"));
+        Assert.AreEqual("none", (string?)mcp.Descendants()
+            .Single(static element => element.Name.LocalName == "VisualElements")
+            .Attribute("AppListEntry"));
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpAlias, (string?)mcp.Descendants()
+            .Single(static element => element.Name.LocalName == "ExecutionAlias")
+            .Attribute("Alias"));
+    }
+
+    [TestMethod]
+    public void Test_policy_rejects_a_manifest_whose_mcp_server_lost_its_alias()
+    {
+        XDocument document = LoadManifest();
+        document.Descendants()
+            .Single(static element => element.Name.LocalName == "ExecutionAlias")
+            .Remove();
+
+        IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(document);
+
+        Assert.IsTrue(
+            violations.Any(static violation => violation.Contains("appExecutionAlias", StringComparison.Ordinal)),
+            "Policy accepted an MCP server that no client could launch: " + string.Join(" | ", violations));
+    }
 }

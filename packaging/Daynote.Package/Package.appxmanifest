@@ -28,8 +28,9 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap desktop">
+  IgnorableNamespaces="uap uap3 rescap desktop">
 
   <Identity
     Name="BreadJinhwaJeong.-Daynote"
@@ -88,6 +89,42 @@
             Enabled="false"
             DisplayName="Daynote" />
         </desktop:Extension>
+      </Extensions>
+    </Application>
+
+    <!--
+      MCP SERVER (docs/MCP.md). A second full-trust entry point in the SAME package, so the stdio
+      server runs WITH this package's identity: file-system virtualization applies to it exactly as it
+      does to the app, and it therefore opens the very same daynote.db. A server built and launched
+      from outside the package would instead see the unredirected %LocalAppData%\Daynote and create an
+      empty second database.
+
+      It is hidden from the Start menu / app list (AppListEntry="none") - it is not something a user
+      launches by hand - and is reached through the app execution alias "daynote-mcp.exe", which
+      Windows puts on PATH for the user. MCP clients are therefore configured with the bare command
+      "daynote-mcp.exe": no path, and nothing under the ACL-locked WindowsApps install folder. Settings
+      -> AI integration registers exactly that command.
+    -->
+    <Application
+      Id="DaynoteMcp"
+      Executable="Daynote.Mcp\Daynote.Mcp.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        AppListEntry="none"
+        DisplayName="Daynote MCP server"
+        Description="Exposes your local Daynote notes to MCP clients over stdio."
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png" />
+      <Extensions>
+        <uap3:Extension
+          Category="windows.appExecutionAlias"
+          Executable="Daynote.Mcp\Daynote.Mcp.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="daynote-mcp.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
       </Extensions>
     </Application>
   </Applications>

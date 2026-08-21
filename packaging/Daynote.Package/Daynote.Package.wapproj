@@ -64,7 +64,18 @@
     <ProjectReference Include="..\..\src\Daynote.App\Daynote.App.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>
+    <!--
+      The MCP stdio server ships in the package as a second (hidden) entry point so it runs with the
+      package identity and therefore reads the same virtualized daynote.db as the app - see the
+      MCP SERVER comment in Package.appxmanifest. The packaging targets lay each referenced project's
+      output into a folder named after the project, which is why the manifest points at
+      "Daynote.Mcp\Daynote.Mcp.exe". Daynote.App stays the EntryPointProjectUniqueName.
+    -->
+    <ProjectReference Include="..\..\src\Daynote.Mcp\Daynote.Mcp.csproj">
+      <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
   </ItemGroup>
 
   <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" />
+
 </Project>

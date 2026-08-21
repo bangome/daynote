@@ -349,29 +349,62 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
 
     public string PrivacyText => Localization.AppStrings.SettingsPrivacyText;
 
-    // ── AI integration (MCP) setup guidance ──
+    // ── AI integration (MCP) ──
 
-    /// <summary>Transient "copied" flash shown after a copy button is pressed.</summary>
+    /// <summary>
+    /// Registers the MCP server that ships inside the package. Null in a build composed without it,
+    /// which hides the whole registration control rather than offering a button that cannot work.
+    /// </summary>
+    public Daynote.Core.Mcp.IMcpRegistrationService? Mcp { get; init; }
+
+    /// <summary>
+    /// False when no server command is reachable (an unpackaged dev run with nothing built). The row
+    /// then explains the situation instead of showing an inert button.
+    /// </summary>
+    public bool McpAvailable => Mcp?.ServerCommand is not null;
+
+    /// <summary>The one-line Claude Code command, shown read-only and copyable. Language-neutral.</summary>
+    public string McpCodeCommand => Mcp?.ClaudeCodeCommand ?? string.Empty;
+
+    /// <summary>Transient "copied" flash shown after the copy button is pressed.</summary>
     [ObservableProperty]
     private bool _mcpCopied;
 
-    /// <summary>Command that publishes the MCP stdio server as a self-contained exe. Language-neutral.</summary>
-    public static string McpBuildCommand => @"dotnet publish src\Daynote.Mcp -c Release -r win-x64 --self-contained true -o dist\daynote-mcp";
+    /// <summary>Result line under the registration row (success, already-done, or failure + path).</summary>
+    [ObservableProperty]
+    private string? _mcpStatusText;
 
-    /// <summary>Claude Desktop config JSON snippet; the command path is a placeholder the user edits. Language-neutral.</summary>
-    public static string McpDesktopConfig =>
-        """
+    /// <summary>
+    /// One-click Claude Desktop registration. The config write is additive, so the only failure the
+    /// user has to act on is an unreadable config - and for that the message names the file.
+    /// </summary>
+    [RelayCommand]
+    private async Task RegisterMcpAsync()
+    {
+        if (Mcp is null)
         {
-          "mcpServers": {
-            "daynote": {
-              "command": "C:\\경로\\Daynote.Mcp.exe"
-            }
-          }
+            return;
         }
-        """;
 
-    /// <summary>One-line Claude Code registration command; the exe path is a placeholder. Language-neutral.</summary>
-    public static string McpCodeCommand => "claude mcp add daynote -- \"C:\\경로\\Daynote.Mcp.exe\"";
+        IsBusy = true;
+        try
+        {
+            Daynote.Core.Mcp.McpRegistrationResult result =
+                await Mcp.RegisterClaudeDesktopAsync().ConfigureAwait(true);
+            McpStatusText = result.Outcome switch
+            {
+                Daynote.Core.Mcp.McpRegistrationOutcome.Registered => Localization.AppStrings.SettingsMcpRegistered,
+                Daynote.Core.Mcp.McpRegistrationOutcome.AlreadyRegistered => Localization.AppStrings.SettingsMcpAlreadyRegistered,
+                Daynote.Core.Mcp.McpRegistrationOutcome.Unavailable => Localization.AppStrings.SettingsMcpUnavailable,
+                _ => string.Format(
+                    CultureInfo.CurrentCulture, Localization.AppStrings.SettingsMcpFailedFormat, result.ConfigPath),
+            };
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     /// <summary>Copies the given code/config text to the clipboard and briefly flashes a confirmation.</summary>
     [RelayCommand]

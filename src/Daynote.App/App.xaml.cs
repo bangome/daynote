@@ -129,6 +129,9 @@ public partial class App : System.Windows.Application
             // Null unless this build has a sync endpoint, which keeps the whole section out of the
             // settings panel rather than showing a feature that cannot work.
             Account = _provider.GetService<Account.AccountViewModel>(),
+
+            // Registers the MCP server bundled in this package (docs/MCP.md).
+            Mcp = _provider.GetService<Daynote.Core.Mcp.IMcpRegistrationService>(),
         };
         if (window.ViewModel.SettingsViewModel.Account is { } account)
         {

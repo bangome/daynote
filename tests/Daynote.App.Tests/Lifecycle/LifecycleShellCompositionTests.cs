@@ -73,6 +73,7 @@ public sealed class LifecycleShellCompositionTests
         ShowcaseResources.Load(application, highContrast: false);
         application.Resources["Daynote.Convert.BoolToVisibility"] = new BooleanToVisibilityConverter();
         application.Resources["Daynote.Convert.InverseBool"] = new InverseBooleanConverter();
+        application.Resources["Daynote.Convert.InverseBoolToVisibility"] = new InverseBoolToVisibilityConverter();
         application.Resources["Daynote.Convert.EqualsToVisibility"] = new EqualsToVisibilityConverter();
         application.Resources["Daynote.Convert.EqualsToBool"] = new EqualsToBooleanConverter();
         application.Resources["Daynote.Convert.NullToVisibility"] = new NullToVisibilityConverter();

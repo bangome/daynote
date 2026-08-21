@@ -17,12 +17,19 @@ internal static class PackageManifestPolicy
     private static readonly XNamespace Rescap = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities";
     private static readonly XNamespace Desktop = "http://schemas.microsoft.com/appx/manifest/desktop/windows10";
     private static readonly XNamespace Desktop6 = "http://schemas.microsoft.com/appx/manifest/desktop/windows10/6";
+    private static readonly XNamespace Uap3 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/3";
 
     /// <summary>The StartupTask id must match Daynote.App's ServiceRegistration.StartupTaskId.</summary>
     public const string ExpectedStartupTaskId = "DaynoteStartupTask";
 
     /// <summary>Minimum OS build, matching the TFM net10.0-windows10.0.19041.0.</summary>
     public const string ExpectedMinVersion = "10.0.19041.0";
+
+    /// <summary>The Application id of the bundled MCP stdio server (docs/MCP.md).</summary>
+    public const string ExpectedMcpApplicationId = "DaynoteMcp";
+
+    /// <summary>The alias MCP clients are configured with; must match McpServerCommand.PackagedAlias.</summary>
+    public const string ExpectedMcpAlias = "daynote-mcp.exe";
 
     public const string ExpectedIdentityName = "Daynote.Dev";
     public const string ExpectedPublisher = "CN=Daynote.Dev";
@@ -146,6 +153,61 @@ internal static class PackageManifestPolicy
             }
         }
 
+        EvaluateMcpServer(package, violations);
+
         return violations;
+    }
+
+    /// <summary>
+    /// The MCP server must ship as a second application in THIS package and be reachable through an
+    /// app execution alias. Both halves are load-bearing: packaging it here is what makes the server
+    /// see the same virtualized database as the app, and the alias is the only path a client process
+    /// can actually launch (the install folder under WindowsApps is ACL-locked). It must also stay out
+    /// of the app list, since no user launches a stdio server by hand.
+    /// </summary>
+    private static void EvaluateMcpServer(XElement package, List<string> violations)
+    {
+        List<XElement> applications = package
+            .Element(Foundation + "Applications")?
+            .Elements(Foundation + "Application")
+            .ToList() ?? [];
+
+        XElement? mcp = applications.Find(
+            application => (string?)application.Attribute("Id") == ExpectedMcpApplicationId);
+        if (mcp is null)
+        {
+            violations.Add($"Missing the MCP server <Application Id='{ExpectedMcpApplicationId}'> (docs/MCP.md).");
+            return;
+        }
+
+        if ((string?)mcp.Attribute("EntryPoint") != "Windows.FullTrustApplication")
+        {
+            violations.Add("The MCP server application must be a Windows.FullTrustApplication.");
+        }
+
+        string? executable = (string?)mcp.Attribute("Executable");
+        if (executable is null || !executable.EndsWith("Daynote.Mcp.exe", StringComparison.Ordinal))
+        {
+            violations.Add("The MCP server application must point at Daynote.Mcp.exe.");
+        }
+
+        string? appListEntry = (string?)mcp.Element(Uap + "VisualElements")?.Attribute("AppListEntry");
+        if (!string.Equals(appListEntry, "none", StringComparison.Ordinal))
+        {
+            violations.Add("The MCP server must set uap:VisualElements/@AppListEntry='none' (not user-launchable).");
+        }
+
+        List<string?> aliases = mcp
+            .Elements(Foundation + "Extensions")
+            .Elements(Uap3 + "Extension")
+            .Where(static extension => (string?)extension.Attribute("Category") == "windows.appExecutionAlias")
+            .Elements(Uap3 + "AppExecutionAlias")
+            .Elements(Desktop + "ExecutionAlias")
+            .Select(static alias => (string?)alias.Attribute("Alias"))
+            .ToList();
+        if (!aliases.Contains(ExpectedMcpAlias))
+        {
+            violations.Add($"Missing the windows.appExecutionAlias '{ExpectedMcpAlias}' on the MCP server application.");
+        }
     }
 }

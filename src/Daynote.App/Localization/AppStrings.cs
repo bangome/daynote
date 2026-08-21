@@ -115,9 +115,13 @@ public static class AppStrings
     public static string SettingsMcpRow => LocalizationService.Instance[nameof(SettingsMcpRow)];
     public static string SettingsMcpLabel => LocalizationService.Instance[nameof(SettingsMcpLabel)];
     public static string SettingsMcpDesc => LocalizationService.Instance[nameof(SettingsMcpDesc)];
-    public static string SettingsMcpStep1 => LocalizationService.Instance[nameof(SettingsMcpStep1)];
-    public static string SettingsMcpStep2 => LocalizationService.Instance[nameof(SettingsMcpStep2)];
-    public static string SettingsMcpStep3 => LocalizationService.Instance[nameof(SettingsMcpStep3)];
+    public static string SettingsMcpRegister => LocalizationService.Instance[nameof(SettingsMcpRegister)];
+    public static string SettingsMcpRegistered => LocalizationService.Instance[nameof(SettingsMcpRegistered)];
+    public static string SettingsMcpAlreadyRegistered => LocalizationService.Instance[nameof(SettingsMcpAlreadyRegistered)];
+    /// <summary>{0} = the config file path that could not be written.</summary>
+    public static string SettingsMcpFailedFormat => LocalizationService.Instance[nameof(SettingsMcpFailedFormat)];
+    public static string SettingsMcpUnavailable => LocalizationService.Instance[nameof(SettingsMcpUnavailable)];
+    public static string SettingsMcpCodeHint => LocalizationService.Instance[nameof(SettingsMcpCodeHint)];
     public static string SettingsMcpFooter => LocalizationService.Instance[nameof(SettingsMcpFooter)];
     public static string SettingsMcpCopy => LocalizationService.Instance[nameof(SettingsMcpCopy)];
     public static string SettingsMcpCopied => LocalizationService.Instance[nameof(SettingsMcpCopied)];

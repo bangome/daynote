@@ -108,13 +108,15 @@ internal static class EnglishStrings
         ["SettingsMcpRow"] = "AI integration",
         ["SettingsMcpLabel"] = "AI integration (MCP)",
         ["SettingsMcpDesc"] =
-            "Connect an MCP server so AI tools like Claude can read and write your Daynote notes directly. Follow the steps below.",
-        ["SettingsMcpStep1"] =
-            "1. Build the MCP server — run this in the Daynote source folder. Output: dist\\daynote-mcp\\Daynote.Mcp.exe",
-        ["SettingsMcpStep2"] =
-            "2. Register with Claude Desktop — add this to %AppData%\\Claude\\claude_desktop_config.json, replace the command path with your real exe location, then restart Claude Desktop.",
-        ["SettingsMcpStep3"] =
-            "3. Register with Claude Code (optional) — you can add it with one terminal command.",
+            "Let AI tools like Claude read and write your Daynote notes directly. The MCP server is " +
+            "installed alongside Daynote, so one button registers it - nothing to build or download.",
+        ["SettingsMcpRegister"] = "Register with Claude Desktop",
+        ["SettingsMcpRegistered"] = "Registered. Restart Claude Desktop and the daynote tools appear.",
+        ["SettingsMcpAlreadyRegistered"] = "Already registered.",
+        ["SettingsMcpFailedFormat"] = "Registration failed. Please check the config file yourself: {0}",
+        ["SettingsMcpUnavailable"] =
+            "This build has no MCP server to register. The feature ships with Daynote installed from the Microsoft Store.",
+        ["SettingsMcpCodeHint"] = "For Claude Code, run this one line in a terminal instead.",
         ["SettingsMcpFooter"] =
             "Tools provided: search, by-date, recent list, create, update, delete. See docs/MCP.md for details.",
         ["SettingsMcpCopy"] = "Copy",

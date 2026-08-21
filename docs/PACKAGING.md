@@ -12,6 +12,12 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 - A **Windows startup task** (`TaskId=DaynoteStartupTask`), **disabled by default and
   opt-in**: the app never auto-enables it (Store policy). The user turns it on from
   Settings, and user/policy-disabled states are never overridden.
+- The **MCP stdio server** (`Daynote.Mcp`) as a second, hidden entry point
+  (`AppListEntry="none"`), reachable through the app execution alias
+  `daynote-mcp.exe`. It ships in the same package on purpose: only then does the
+  server inherit the package identity, and with it the redirected data path below, so
+  it opens the very same database as the app. Settings -> AI integration registers the
+  alias with Claude Desktop / Claude Code. See [MCP.md](MCP.md).
 
 No x86/Arm64 artifact and no auto-update feed are produced here. For **Store**
 submission see [STORE.md](STORE.md) (`scripts/Build-Package.ps1 -Store`).

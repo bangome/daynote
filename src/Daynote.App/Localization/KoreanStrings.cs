@@ -111,13 +111,15 @@ internal static class KoreanStrings
         ["SettingsMcpRow"] = "AI 연동",
         ["SettingsMcpLabel"] = "AI 연동 (MCP)",
         ["SettingsMcpDesc"] =
-            "Claude 같은 AI 도구가 Daynote 노트를 직접 읽고 쓸 수 있도록 MCP 서버를 연결할 수 있습니다. 아래 순서를 따라 설정하세요.",
-        ["SettingsMcpStep1"] =
-            "1. MCP 서버 빌드하기 — Daynote 소스 폴더에서 아래 명령을 실행하세요. 결과 실행 파일: dist\\daynote-mcp\\Daynote.Mcp.exe",
-        ["SettingsMcpStep2"] =
-            "2. Claude Desktop에 등록 — %AppData%\\Claude\\claude_desktop_config.json 에 아래 내용을 추가하고 command 경로를 실제 exe 위치로 바꾼 뒤 Claude Desktop을 재시작하세요.",
-        ["SettingsMcpStep3"] =
-            "3. Claude Code에 등록 (선택) — 터미널에서 한 줄로 등록할 수도 있습니다.",
+            "Claude 같은 AI 도구가 Daynote 노트를 직접 읽고 쓸 수 있습니다. MCP 서버는 Daynote에 함께 설치되어 " +
+            "있으므로 따로 빌드하거나 내려받을 필요 없이 버튼 한 번으로 등록됩니다.",
+        ["SettingsMcpRegister"] = "Claude Desktop에 등록",
+        ["SettingsMcpRegistered"] = "등록했습니다. Claude Desktop을 재시작하면 daynote 도구가 나타납니다.",
+        ["SettingsMcpAlreadyRegistered"] = "이미 등록되어 있습니다.",
+        ["SettingsMcpFailedFormat"] = "등록하지 못했습니다. 설정 파일을 직접 확인해 주세요: {0}",
+        ["SettingsMcpUnavailable"] =
+            "이 실행 환경에는 등록할 MCP 서버가 없습니다. Microsoft Store에서 설치한 Daynote에서 쓸 수 있는 기능입니다.",
+        ["SettingsMcpCodeHint"] = "Claude Code에서는 터미널에 아래 한 줄을 실행하세요.",
         ["SettingsMcpFooter"] =
             "제공 도구: 노트 검색 · 날짜별 조회 · 최근 목록 · 생성 · 수정 · 삭제. 자세한 내용은 docs/MCP.md 를 참고하세요.",
         ["SettingsMcpCopy"] = "복사",

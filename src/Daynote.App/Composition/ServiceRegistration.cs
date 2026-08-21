@@ -67,6 +67,14 @@ public static class ServiceRegistration
         services.AddSingleton<Daynote.Core.Backup.IBackupService>(
             new Daynote.Infrastructure.Backup.BackupService(options.DataRoot, options.DatabasePath));
         services.AddSingleton<Settings.IBackupFilePicker, Settings.Win32BackupFilePicker>();
+
+        // AI integration: registers the MCP server that ships inside the package (docs/MCP.md). The
+        // command is the package's app execution alias, which is what makes the server see the same
+        // virtualized database as the app.
+        services.AddSingleton<Daynote.Core.Mcp.IMcpRegistrationService>(_ =>
+            new Daynote.Infrastructure.Mcp.ClaudeDesktopMcpRegistration(
+                Daynote.Infrastructure.Mcp.ClaudeDesktopMcpRegistration.DefaultConfigPath,
+                Daynote.Infrastructure.Mcp.McpServerCommand.Current));
         services.AddSingleton(sp => new Input.ConfigurableShortcuts(sp.GetRequiredService<ISettingsStore>()));
         services.AddSingleton(sp => new Onboarding.TutorialViewModel(
             sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<Input.ConfigurableShortcuts>(),
