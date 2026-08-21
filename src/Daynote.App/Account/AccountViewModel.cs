@@ -312,6 +312,14 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         AccountFailure.RewrapRequired => AppStrings.AccountErrorRewrapRequired,
         AccountFailure.UnsupportedKdfProfile => AppStrings.AccountErrorUnsupportedVersion,
         AccountFailure.Offline => AppStrings.AccountErrorOffline,
+        // The recovery failures were missing here, so every one of them rendered as the generic
+        // "the sync service had a problem, try again later". That is actively misleading on the one
+        // path where the user has something to do: a wrong reset code needs re-typing or a new code,
+        // a wrong recovery key needs the right one, and no-way-to-unlock needs another device or a
+        // deliberate discard. None of them are helped by waiting.
+        AccountFailure.InvalidResetCode => AppStrings.AccountErrorInvalidResetCode,
+        AccountFailure.InvalidRecoveryKey => AppStrings.AccountErrorInvalidRecoveryKeyEntered,
+        AccountFailure.NoWayToUnlock => AppStrings.AccountErrorNoWayToUnlock,
         _ => AppStrings.AccountErrorServer,
     };
 

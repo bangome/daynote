@@ -156,14 +156,19 @@ public sealed class AccountRecoveryViewModelTests
     }
 
     [TestMethod]
-    public async Task Every_recovery_failure_maps_to_catalog_copy()
+    public async Task Every_recovery_failure_maps_to_its_own_catalog_copy()
     {
-        foreach (AccountFailure failure in new[]
-        {
-            AccountFailure.InvalidResetCode,
-            AccountFailure.InvalidRecoveryKey,
-            AccountFailure.NoWayToUnlock,
-        })
+        // This used to assert only that the message was not the developer text, which the generic
+        // "the sync service had a problem" satisfied — so it passed while all three of these
+        // failures rendered identically and told the user to wait for nothing.
+        (AccountFailure Failure, string Expected)[] cases =
+        [
+            (AccountFailure.InvalidResetCode, AppStrings.AccountErrorInvalidResetCode),
+            (AccountFailure.InvalidRecoveryKey, AppStrings.AccountErrorInvalidRecoveryKeyEntered),
+            (AccountFailure.NoWayToUnlock, AppStrings.AccountErrorNoWayToUnlock),
+        ];
+
+        foreach ((AccountFailure failure, string expected) in cases)
         {
             accounts = new FakeAccounts(store) { NextFailure = new AccountException(failure, "developer text") };
             AccountViewModel vm = Create();
@@ -173,9 +178,26 @@ public sealed class AccountRecoveryViewModelTests
 
             await vm.ConfirmResetCommand.ExecuteAsync("the new password");
 
-            Assert.IsNotNull(vm.ErrorMessage, failure.ToString());
-            Assert.AreNotEqual("developer text", vm.ErrorMessage, failure.ToString());
+            Assert.AreEqual(expected, vm.ErrorMessage, failure.ToString());
+            Assert.AreNotEqual(AppStrings.AccountErrorServer, vm.ErrorMessage, failure.ToString());
         }
+    }
+
+    [TestMethod]
+    public async Task An_account_with_no_recovery_envelope_says_so_instead_of_blaming_the_server()
+    {
+        accounts = new FakeAccounts(store) { RecoveryEnvelopeStored = false };
+        AccountViewModel vm = Create();
+        vm.Email = "alice@example.test";
+        await vm.SignInCommand.ExecuteAsync("the old password");
+        vm.RecoveryKeyEntry = RecoveryKey.Generate().ToDisplayString();
+
+        await vm.UnlockCommand.ExecuteAsync("the new password");
+
+        // Nothing on this PC can open the cloud copy, so the user needs the other-device / discard
+        // options named — not an invitation to try again later.
+        Assert.AreEqual(AppStrings.AccountErrorNoWayToUnlock, vm.ErrorMessage);
+        Assert.AreEqual(0, accounts.UnlockAttempts);
     }
 
     [TestMethod]

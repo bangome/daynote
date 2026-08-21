@@ -45,6 +45,13 @@ internal sealed class FakeAccounts
         set => crypto.FailUnwrap = value;
     }
 
+    /// <summary>
+    /// Whether the account has a recovery envelope stored server-side. True by default: an account
+    /// registered with a recovery key has one, and /auth/me returns it as wrapped_dek_rk. Set false to
+    /// exercise the account that cannot be unlocked at all.
+    /// </summary>
+    internal bool RecoveryEnvelopeStored { get; set; } = true;
+
     /// <summary>How many times a recovery key actually reached the unlock path.</summary>
     internal int UnlockAttempts { get; private set; }
 
@@ -77,7 +84,17 @@ internal sealed class FakeAccounts
         }
 
         public ValueTask<AccountSummary> GetAccountAsync(string accessToken, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(new AccountSummary("u", "alice@example.test", true, false, 1, []));
+            ValueTask.FromResult(new AccountSummary(
+                "u",
+                "alice@example.test",
+                RecoveryKeySet: owner.RecoveryEnvelopeStored,
+                RewrapPending: false,
+                DekGeneration: 1,
+                Devices: [],
+                // This was omitted, so it defaulted to null and every unlock threw NoWayToUnlock
+                // before it could reach the recovery key at all — the fake was modelling an account
+                // with no recovery envelope while the tests were about one that has it.
+                WrappedDekRecovery: owner.RecoveryEnvelopeStored ? InstantCrypto.Envelope : null));
 
         public ValueTask RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
         {
