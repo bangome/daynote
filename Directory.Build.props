@@ -9,5 +9,14 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!--
+      Declared repo-wide so the committed lock files stay valid under BOTH restores this repo performs:
+      the plain locked-mode restore (scripts/Build-Package.ps1 step 1, CI) and the win-x64 publish the MSIX
+      packaging project runs over Daynote.App and everything it references. Without it, packaging wrote
+      a win-x64 target into lock files whose project declared no RID, and the next locked-mode restore
+      failed with NU1004. This only widens what restore is allowed to resolve; it does not set
+      RuntimeIdentifier, so a plain build is unchanged.
+    -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 </Project>

@@ -43,6 +43,16 @@ pwsh -File scripts/Build-Package.ps1 -Configuration Release -Architecture x64 `
     -OutputDirectory artifacts\package
 ```
 
+### Lock files and the win-x64 RID
+
+Packaging publishes `Daynote.App` and everything it references for `win-x64`, so restore records a
+win-x64 target in those projects' `packages.lock.json`. `Directory.Build.props` therefore declares
+`<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>` repo-wide: without it those lock files named a RID
+their project did not, and the next locked-mode restore failed with NU1004 - so a packaging run left
+the repo unable to restore. With it, the committed lock files satisfy both restores and a packaging run
+leaves the working tree unchanged. Step 1's locked restore is the guard: if the lock files ever drift
+again, packaging fails there rather than silently rewriting them.
+
 The script always performs the locked restore, `-warnaserror` build, and the
 self-contained `win-x64` publish. It builds the `.msix` only when a full MSBuild with
 the DesktopBridge targets is present (Visual Studio "Windows application packaging"
