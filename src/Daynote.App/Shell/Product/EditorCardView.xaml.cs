@@ -30,6 +30,7 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
     {
         InitializeComponent();
         BodyBox.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnBodyScroll));
+        HighlightScroll.ScrollChanged += OnHighlightScroll;
 
         // File-link plumbing: paste stores images/files as day files and inserts a [[file:…]] marker;
         // dropping a 파일-tab card (or Explorer files) does the same; clicking a marker reveals the file.
@@ -142,8 +143,35 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
 
     private void OnBodyScroll(object sender, ScrollChangedEventArgs e)
     {
-        HighlightScroll.ScrollToVerticalOffset(e.VerticalOffset);
-        HighlightScroll.ScrollToHorizontalOffset(e.HorizontalOffset);
+        _ = e;
+        SyncHighlightOffset();
+    }
+
+    /// <summary>
+    /// Re-mirrors the offset after the highlight layer's own extent changes.
+    /// </summary>
+    /// <remarks>
+    /// <c>ScrollToVerticalOffset</c> clamps to the <c>ScrollableHeight</c> the target has at that
+    /// instant, and says nothing when it does. The highlight layer's content is replaced on the same
+    /// TextChanged that precedes the editor's ScrollChanged, so a mirror can land while its extent is
+    /// still the shorter, pre-edit one: the offset is silently clamped, no further ScrollChanged
+    /// arrives to correct it, and the glyphs stay parked above the caret. Typing then lands a line or
+    /// more away from where the caret is drawn. Reissuing whenever the extent changes closes that
+    /// window; a plain offset change carries no extent delta, so this cannot recurse.
+    /// </remarks>
+    private void OnHighlightScroll(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ExtentHeightChange != 0 || e.ExtentWidthChange != 0)
+        {
+            SyncHighlightOffset();
+        }
+    }
+
+    /// <summary>Aligns the glyph layer with the editor, reading the editor's live offset rather than a cached one.</summary>
+    private void SyncHighlightOffset()
+    {
+        HighlightScroll.ScrollToVerticalOffset(BodyBox.VerticalOffset);
+        HighlightScroll.ScrollToHorizontalOffset(BodyBox.HorizontalOffset);
     }
 
     private void OnTitleLostFocus(object sender, RoutedEventArgs e)
