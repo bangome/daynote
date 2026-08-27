@@ -140,24 +140,48 @@ public sealed class PackageManifestPolicyTests
     }
 
     [TestMethod]
-    public void Test_manifest_ships_the_mcp_server_behind_an_execution_alias()
+    public void Test_the_mcp_server_is_an_alias_on_the_app_not_an_app_of_its_own()
     {
         XDocument document = LoadManifest();
-        XElement mcp = document.Descendants()
-            .Single(static element => element.Name.LocalName == "Application"
-                && (string?)element.Attribute("Id") == PackageManifestPolicy.ExpectedMcpApplicationId);
 
-        // Bundling the server here is what makes it see the app's virtualized database; the alias is
-        // what an MCP client can actually launch. Both are asserted, plus that it stays hidden.
-        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpExecutable, (string?)mcp.Attribute("Executable"),
-            "the server must stay in the app's folder so the package carries one copy of the runtime");
-        Assert.AreEqual("Windows.FullTrustApplication", (string?)mcp.Attribute("EntryPoint"));
-        Assert.AreEqual("none", (string?)mcp.Descendants()
-            .Single(static element => element.Name.LocalName == "VisualElements")
-            .Attribute("AppListEntry"));
-        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpAlias, (string?)mcp.Descendants()
-            .Single(static element => element.Name.LocalName == "ExecutionAlias")
-            .Attribute("Alias"));
+        // Partner Center refused an earlier build for exactly this: a second <Application> with
+        // AppListEntry="none" is a headless app, which needs a HeadlessAppBypass entitlement. The
+        // alias rides on the app's own entry instead, which also keeps a useless Start-menu tile off
+        // a server that only speaks stdio.
+        List<XElement> applications = document.Descendants()
+            .Where(static element => element.Name.LocalName == "Application")
+            .ToList();
+        Assert.AreEqual(1, applications.Count, "the package must declare exactly one application");
+        Assert.AreEqual(PackageManifestPolicy.ExpectedApplicationId, (string?)applications[0].Attribute("Id"));
+
+        Assert.IsFalse(
+            document.Descendants().Any(static element => element.Attribute("AppListEntry") is not null),
+            "AppListEntry must not appear anywhere; it is what made the package headless");
+
+        XElement alias = document.Descendants()
+            .Single(static element => element.Name.LocalName == "ExecutionAlias");
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpAlias, (string?)alias.Attribute("Alias"));
+
+        // The alias names an executable other than the one hosting it, which is what lets a single
+        // application entry publish the server.
+        XElement extension = document.Descendants()
+            .Single(static element => (string?)element.Attribute("Category") == "windows.appExecutionAlias");
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpExecutable, (string?)extension.Attribute("Executable"));
+    }
+
+    [TestMethod]
+    public void Test_policy_rejects_a_manifest_that_hides_an_application_from_the_app_list()
+    {
+        XDocument document = LoadManifest();
+        document.Descendants()
+            .First(static element => element.Name.LocalName == "VisualElements")
+            .SetAttributeValue("AppListEntry", "none");
+
+        IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(document);
+
+        Assert.IsTrue(
+            violations.Any(static violation => violation.Contains("HeadlessAppBypass", StringComparison.Ordinal)),
+            "Policy accepted the shape Partner Center rejects: " + string.Join(" | ", violations));
     }
 
     [TestMethod]
