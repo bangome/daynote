@@ -1,0 +1,40 @@
+name = "daynote-cloud"
+main = "src/index.ts"
+compatibility_date = "2025-09-15"
+
+# No *.workers.dev hostname and no preview URLs: the service accepts account registrations, so it
+# should only be reachable on a domain that is deliberately attached. Flip workers_dev to true for a
+# throwaway verification run, then flip it back.
+workers_dev = false
+preview_urls = false
+
+# JWT_SECRET is a secret, not a var. Set it with:
+#   wrangler secret put JWT_SECRET
+# Generate one with:
+#   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+
+# Password-reset email, over Resend. The API key is a secret:
+#   wrangler secret put RESEND_API_KEY
+# No DKIM key lives here: Resend holds the private half and gives you a public key to publish. See
+# DEPLOY.md for the three DNS records daynote.arachat.cc needs.
+
+[vars]
+ACCESS_TOKEN_TTL_SECONDS = "900"
+REFRESH_TOKEN_TTL_DAYS = "60"
+EMAIL_FROM = "no-reply@daynote.arachat.cc"
+EMAIL_FROM_NAME = "Daynote"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "daynote"
+database_id = "4226d475-a071-44c0-a2c7-4a953cbaa44e"
+migrations_dir = "migrations"
+
+# R2 arrives with Phase 7 (encrypted attachments); left commented so the binding is not silently
+# created before the code that uses it exists.
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "daynote-assets"
+
+[observability]
+enabled = true

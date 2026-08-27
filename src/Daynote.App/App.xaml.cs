@@ -124,7 +124,19 @@ public partial class App : System.Windows.Application
             async () => (await window.ViewModel.Notes.FlushAsync(Daynote.Core.Notes.FlushReason.Quit).ConfigureAwait(true)).CanProceed,
             RequestRestartForRestore,
             () => { window.ViewModel.CloseSettings(); tutorial.Open(); },
-            options.DataRoot);
+            options.DataRoot)
+        {
+            // Null unless this build has a sync endpoint, which keeps the whole section out of the
+            // settings panel rather than showing a feature that cannot work.
+            Account = _provider.GetService<Account.AccountViewModel>(),
+
+            // Registers the MCP server bundled in this package (docs/MCP.md).
+            Mcp = _provider.GetService<Daynote.Core.Mcp.IMcpRegistrationService>(),
+        };
+        if (window.ViewModel.SettingsViewModel.Account is { } account)
+        {
+            _ = account.InitializeAsync();
+        }
 
         // Switching language rewrites the untouched first-run sample note into the new language too.
         Localization.LocalizationService.Instance.LanguageChanged += (_, _) => _ = RelocalizeSampleNoteAsync(window);

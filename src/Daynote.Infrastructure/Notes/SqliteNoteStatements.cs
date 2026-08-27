@@ -161,8 +161,27 @@ internal static class SqliteNoteStatements
         return checked(request.Revision + 1);
     }
 
-    public static void Delete(SqliteConnection connection, SqliteTransaction transaction, NoteId id)
+    /// <summary>
+    /// Deletes a note. <paramref name="deletedUtc"/> records the cloud-sync tombstone from the app's
+    /// clock: the AFTER DELETE trigger would otherwise stamp it from SQLite's own <c>'now'</c>, which
+    /// no test can control and which last-write-wins depends on for ordering a delete against an edit.
+    /// The trigger stays as the safety net for any writer that bypasses this method.
+    /// </summary>
+    public static void Delete(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        NoteId id,
+        string deletedUtc)
     {
+        using (SqliteCommand tombstone = Create(connection, transaction,
+            "INSERT INTO sync_tombstones(entity,entity_id,deleted_utc) VALUES('note',$id,$utc) " +
+            "ON CONFLICT(entity,entity_id) DO UPDATE SET deleted_utc=excluded.deleted_utc;"))
+        {
+            tombstone.Parameters.AddWithValue("$id", id.ToString());
+            tombstone.Parameters.AddWithValue("$utc", deletedUtc);
+            tombstone.ExecuteNonQuery();
+        }
+
         using SqliteCommand search = Create(connection, transaction, "DELETE FROM search_documents WHERE source_type='note' AND source_id=$id;");
         search.Parameters.AddWithValue("$id", id.ToString());
         search.ExecuteNonQuery();

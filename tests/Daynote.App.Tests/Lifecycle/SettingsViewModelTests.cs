@@ -262,6 +262,47 @@ public sealed class SettingsViewModelTests
 
         StringAssert.Contains(vm.StorageLocation, "Daynote");
         StringAssert.Contains(vm.PrivacyText, "평문");
-        StringAssert.Contains(vm.PrivacyText, "전송하지 않습니다");
+
+        // This used to pin the phrase "전송하지 않습니다" - it was pinning the inaccuracy. What the
+        // statement must actually carry is the no-telemetry promise, which is still true.
+        StringAssert.Contains(vm.PrivacyText, "원격 측정이 없습니다");
+    }
+
+    [TestMethod]
+    public async Task Test_Privacy_text_discloses_the_MCP_integration()
+    {
+        (SettingsViewModel vm, _) = await CreateAsync(StartupTaskState.Disabled);
+
+        // The MCP server ships in every build, so its disclosure is never optional.
+        StringAssert.Contains(vm.PrivacyText, "AI 연동(MCP)");
+    }
+
+    [TestMethod]
+    public void Test_Privacy_text_mentions_uploading_only_when_this_build_can_sync()
+    {
+        string withSync = SettingsViewModel.ComposePrivacyText(cloudSyncAvailable: true);
+        string withoutSync = SettingsViewModel.ComposePrivacyText(cloudSyncAvailable: false);
+
+        StringAssert.Contains(withSync, "클라우드 동기화");
+        Assert.IsFalse(
+            withoutSync.Contains("클라우드 동기화", StringComparison.Ordinal),
+            "a build with no sync endpoint makes no network calls, so it must not describe uploading");
+    }
+
+    [TestMethod]
+    public void Test_Privacy_text_no_longer_claims_nothing_leaves_the_machine()
+    {
+        // The old wording ("does not encrypt, sync, or send over the network") was the actual defect:
+        // both cloud sync and the MCP server can move note content off this PC.
+        foreach (string text in new[]
+        {
+            SettingsViewModel.ComposePrivacyText(cloudSyncAvailable: true),
+            SettingsViewModel.ComposePrivacyText(cloudSyncAvailable: false),
+        })
+        {
+            Assert.IsFalse(
+                text.Contains("네트워크로 전송하지 않습니다", StringComparison.Ordinal),
+                "the privacy statement must not promise that nothing is ever sent: " + text);
+        }
     }
 }

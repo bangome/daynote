@@ -64,7 +64,74 @@
     <ProjectReference Include="..\..\src\Daynote.App\Daynote.App.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>
+    <!--
+      The MCP stdio server ships in the package as a second (hidden) entry point so it runs with the
+      package identity and therefore reads the same virtualized daynote.db as the app - see the
+      MCP SERVER comment in Package.appxmanifest. The packaging targets lay each referenced project's
+      output into a folder named after the project, which is why the manifest points at
+      "Daynote.Mcp\Daynote.Mcp.exe". Daynote.App stays the EntryPointProjectUniqueName.
+    -->
+    <ProjectReference Include="..\..\src\Daynote.Mcp\Daynote.Mcp.csproj">
+      <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
   </ItemGroup>
 
   <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" />
+
+  <!--
+    Co-locate the MCP server with the app instead of giving it its own folder.
+
+    By default the packaging targets lay each referenced project's publish output into a folder named
+    after the project. For Daynote.Mcp that folder is ~113 MB, of which ~109 MB is byte-identical to
+    what is already in Daynote.App\ - both are self-contained publishes of the same runtime. So we keep
+    only the three files that are genuinely the server's (its apphost and the two host config files)
+    and move them next to the app, where the runtime and every shared assembly already sit.
+
+    Daynote.Mcp.dll itself and the MCP-only packages arrive in Daynote.App\ through the ProjectReference
+    Daynote.App has on Daynote.Mcp; that reference is also what guarantees a single dependency graph, so
+    this merge cannot produce a folder with two different builds of one assembly name. Build-Package.ps1
+    re-checks the merged folder against Daynote.Mcp.deps.json after packaging.
+
+    The rewrite happens on the layout items produced by _ConvertItems, and must cover the upload
+    (Store) list as well as the local one.
+  -->
+  <Target Name="_DaynoteCoLocateMcpServer" AfterTargets="_ConvertItems">
+    <PropertyGroup>
+      <_DaynoteMcpLayoutPrefix>Daynote.Mcp$([System.IO.Path]::DirectorySeparatorChar)</_DaynoteMcpLayoutPrefix>
+      <_DaynoteAppLayoutDir>Daynote.App$([System.IO.Path]::DirectorySeparatorChar)</_DaynoteAppLayoutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- Everything the MCP publish contributed, and the subset that must survive the merge. -->
+      <_DaynoteMcpLayout Include="@(WapProjPackageFile)"
+                         Condition="$([System.String]::Copy('%(TargetPath)').StartsWith('$(_DaynoteMcpLayoutPrefix)'))" />
+      <_DaynoteMcpHost Include="@(_DaynoteMcpLayout)"
+                       Condition="'%(Filename)%(Extension)' == 'Daynote.Mcp.exe'
+                               or '%(Filename)%(Extension)' == 'Daynote.Mcp.deps.json'
+                               or '%(Filename)%(Extension)' == 'Daynote.Mcp.runtimeconfig.json'" />
+
+      <_DaynoteMcpUploadLayout Include="@(UploadWapProjPackageFile)"
+                               Condition="$([System.String]::Copy('%(TargetPath)').StartsWith('$(_DaynoteMcpLayoutPrefix)'))" />
+      <_DaynoteMcpUploadHost Include="@(_DaynoteMcpUploadLayout)"
+                             Condition="'%(Filename)%(Extension)' == 'Daynote.Mcp.exe'
+                                     or '%(Filename)%(Extension)' == 'Daynote.Mcp.deps.json'
+                                     or '%(Filename)%(Extension)' == 'Daynote.Mcp.runtimeconfig.json'" />
+    </ItemGroup>
+
+    <!-- A silent merge that dropped the apphost would ship a package whose second entry point does
+         not exist, so fail loudly instead. -->
+    <Error Condition="'@(_DaynoteMcpLayout)' != '' and '@(_DaynoteMcpHost)' == ''"
+           Text="The MCP publish contributed files but no Daynote.Mcp.exe / host config to co-locate." />
+
+    <ItemGroup>
+      <WapProjPackageFile Remove="@(_DaynoteMcpLayout)" />
+      <WapProjPackageFile Include="@(_DaynoteMcpHost)" TargetPath="$(_DaynoteAppLayoutDir)%(Filename)%(Extension)" />
+
+      <UploadWapProjPackageFile Remove="@(_DaynoteMcpUploadLayout)" />
+      <UploadWapProjPackageFile Include="@(_DaynoteMcpUploadHost)" TargetPath="$(_DaynoteAppLayoutDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Co-located the MCP server: kept @(_DaynoteMcpHost->Count()) host file(s) in $(_DaynoteAppLayoutDir), dropped @(_DaynoteMcpLayout->Count()) duplicate(s) of the app's runtime." />
+  </Target>
 </Project>

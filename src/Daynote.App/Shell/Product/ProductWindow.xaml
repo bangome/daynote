@@ -7,6 +7,7 @@
     xmlns:lifecycle="clr-namespace:Daynote.App.Lifecycle"
     xmlns:onboarding="clr-namespace:Daynote.App.Onboarding"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:account="clr-namespace:Daynote.App.Account"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -171,6 +172,7 @@
                               Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                     </Grid>
                 </Button>
+                <account:SyncStatusChip DataContext="{Binding Account}" VerticalAlignment="Center" Margin="0,0,4,0" />
                 <Button x:Name="TutSettings" Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
                         Command="{Binding ToggleSettingsCommand}" ToolTip="{loc:Tr SettingsTitle}"
                         AutomationProperties.Name="{loc:Tr SettingsTitle}">
@@ -656,49 +658,8 @@
         </Grid>
 
         <!-- Search dropdown overlay -->
-        <Border Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center" Width="480" Margin="0,4,0,0"
-                MaxHeight="420" Panel.ZIndex="50" Style="{DynamicResource Daynote.Product.Style.Card}"
-                Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}"
-                Visibility="{Binding Search.IsOpen, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="6">
-                <StackPanel>
-                    <ItemsControl ItemsSource="{Binding Search.Results}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type product:SearchResultRowViewModel}">
-                                <Button HorizontalContentAlignment="Stretch" Command="{Binding ActivateCommand}"
-                                        Style="{DynamicResource Daynote.Product.Style.SearchResultButton}" Padding="10,8">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" MinWidth="38" Background="{DynamicResource Daynote.Product.Brush.AccentSoft}"
-                                                CornerRadius="{DynamicResource Daynote.Product.Radius.Chip}" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Kind}" FontSize="10" FontWeight="SemiBold" TextAlignment="Center"
-                                                       Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource Daynote.Product.Brush.Text}"
-                                                       product:SearchHighlight.Query="{Binding Query}" product:SearchHighlight.Text="{Binding Title}" />
-                                            <TextBlock FontSize="11.5" TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
-                                                       product:SearchHighlight.Query="{Binding Query}" product:SearchHighlight.Text="{Binding Sub}" />
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding DateLabel}" FontSize="11" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
-                                    </Grid>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock Text="{loc:Tr SearchNoResultsRow}" TextAlignment="Center" Margin="14" FontSize="12"
-                               Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
-                               Visibility="{Binding Search.NoResults, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
+        <product:SearchDropdownView Grid.Row="1" Panel.ZIndex="50" DataContext="{Binding Search}"
+                                    Visibility="{Binding IsOpen, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
 
         <!-- Settings overlay (reused, minimally hosted) -->
         <settings:SettingsView x:Name="SettingsHost" Grid.Row="1" DataContext="{Binding SettingsViewModel}"

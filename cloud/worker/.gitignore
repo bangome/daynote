@@ -1,0 +1,7 @@
+node_modules/
+.omc/
+.wrangler/
+.dev.vars
+.dev.vars.*
+dist/
+*.log

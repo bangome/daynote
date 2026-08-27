@@ -101,20 +101,27 @@ internal static class EnglishStrings
         ["SettingsStartupDisabledByUserText"] = "Turned off in Windows startup app settings. Re-enable it there.",
         ["SettingsStartupUnavailableText"] = "Startup app settings are unavailable on this device.",
         ["SettingsPrivacyText"] =
-            "Notes are stored in a plain-text SQLite database, and attachments as local files. " +
-            "Daynote does not encrypt, sync, or send them over the network.",
+            "Notes are stored in a plain-text SQLite database on this PC, and attachments as local " +
+            "files. Daynote itself has no analytics and no telemetry.",
+        ["SettingsPrivacyMcp"] =
+            "If you register the AI integration (MCP), the AI client you connect can read and write " +
+            "your notes, and that client may send their content to its own service.",
+        ["SettingsPrivacySync"] =
+            "Cloud sync is off by default. When you sign in, notes are encrypted on this PC before they are uploaded.",
 
         // AI integration / MCP (settings)
         ["SettingsMcpRow"] = "AI integration",
         ["SettingsMcpLabel"] = "AI integration (MCP)",
         ["SettingsMcpDesc"] =
-            "Connect an MCP server so AI tools like Claude can read and write your Daynote notes directly. Follow the steps below.",
-        ["SettingsMcpStep1"] =
-            "1. Build the MCP server — run this in the Daynote source folder. Output: dist\\daynote-mcp\\Daynote.Mcp.exe",
-        ["SettingsMcpStep2"] =
-            "2. Register with Claude Desktop — add this to %AppData%\\Claude\\claude_desktop_config.json, replace the command path with your real exe location, then restart Claude Desktop.",
-        ["SettingsMcpStep3"] =
-            "3. Register with Claude Code (optional) — you can add it with one terminal command.",
+            "Let AI tools like Claude read and write your Daynote notes directly. The MCP server is " +
+            "installed alongside Daynote, so one button registers it - nothing to build or download.",
+        ["SettingsMcpRegister"] = "Register with Claude Desktop",
+        ["SettingsMcpRegistered"] = "Registered. Restart Claude Desktop and the daynote tools appear.",
+        ["SettingsMcpAlreadyRegistered"] = "Already registered.",
+        ["SettingsMcpFailedFormat"] = "Registration failed. Please check the config file yourself: {0}",
+        ["SettingsMcpUnavailable"] =
+            "This build has no MCP server to register. The feature ships with Daynote installed from the Microsoft Store.",
+        ["SettingsMcpCodeHint"] = "For Claude Code, run this one line in a terminal instead.",
         ["SettingsMcpFooter"] =
             "Tools provided: search, by-date, recent list, create, update, delete. See docs/MCP.md for details.",
         ["SettingsMcpCopy"] = "Copy",
@@ -339,6 +346,75 @@ internal static class EnglishStrings
 
         // Default display title for a note the user never named ({0} = note number)
         ["UntitledNoteFormat"] = "Note {0}",
+
+        // Cloud sync: account section and the command-row status chip
+        ["CloudSyncTitle"] = "Cloud sync",
+        ["CloudSyncBlurb"] = "Optional. When you sign in, your notes are encrypted on this PC before they are uploaded, then synced to your other devices. What is stored cannot be read on the server.",
+        ["CloudSyncPrivacyNote"] = "The server keeps the ciphertext, plus your email address, when each note was last edited, and how many notes you have. Titles, bodies, tags, and dates are not stored.",
+        ["CloudSyncLocalNote"] = "The database on this PC stays unencrypted. Sync is not a substitute for a backup.",
+        ["AccountEmail"] = "Email",
+        ["AccountPassword"] = "Password",
+        ["AccountSignIn"] = "Sign in",
+        ["AccountCreate"] = "Create account",
+        ["AccountSignOut"] = "Sign out",
+        ["AccountSyncNow"] = "Sync now",
+        ["AccountBusy"] = "Working…",
+        // {0} = the signed-in email address.
+        ["AccountSignedInAsFormat"] = "Signed in as {0}",
+        // {0} = a formatted local time.
+        ["AccountLastSyncFormat"] = "Last synced {0}",
+        ["AccountNeverSynced"] = "Not synced yet",
+        // {0} = the minimum password length.
+        ["AccountPasswordHint"] = "Use at least {0} characters. If you forget it, your recovery key is the only way back in.",
+        ["RecoveryKeyTitle"] = "Recovery key",
+        ["RecoveryKeyBlurb"] = "Write this down somewhere safe. It is the only way to recover the notes in your cloud copy if you forget your password, and it cannot be shown again.",
+        ["RecoveryKeyCopy"] = "Copy",
+        ["RecoveryKeyCopied"] = "Copied",
+        ["RecoveryKeySaveToFile"] = "Save to file",
+        ["RecoveryKeyConfirm"] = "I have saved my recovery key",
+        ["RecoveryKeyDone"] = "Done",
+        ["RecoveryKeyFileFilter"] = "Text file (*.txt)|*.txt",
+        ["AccountLockedTitle"] = "Your notes are locked",
+        ["AccountLockedBlurb"] = "Your password was reset, so this device cannot open the cloud copy. Enter your recovery key, or sign in on a device you used before. The notes already on this PC are untouched.",
+        // {0} = number of notes replaced by a newer version from another device.
+        ["AccountConflictsFormat"] = "{0} notes were replaced by a newer version from another device. The earlier text was kept as a copy.",
+        ["AccountOpenConflicts"] = "Open the copies folder",
+        ["SyncChipSynced"] = "Synced",
+        ["SyncChipSyncing"] = "Syncing",
+        ["SyncChipPending"] = "Pending",
+        ["SyncChipOffline"] = "Offline",
+        ["SyncChipLocked"] = "Locked",
+        ["SyncChipError"] = "Sync problem",
+        ["SyncStatusAutomation"] = "Cloud sync status",
+        ["AccountErrorInvalidCredentials"] = "That email address or password is incorrect.",
+        ["AccountErrorEmailTaken"] = "That email address is already registered.",
+        ["AccountErrorInvalidEmail"] = "That does not look like an email address.",
+        // {0} = the minimum password length.
+        ["AccountErrorWeakPassword"] = "Use at least {0} characters.",
+        ["AccountErrorRewrapRequired"] = "A recovery key is required.",
+        ["AccountErrorUnsupportedVersion"] = "This account was created by a newer version of Daynote. Update the app to sign in.",
+        ["AccountErrorOffline"] = "Daynote could not reach the sync service. Check your connection and try again.",
+        ["AccountErrorServer"] = "The sync service reported a problem. Try again in a moment.",
+
+        // Cloud sync: password reset and unlock
+        ["AccountForgotPassword"] = "Forgot your password?",
+        ["AccountResetSend"] = "Email me a code",
+        // {0} = the email address the code was sent to.
+        ["AccountResetSentFormat"] = "A code has been sent to {0}. If that address is not registered, no email will arrive.",
+        ["AccountResetCode"] = "Reset code",
+        ["AccountResetNewPassword"] = "New password",
+        ["AccountResetConfirm"] = "Change password",
+        ["AccountResetCancel"] = "Cancel",
+        ["AccountResetWarning"] = "Changing your password gets you back into the account, but the notes in your cloud copy need your recovery key to open. If you are resetting on a PC you already used, they open automatically.",
+        ["AccountUnlockWithRecoveryKey"] = "Unlock with recovery key",
+        ["AccountUnlockKeyLabel"] = "Recovery key",
+        ["AccountUnlockConfirm"] = "Unlock",
+        ["AccountUnlockPasswordLabel"] = "Current password",
+        ["AccountDiscardCloudCopy"] = "Discard the cloud copy",
+        ["AccountDiscardCloudCopyBlurb"] = "With no recovery key and no earlier device, you can discard the cloud copy and start again from the notes on this PC. The notes on this PC are untouched.",
+        ["AccountErrorInvalidResetCode"] = "That reset code is not valid. Request a new one.",
+        ["AccountErrorInvalidRecoveryKeyEntered"] = "That recovery key does not match this account.",
+        ["AccountErrorNoWayToUnlock"] = "This device cannot open the cloud copy. Sign in on a device you used before, or discard the cloud copy.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",

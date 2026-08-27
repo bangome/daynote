@@ -20,6 +20,13 @@ public enum DomainErrorCode
     ProjectionCannotBePersisted,
     InvalidNoteTag,
     TooManyNoteTags,
+    InvalidRecoveryKey,
+    InvalidKdfParameters,
+    MalformedCiphertext,
+    CiphertextAuthenticationFailed,
+    InvalidSyncTimestamp,
+    MalformedSyncPayload,
+    AccountOperationFailed,
 }
 
 public readonly record struct DomainError(DomainErrorCode Code, string Message)

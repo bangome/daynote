@@ -20,6 +20,16 @@ public sealed class DaynoteAppOptions
     public string DatabasePath { get; }
 
     /// <summary>
+    /// Base address of the cloud sync service, or null when this build has none configured. Cloud
+    /// sync is opt-in twice over: the feature is inert without an endpoint, and inert again until the
+    /// user signs in. A build with no endpoint makes no network calls at all.
+    /// </summary>
+    public Uri? SyncEndpoint { get; init; }
+
+    /// <summary>Environment variable that supplies <see cref="SyncEndpoint"/>.</summary>
+    public const string SyncEndpointEnvironmentVariable = "DAYNOTE_SYNC_ENDPOINT";
+
+    /// <summary>
     /// Environment variable that redirects the per-user data root. This is the deterministic-QA
     /// seam consumed by <c>qa/Daynote.UiQa</c>: it lets the harness run the real product against a
     /// namespaced, disposable data root (under the real Daynote root) so QA never touches the
@@ -36,6 +46,15 @@ public sealed class DaynoteAppOptions
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Daynote")
             : overrideRoot;
-        return new DaynoteAppOptions(root);
+        string? endpoint = Environment.GetEnvironmentVariable(SyncEndpointEnvironmentVariable);
+        return new DaynoteAppOptions(root)
+        {
+            SyncEndpoint = Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? parsed)
+                && parsed.Scheme == Uri.UriSchemeHttps
+                    ? parsed
+                    // Anything but https is refused rather than downgraded: the bearer token and the
+                    // ciphertext must not cross a plaintext connection.
+                    : null,
+        };
     }
 }

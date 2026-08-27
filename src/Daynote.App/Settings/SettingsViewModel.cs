@@ -31,6 +31,12 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
     private readonly Action _showTutorial;
     private ShortcutRowViewModel? _capturingRow;
 
+    /// <summary>
+    /// The cloud-sync section, or null when this build has no sync endpoint configured. Null keeps the
+    /// whole section out of the panel rather than showing a feature that cannot work.
+    /// </summary>
+    public Account.AccountViewModel? Account { get; init; }
+
     public SettingsViewModel(
         IStartupTaskService startup,
         IGlobalHotkeyService hotkeys,
@@ -341,43 +347,24 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
         }
     }
 
-    public string PrivacyText => Localization.AppStrings.SettingsPrivacyText;
+    /// <summary>
+    /// The privacy statement, assembled from what this build can actually do. It used to be one fixed
+    /// sentence claiming Daynote never syncs or sends anything over the network, which stopped being
+    /// true twice over: cloud sync uploads notes, and the MCP server hands them to an AI client that
+    /// may forward them to its own service. Both are opt-in, but silence about them is still a promise
+    /// the app cannot keep - and the Store listing has to match this text.
+    /// </summary>
+    public string PrivacyText => ComposePrivacyText(cloudSyncAvailable: Account is not null);
 
-    // ── AI integration (MCP) setup guidance ──
-
-    /// <summary>Transient "copied" flash shown after a copy button is pressed.</summary>
-    [ObservableProperty]
-    private bool _mcpCopied;
-
-    /// <summary>Command that publishes the MCP stdio server as a self-contained exe. Language-neutral.</summary>
-    public static string McpBuildCommand => @"dotnet publish src\Daynote.Mcp -c Release -r win-x64 --self-contained true -o dist\daynote-mcp";
-
-    /// <summary>Claude Desktop config JSON snippet; the command path is a placeholder the user edits. Language-neutral.</summary>
-    public static string McpDesktopConfig =>
-        """
-        {
-          "mcpServers": {
-            "daynote": {
-              "command": "C:\\경로\\Daynote.Mcp.exe"
-            }
-          }
-        }
-        """;
-
-    /// <summary>One-line Claude Code registration command; the exe path is a placeholder. Language-neutral.</summary>
-    public static string McpCodeCommand => "claude mcp add daynote -- \"C:\\경로\\Daynote.Mcp.exe\"";
-
-    /// <summary>Copies the given code/config text to the clipboard and briefly flashes a confirmation.</summary>
-    [RelayCommand]
-    private async Task CopyToClipboard(string? text)
+    /// <summary>
+    /// The sync sentence is omitted when this build has no sync endpoint, because such a build makes no
+    /// network calls at all and describing an absent feature would be its own inaccuracy.
+    /// </summary>
+    public static string ComposePrivacyText(bool cloudSyncAvailable)
     {
-        if (string.IsNullOrEmpty(text)) return;
-        try { System.Windows.Clipboard.SetText(text); }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.ExternalException or System.Runtime.InteropServices.COMException or System.Threading.ThreadStateException)
-        { return; } // clipboard was busy/locked; best-effort
-        McpCopied = true;
-        try { await Task.Delay(TimeSpan.FromSeconds(1.5)); } catch { }
-        McpCopied = false;
+        string text = Localization.AppStrings.SettingsPrivacyText
+            + " " + Localization.AppStrings.SettingsPrivacyMcp;
+        return cloudSyncAvailable ? text + " " + Localization.AppStrings.SettingsPrivacySync : text;
     }
 
     [ObservableProperty]

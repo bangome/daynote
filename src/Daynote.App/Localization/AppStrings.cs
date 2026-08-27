@@ -110,14 +110,22 @@ public static class AppStrings
     public static string SettingsStartupDisabledByUserText => LocalizationService.Instance[nameof(SettingsStartupDisabledByUserText)];
     public static string SettingsStartupUnavailableText => LocalizationService.Instance[nameof(SettingsStartupUnavailableText)];
     public static string SettingsPrivacyText => LocalizationService.Instance[nameof(SettingsPrivacyText)];
+    /// <summary>Appended to the privacy statement because the MCP server ships in every build.</summary>
+    public static string SettingsPrivacyMcp => LocalizationService.Instance[nameof(SettingsPrivacyMcp)];
+    /// <summary>Appended only when this build has a sync endpoint, i.e. when the section is shown.</summary>
+    public static string SettingsPrivacySync => LocalizationService.Instance[nameof(SettingsPrivacySync)];
 
     // AI integration / MCP (settings)
     public static string SettingsMcpRow => LocalizationService.Instance[nameof(SettingsMcpRow)];
     public static string SettingsMcpLabel => LocalizationService.Instance[nameof(SettingsMcpLabel)];
     public static string SettingsMcpDesc => LocalizationService.Instance[nameof(SettingsMcpDesc)];
-    public static string SettingsMcpStep1 => LocalizationService.Instance[nameof(SettingsMcpStep1)];
-    public static string SettingsMcpStep2 => LocalizationService.Instance[nameof(SettingsMcpStep2)];
-    public static string SettingsMcpStep3 => LocalizationService.Instance[nameof(SettingsMcpStep3)];
+    public static string SettingsMcpRegister => LocalizationService.Instance[nameof(SettingsMcpRegister)];
+    public static string SettingsMcpRegistered => LocalizationService.Instance[nameof(SettingsMcpRegistered)];
+    public static string SettingsMcpAlreadyRegistered => LocalizationService.Instance[nameof(SettingsMcpAlreadyRegistered)];
+    /// <summary>{0} = the config file path that could not be written.</summary>
+    public static string SettingsMcpFailedFormat => LocalizationService.Instance[nameof(SettingsMcpFailedFormat)];
+    public static string SettingsMcpUnavailable => LocalizationService.Instance[nameof(SettingsMcpUnavailable)];
+    public static string SettingsMcpCodeHint => LocalizationService.Instance[nameof(SettingsMcpCodeHint)];
     public static string SettingsMcpFooter => LocalizationService.Instance[nameof(SettingsMcpFooter)];
     public static string SettingsMcpCopy => LocalizationService.Instance[nameof(SettingsMcpCopy)];
     public static string SettingsMcpCopied => LocalizationService.Instance[nameof(SettingsMcpCopied)];
@@ -323,6 +331,75 @@ public static class AppStrings
 
     /// <summary>Display title for a note the user never named. {0} = note number.</summary>
     public static string UntitledNoteFormat => LocalizationService.Instance[nameof(UntitledNoteFormat)];
+
+    // Cloud sync (account section, recovery key, status chip)
+    public static string CloudSyncTitle => LocalizationService.Instance[nameof(CloudSyncTitle)];
+    public static string CloudSyncBlurb => LocalizationService.Instance[nameof(CloudSyncBlurb)];
+    public static string CloudSyncPrivacyNote => LocalizationService.Instance[nameof(CloudSyncPrivacyNote)];
+    public static string CloudSyncLocalNote => LocalizationService.Instance[nameof(CloudSyncLocalNote)];
+    public static string AccountEmail => LocalizationService.Instance[nameof(AccountEmail)];
+    public static string AccountPassword => LocalizationService.Instance[nameof(AccountPassword)];
+    public static string AccountSignIn => LocalizationService.Instance[nameof(AccountSignIn)];
+    public static string AccountCreate => LocalizationService.Instance[nameof(AccountCreate)];
+    public static string AccountSignOut => LocalizationService.Instance[nameof(AccountSignOut)];
+    public static string AccountSyncNow => LocalizationService.Instance[nameof(AccountSyncNow)];
+    public static string AccountBusy => LocalizationService.Instance[nameof(AccountBusy)];
+    /// <summary>{0} = the signed-in email address.</summary>
+    public static string AccountSignedInAsFormat => LocalizationService.Instance[nameof(AccountSignedInAsFormat)];
+    /// <summary>{0} = a formatted local time.</summary>
+    public static string AccountLastSyncFormat => LocalizationService.Instance[nameof(AccountLastSyncFormat)];
+    public static string AccountNeverSynced => LocalizationService.Instance[nameof(AccountNeverSynced)];
+    /// <summary>{0} = the minimum password length.</summary>
+    public static string AccountPasswordHint => LocalizationService.Instance[nameof(AccountPasswordHint)];
+    public static string RecoveryKeyTitle => LocalizationService.Instance[nameof(RecoveryKeyTitle)];
+    public static string RecoveryKeyBlurb => LocalizationService.Instance[nameof(RecoveryKeyBlurb)];
+    public static string RecoveryKeyCopy => LocalizationService.Instance[nameof(RecoveryKeyCopy)];
+    public static string RecoveryKeyCopied => LocalizationService.Instance[nameof(RecoveryKeyCopied)];
+    public static string RecoveryKeySaveToFile => LocalizationService.Instance[nameof(RecoveryKeySaveToFile)];
+    public static string RecoveryKeyConfirm => LocalizationService.Instance[nameof(RecoveryKeyConfirm)];
+    public static string RecoveryKeyDone => LocalizationService.Instance[nameof(RecoveryKeyDone)];
+    public static string RecoveryKeyFileFilter => LocalizationService.Instance[nameof(RecoveryKeyFileFilter)];
+    public static string AccountLockedTitle => LocalizationService.Instance[nameof(AccountLockedTitle)];
+    public static string AccountLockedBlurb => LocalizationService.Instance[nameof(AccountLockedBlurb)];
+    /// <summary>{0} = number of notes replaced by a newer version from another device.</summary>
+    public static string AccountConflictsFormat => LocalizationService.Instance[nameof(AccountConflictsFormat)];
+    public static string AccountOpenConflicts => LocalizationService.Instance[nameof(AccountOpenConflicts)];
+    public static string SyncChipSynced => LocalizationService.Instance[nameof(SyncChipSynced)];
+    public static string SyncChipSyncing => LocalizationService.Instance[nameof(SyncChipSyncing)];
+    public static string SyncChipPending => LocalizationService.Instance[nameof(SyncChipPending)];
+    public static string SyncChipOffline => LocalizationService.Instance[nameof(SyncChipOffline)];
+    public static string SyncChipLocked => LocalizationService.Instance[nameof(SyncChipLocked)];
+    public static string SyncChipError => LocalizationService.Instance[nameof(SyncChipError)];
+    public static string SyncStatusAutomation => LocalizationService.Instance[nameof(SyncStatusAutomation)];
+    public static string AccountErrorInvalidCredentials => LocalizationService.Instance[nameof(AccountErrorInvalidCredentials)];
+    public static string AccountErrorEmailTaken => LocalizationService.Instance[nameof(AccountErrorEmailTaken)];
+    public static string AccountErrorInvalidEmail => LocalizationService.Instance[nameof(AccountErrorInvalidEmail)];
+    /// <summary>{0} = the minimum password length.</summary>
+    public static string AccountErrorWeakPassword => LocalizationService.Instance[nameof(AccountErrorWeakPassword)];
+    public static string AccountErrorRewrapRequired => LocalizationService.Instance[nameof(AccountErrorRewrapRequired)];
+    public static string AccountErrorUnsupportedVersion => LocalizationService.Instance[nameof(AccountErrorUnsupportedVersion)];
+    public static string AccountErrorOffline => LocalizationService.Instance[nameof(AccountErrorOffline)];
+    public static string AccountErrorServer => LocalizationService.Instance[nameof(AccountErrorServer)];
+
+    // Cloud sync: password reset and unlock
+    public static string AccountForgotPassword => LocalizationService.Instance[nameof(AccountForgotPassword)];
+    public static string AccountResetSend => LocalizationService.Instance[nameof(AccountResetSend)];
+    /// <summary>{0} = the email address the code was sent to.</summary>
+    public static string AccountResetSentFormat => LocalizationService.Instance[nameof(AccountResetSentFormat)];
+    public static string AccountResetCode => LocalizationService.Instance[nameof(AccountResetCode)];
+    public static string AccountResetNewPassword => LocalizationService.Instance[nameof(AccountResetNewPassword)];
+    public static string AccountResetConfirm => LocalizationService.Instance[nameof(AccountResetConfirm)];
+    public static string AccountResetCancel => LocalizationService.Instance[nameof(AccountResetCancel)];
+    public static string AccountResetWarning => LocalizationService.Instance[nameof(AccountResetWarning)];
+    public static string AccountUnlockWithRecoveryKey => LocalizationService.Instance[nameof(AccountUnlockWithRecoveryKey)];
+    public static string AccountUnlockKeyLabel => LocalizationService.Instance[nameof(AccountUnlockKeyLabel)];
+    public static string AccountUnlockConfirm => LocalizationService.Instance[nameof(AccountUnlockConfirm)];
+    public static string AccountUnlockPasswordLabel => LocalizationService.Instance[nameof(AccountUnlockPasswordLabel)];
+    public static string AccountDiscardCloudCopy => LocalizationService.Instance[nameof(AccountDiscardCloudCopy)];
+    public static string AccountDiscardCloudCopyBlurb => LocalizationService.Instance[nameof(AccountDiscardCloudCopyBlurb)];
+    public static string AccountErrorInvalidResetCode => LocalizationService.Instance[nameof(AccountErrorInvalidResetCode)];
+    public static string AccountErrorInvalidRecoveryKeyEntered => LocalizationService.Instance[nameof(AccountErrorInvalidRecoveryKeyEntered)];
+    public static string AccountErrorNoWayToUnlock => LocalizationService.Instance[nameof(AccountErrorNoWayToUnlock)];
 
     /// <summary>Win32 file-dialog filter for backup archives.</summary>
     public static string BackupZipFilter => LocalizationService.Instance[nameof(BackupZipFilter)];

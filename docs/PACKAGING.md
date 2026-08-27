@@ -12,6 +12,16 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 - A **Windows startup task** (`TaskId=DaynoteStartupTask`), **disabled by default and
   opt-in**: the app never auto-enables it (Store policy). The user turns it on from
   Settings, and user/policy-disabled states are never overridden.
+- The **MCP stdio server** (`Daynote.Mcp`) as a second, hidden entry point
+  (`AppListEntry="none"`), reachable through the app execution alias
+  `daynote-mcp.exe`. It ships in the same package on purpose: only then does the
+  server inherit the package identity, and with it the redirected data path below, so
+  it opens the very same database as the app. It also shares the app's folder
+  (`Daynote.App\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
+  of the .NET runtime in the package instead of two - 86 MB instead of 131 MB. The
+  `_DaynoteCoLocateMcpServer` target does the merge and `Build-Package.ps1` verifies it.
+  Settings -> AI integration registers the alias with Claude Desktop / Claude Code.
+  See [MCP.md](MCP.md).
 
 No x86/Arm64 artifact and no auto-update feed are produced here. For **Store**
 submission see [STORE.md](STORE.md) (`scripts/Build-Package.ps1 -Store`).
@@ -42,6 +52,16 @@ pwsh -File scripts/Build-Package.ps1 -Configuration Release -Architecture x64 `
     -EvidenceDir .omo\evidence\daynote-desktop-app\task-11 `
     -OutputDirectory artifacts\package
 ```
+
+### Lock files and the win-x64 RID
+
+Packaging publishes `Daynote.App` and everything it references for `win-x64`, so restore records a
+win-x64 target in those projects' `packages.lock.json`. `Directory.Build.props` therefore declares
+`<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>` repo-wide: without it those lock files named a RID
+their project did not, and the next locked-mode restore failed with NU1004 - so a packaging run left
+the repo unable to restore. With it, the committed lock files satisfy both restores and a packaging run
+leaves the working tree unchanged. Step 1's locked restore is the guard: if the lock files ever drift
+again, packaging fails there rather than silently rewriting them.
 
 The script always performs the locked restore, `-warnaserror` build, and the
 self-contained `win-x64` publish. It builds the `.msix` only when a full MSBuild with

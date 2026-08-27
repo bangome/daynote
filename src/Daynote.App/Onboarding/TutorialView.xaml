@@ -15,7 +15,7 @@
          accent highlight ring on the target, and a floating callout. Positions are set in code-behind. -->
     <Canvas x:Name="OverlayCanvas" ClipToBounds="True">
         <!-- Scrim: covers everything; the current target is punched out (even-odd) so real UI shows through. -->
-        <Path x:Name="Scrim" Fill="#8C000000" />
+        <Path x:Name="Scrim" Fill="{DynamicResource Daynote.Product.Brush.Scrim}" />
 
         <!-- Highlight ring around the target (hidden on centered steps). -->
         <Border x:Name="HighlightRing" Visibility="Collapsed"

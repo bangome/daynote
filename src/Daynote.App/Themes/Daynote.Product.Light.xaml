@@ -30,6 +30,9 @@
     <SolidColorBrush x:Key="Daynote.Product.Brush.CloseHover" Color="#FFC42B1C" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFD13438" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF0067C0" po:Freeze="True" />
+    <!-- The onboarding overlay's dimming scrim. Deliberately the same value in both themes: it dims
+         the real UI around a cut-out, so it is judged against the app behind it, not the palette. -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim" Color="#8C000000" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFD13438" po:Freeze="True" />
 
     <DropShadowEffect x:Key="Daynote.Product.Effect.CardShadow" BlurRadius="8" ShadowDepth="1" Direction="270" Opacity="0.10" Color="#000000" />

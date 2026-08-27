@@ -104,20 +104,27 @@ internal static class KoreanStrings
         ["SettingsStartupDisabledByUserText"] = "Windows 시작 프로그램 설정에서 꺼져 있습니다. 그곳에서 다시 켜세요.",
         ["SettingsStartupUnavailableText"] = "이 기기에서는 시작 프로그램 설정을 사용할 수 없습니다.",
         ["SettingsPrivacyText"] =
-            "노트는 평문 SQLite 데이터베이스에, 첨부 파일은 로컬 파일로 저장됩니다. " +
-            "Daynote가 암호화하거나 동기화하거나 네트워크로 전송하지 않습니다.",
+            "노트는 이 PC의 평문 SQLite 데이터베이스에, 첨부 파일은 로컬 파일로 저장됩니다. " +
+            "Daynote 자체에는 분석 도구나 원격 측정이 없습니다.",
+        ["SettingsPrivacyMcp"] =
+            "AI 연동(MCP)을 등록하면 연결한 AI 클라이언트가 노트를 읽고 쓸 수 있습니다. " +
+            "그 클라이언트가 노트 내용을 자체 서비스로 전송할 수 있습니다.",
+        ["SettingsPrivacySync"] =
+            "클라우드 동기화는 기본적으로 꺼져 있습니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드됩니다.",
 
         // AI integration / MCP (settings)
         ["SettingsMcpRow"] = "AI 연동",
         ["SettingsMcpLabel"] = "AI 연동 (MCP)",
         ["SettingsMcpDesc"] =
-            "Claude 같은 AI 도구가 Daynote 노트를 직접 읽고 쓸 수 있도록 MCP 서버를 연결할 수 있습니다. 아래 순서를 따라 설정하세요.",
-        ["SettingsMcpStep1"] =
-            "1. MCP 서버 빌드하기 — Daynote 소스 폴더에서 아래 명령을 실행하세요. 결과 실행 파일: dist\\daynote-mcp\\Daynote.Mcp.exe",
-        ["SettingsMcpStep2"] =
-            "2. Claude Desktop에 등록 — %AppData%\\Claude\\claude_desktop_config.json 에 아래 내용을 추가하고 command 경로를 실제 exe 위치로 바꾼 뒤 Claude Desktop을 재시작하세요.",
-        ["SettingsMcpStep3"] =
-            "3. Claude Code에 등록 (선택) — 터미널에서 한 줄로 등록할 수도 있습니다.",
+            "Claude 같은 AI 도구가 Daynote 노트를 직접 읽고 쓸 수 있습니다. MCP 서버는 Daynote에 함께 설치되어 " +
+            "있으므로 따로 빌드하거나 내려받을 필요 없이 버튼 한 번으로 등록됩니다.",
+        ["SettingsMcpRegister"] = "Claude Desktop에 등록",
+        ["SettingsMcpRegistered"] = "등록했습니다. Claude Desktop을 재시작하면 daynote 도구가 나타납니다.",
+        ["SettingsMcpAlreadyRegistered"] = "이미 등록되어 있습니다.",
+        ["SettingsMcpFailedFormat"] = "등록하지 못했습니다. 설정 파일을 직접 확인해 주세요: {0}",
+        ["SettingsMcpUnavailable"] =
+            "이 실행 환경에는 등록할 MCP 서버가 없습니다. Microsoft Store에서 설치한 Daynote에서 쓸 수 있는 기능입니다.",
+        ["SettingsMcpCodeHint"] = "Claude Code에서는 터미널에 아래 한 줄을 실행하세요.",
         ["SettingsMcpFooter"] =
             "제공 도구: 노트 검색 · 날짜별 조회 · 최근 목록 · 생성 · 수정 · 삭제. 자세한 내용은 docs/MCP.md 를 참고하세요.",
         ["SettingsMcpCopy"] = "복사",
@@ -330,6 +337,75 @@ internal static class KoreanStrings
 
         // Default display title for a note the user never named ({0} = note number)
         ["UntitledNoteFormat"] = "노트 {0}",
+
+        // Cloud sync: account section and the command-row status chip
+        ["CloudSyncTitle"] = "클라우드 동기화",
+        ["CloudSyncBlurb"] = "선택 기능입니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드되어 다른 기기와 동기화됩니다. 저장된 내용은 서버에서 열어볼 수 없습니다.",
+        ["CloudSyncPrivacyNote"] = "서버에는 암호문과 함께 이메일 주소, 각 노트의 수정 시각, 노트 개수가 남습니다. 제목·본문·태그·날짜는 남지 않습니다.",
+        ["CloudSyncLocalNote"] = "이 PC의 데이터베이스는 계속 평문입니다. 동기화는 백업을 대신하지 않습니다.",
+        ["AccountEmail"] = "이메일",
+        ["AccountPassword"] = "비밀번호",
+        ["AccountSignIn"] = "로그인",
+        ["AccountCreate"] = "계정 만들기",
+        ["AccountSignOut"] = "로그아웃",
+        ["AccountSyncNow"] = "지금 동기화",
+        ["AccountBusy"] = "처리 중…",
+        // {0} = the signed-in email address.
+        ["AccountSignedInAsFormat"] = "{0} 계정으로 로그인됨",
+        // {0} = a formatted local time.
+        ["AccountLastSyncFormat"] = "마지막 동기화: {0}",
+        ["AccountNeverSynced"] = "아직 동기화하지 않았습니다",
+        // {0} = the minimum password length.
+        ["AccountPasswordHint"] = "비밀번호는 {0}자 이상이어야 합니다. 비밀번호를 잊으면 복구 키가 유일한 방법입니다.",
+        ["RecoveryKeyTitle"] = "복구 키",
+        ["RecoveryKeyBlurb"] = "이 키를 안전한 곳에 적어 두세요. 비밀번호를 잊었을 때 클라우드에 있는 노트를 되찾을 수 있는 유일한 방법이며, 다시 보여줄 수 없습니다.",
+        ["RecoveryKeyCopy"] = "복사",
+        ["RecoveryKeyCopied"] = "복사했습니다",
+        ["RecoveryKeySaveToFile"] = "파일로 저장",
+        ["RecoveryKeyConfirm"] = "복구 키를 안전한 곳에 저장했습니다",
+        ["RecoveryKeyDone"] = "완료",
+        ["RecoveryKeyFileFilter"] = "텍스트 파일 (*.txt)|*.txt",
+        ["AccountLockedTitle"] = "노트가 잠겨 있습니다",
+        ["AccountLockedBlurb"] = "비밀번호가 재설정되어 이 기기에서는 클라우드 노트를 열 수 없습니다. 복구 키를 입력하거나, 이전에 사용한 기기에서 로그인하세요. 이 PC에 있는 노트는 그대로입니다.",
+        // {0} = number of notes replaced by a newer version from another device.
+        ["AccountConflictsFormat"] = "노트 {0}개가 다른 기기의 최신 버전으로 교체되었습니다. 이전 내용은 사본으로 남겨 두었습니다.",
+        ["AccountOpenConflicts"] = "사본 폴더 열기",
+        ["SyncChipSynced"] = "동기화됨",
+        ["SyncChipSyncing"] = "동기화 중",
+        ["SyncChipPending"] = "대기 중",
+        ["SyncChipOffline"] = "오프라인",
+        ["SyncChipLocked"] = "잠김",
+        ["SyncChipError"] = "동기화 오류",
+        ["SyncStatusAutomation"] = "클라우드 동기화 상태",
+        ["AccountErrorInvalidCredentials"] = "이메일 주소 또는 비밀번호가 올바르지 않습니다.",
+        ["AccountErrorEmailTaken"] = "이미 등록된 이메일 주소입니다.",
+        ["AccountErrorInvalidEmail"] = "이메일 주소 형식이 올바르지 않습니다.",
+        // {0} = the minimum password length.
+        ["AccountErrorWeakPassword"] = "비밀번호는 {0}자 이상이어야 합니다.",
+        ["AccountErrorRewrapRequired"] = "복구 키가 필요합니다.",
+        ["AccountErrorUnsupportedVersion"] = "이 계정은 더 새로운 버전의 Daynote에서 만들어졌습니다. 앱을 업데이트하세요.",
+        ["AccountErrorOffline"] = "동기화 서비스에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+        ["AccountErrorServer"] = "동기화 서비스에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
+
+        // Cloud sync: password reset and unlock
+        ["AccountForgotPassword"] = "비밀번호를 잊으셨나요?",
+        ["AccountResetSend"] = "재설정 코드 받기",
+        // {0} = the email address the code was sent to.
+        ["AccountResetSentFormat"] = "{0} 으로 코드를 보냈습니다. 등록된 주소가 아니면 메일은 오지 않습니다.",
+        ["AccountResetCode"] = "재설정 코드",
+        ["AccountResetNewPassword"] = "새 비밀번호",
+        ["AccountResetConfirm"] = "비밀번호 변경",
+        ["AccountResetCancel"] = "취소",
+        ["AccountResetWarning"] = "비밀번호를 바꾸면 계정에는 다시 들어올 수 있지만, 클라우드에 있는 노트는 복구 키가 있어야 열립니다. 이 PC에서 재설정하는 경우에는 자동으로 열립니다.",
+        ["AccountUnlockWithRecoveryKey"] = "복구 키로 잠금 해제",
+        ["AccountUnlockKeyLabel"] = "복구 키",
+        ["AccountUnlockConfirm"] = "잠금 해제",
+        ["AccountUnlockPasswordLabel"] = "현재 비밀번호",
+        ["AccountDiscardCloudCopy"] = "클라우드 사본 폐기",
+        ["AccountDiscardCloudCopyBlurb"] = "복구 키도 이전 기기도 없다면, 클라우드 사본을 버리고 이 PC의 노트로 다시 시작할 수 있습니다. 이 PC의 노트는 그대로입니다.",
+        ["AccountErrorInvalidResetCode"] = "재설정 코드가 올바르지 않습니다. 새 코드를 요청하세요.",
+        ["AccountErrorInvalidRecoveryKeyEntered"] = "이 계정의 복구 키가 아닙니다.",
+        ["AccountErrorNoWayToUnlock"] = "이 기기에서는 클라우드 사본을 열 수 없습니다. 이전에 사용한 기기에서 로그인하거나, 클라우드 사본을 폐기하세요.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",

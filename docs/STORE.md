@@ -11,8 +11,13 @@ can only be done in your Partner Center account; the rest are already wired in t
 2. Have a **privacy policy URL** ready — the Store expects one for any app that stores
    user data. Host the content of [PRIVACY.md](PRIVACY.md) at a public URL
    (GitHub Pages, your site, etc.). Key points it must state: Daynote stores only what
-   you create (notes, attached day files, settings) locally in plaintext, makes no
-   network calls, and nothing is uploaded or synced.
+   you create (notes, attached day files, settings) locally in plaintext; it has no
+   analytics or telemetry; and it makes no network calls unless the user opts into cloud
+   sync and signs in.
+   If the build you submit has cloud sync enabled, the listing also has to declare that
+   an account exists, that an email address is collected, and that note content is
+   uploaded — encrypted on the device, but uploaded. A build with no sync endpoint
+   configured makes no network calls at all and can be declared as such.
 
 ## 1. Reserve the app + get its identity **(you)**
 

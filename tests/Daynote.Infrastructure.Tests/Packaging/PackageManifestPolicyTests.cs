@@ -1,11 +1,12 @@
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Daynote.Infrastructure.Tests.Packaging;
 
 /// <summary>
-/// Static (no-install) validation of the Daynote development MSIX manifest, plan
-/// Todo 11. These tests never spawn a subprocess and never touch a cert store or an
-/// installed package; they parse the committed Package.appxmanifest only.
+/// Static (no-install) validation of the Daynote Microsoft Store MSIX manifest. These
+/// tests never spawn a subprocess and never touch a cert store or an installed package;
+/// they parse the committed Package.appxmanifest only.
 /// </summary>
 [TestClass]
 public sealed class PackageManifestPolicyTests
@@ -48,7 +49,8 @@ public sealed class PackageManifestPolicyTests
 
         Assert.AreEqual(PackageManifestPolicy.ExpectedIdentityName, (string?)identity.Attribute("Name"));
         Assert.AreEqual(PackageManifestPolicy.ExpectedPublisher, (string?)identity.Attribute("Publisher"));
-        Assert.AreEqual("1.0.0.0", (string?)identity.Attribute("Version"));
+        // Bumped for every submission, so assert the Store's rule instead of today's number.
+        StringAssert.Matches((string?)identity.Attribute("Version"), new Regex(@"^\d+\.\d+\.\d+\.0$"));
         Assert.AreEqual(PackageManifestPolicy.ExpectedArchitecture, (string?)identity.Attribute("ProcessorArchitecture"));
 
         // No x86 / Arm64 identity is present anywhere.
@@ -72,50 +74,48 @@ public sealed class PackageManifestPolicyTests
     }
 
     [TestMethod]
-    public void Test_policy_rejects_a_manifest_without_the_virtualization_exclusion()
+    public void Test_policy_rejects_a_manifest_that_disables_file_system_virtualization()
     {
-        // Plan Todo 11 QA-failure: a disposable in-memory copy WITHOUT the
-        // FileSystemWriteVirtualization exclusion must be REJECTED by the policy.
+        // The sideload builds disabled virtualization to keep the un-redirected data path across
+        // uninstall. That needs a restricted capability the Store will not grant, so a manifest that
+        // reintroduces it must be rejected here rather than by Partner Center.
         XDocument mutated = LoadManifest();
-        XElement virtualization = mutated.Descendants()
-            .Single(static element => element.Name.LocalName == "FileSystemWriteVirtualization");
-        virtualization.Remove();
+        XNamespace desktop6 = "http://schemas.microsoft.com/appx/manifest/desktop/windows10/6";
+        XElement properties = mutated.Descendants()
+            .Single(static element => element.Name.LocalName == "Properties");
+        properties.Add(new XElement(desktop6 + "FileSystemWriteVirtualization", "disabled"));
 
         IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(mutated);
 
         Assert.IsTrue(
             violations.Any(static v => v.Contains("FileSystemWriteVirtualization", StringComparison.Ordinal)),
-            "Removing the virtualization exclusion must produce a naming violation. Got: "
-                + string.Join(" | ", violations));
+            "Disabling virtualization must be rejected. Got: " + string.Join(" | ", violations));
     }
 
     [TestMethod]
-    public void Test_policy_rejects_a_manifest_without_the_unvirtualized_capability()
+    public void Test_policy_rejects_a_manifest_that_declares_unvirtualized_resources()
     {
-        // Additional negative: dropping the enabling capability must also be rejected,
-        // using a disposable temp-file copy that is cleaned up afterward.
+        // Same story from the capability side, through a disposable temp-file copy.
         string tempManifest = Path.Combine(
             Path.GetTempPath(),
-            "daynote-task11-manifest",
+            "daynote-manifest-policy",
             Guid.NewGuid().ToString("N"),
             "Package.appxmanifest");
         Directory.CreateDirectory(Path.GetDirectoryName(tempManifest)!);
         try
         {
             XDocument mutated = LoadManifest();
-            XElement capability = mutated.Descendants()
-                .Single(static element =>
-                    element.Name.LocalName == "Capability"
-                    && (string?)element.Attribute("Name") == "unvirtualizedResources");
-            capability.Remove();
+            XNamespace rescap = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities";
+            XElement capabilities = mutated.Descendants()
+                .Single(static element => element.Name.LocalName == "Capabilities");
+            capabilities.Add(new XElement(rescap + "Capability", new XAttribute("Name", "unvirtualizedResources")));
             mutated.Save(tempManifest);
 
             IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(XDocument.Load(tempManifest));
 
             Assert.IsTrue(
                 violations.Any(static v => v.Contains("unvirtualizedResources", StringComparison.Ordinal)),
-                "Removing the unvirtualizedResources capability must produce a naming violation. Got: "
-                    + string.Join(" | ", violations));
+                "Declaring unvirtualizedResources must be rejected. Got: " + string.Join(" | ", violations));
         }
         finally
         {
@@ -137,5 +137,41 @@ public sealed class PackageManifestPolicyTests
         Assert.IsTrue(
             violations.Any(static v => v.Contains("Enabled", StringComparison.Ordinal)),
             "An enabled-by-default StartupTask must be rejected. Got: " + string.Join(" | ", violations));
+    }
+
+    [TestMethod]
+    public void Test_manifest_ships_the_mcp_server_behind_an_execution_alias()
+    {
+        XDocument document = LoadManifest();
+        XElement mcp = document.Descendants()
+            .Single(static element => element.Name.LocalName == "Application"
+                && (string?)element.Attribute("Id") == PackageManifestPolicy.ExpectedMcpApplicationId);
+
+        // Bundling the server here is what makes it see the app's virtualized database; the alias is
+        // what an MCP client can actually launch. Both are asserted, plus that it stays hidden.
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpExecutable, (string?)mcp.Attribute("Executable"),
+            "the server must stay in the app's folder so the package carries one copy of the runtime");
+        Assert.AreEqual("Windows.FullTrustApplication", (string?)mcp.Attribute("EntryPoint"));
+        Assert.AreEqual("none", (string?)mcp.Descendants()
+            .Single(static element => element.Name.LocalName == "VisualElements")
+            .Attribute("AppListEntry"));
+        Assert.AreEqual(PackageManifestPolicy.ExpectedMcpAlias, (string?)mcp.Descendants()
+            .Single(static element => element.Name.LocalName == "ExecutionAlias")
+            .Attribute("Alias"));
+    }
+
+    [TestMethod]
+    public void Test_policy_rejects_a_manifest_whose_mcp_server_lost_its_alias()
+    {
+        XDocument document = LoadManifest();
+        document.Descendants()
+            .Single(static element => element.Name.LocalName == "ExecutionAlias")
+            .Remove();
+
+        IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(document);
+
+        Assert.IsTrue(
+            violations.Any(static violation => violation.Contains("appExecutionAlias", StringComparison.Ordinal)),
+            "Policy accepted an MCP server that no client could launch: " + string.Join(" | ", violations));
     }
 }

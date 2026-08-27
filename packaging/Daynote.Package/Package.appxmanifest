@@ -28,13 +28,14 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap desktop">
+  IgnorableNamespaces="uap uap3 rescap desktop">
 
   <Identity
     Name="BreadJinhwaJeong.-Daynote"
     Publisher="CN=7FDB7ABF-3343-4BA9-9F0C-C601ABED42EE"
-    Version="1.2.4.0"
+    Version="1.3.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
@@ -88,6 +89,49 @@
             Enabled="false"
             DisplayName="Daynote" />
         </desktop:Extension>
+      </Extensions>
+    </Application>
+
+    <!--
+      MCP SERVER (docs/MCP.md). A second full-trust entry point in the SAME package, so the stdio
+      server runs WITH this package's identity: file-system virtualization applies to it exactly as it
+      does to the app, and it therefore opens the very same daynote.db. A server built and launched
+      from outside the package would instead see the unredirected %LocalAppData%\Daynote and create an
+      empty second database.
+
+      It lives in the APP's folder, not its own: two apphosts sharing one copy of the .NET runtime.
+      Its own publish output is 113 MB of which 109 MB is byte-identical to the app's, so a separate
+      folder would double the download for nothing. Daynote.App references Daynote.Mcp so restore
+      resolves a single dependency graph for both and the shared folder cannot hold two different
+      builds of one assembly name; the .wapproj target _DaynoteCoLocateMcpServer rewrites the layout,
+      and Build-Package.ps1 verifies every assembly the server needs is actually there.
+
+      It is hidden from the Start menu / app list (AppListEntry="none") - it is not something a user
+      launches by hand - and is reached through the app execution alias "daynote-mcp.exe", which
+      Windows puts on PATH for the user. MCP clients are therefore configured with the bare command
+      "daynote-mcp.exe": no path, and nothing under the ACL-locked WindowsApps install folder. Settings
+      -> AI integration registers exactly that command.
+    -->
+    <Application
+      Id="DaynoteMcp"
+      Executable="Daynote.App\Daynote.Mcp.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        AppListEntry="none"
+        DisplayName="Daynote MCP server"
+        Description="Exposes your local Daynote notes to MCP clients over stdio."
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png" />
+      <Extensions>
+        <uap3:Extension
+          Category="windows.appExecutionAlias"
+          Executable="Daynote.App\Daynote.Mcp.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="daynote-mcp.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
       </Extensions>
     </Application>
   </Applications>
