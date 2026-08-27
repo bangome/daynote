@@ -3,6 +3,9 @@
 Daynote is local-first. This document states plainly what it stores, what can leave your PC, and
 exactly how your data is kept.
 
+*Applies to Daynote 1.3.0.0. Last updated 2026-08-28 — this revision covers the AI integration (MCP),
+which is new in 1.3.*
+
 ## No telemetry, no analytics, and nothing sent unless you ask for it
 
 Daynote has **no analytics and no telemetry**, ever. Nothing about how you use the app is reported
@@ -22,6 +25,12 @@ Daynote ships an MCP server that lets an AI client — Claude Desktop, Claude Co
 host — read and write your notes. **Nothing is connected until you register it** from Settings →
 **AI 연동 / AI integration**; before that the server is never started.
 
+Registering is the one time Daynote writes outside its own storage: it adds a `daynote` entry to your
+AI client's configuration file — for Claude Desktop, `%AppData%\Claude\claude_desktop_config.json`. Only
+that entry is added; other servers and settings in the file are left as they are, and a file Daynote
+cannot parse is reported back to you rather than overwritten. For Claude Code, Settings hands you the
+command to run instead and changes nothing itself.
+
 Once registered, understand what the AI client can see:
 
 - It has the **same access to your notes as the app does**: search, read any day, create, edit, and
@@ -31,8 +40,9 @@ Once registered, understand what the AI client can see:
   see or control that, and this page cannot describe it — check your AI client's own privacy terms.
 - The server itself makes **no network calls**. It speaks to the client over stdin/stdout on this PC.
 
-To disconnect it, remove the `daynote` entry from your MCP client's configuration (for Claude Desktop
-that is `%AppData%\Claude\claude_desktop_config.json`). Uninstalling Daynote also removes the server.
+To disconnect it, remove the `daynote` entry from your MCP client's configuration. Uninstalling
+Daynote removes the server itself, but not that entry — it is your client's file, so Daynote does not
+touch it on the way out; the entry simply stops resolving.
 
 See [MCP.md](MCP.md) for the tool list and setup details.
 
