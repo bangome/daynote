@@ -6,8 +6,8 @@ hosts) with read **and** write tools. It reads the same database the app uses â€
 `%LocalAppData%\Daynote\daynote.db` â€” so notes created or edited through an AI assistant show up in
 the Daynote app, and vice versa.
 
-It is a separate console app (`src/Daynote.Mcp`) that **ships inside the Store package** as a second,
-hidden entry point, so an ordinary user never builds anything. It uses the official
+It is a separate console app (`src/Daynote.Mcp`) that **ships inside the Store package**, published
+through an app execution alias on the app's own entry, so an ordinary user never builds anything. It uses the official
 `ModelContextProtocol` .NET SDK (2.0.0) over stdio.
 
 ## Tools
@@ -61,6 +61,12 @@ Windows puts on the user's PATH. Launching through it is what makes the integrat
   of the user's notes.
 - **It is reachable.** The real executable lives under `%ProgramFiles%\WindowsApps`, whose ACLs a
   client process cannot traverse. The alias can be launched by anyone.
+
+The alias is declared as an extension on the **app's own `<Application>`**, naming a different
+executable, rather than as a second application. A second one would need `AppListEntry="none"` to stay
+out of the Start menu, and that makes it a *headless app* - which the Store refuses without a
+`HeadlessAppBypass` entitlement (Partner Center rejected an earlier build for exactly this). Giving it
+a visible entry instead would put a Start-menu tile on a server that only speaks stdio.
 
 ## Build (developers)
 

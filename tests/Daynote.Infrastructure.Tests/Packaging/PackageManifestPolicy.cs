@@ -25,14 +25,14 @@ internal static class PackageManifestPolicy
     /// <summary>Minimum OS build, matching the TFM net10.0-windows10.0.19041.0.</summary>
     public const string ExpectedMinVersion = "10.0.19041.0";
 
-    /// <summary>The Application id of the bundled MCP stdio server (docs/MCP.md).</summary>
-    public const string ExpectedMcpApplicationId = "DaynoteMcp";
-
     /// <summary>The alias MCP clients are configured with; must match McpServerCommand.PackagedAlias.</summary>
     public const string ExpectedMcpAlias = "daynote-mcp.exe";
 
     /// <summary>The MCP server sits in the app's folder so both share one copy of the .NET runtime.</summary>
     public const string ExpectedMcpExecutable = @"Daynote.App\Daynote.Mcp.exe";
+
+    /// <summary>The single visible application; the MCP server is an alias on it, not an app of its own.</summary>
+    public const string ExpectedApplicationId = "Daynote";
 
     /// <summary>
     /// The identity Partner Center reserved for this app. It is not cosmetic: the Store rejects a
@@ -166,63 +166,77 @@ internal static class PackageManifestPolicy
             }
         }
 
-        EvaluateMcpServer(package, violations);
+        List<XElement> applications = package
+            .Element(Foundation + "Applications")?
+            .Elements(Foundation + "Application")
+            .ToList() ?? [];
+        EvaluateMcpServer(package, applications, violations);
 
         return violations;
     }
 
     /// <summary>
-    /// The MCP server must ship as a second application in THIS package and be reachable through an
-    /// app execution alias. Both halves are load-bearing: packaging it here is what makes the server
-    /// see the same virtualized database as the app, and the alias is the only path a client process
-    /// can actually launch (the install folder under WindowsApps is ACL-locked). It must also stay out
-    /// of the app list, since no user launches a stdio server by hand.
+    /// The MCP server must ship in THIS package and be reachable through an app execution alias. Both
+    /// halves are load-bearing: packaging it here is what makes the server see the app's virtualized
+    /// database, and the alias is the only path a client process can launch (the install folder under
+    /// WindowsApps is ACL-locked).
     /// </summary>
-    private static void EvaluateMcpServer(XElement package, List<string> violations)
+    /// <remarks>
+    /// It must NOT be a second <c>Application</c>. One with <c>AppListEntry="none"</c> is a headless
+    /// app, which the Store rejects without a HeadlessAppBypass entitlement - that rejection is what
+    /// this shape exists to prevent - and a visible second entry would put a Start-menu tile on a
+    /// stdio server that does nothing when clicked. An extension may name a different executable from
+    /// the application hosting it, so the alias rides on the app's own entry.
+    /// </remarks>
+    private static void EvaluateMcpServer(XElement package, List<XElement> applications, List<string> violations)
     {
-        List<XElement> applications = package
+        if (applications.Count != 1)
+        {
+            violations.Add($"Expected exactly one <Application>; found {applications.Count}. The MCP server is an alias, not an app.");
+        }
+
+        foreach (XElement application in applications)
+        {
+            string? appListEntry = (string?)application.Element(Uap + "VisualElements")?.Attribute("AppListEntry");
+            if (appListEntry is not null)
+            {
+                violations.Add(
+                    $"Application '{(string?)application.Attribute("Id")}' sets AppListEntry='{appListEntry}'. "
+                        + "The Store refuses headless apps without a HeadlessAppBypass entitlement.");
+            }
+        }
+
+        List<XElement> aliasExtensions = package
             .Element(Foundation + "Applications")?
             .Elements(Foundation + "Application")
-            .ToList() ?? [];
-
-        XElement? mcp = applications.Find(
-            application => (string?)application.Attribute("Id") == ExpectedMcpApplicationId);
-        if (mcp is null)
-        {
-            violations.Add($"Missing the MCP server <Application Id='{ExpectedMcpApplicationId}'> (docs/MCP.md).");
-            return;
-        }
-
-        if ((string?)mcp.Attribute("EntryPoint") != "Windows.FullTrustApplication")
-        {
-            violations.Add("The MCP server application must be a Windows.FullTrustApplication.");
-        }
-
-        // Co-located with the app on purpose: the server shares the app's single copy of the .NET
-        // runtime, which is worth ~64 MB of download. Its own folder would be a silent size doubling.
-        string? executable = (string?)mcp.Attribute("Executable");
-        if (executable != ExpectedMcpExecutable)
-        {
-            violations.Add($"The MCP server application must point at '{ExpectedMcpExecutable}' (co-located with the app).");
-        }
-
-        string? appListEntry = (string?)mcp.Element(Uap + "VisualElements")?.Attribute("AppListEntry");
-        if (!string.Equals(appListEntry, "none", StringComparison.Ordinal))
-        {
-            violations.Add("The MCP server must set uap:VisualElements/@AppListEntry='none' (not user-launchable).");
-        }
-
-        List<string?> aliases = mcp
             .Elements(Foundation + "Extensions")
             .Elements(Uap3 + "Extension")
             .Where(static extension => (string?)extension.Attribute("Category") == "windows.appExecutionAlias")
+            .ToList() ?? [];
+
+        List<string?> aliases = aliasExtensions
             .Elements(Uap3 + "AppExecutionAlias")
             .Elements(Desktop + "ExecutionAlias")
             .Select(static alias => (string?)alias.Attribute("Alias"))
             .ToList();
         if (!aliases.Contains(ExpectedMcpAlias))
         {
-            violations.Add($"Missing the windows.appExecutionAlias '{ExpectedMcpAlias}' on the MCP server application.");
+            violations.Add($"Missing the windows.appExecutionAlias '{ExpectedMcpAlias}'.");
+        }
+
+        foreach (XElement extension in aliasExtensions)
+        {
+            if ((string?)extension.Attribute("Executable") != ExpectedMcpExecutable)
+            {
+                violations.Add(
+                    $"The alias must launch '{ExpectedMcpExecutable}' (co-located with the app), "
+                        + $"not '{(string?)extension.Attribute("Executable")}'.");
+            }
+
+            if ((string?)extension.Attribute("EntryPoint") != "Windows.FullTrustApplication")
+            {
+                violations.Add("The alias extension must be a Windows.FullTrustApplication.");
+            }
         }
     }
 }

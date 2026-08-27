@@ -89,41 +89,26 @@
             Enabled="false"
             DisplayName="Daynote" />
         </desktop:Extension>
-      </Extensions>
-    </Application>
 
-    <!--
-      MCP SERVER (docs/MCP.md). A second full-trust entry point in the SAME package, so the stdio
-      server runs WITH this package's identity: file-system virtualization applies to it exactly as it
-      does to the app, and it therefore opens the very same daynote.db. A server built and launched
-      from outside the package would instead see the unredirected %LocalAppData%\Daynote and create an
-      empty second database.
+        <!--
+          MCP SERVER (docs/MCP.md). The stdio server ships in this package so it runs WITH the package
+          identity: file-system virtualization applies to it exactly as it does to the app, and it
+          therefore opens the very same daynote.db. A server built and launched from outside the
+          package would instead see the unredirected %LocalAppData%\Daynote and create an empty second
+          database. It sits in the app's own folder, so both share one copy of the .NET runtime; the
+          .wapproj target _DaynoteCoLocateMcpServer does that merge and Build-Package.ps1 verifies it.
 
-      It lives in the APP's folder, not its own: two apphosts sharing one copy of the .NET runtime.
-      Its own publish output is 113 MB of which 109 MB is byte-identical to the app's, so a separate
-      folder would double the download for nothing. Daynote.App references Daynote.Mcp so restore
-      resolves a single dependency graph for both and the shared folder cannot hold two different
-      builds of one assembly name; the .wapproj target _DaynoteCoLocateMcpServer rewrites the layout,
-      and Build-Package.ps1 verifies every assembly the server needs is actually there.
+          It is declared as an alias on THIS application rather than as an application of its own. An
+          <Application> with AppListEntry="none" is a "headless app", which the Store refuses without a
+          HeadlessAppBypass entitlement - and giving the server its own visible entry would put a tile
+          in the Start menu that does nothing when clicked, since it only speaks stdio. An extension
+          may name a different Executable from the application hosting it, which gets the alias
+          registered with no second entry point and nothing extra in the app list.
 
-      It is hidden from the Start menu / app list (AppListEntry="none") - it is not something a user
-      launches by hand - and is reached through the app execution alias "daynote-mcp.exe", which
-      Windows puts on PATH for the user. MCP clients are therefore configured with the bare command
-      "daynote-mcp.exe": no path, and nothing under the ACL-locked WindowsApps install folder. Settings
-      -> AI integration registers exactly that command.
-    -->
-    <Application
-      Id="DaynoteMcp"
-      Executable="Daynote.App\Daynote.Mcp.exe"
-      EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements
-        AppListEntry="none"
-        DisplayName="Daynote MCP server"
-        Description="Exposes your local Daynote notes to MCP clients over stdio."
-        BackgroundColor="transparent"
-        Square150x150Logo="Images\Square150x150Logo.png"
-        Square44x44Logo="Images\Square44x44Logo.png" />
-      <Extensions>
+          Windows puts "daynote-mcp.exe" on the user's PATH, so MCP clients are configured with that
+          bare command: no path, and nothing under the ACL-locked WindowsApps install folder.
+          Settings -> AI integration registers exactly that command.
+        -->
         <uap3:Extension
           Category="windows.appExecutionAlias"
           Executable="Daynote.App\Daynote.Mcp.exe"
@@ -134,6 +119,7 @@
         </uap3:Extension>
       </Extensions>
     </Application>
+
   </Applications>
 
   <Capabilities>

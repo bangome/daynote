@@ -12,9 +12,10 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 - A **Windows startup task** (`TaskId=DaynoteStartupTask`), **disabled by default and
   opt-in**: the app never auto-enables it (Store policy). The user turns it on from
   Settings, and user/policy-disabled states are never overridden.
-- The **MCP stdio server** (`Daynote.Mcp`) as a second, hidden entry point
-  (`AppListEntry="none"`), reachable through the app execution alias
-  `daynote-mcp.exe`. It ships in the same package on purpose: only then does the
+- The **MCP stdio server** (`Daynote.Mcp`), reachable through the app execution alias
+  `daynote-mcp.exe`, declared as an extension on the app's own `<Application>`. It is
+  deliberately **not** a second application: one hidden with `AppListEntry="none"` is a
+  headless app, which the Store refuses without a `HeadlessAppBypass` entitlement. It ships in the same package on purpose: only then does the
   server inherit the package identity, and with it the redirected data path below, so
   it opens the very same database as the app. It also shares the app's folder
   (`Daynote.App\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
