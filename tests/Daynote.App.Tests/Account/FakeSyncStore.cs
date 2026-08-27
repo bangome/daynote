@@ -7,7 +7,7 @@ namespace Daynote.App.Tests.Account;
 /// behaviour is covered against a real database in the infrastructure suite.
 /// </summary>
 internal sealed class FakeSyncStore : ISyncStore
-    {
+{
     internal SyncStateSnapshot State { get; set; } = new(null, 0, 0, false, null);
 
     public ValueTask<SyncStateSnapshot> ReadStateAsync(CancellationToken cancellationToken = default) =>

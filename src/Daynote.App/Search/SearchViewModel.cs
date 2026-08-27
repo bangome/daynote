@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Daynote.App.Localization;
 using Daynote.App.Shell;
 using Daynote.Core.Search;
-using Daynote.App.Localization;
 
 namespace Daynote.App.Search;
 

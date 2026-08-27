@@ -103,7 +103,10 @@ public sealed class EditorHighlightScrollTests
         var card = new EditorCardView();
         var window = new Window
         {
-            Width = Width + 40, Height = Height + 80, Left = -4000, ShowInTaskbar = false,
+            Width = Width + 40,
+            Height = Height + 80,
+            Left = -4000,
+            ShowInTaskbar = false,
             Content = new Grid { Width = Width, Height = Height, Children = { card } },
         };
         window.Show();

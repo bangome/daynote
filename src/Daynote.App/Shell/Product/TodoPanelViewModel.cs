@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Daynote.App.Localization;
 using Daynote.App.Notes;
 using Daynote.Core.Notes;
 using Daynote.Core.Time;
-using Daynote.App.Localization;
 
 namespace Daynote.App.Shell.Product;
 
