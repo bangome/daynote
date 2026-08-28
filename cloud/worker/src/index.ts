@@ -1,4 +1,5 @@
 import { ApiError, errorResponse, json } from './http';
+import { privacyPage } from './privacy';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
 import * as auth from './auth';
@@ -40,6 +41,13 @@ export default {
 
     if (url.pathname === '/v1/health') {
       return json({ ok: true, server_utc: canonicalUtc(now) });
+    }
+
+    // The privacy policy the Store listing links to, served from docs/PRIVACY.md itself so the
+    // published page cannot drift from the document in the repository. Answered before the API
+    // routing table: it is a static page, and it must not reach D1 or the rate limiter.
+    if (request.method === 'GET' && url.pathname === '/privacy') {
+      return privacyPage();
     }
 
     const handler = ROUTES[`${request.method} ${url.pathname}`];

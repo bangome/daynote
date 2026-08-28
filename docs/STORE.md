@@ -9,8 +9,11 @@ can only be done in your Partner Center account; the rest are already wired in t
    (individual or company). A company account is needed if you want the publisher
    display name to be your organization.
 2. Have a **privacy policy URL** ready — the Store expects one for any app that stores
-   user data. Host the content of [PRIVACY.md](PRIVACY.md) at a public URL
-   (GitHub Pages, your site, etc.). Key points it must state: Daynote stores only what
+   user data. The cloud Worker serves one at **`https://daynote.arachat.cc/privacy`**,
+   rendered from [PRIVACY.md](PRIVACY.md) itself, so updating the document and deploying
+   the Worker republishes the policy; there is no page to maintain by hand. Use that URL
+   unless you are shipping a build with no Worker deployed, in which case host the
+   content of PRIVACY.md anywhere public. Key points it must state: Daynote stores only what
    you create (notes, attached day files, settings) locally in plaintext; it has no
    analytics or telemetry; and it makes no network calls unless the user opts into cloud
    sync and signs in.

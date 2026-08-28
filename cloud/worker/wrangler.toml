@@ -18,6 +18,12 @@ preview_urls = false
 # No DKIM key lives here: Resend holds the private half and gives you a public key to publish. See
 # DEPLOY.md for the three DNS records daynote.arachat.cc needs.
 
+# docs/PRIVACY.md is bundled as text so /privacy serves the repository's own policy rather than a
+# copy that has to be republished by hand. See src/privacy.ts.
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "60"
