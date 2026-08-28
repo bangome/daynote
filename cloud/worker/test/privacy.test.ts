@@ -78,6 +78,16 @@ describe('renderMarkdown', () => {
     expect(html).toContain('&amp;');
   });
 
+  it('closes emphasis that opens before a code span and ends after it', () => {
+    // This shipped once: the two asterisks fell either side of a code span, matched in neither
+    // half, and the sentence published with its markers showing.
+    const html = renderMarkdown('*Published at `https://example.test/privacy`, from this file.*');
+
+    expect(html).toContain('<em>');
+    expect(html).toContain('<code>https://example.test/privacy</code>');
+    expect(html).not.toContain('*');
+  });
+
   it('leaves emphasis characters inside code spans alone', () => {
     const html = renderMarkdown('Use `%LocalAppData%\Daynote` and `**not bold**` here.');
 
