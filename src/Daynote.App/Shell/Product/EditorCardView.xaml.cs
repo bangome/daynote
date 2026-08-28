@@ -43,7 +43,63 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
         // Tag-panel jumps ask the shell to select a body span; follow the DataContext so the editor
         // stays subscribed to the live shell and never leaks a handler.
         DataContextChanged += OnShellDataContextChanged;
+        Loaded += OnEditorLoaded;
         Unloaded += OnEditorUnloaded;
+    }
+
+    /// <summary>
+    /// Aligns the highlight layer's text box with the editor's, so the caret sits over its glyph.
+    /// </summary>
+    /// <remarks>
+    /// The two layers only stay in step if they wrap at exactly the same width, and identical
+    /// <c>Padding</c> does not give them that: WPF's <c>TextBox</c> template puts a 2px
+    /// horizontal margin on the inner text view — a gutter so the caret stays visible at column 0 and
+    /// at the end of a full line. The editor's text is therefore 4px narrower than a
+    /// <see cref="TextBlock"/> of the same width and padding, and each layer picks its own break
+    /// point. When they choose differently, everything after that point renders a line away from the
+    /// caret, which reads as typing landing on the wrong line. It only shows on text whose wrap point
+    /// happens to fall inside those 4px, which is why it looked like certain documents were cursed.
+    ///
+    /// Read the gutter off the live template rather than hard-coding 2: this is a WPF constant, not
+    /// ours, and a theme that replaces the template would move it. <c>HighlightGutterTests</c> pins
+    /// the invariant either way.
+    /// </remarks>
+    private void OnEditorLoaded(object sender, RoutedEventArgs e)
+    {
+        Thickness gutter = TextViewGutter(BodyBox);
+        Highlight.Padding = new Thickness(
+            BodyBox.Padding.Left + gutter.Left,
+            BodyBox.Padding.Top + gutter.Top,
+            BodyBox.Padding.Right + gutter.Right,
+            BodyBox.Padding.Bottom + gutter.Bottom);
+    }
+
+    /// <summary>The inner text view's margin, or WPF's default 2px gutter if the template hides it.</summary>
+    public static Thickness TextViewGutter(System.Windows.Controls.TextBox box)
+    {
+        ArgumentNullException.ThrowIfNull(box);
+        var host = box.Template?.FindName("PART_ContentHost", box) as DependencyObject;
+        FrameworkElement? view = host is null ? null : Descendants(host)
+            .FirstOrDefault(static element => element.GetType().Name == "TextBoxView");
+        return view?.Margin ?? new Thickness(2, 0, 2, 0);
+    }
+
+    private static IEnumerable<FrameworkElement> Descendants(DependencyObject root)
+    {
+        int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is FrameworkElement element)
+            {
+                yield return element;
+            }
+
+            foreach (FrameworkElement nested in Descendants(child))
+            {
+                yield return nested;
+            }
+        }
     }
 
     private ProductShellViewModel? _subscribedShell;

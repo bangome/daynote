@@ -159,7 +159,10 @@
                 <Grid Grid.Row="4">
                     <ScrollViewer x:Name="HighlightScroll" VerticalScrollBarVisibility="Hidden"
                                   HorizontalScrollBarVisibility="Disabled" IsHitTestVisible="False" Focusable="False">
-                        <TextBlock x:Name="Highlight" TextWrapping="Wrap" Padding="16,12"
+                        <!-- Padding is overwritten on load with the editor's padding plus the
+                             TextBoxView gutter; see EditorCardView.OnEditorLoaded. This value only
+                             covers the frames before then and the design-time preview. -->
+                        <TextBlock x:Name="Highlight" TextWrapping="Wrap" Padding="18,12"
                                    FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
                                    FontSize="{DynamicResource Daynote.Product.Type.Editor}"
                                    Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
