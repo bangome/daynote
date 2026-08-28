@@ -1,12 +1,12 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–6 built and verified against a real deployment.** The Worker is deployed with
-> no route attached and an empty D1; see [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md) for
-> what is still needed (hostname, Resend key, DNS). The app is wired up behind a configured
-> sync endpoint. The auth Worker lives in
-> [`cloud/worker/`](../cloud/worker/README.md). The WPF app still makes **no network calls** and has
-> no sign-in UI, so [PRIVACY.md](PRIVACY.md) remains accurate until Phase 5 ships. Phases 2–8 below
-> are still plan, not code.
+> Status: **Phases 1–6 built, deployed, and live.** The Worker serves `https://daynote.arachat.cc`
+> against D1, and the app points at it by default — see §12 for why that is a build-time constant
+> rather than an environment variable. Password-reset mail is the one part still unverified end to
+> end: see [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md). The Worker lives in
+> [`cloud/worker/`](../cloud/worker/README.md). A signed-out app still makes **no network calls** at
+> all, which is what keeps [PRIVACY.md](PRIVACY.md) accurate. Phase 7 (R2 attachments) is still plan,
+> not code.
 
 ## 1. Decisions taken
 
@@ -665,7 +665,7 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 3 ✅ | `004_cloud_sync.sql`, `SqliteSyncStore`, tombstone capture on delete | **Done.** Trigger-maintained outbox, tombstones, merge with dense re-ordering, cursor/account state. 51 tests green, including a seeded v3 → v4 upgrade and the §6.1 collision cases |
 | 4 ✅ | `SyncEngine` + `HttpSyncApiClient` for notes/tags/title-flag | **Done.** Worker push/pull with a grouped change-log cursor; engine encrypts, pushes, pulls, merges. 22 convergence cases across two real databases and one shared server, plus 26 Worker cases. A test asserts the server's stored blob contains no title, body, tag, or date |
 | 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
-| 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on `DAYNOTE_SYNC_ENDPOINT`: with no endpoint nothing is registered, no `HttpClient` exists, and the section is absent. PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
+| 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on the resolved sync endpoint: with none, nothing is registered, no `HttpClient` exists, and the section is absent (§12). PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
 | 6 ✅ | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | **Done.** Resend behind an `EmailSender` interface, an 8-character Crockford code with a five-attempt cap, and all three §4.8 unlock paths tested end-to-end including "discard the cloud copy". 19 Worker cases and 23 client cases |
 | 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |
@@ -730,3 +730,31 @@ At Cloudflare's current published tiers — verify against the live pricing page
    §4.8(b) can save them. Allow the opt-out with a blunt warning, or make it mandatory?
 4. **Legacy table cleanup.** `clipboard_items` and `image_assets` are dead; drop them in a separate
    migration before `004` so the sync code never has to reason about them.
+
+## 12. How the app finds the service
+
+`DaynoteAppOptions.ResolveSyncEndpoint` takes `DAYNOTE_SYNC_ENDPOINT` if it is set and falls back to
+the `DefaultSyncEndpoint` constant, `https://daynote.arachat.cc`. Only `https` is accepted; anything
+else — including a plaintext `http://` — resolves to null rather than being downgraded, because the
+bearer token and the ciphertext must not cross an unencrypted connection. Setting the variable to
+`off` also resolves to null, which is the escape hatch for a wholly offline build.
+
+Null is not a degraded mode. `SyncRegistration` registers nothing, no `HttpClient` is constructed,
+the account section is absent from the settings panel, and the status chip does not render.
+
+**The constant exists because the environment variable alone was a bug.** The endpoint used to come
+only from `DAYNOTE_SYNC_ENDPOINT`, which meant every installed copy resolved it to null: the account
+section was missing from the settings panel of the shipped MSIX while the service itself was
+deployed and answering correctly. An environment variable is a development seam, not something a
+packaged app can ask a user to set, and gating the feature on one made "cloud sync doesn't work"
+indistinguishable from "cloud sync isn't there". `SyncEndpointTests` pins the fallback so a build
+cannot silently lose it again.
+
+Pointing the app at a local `wrangler dev` is still just the variable:
+
+```
+DAYNOTE_SYNC_ENDPOINT=https://localhost:8787
+```
+
+Having an endpoint is not the same as using one. Cloud sync remains opt-in at the point that
+matters: nothing leaves the machine until the user signs in.

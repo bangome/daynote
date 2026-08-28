@@ -82,12 +82,27 @@ never sent. That is deliberate, and it is what a live check against the current 
 
 ## 3. Point the app at it
 
+Nothing to do: `DaynoteAppOptions.DefaultSyncEndpoint` is `https://daynote.arachat.cc`, so a shipped
+build already points here. `DAYNOTE_SYNC_ENDPOINT` overrides it for local development:
+
 ```
-DAYNOTE_SYNC_ENDPOINT=https://daynote.arachat.cc
+DAYNOTE_SYNC_ENDPOINT=https://localhost:8787   # a wrangler dev instance
+DAYNOTE_SYNC_ENDPOINT=off                      # no account section at all
 ```
 
-Only `https` is accepted; anything else is refused rather than downgraded. With the variable unset the
-app registers no sync services at all, has no `HttpClient`, and makes no network calls.
+Only `https` is accepted; anything else resolves to null rather than being downgraded, and null means
+the app registers no sync services, has no `HttpClient`, and makes no network calls.
+
+The default used to be absent, and that was the bug: every installed copy had no endpoint, so the
+account section was missing from the settings panel while this service was deployed and working. See
+[docs/CLOUD_SYNC.md §12](../../docs/CLOUD_SYNC.md).
+
+### One thing that will waste your time
+
+The zone's Browser Integrity Check rejects some non-browser clients by User-Agent with a Cloudflare
+`error code: 1010`, not a Worker response. `Python-urllib/3.x` is one of them, so a quick probe
+script can report a broken service that is in fact fine. `curl` is unaffected, and so is the app's
+`HttpClient`. If you see 1010, check the User-Agent before you check the Worker.
 
 ## Routine operations
 

@@ -17,10 +17,13 @@ can only be done in your Partner Center account; the rest are already wired in t
    you create (notes, attached day files, settings) locally in plaintext; it has no
    analytics or telemetry; and it makes no network calls unless the user opts into cloud
    sync and signs in.
-   If the build you submit has cloud sync enabled, the listing also has to declare that
+   The build now ships with a sync endpoint by default, so the listing has to declare that
    an account exists, that an email address is collected, and that note content is
-   uploaded — encrypted on the device, but uploaded. A build with no sync endpoint
-   configured makes no network calls at all and can be declared as such.
+   uploaded — encrypted on the device, but uploaded. "No network calls unless you opt in"
+   stays true and is the accurate phrasing: a signed-out app opens no connection at all.
+   The manifest declares `internetClient` accordingly. A build made with
+   `DAYNOTE_SYNC_ENDPOINT=off` has no account section and can be declared as making no
+   network calls whatsoever.
 
 ## 1. Reserve the app + get its identity **(you)**
 

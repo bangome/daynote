@@ -121,7 +121,7 @@ internal static class PackageManifestPolicy
             }
         }
 
-        // Capabilities: full trust only.
+        // Capabilities: full trust, plus the network the app now actually uses.
         var capabilities = package
             .Element(Foundation + "Capabilities")?
             .Elements(Rescap + "Capability")
@@ -135,6 +135,19 @@ internal static class PackageManifestPolicy
         if (capabilities.Contains("unvirtualizedResources"))
         {
             violations.Add("rescap:Capability 'unvirtualizedResources' needs special Microsoft approval and must not be declared.");
+        }
+
+        // Cloud sync makes outbound calls once the user signs in. runFullTrust already permits them,
+        // so nothing breaks if this is missing — which is exactly why it needs pinning: the Store
+        // shows declared capabilities to the user, and an undeclared network is a silent one.
+        var generalCapabilities = package
+            .Element(Foundation + "Capabilities")?
+            .Elements(Foundation + "Capability")
+            .Select(static element => (string?)element.Attribute("Name"))
+            .ToList() ?? new List<string?>();
+        if (!generalCapabilities.Contains("internetClient"))
+        {
+            violations.Add("Missing Capability 'internetClient' (cloud sync makes outbound calls).");
         }
 
         // StartupTask present AND disabled by default with the expected id.

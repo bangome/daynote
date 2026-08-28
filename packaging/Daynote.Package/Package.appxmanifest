@@ -124,5 +124,9 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <!-- Cloud sync (docs/CLOUD_SYNC.md). Declared even though runFullTrust already permits outbound
+         connections, because the Store lists declared capabilities to the user and an app that talks
+         to a network should say so. Nothing is sent until the user signs in. -->
+    <Capability Name="internetClient" />
   </Capabilities>
 </Package>

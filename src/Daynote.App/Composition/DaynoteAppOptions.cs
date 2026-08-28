@@ -20,13 +20,25 @@ public sealed class DaynoteAppOptions
     public string DatabasePath { get; }
 
     /// <summary>
-    /// Base address of the cloud sync service, or null when this build has none configured. Cloud
-    /// sync is opt-in twice over: the feature is inert without an endpoint, and inert again until the
-    /// user signs in. A build with no endpoint makes no network calls at all.
+    /// Base address of the cloud sync service, or null when this build has none. Cloud sync stays
+    /// opt-in: the account section is visible, but nothing leaves the machine until the user signs
+    /// in, and a signed-out app makes no network calls at all.
     /// </summary>
     public Uri? SyncEndpoint { get; init; }
 
-    /// <summary>Environment variable that supplies <see cref="SyncEndpoint"/>.</summary>
+    /// <summary>
+    /// The deployed service. This is a build-time default rather than something the user configures,
+    /// because an environment variable is not a setting a shipped app can ask for: without it
+    /// <see cref="SyncEndpoint"/> was null in every installed build, which silently removed the whole
+    /// account section from the settings panel. The variable below still overrides it for local
+    /// development and QA.
+    /// </summary>
+    public const string DefaultSyncEndpoint = "https://daynote.arachat.cc";
+
+    /// <summary>
+    /// Overrides <see cref="DefaultSyncEndpoint"/>. Set it to <c>off</c> to build a wholly offline
+    /// app with no account section at all.
+    /// </summary>
     public const string SyncEndpointEnvironmentVariable = "DAYNOTE_SYNC_ENDPOINT";
 
     /// <summary>
@@ -46,15 +58,32 @@ public sealed class DaynoteAppOptions
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Daynote")
             : overrideRoot;
-        string? endpoint = Environment.GetEnvironmentVariable(SyncEndpointEnvironmentVariable);
         return new DaynoteAppOptions(root)
         {
-            SyncEndpoint = Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? parsed)
-                && parsed.Scheme == Uri.UriSchemeHttps
-                    ? parsed
-                    // Anything but https is refused rather than downgraded: the bearer token and the
-                    // ciphertext must not cross a plaintext connection.
-                    : null,
+            SyncEndpoint = ResolveSyncEndpoint(
+                Environment.GetEnvironmentVariable(SyncEndpointEnvironmentVariable)),
         };
+    }
+
+    /// <summary>
+    /// Resolves the sync endpoint from an override, falling back to <see cref="DefaultSyncEndpoint"/>.
+    /// </summary>
+    public static Uri? ResolveSyncEndpoint(string? overrideEndpoint)
+    {
+        string candidate = string.IsNullOrWhiteSpace(overrideEndpoint)
+            ? DefaultSyncEndpoint
+            : overrideEndpoint.Trim();
+
+        if (string.Equals(candidate, "off", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return Uri.TryCreate(candidate, UriKind.Absolute, out Uri? parsed)
+            && parsed.Scheme == Uri.UriSchemeHttps
+                ? parsed
+                // Anything but https is refused rather than downgraded: the bearer token and the
+                // ciphertext must not cross a plaintext connection.
+                : null;
     }
 }
