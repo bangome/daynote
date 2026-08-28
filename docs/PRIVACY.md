@@ -6,6 +6,9 @@ exactly how your data is kept.
 *Applies to Daynote 1.3.0.0. Last updated 2026-08-28 — this revision covers the AI integration (MCP),
 which is new in 1.3.*
 
+*This page is published at `https://daynote.arachat.cc/privacy`, rendered from this file by the sync
+Worker — the page and this document cannot say different things.*
+
 ## No telemetry, no analytics, and nothing sent unless you ask for it
 
 Daynote has **no analytics and no telemetry**, ever. Nothing about how you use the app is reported
