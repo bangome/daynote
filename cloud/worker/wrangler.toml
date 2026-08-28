@@ -23,6 +23,9 @@ preview_urls = false
 [[rules]]
 type = "Text"
 globs = ["**/*.md"]
+# Without this the rule replaces wrangler's defaults instead of adding to them, silently turning off
+# text imports for .txt/.html/.sql.
+fallthrough = true
 
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
