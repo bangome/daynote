@@ -1,23 +1,26 @@
 # Deploying the Daynote cloud worker
 
-Current state, verified 2026-08-20 against a real deployment:
+Current state, verified 2026-08-28 against the real deployment:
 
 | Thing | State |
 | --- | --- |
-| Worker `daynote-cloud` | deployed, **no route attached** |
-| D1 `daynote` | created (`4226d475-a071-44c0-a2c7-4a953cbaa44e`, APAC), migrations 0001–0003 applied, empty |
+| Worker `daynote-cloud` | deployed and answering on `https://daynote.arachat.cc` |
+| D1 `daynote` | `4226d475-a071-44c0-a2c7-4a953cbaa44e` (APAC), migrations 0001–0003 applied, **empty** |
 | `JWT_SECRET` | set |
-| `RESEND_API_KEY` | **not set** — password reset returns 500 until it is |
-| DNS on `daynote.arachat.cc` | **not created** |
-| `workers_dev` | false, `preview_urls` false — the service has no public hostname on purpose |
+| `RESEND_API_KEY` | set |
+| Resend DNS on `daynote.arachat.cc` | **not created** — reset mail is therefore unverified |
+| `workers_dev` | false, `preview_urls` false — only the custom domain answers |
+| The app | **does not use this service.** Cloud sync is held back; see §3 |
 
-The worker is deployed but unreachable. That is the intended resting state: it accepts account
-registrations, so it should only answer on a hostname somebody deliberately attached.
+Register and login were exercised end to end against this deployment on 2026-08-28 and both work.
+The gap is email: until the Resend records exist, a password reset cannot be delivered, which is
+exactly why the app ships with cloud sync off.
 
-## 1. Attach the hostname
+## 1. Attach the hostname — done
 
-Needs `zone:edit` on `arachat.cc`, which the OAuth token used for the rest of this does not have. In
-the dashboard: **Workers & Pages → daynote-cloud → Settings → Domains & Routes → Add custom domain**,
+Already attached; `curl -s https://daynote.arachat.cc/v1/health` returns `{"ok":true,...}`. Kept here
+because it needs `zone:edit` on `arachat.cc`, which the OAuth token used for everything else does not
+have, so a rebuild from scratch runs into it again. In the dashboard: **Workers & Pages → daynote-cloud → Settings → Domains & Routes → Add custom domain**,
 then `daynote.arachat.cc`. Cloudflare creates the DNS record itself.
 
 Then confirm:
@@ -82,20 +85,21 @@ never sent. That is deliberate, and it is what a live check against the current 
 
 ## 3. Point the app at it
 
-Nothing to do: `DaynoteAppOptions.DefaultSyncEndpoint` is `https://daynote.arachat.cc`, so a shipped
-build already points here. `DAYNOTE_SYNC_ENDPOINT` overrides it for local development:
+**The shipped app does not talk to this service.** `DaynoteAppOptions.SyncEnabledByDefault` is
+`false`, so a released build resolves no endpoint at all — see
+[docs/CLOUD_SYNC.md §12](../../docs/CLOUD_SYNC.md) for why, and for what flipping it requires. This
+service stays deployed so the remaining email work can be finished against it.
+
+Reach it from a development build with the environment variable, which overrides the flag:
 
 ```
-DAYNOTE_SYNC_ENDPOINT=https://localhost:8787   # a wrangler dev instance
-DAYNOTE_SYNC_ENDPOINT=off                      # no account section at all
+DAYNOTE_SYNC_ENDPOINT=https://daynote.arachat.cc   # this service
+DAYNOTE_SYNC_ENDPOINT=https://localhost:8787       # a wrangler dev instance
+DAYNOTE_SYNC_ENDPOINT=off                          # force it off
 ```
 
 Only `https` is accepted; anything else resolves to null rather than being downgraded, and null means
 the app registers no sync services, has no `HttpClient`, and makes no network calls.
-
-The default used to be absent, and that was the bug: every installed copy had no endpoint, so the
-account section was missing from the settings panel while this service was deployed and working. See
-[docs/CLOUD_SYNC.md §12](../../docs/CLOUD_SYNC.md).
 
 ### One thing that will waste your time
 

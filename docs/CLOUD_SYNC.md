@@ -1,12 +1,12 @@
 # Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
 
-> Status: **Phases 1–6 built, deployed, and live.** The Worker serves `https://daynote.arachat.cc`
-> against D1, and the app points at it by default — see §12 for why that is a build-time constant
-> rather than an environment variable. Password-reset mail is the one part still unverified end to
-> end: see [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md). The Worker lives in
-> [`cloud/worker/`](../cloud/worker/README.md). A signed-out app still makes **no network calls** at
-> all, which is what keeps [PRIVACY.md](PRIVACY.md) accurate. Phase 7 (R2 attachments) is still plan,
-> not code.
+> Status: **Phases 1–6 built and deployed, but held back from release.** The Worker serves
+> `https://daynote.arachat.cc` against D1 and is verified in production, while the app ships with
+> cloud sync **off** — no account section, no network calls — because password-reset mail has never
+> been verified end to end. See §12 for the flag and what turning it on requires. The Worker lives in
+> [`cloud/worker/`](../cloud/worker/README.md); the remaining email setup is in
+> [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md). [PRIVACY.md](PRIVACY.md) describes the
+> shipped build, which makes no network calls. Phase 7 (R2 attachments) is still plan, not code.
 
 ## 1. Decisions taken
 
@@ -731,30 +731,59 @@ At Cloudflare's current published tiers — verify against the live pricing page
 4. **Legacy table cleanup.** `clipboard_items` and `image_assets` are dead; drop them in a separate
    migration before `004` so the sync code never has to reason about them.
 
-## 12. How the app finds the service
+## 12. Shipping state: held back
 
-`DaynoteAppOptions.ResolveSyncEndpoint` takes `DAYNOTE_SYNC_ENDPOINT` if it is set and falls back to
-the `DefaultSyncEndpoint` constant, `https://daynote.arachat.cc`. Only `https` is accepted; anything
-else — including a plaintext `http://` — resolves to null rather than being downgraded, because the
-bearer token and the ciphertext must not cross an unencrypted connection. Setting the variable to
-`off` also resolves to null, which is the escape hatch for a wholly offline build.
+**Cloud sync is not in the shipped app.** `DaynoteAppOptions.SyncEnabledByDefault` is `false`, so a
+released build resolves no endpoint, registers no sync services, constructs no `HttpClient`, shows no
+account section in the settings panel, renders no status chip, and makes no network calls at all. The
+MSIX declares no `internetClient` capability to match.
 
-Null is not a degraded mode. `SyncRegistration` registers nothing, no `HttpClient` is constructed,
-the account section is absent from the settings panel, and the status chip does not render.
+The reason is §4.9's dependency, not the sync engine: **password-reset mail has never been verified
+end to end.** In an end-to-end-encrypted system that is not a cosmetic gap. A user who signs up,
+forgets their password, and cannot receive a reset code has permanently lost their cloud copy — we
+hold no key that can recover it. Shipping the sign-up button before the recovery path works would
+hand people a way to lose data, and half a recovery story is worse than none.
 
-**The constant exists because the environment variable alone was a bug.** The endpoint used to come
-only from `DAYNOTE_SYNC_ENDPOINT`, which meant every installed copy resolved it to null: the account
-section was missing from the settings panel of the shipped MSIX while the service itself was
-deployed and answering correctly. An environment variable is a development seam, not something a
-packaged app can ask a user to set, and gating the feature on one made "cloud sync doesn't work"
-indistinguishable from "cloud sync isn't there". `SyncEndpointTests` pins the fallback so a build
-cannot silently lose it again.
+Everything else is built, deployed, and tested: 84 Worker cases, the client suites, and a live
+verification run against `https://daynote.arachat.cc` (§13). This is a release decision, not an
+unfinished implementation.
 
-Pointing the app at a local `wrangler dev` is still just the variable:
+### Turning it on
+
+One line. Set `SyncEnabledByDefault` to `true`, and in the same commit:
+
+- add `<Capability Name="internetClient" />` back to `packaging/Daynote.Package/Package.appxmanifest`
+  and update `PackageManifestPolicy`, which currently pins its absence;
+- update the Store listing (STORE.md) to declare the account, the email address collected, and the
+  uploaded note content;
+- update PRIVACY.md, which currently states the app makes no network calls.
+
+`SyncEndpointTests` asserts the flag is false, so flipping it fails a test whose message says what
+else to change. That is deliberate: these four things have to move together or the app understates
+what it does.
+
+### How the endpoint resolves
+
+`DaynoteAppOptions.ResolveSyncEndpoint` takes `DAYNOTE_SYNC_ENDPOINT` when it is set, and otherwise
+falls back to `DeployedSyncEndpoint` (`https://daynote.arachat.cc`) if — and only if —
+`SyncEnabledByDefault` is true. Only `https` is accepted; anything else, including a plaintext
+`http://`, resolves to null rather than being downgraded, because the bearer token and the ciphertext
+must not cross an unencrypted connection. `off` also resolves to null.
+
+The variable overrides the flag in both directions, which is how development and QA reach the feature
+while it is held back:
 
 ```
-DAYNOTE_SYNC_ENDPOINT=https://localhost:8787
+DAYNOTE_SYNC_ENDPOINT=https://daynote.arachat.cc   # the deployed service
+DAYNOTE_SYNC_ENDPOINT=https://localhost:8787       # a wrangler dev instance
+DAYNOTE_SYNC_ENDPOINT=off                          # force it off
 ```
 
-Having an endpoint is not the same as using one. Cloud sync remains opt-in at the point that
-matters: nothing leaves the machine until the user signs in.
+**The endpoint is a build-time constant because an environment variable alone was a bug.** It used to
+come only from `DAYNOTE_SYNC_ENDPOINT`, so every installed copy resolved it to null and the account
+section was missing from the shipped MSIX while the service was deployed and answering correctly.
+That looked exactly like the state above and was not a decision. The flag exists so the two are
+distinguishable.
+
+Having an endpoint would still not be the same as using one: even with sync shipped, nothing leaves
+the machine until the user signs in.

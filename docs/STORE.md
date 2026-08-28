@@ -15,15 +15,14 @@ can only be done in your Partner Center account; the rest are already wired in t
    unless you are shipping a build with no Worker deployed, in which case host the
    content of PRIVACY.md anywhere public. Key points it must state: Daynote stores only what
    you create (notes, attached day files, settings) locally in plaintext; it has no
-   analytics or telemetry; and it makes no network calls unless the user opts into cloud
-   sync and signs in.
-   The build now ships with a sync endpoint by default, so the listing has to declare that
-   an account exists, that an email address is collected, and that note content is
-   uploaded — encrypted on the device, but uploaded. "No network calls unless you opt in"
-   stays true and is the accurate phrasing: a signed-out app opens no connection at all.
-   The manifest declares `internetClient` accordingly. A build made with
-   `DAYNOTE_SYNC_ENDPOINT=off` has no account section and can be declared as making no
-   network calls whatsoever.
+   analytics or telemetry; and it makes no network calls at all.
+   That last claim is currently unconditional. Cloud sync is built but held back
+   (`DaynoteAppOptions.SyncEnabledByDefault` is `false`), so the shipped build has no
+   account, collects no email address, uploads nothing, and declares no `internetClient`
+   capability. Declare no account and no data collection.
+   **When cloud sync ships**, this listing has to change in the same release: an account
+   exists, an email address is collected, and note content is uploaded — encrypted on the
+   device, but uploaded. See [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for the full checklist.
 
 ## 1. Reserve the app + get its identity **(you)**
 

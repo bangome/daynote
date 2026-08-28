@@ -121,7 +121,7 @@ internal static class PackageManifestPolicy
             }
         }
 
-        // Capabilities: full trust, plus the network the app now actually uses.
+        // Capabilities: full trust only, while the app makes no network calls.
         var capabilities = package
             .Element(Foundation + "Capabilities")?
             .Elements(Rescap + "Capability")
@@ -137,17 +137,21 @@ internal static class PackageManifestPolicy
             violations.Add("rescap:Capability 'unvirtualizedResources' needs special Microsoft approval and must not be declared.");
         }
 
-        // Cloud sync makes outbound calls once the user signs in. runFullTrust already permits them,
-        // so nothing breaks if this is missing — which is exactly why it needs pinning: the Store
-        // shows declared capabilities to the user, and an undeclared network is a silent one.
+        // No network capability while cloud sync is held back. This is pinned rather than left
+        // unchecked so that shipping the feature has to come through here: runFullTrust already
+        // permits outbound calls, so an undeclared network would otherwise work silently and the
+        // Store listing would understate what the app does.
         var generalCapabilities = package
             .Element(Foundation + "Capabilities")?
             .Elements(Foundation + "Capability")
             .Select(static element => (string?)element.Attribute("Name"))
             .ToList() ?? new List<string?>();
-        if (!generalCapabilities.Contains("internetClient"))
+        if (generalCapabilities.Contains("internetClient"))
         {
-            violations.Add("Missing Capability 'internetClient' (cloud sync makes outbound calls).");
+            violations.Add(
+                "Capability 'internetClient' is declared, but this build makes no network calls. "
+                + "If cloud sync now ships (DaynoteAppOptions.SyncEnabledByDefault), update this "
+                + "policy and the Store listing together.");
         }
 
         // StartupTask present AND disabled by default with the expected id.

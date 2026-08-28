@@ -124,9 +124,10 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
-    <!-- Cloud sync (docs/CLOUD_SYNC.md). Declared even though runFullTrust already permits outbound
-         connections, because the Store lists declared capabilities to the user and an app that talks
-         to a network should say so. Nothing is sent until the user signs in. -->
-    <Capability Name="internetClient" />
+    <!-- No internetClient: this build makes no network calls at all. Cloud sync is built but held
+         back (DaynoteAppOptions.SyncEnabledByDefault), so declaring a network the app never uses
+         would show the user a permission that is not real. Add it back in the same commit that
+         flips that flag — the Store lists declared capabilities, and an undeclared network is a
+         silent one. See docs/CLOUD_SYNC.md. -->
   </Capabilities>
 </Package>

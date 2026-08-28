@@ -3,10 +3,12 @@
 This document explains where Daynote keeps your data, what survives updates and reinstalls, and how
 to back up, recover, or remove your data.
 
-Your PC is the source of truth. Optional cloud sync keeps your other devices in step, but it is a
-**sync, not a backup**: it propagates deletions as faithfully as it propagates edits, so a note you
-delete by mistake is deleted everywhere. **You** still own the backup story — see
-[PRIVACY.md](PRIVACY.md) for what cloud sync does and does not store.
+Your PC is the only copy. This version has no cloud sync, so there is nothing standing between a
+mistake and lost notes except a backup you took — see [Backing up your data](#backing-up-your-data) below.
+
+When cloud sync does ship it will not change that. It is a **sync, not a backup**: it propagates
+deletions as faithfully as it propagates edits, so a note you delete by mistake is deleted
+everywhere. **You** will still own the backup story.
 
 ## Data location
 
@@ -21,11 +23,13 @@ All Daynote data lives under:
 - `daynote.db-wal`, `daynote.db-shm` — SQLite write-ahead-log side files.
 - `assets\` — captured images as content-addressed PNG files (`assets\<hh>\<hash>.png`).
 - Settings are stored inside the database.
-- `credentials.dat` — your cloud-sync session and content key, encrypted with Windows DPAPI. Present
+Two more files appear only once cloud sync ships, and neither exists in this version:
+
+- `credentials.dat` — the cloud-sync session and content key, encrypted with Windows DPAPI. Present
   only while signed in, excluded from backups on purpose, and unusable on another PC or under another
   Windows account.
 - `conflicts\` — plain-text copies of note versions that a sync replaced with a newer version from
-  another device. Nothing here is needed by the app; it exists so a sync never silently discards
+  another device. Nothing there is needed by the app; it exists so a sync never silently discards
   something you wrote.
 
 The data is **plaintext and not encrypted by Daynote**. It is not copied or uploaded anywhere.

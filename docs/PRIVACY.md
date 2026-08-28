@@ -14,13 +14,12 @@ Worker — the page and this document cannot say different things.*
 Daynote has **no analytics and no telemetry**, ever. Nothing about how you use the app is reported
 anywhere.
 
-Daynote makes **no network calls at all** unless you turn on cloud sync and sign in. Cloud sync is
-off by default.
+**This version of Daynote makes no network calls at all.** Cloud sync is not included in it — see
+below.
 
-There are exactly two ways note content can leave this PC, and you have to switch each of them on:
-**cloud sync**, which uploads it (encrypted here first), and the **AI integration (MCP)**, which hands
-it to an AI client that may forward it to that client's own service. Both are described below. With
-neither enabled, everything stays on this PC.
+There is exactly one way note content can leave this PC, and you have to switch it on: the **AI
+integration (MCP)**, which hands your notes to an AI client that may forward them to that client's own
+service. It is described below. With it off, everything stays on this PC.
 
 ## AI integration (MCP, optional, off by default)
 
@@ -49,46 +48,18 @@ touch it on the way out; the entry simply stops resolving.
 
 See [MCP.md](MCP.md) for the tool list and setup details.
 
-## Cloud sync (optional, off by default)
+## Cloud sync — not in this version
 
-If you sign in under Settings → **클라우드 동기화 / Cloud sync**, your notes are synced to your other
-devices through a service Daynote operates. What that means precisely:
+Daynote has no accounts and no cloud sync. There is no sign-in, nothing is uploaded, and the app
+opens no network connection. If you have read about cloud sync elsewhere, it is built but not
+released.
 
-**Your notes are encrypted on this PC before they are uploaded.** The key comes from your password
-and never leaves your device. The service stores ciphertext it cannot open — not the operators of the
-service, and not anyone who obtains a copy of its database.
-
-**What the service stores and can read:**
-
-- your email address, and when the account was created
-- how many notes you have, and their random identifiers
-- **when** each note was last edited or deleted
-- the size of each encrypted note
-- your IP address and device names when you sign in
-
-**What the service cannot read:** note titles, note bodies, tags, favorites, the dates your notes are
-filed under, or their order. All of that is inside the encrypted payload. The service cannot even tell
-which days you write on.
-
-**If you forget your password**, you can reset it by email. Resetting gets you back into the account,
-but it does not by itself open the cloud copy: the key comes from your password, and the service does
-not hold it. What happens next depends on where you are:
-
-- **On a PC you already used**, the notes open automatically — the key is still on that machine.
-- **On a new PC**, you are asked for the recovery key shown once when you created the account.
-- **With neither**, the cloud copy cannot be opened by anyone, including us. You can discard it and
-  start again from the notes on your PC, which are never affected either way.
-
-Reset emails come from `no-reply@daynote.arachat.cc` and carry a code that expires in 30 minutes.
-
-**Cloud sync is not a backup.** It copies changes, including deletions: a note you delete on one
-device is deleted on the others. Use Settings → **백업 및 복원 / Backup and restore** for a real
-backup.
-
-Attachments are **not** synced yet. Files you attach to a day stay on the PC you added them to.
-
-To stop syncing, sign out. That removes the account and its keys from this PC and leaves your local
-notes untouched.
+When it does ship it will be optional and off until you sign in, and it is designed so that the
+service stores only ciphertext it cannot open: notes are encrypted on your PC with a key derived from
+your password, and that key never leaves your device. This document will be replaced with the
+specifics — including what the service can still see, such as your email address and when each note
+changed — in the same release that turns it on. Until then, treat any description of it as a plan
+rather than a description of the app you are running.
 
 ## Daynote only stores what you create — no background capture
 

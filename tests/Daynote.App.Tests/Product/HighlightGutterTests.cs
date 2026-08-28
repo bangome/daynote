@@ -41,6 +41,13 @@ public sealed class HighlightGutterTests
         """;
 
     /// <summary>
+    /// <see cref="KoreanNotes"/> with its line endings normalized, which is what actually gets
+    /// measured. Git rewrites the source file's newlines on checkout, so the literal's length is not
+    /// stable across machines — indexing the TextBox by it threw once the file came back as CRLF.
+    /// </summary>
+    private static readonly string Notes = KoreanNotes.ReplaceLineEndings("\n");
+
+    /// <summary>
     /// One offscreen window, reused for every measurement and closed once. Text metrics need a
     /// realized visual tree, and a window per width both dominated the runtime and left enough live
     /// windows to break unrelated rendering tests.
@@ -91,8 +98,8 @@ public sealed class HighlightGutterTests
     {
         // The mechanism, stated directly. If WPF ever drops the gutter this fails and the
         // compensation can go.
-        var box = NewEditor(KoreanNotes);
-        var block = NewHighlight(KoreanNotes, EditorPadding);
+        var box = NewEditor(Notes);
+        var block = NewHighlight(Notes, EditorPadding);
         Lay(box, block, 700);
 
         Assert.IsLessThan(
@@ -109,8 +116,8 @@ public sealed class HighlightGutterTests
         int widthsThatDrift = 0;
         foreach (double width in Widths())
         {
-            var box = NewEditor(KoreanNotes);
-            var block = NewHighlight(KoreanNotes, EditorPadding);
+            var box = NewEditor(Notes);
+            var block = NewHighlight(Notes, EditorPadding);
             Lay(box, block, width);
             if (CountDriftingCharacters(box, block) > 0)
             {
@@ -127,10 +134,10 @@ public sealed class HighlightGutterTests
         // Many widths, because the bug is a boundary effect: any single width can pass by luck.
         foreach (double width in Widths())
         {
-            var box = NewEditor(KoreanNotes);
+            var box = NewEditor(Notes);
             Thickness gutter = EditorCardView.TextViewGutter(NewEditorInTree());
             var block = NewHighlight(
-                KoreanNotes,
+                Notes,
                 new Thickness(
                     EditorPadding.Left + gutter.Left,
                     EditorPadding.Top + gutter.Top,
@@ -166,7 +173,7 @@ public sealed class HighlightGutterTests
         double lineHeight = LineHeight(box);
         var run = (Run)block.Inlines.FirstInline;
         int drifted = 0;
-        for (int i = 0; i <= KoreanNotes.Length; i++)
+        for (int i = 0; i <= Notes.Length; i++)
         {
             TextPointer? pointer = run.ContentStart.GetPositionAtOffset(i);
             if (pointer is null)
