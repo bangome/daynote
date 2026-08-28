@@ -80,6 +80,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $solution = Join-Path $repoRoot 'Daynote.sln'
 $appProject = Join-Path $repoRoot 'src\Daynote.App\Daynote.App.csproj'
 $wapProject = Join-Path $repoRoot 'packaging\Daynote.Package\Daynote.Package.wapproj'
+$manifest = Join-Path $repoRoot 'packaging\Daynote.Package\Package.appxmanifest'
 $rid = "win-$Architecture"
 
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot 'artifacts' }
@@ -211,6 +212,63 @@ function Assert-McpServerCoLocated {
     }
 }
 
+function Assert-PackageVersionMatchesManifest {
+    <#
+    .SYNOPSIS
+        Verifies the produced package carries the version in Package.appxmanifest.
+    .DESCRIPTION
+        The StoreUpload path keeps its own bin\...\Upload tree, and an incremental build has been
+        observed leaving that tree's generated AppxManifest.xml at the previous version while the
+        bundle around it advanced. The result is a .msixupload whose file name says the new version
+        and whose application package says the old one. Partner Center then rejects it as a duplicate
+        of the release you already shipped -- or, worse, you believe you submitted a new build and
+        did not.
+
+        Deleting packaging\Daynote.Package\bin and \obj fixes it. This check exists so the mismatch
+        surfaces at build time instead of at upload time.
+    #>
+    param(
+        [Parameter(Mandatory)][string] $PackagePath,
+        [Parameter(Mandatory)][string] $ManifestPath)
+
+    $expected = ([xml] (Get-Content -Path $ManifestPath -Raw)).Package.Identity.Version
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+    $scratch = Join-Path ([System.IO.Path]::GetTempPath()) ("daynote-version-verify-" + [System.Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $scratch | Out-Null
+    try {
+        # Same nesting as the MCP check: .msixupload -> .msixbundle -> .msix.
+        $current = $PackagePath
+        foreach ($inner in @('*.msixbundle', '*.msix')) {
+            if ([System.IO.Path]::GetExtension($current) -eq '.msix') { break }
+            $stage = Join-Path $scratch ([System.Guid]::NewGuid().ToString('N'))
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($current, $stage)
+            $next = Get-ChildItem -Path $stage -Filter $inner -File | Select-Object -First 1
+            if (-not $next) { throw "Could not find $inner inside $current." }
+            $current = $next.FullName
+        }
+
+        $package = [System.IO.Compression.ZipFile]::OpenRead($current)
+        try {
+            $entry = $package.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' } | Select-Object -First 1
+            if (-not $entry) { throw 'The produced package has no AppxManifest.xml.' }
+            $reader = New-Object System.IO.StreamReader($entry.Open())
+            try { $actual = ([xml] $reader.ReadToEnd()).Package.Identity.Version } finally { $reader.Dispose() }
+        }
+        finally { $package.Dispose() }
+    }
+    finally {
+        try { Remove-Item -Recurse -Force $scratch -ErrorAction Stop } catch {}
+    }
+
+    if ($actual -ne $expected) {
+        throw ("Version mismatch: Package.appxmanifest says {0} but the packaged application says {1}. " +
+            "That is stale packaging output -- delete packaging\Daynote.Package\bin and \obj, then build again.") -f $expected, $actual
+    }
+
+    Write-Log "Package version verified: $actual matches Package.appxmanifest."
+}
+
 Write-Log "Step 4: MSBuild package via $msbuild"
 
 if ($Store) {
@@ -230,6 +288,7 @@ if ($Store) {
         Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($upload) {
         Write-Log "Produced Store package: $($upload.FullName)"
+        Assert-PackageVersionMatchesManifest -PackagePath $upload.FullName -ManifestPath $manifest
         Assert-McpServerCoLocated -PackagePath $upload.FullName
         Write-Log 'Upload this .msixupload in Partner Center. See docs/STORE.md.'
     }
@@ -266,6 +325,7 @@ $msix = Get-ChildItem -Path $OutputDirectory -Recurse -Filter '*.msix' -ErrorAct
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($msix) {
     Write-Log "Produced MSIX: $($msix.FullName)"
+    Assert-PackageVersionMatchesManifest -PackagePath $msix.FullName -ManifestPath $manifest
     Assert-McpServerCoLocated -PackagePath $msix.FullName
 }
 else { Write-Log 'No .msix found after packaging.' }

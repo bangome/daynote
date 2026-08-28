@@ -55,6 +55,22 @@ This produces an **unsigned `.msixupload`** under `artifacts\` using
 re-signs with your app's Store identity. (The default, `-Store`-less run still makes
 the self-signed sideload `.msix` for local testing.)
 
+The script verifies two things about what it produced, and fails the build rather than
+letting either reach Partner Center:
+
+- the packaged application's version matches `Package.appxmanifest`;
+- the co-located MCP server has every assembly its `deps.json` names.
+
+`artifacts\` accumulates one `.msixupload` per version. **Upload the one matching the
+version you just bumped to** — the older ones are still sitting there.
+
+> **Bump the version before you build.** The `bin\...\Upload` tree that the Store path
+> writes has been seen surviving an incremental build with the previous version inside
+> it, producing a `.msixupload` whose *file name* carried the new version and whose
+> *application package* carried the old one. Partner Center rejects that as a duplicate
+> of the release you already shipped. The version check above catches it now; the fix is
+> to delete `packaging\Daynote.Package\bin` and `\obj`, then build again.
+
 ## 4. Complete the submission **(you)**
 
 In Partner Center for the reserved app:
@@ -80,3 +96,7 @@ Submit → Microsoft certification → published.
 - **Startup**: "start with Windows" is opt-in (Settings toggle); the app never
   auto-enables it, per Store policy.
 - **x64 only**: no x86/Arm64 package is produced.
+- **No network**: this build makes no network calls, declares no `internetClient`
+  capability, and has no accounts. Declare no data collection. Cloud sync is built but
+  held back — see [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for everything that has to change
+  in the release that turns it on, this listing included.
