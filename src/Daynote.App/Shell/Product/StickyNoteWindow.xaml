@@ -9,7 +9,7 @@
     WindowStyle="None" ResizeMode="CanResize"
     Topmost="True"
     FontFamily="{DynamicResource Daynote.Product.Font.UI}"
-    Foreground="{DynamicResource Daynote.Product.Brush.Text}"
+    Foreground="{DynamicResource Daynote.Product.Brush.StickyText}"
     UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal"
     AutomationProperties.Name="{Binding Shell.Notes.SelectedTab.Title}">
 
@@ -21,7 +21,7 @@
         Background="{DynamicResource Daynote.Product.Brush.Sticky}"
         BorderBrush="{DynamicResource Daynote.Product.Brush.StickyStroke}"
         BorderThickness="1"
-        CornerRadius="{DynamicResource Daynote.Product.Radius.Card}"
+        CornerRadius="6"
         Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}"
         ClipToBounds="True">
         <Grid>
@@ -85,8 +85,8 @@
                 Margin="14,0,14,14"
                 Background="Transparent"
                 BorderThickness="0"
-                Foreground="{DynamicResource Daynote.Product.Brush.Text}"
-                CaretBrush="{DynamicResource Daynote.Product.Brush.Text}"
+                Foreground="{DynamicResource Daynote.Product.Brush.StickyText}"
+                CaretBrush="{DynamicResource Daynote.Product.Brush.StickyText}"
                 Text="{Binding Shell.Notes.EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
                 FontSize="{DynamicResource Daynote.Product.Type.Editor}"

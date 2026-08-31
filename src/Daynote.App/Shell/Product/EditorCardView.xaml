@@ -42,11 +42,11 @@
 
                 <!-- Selected date, small and centered above the note -->
                 <TextBlock Grid.Row="0" Text="{Binding DayLabel}" FontSize="11" HorizontalAlignment="Center"
-                           Margin="16,8,16,0" Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                           Margin="22,12,22,0" Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
                            AutomationProperties.Name="{Binding DayLabel}" />
 
                 <!-- Title + new note + favorite + post-it + delete -->
-                <Grid Grid.Row="1" Margin="16,4,16,0">
+                <Grid Grid.Row="1" Margin="22,4,22,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -100,7 +100,7 @@
                 </Grid>
 
                 <!-- Tag chips + inline add: the "+ 태그" input flows right after the last chip (design row) -->
-                <WrapPanel Grid.Row="2" Margin="16,8,16,8" Orientation="Horizontal">
+                <WrapPanel Grid.Row="2" Margin="22,8,22,10" Orientation="Horizontal">
                     <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -153,7 +153,7 @@
                 </WrapPanel>
 
                 <!-- Divider -->
-                <Border Grid.Row="3" Height="1" Margin="16,0" Background="{DynamicResource Daynote.Product.Brush.Stroke}" />
+                <Border Grid.Row="3" Height="1" Margin="22,0" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
                 <!-- Body: highlight layer under a transparent-foreground editor -->
                 <Grid Grid.Row="4">
@@ -168,7 +168,7 @@
                                    Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
                     </ScrollViewer>
                     <TextBox x:Name="BodyBox" Background="Transparent" Foreground="Transparent" BorderThickness="0"
-                             CaretBrush="{DynamicResource Daynote.Product.Brush.Text}" Padding="16,12"
+                             CaretBrush="{DynamicResource Daynote.Product.Brush.Text}" Padding="22,14"
                              FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
                              FontSize="{DynamicResource Daynote.Product.Type.Editor}"
                              TextWrapping="Wrap" AcceptsReturn="True" AcceptsTab="True" SpellCheck.IsEnabled="False"
@@ -179,11 +179,13 @@
                              AutomationProperties.Name="{loc:Tr MarkdownEditor}" />
                 </Grid>
 
-                <!-- Footer meta -->
-                <Grid Grid.Row="5" Margin="16,6">
-                    <TextBlock x:Name="MetaLeft" HorizontalAlignment="Left" FontSize="11"
-                               Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
-                </Grid>
+                <!-- Footer meta (v3: hairline top border) -->
+                <Border Grid.Row="5" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
+                    <Grid Margin="22,8">
+                        <TextBlock x:Name="MetaLeft" HorizontalAlignment="Left" FontSize="11"
+                                   Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
     </Border>

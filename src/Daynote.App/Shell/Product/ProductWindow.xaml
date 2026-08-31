@@ -80,8 +80,8 @@
             <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                   MaxWidth="444" MinWidth="120" Margin="12,0" WindowChrome.IsHitTestVisibleInChrome="True">
                 <Border Background="{DynamicResource Daynote.Product.Brush.Input}"
-                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1,1,1,2"
-                        CornerRadius="{DynamicResource Daynote.Product.Radius.Control}" Height="32" Padding="10,0">
+                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
+                        CornerRadius="{DynamicResource Daynote.Product.Radius.Pill}" Height="34" Padding="14,0,8,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -112,72 +112,64 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,0"
                         WindowChrome.IsHitTestVisibleInChrome="True">
                 <Button Content="{loc:Tr GoToToday}" Style="{DynamicResource Daynote.Product.Style.Button.Secondary}"
-                        Command="{Binding GoToTodayCommand}" VerticalAlignment="Center" Height="26" Margin="0,0,4,0"
+                        Command="{Binding GoToTodayCommand}" VerticalAlignment="Center" Height="30" Margin="0,0,6,0"
                         Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
                 <!-- Compact titlebar: icon-only 오늘로 이동 with the label as tooltip/accessible name -->
-                <Button Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                        Command="{Binding GoToTodayCommand}" VerticalAlignment="Center" Margin="0,0,4,0"
+                <Button Style="{DynamicResource Daynote.Product.Style.Button.Round}"
+                        Command="{Binding GoToTodayCommand}" VerticalAlignment="Center" Margin="0,0,6,0"
                         ToolTip="{loc:Tr GoToToday}"
                         AutomationProperties.Name="{loc:Tr GoToToday}"
                         Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
                     <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.CalendarGlyph}"
-                          Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}" />
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}" />
                 </Button>
                 <!-- Both-sidebars toggle: the ONLY collapse/expand affordance (the card's corner buttons are
                      gone). The glyph shows the action — >< while expanded (click to collapse), <> while both
                      are collapsed (click to expand). A stacked pair, one visible per state, so the
                      tooltip/accessible name always matches the action. -->
-                <Button Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                        Command="{Binding TogglePanelsCommand}" VerticalAlignment="Center"
+                <Button Style="{DynamicResource Daynote.Product.Style.Button.Round}"
+                        Command="{Binding TogglePanelsCommand}" VerticalAlignment="Center" Margin="0,0,6,0"
                         ToolTip="{loc:Tr SidebarsCollapse}"
                         AutomationProperties.Name="{loc:Tr SidebarsCollapse}"
                         Visibility="{Binding PanelsCollapsed, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
                     <Path Width="14" Height="14" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.PanelsCollapse}"
-                          Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}" />
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}" />
                 </Button>
-                <Button Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                        Command="{Binding TogglePanelsCommand}" VerticalAlignment="Center"
+                <Button Style="{DynamicResource Daynote.Product.Style.Button.Round}"
+                        Command="{Binding TogglePanelsCommand}" VerticalAlignment="Center" Margin="0,0,6,0"
                         ToolTip="{loc:Tr SidebarsExpand}"
                         AutomationProperties.Name="{loc:Tr SidebarsExpand}"
                         Visibility="{Binding PanelsCollapsed, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
                     <Path Width="14" Height="14" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.PanelsExpand}"
-                          Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}" />
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}" />
                 </Button>
-                <Button Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
+                <Button Style="{DynamicResource Daynote.Product.Style.Button.Round}"
                         Command="{Binding ToggleTimelineCommand}" ToolTip="{loc:Tr TimelineToggle}"
+                        VerticalAlignment="Center" Margin="0,0,6,0" Tag="{Binding IsTimelineMode}"
                         AutomationProperties.Name="{loc:Tr TimelineToggle}">
                     <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Timeline}"
-                          StrokeThickness="1.4" Fill="{x:Null}">
-                        <Path.Style>
-                            <Style TargetType="Path">
-                                <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsTimelineMode}" Value="True">
-                                        <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Path.Style>
-                    </Path>
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}" />
                 </Button>
-                <Button Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
+                <Button Style="{DynamicResource Daynote.Product.Style.Button.Round}"
                         Command="{Binding ToggleThemeCommand}" ToolTip="{loc:Tr ThemeToggle}"
+                        VerticalAlignment="Center" Margin="0,0,6,0"
                         AutomationProperties.Name="{loc:Tr ThemeToggle}">
                     <Grid>
                         <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Moon}"
-                              Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}"
                               Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
                         <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Sun}"
-                              Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}"
                               Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                     </Grid>
                 </Button>
-                <account:SyncStatusChip DataContext="{Binding Account}" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <Button x:Name="TutSettings" Width="32" Height="32" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
+                <account:SyncStatusChip DataContext="{Binding Account}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <Button x:Name="TutSettings" Style="{DynamicResource Daynote.Product.Style.Button.Round}"
                         Command="{Binding ToggleSettingsCommand}" ToolTip="{loc:Tr SettingsTitle}"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="{loc:Tr SettingsTitle}">
                     <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Settings}"
-                          Stroke="{DynamicResource Daynote.Product.Brush.Text}" StrokeThickness="1.4" Fill="{x:Null}" />
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" Fill="{x:Null}" />
                 </Button>
                 <Button x:Name="MinButton" Style="{DynamicResource Daynote.Product.Style.CaptionButton}" Click="OnMinimize"
                         Margin="8,0,0,0" AutomationProperties.Name="{loc:Tr WindowMinimize}">
@@ -198,7 +190,7 @@
         </Grid>
 
         <!-- ═ Body ═ side panels stay put in both editor and timeline mode; only the center swaps -->
-        <Grid Grid.Row="1" Margin="10,0,10,10">
+        <Grid Grid.Row="1" Margin="16,0,16,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -207,7 +199,7 @@
 
             <!-- LEFT: full column (calendar + note list); when collapsed it disappears entirely and the
                  expand affordance lives at the editor card's top-left corner (EditorCardView) -->
-            <Grid Grid.Column="0" Width="290" Margin="0,0,10,0"
+            <Grid Grid.Column="0" Width="292" Margin="0,0,12,0"
                   Visibility="{Binding LeftCollapsed, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -215,7 +207,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Calendar card -->
-                <Border x:Name="TutCalendar" Grid.Row="0" Style="{DynamicResource Daynote.Product.Style.Panel}" Padding="12" Margin="0,0,0,10"
+                <Border x:Name="TutCalendar" Grid.Row="0" Style="{DynamicResource Daynote.Product.Style.Panel}" Padding="14" Margin="0,0,0,12"
                         DataContext="{Binding Calendar}">
                     <StackPanel>
                         <Grid Margin="0,0,0,8">
@@ -251,29 +243,68 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type product:CalendarDayCellViewModel}">
-                                    <Button Height="36" Margin="1" Command="{Binding SelectCommand}"
+                                    <Button Height="38" Margin="1" Command="{Binding SelectCommand}"
                                             Style="{DynamicResource Daynote.Product.Style.GhostButton}"
                                             AutomationProperties.Name="{Binding DayText}">
                                         <Grid>
-                                            <Border x:Name="CellBg" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"
-                                                    BorderThickness="1" BorderBrush="Transparent" />
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                <Grid HorizontalAlignment="Center">
+                                                <!-- v3: day number sits inside a 24px circle — accent-filled when selected,
+                                                     accent-ringed on today, weekend-tinted otherwise -->
+                                                <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="Transparent" />
+                                                            <Setter Property="BorderThickness" Value="1.5" />
+                                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
                                                     <TextBlock x:Name="DayNum" Text="{Binding DayText}" FontSize="12" TextAlignment="Center"
-                                                               Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
-                                                    <!-- Count rides the day number's top-right corner like a superscript; the
-                                                         negative margin hangs it outside the number so the two never overlap. -->
-                                                    <TextBlock Text="{Binding CountText}" FontSize="8" VerticalAlignment="Top" HorizontalAlignment="Right"
-                                                               Margin="0,-4,-9,0" Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
-                                                               Visibility="{Binding HasCount, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                                </Grid>
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Height="4" Margin="0,1,0,0">
-                                                    <Ellipse Width="4" Height="4" Margin="1,0" Fill="{DynamicResource Daynote.Product.Brush.Accent}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+                                                                <Setter Property="FontWeight" Value="Medium" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsSunday}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsSaturday}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+                                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Height="5" Margin="0,2,0,0">
+                                                    <Ellipse Width="5" Height="5" Margin="1.5,0" Fill="{DynamicResource Daynote.Product.Brush.Accent}"
                                                              Visibility="{Binding HasNotes, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                                    <Ellipse Width="4" Height="4" Margin="1,0" Fill="{DynamicResource Daynote.Product.Brush.Extras}"
+                                                    <Ellipse Width="5" Height="5" Margin="1.5,0" Fill="{DynamicResource Daynote.Product.Brush.Extras}"
                                                              Visibility="{Binding HasExtras, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                                                 </StackPanel>
                                             </StackPanel>
+                                            <!-- v3: note count pinned to the cell's top-right corner in accent -->
+                                            <TextBlock Text="{Binding CountText}" FontSize="9.5" FontWeight="Bold"
+                                                       VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,2,4,0"
+                                                       Foreground="{DynamicResource Daynote.Product.Brush.Accent}"
+                                                       Visibility="{Binding HasCount, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                                         </Grid>
                                     </Button>
                                 </DataTemplate>
@@ -314,11 +345,11 @@
                                                     CommandParameter="{Binding}">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="Row" Padding="10,8" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"
-                                                                BorderThickness="3,0,0,0" BorderBrush="Transparent" Background="Transparent">
+                                                        <Border x:Name="Row" Padding="11,9" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"
+                                                                BorderThickness="0" Background="Transparent">
                                                             <StackPanel>
                                                                 <Grid>
-                                                                    <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
+                                                                    <TextBlock x:Name="RowTitle" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
                                                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
                                                                     <Path Width="11" Height="11" Stretch="Uniform" HorizontalAlignment="Right"
                                                                           Data="{DynamicResource Daynote.Product.Geo.Star}" Fill="{DynamicResource Daynote.Product.Brush.Extras}"
@@ -350,7 +381,7 @@
                                                             </Trigger>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                                 <Setter TargetName="Row" Property="Background" Value="{DynamicResource Daynote.Product.Brush.AccentSoft}" />
-                                                                <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                                                <Setter TargetName="RowTitle" Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
                                                             </DataTrigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -378,7 +409,7 @@
 
             <!-- RIGHT: tab panel; when collapsed it disappears entirely and the expand affordance lives
                  at the editor card's top-right corner (EditorCardView) -->
-            <Border Grid.Column="2" Width="300" Margin="10,0,0,0" Style="{DynamicResource Daynote.Product.Style.Panel}"
+            <Border Grid.Column="2" Width="302" Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Panel}"
                     Visibility="{Binding RightCollapsed, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -386,27 +417,30 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <!-- Tab row -->
-                    <Grid Grid.Row="0" Margin="8,8,8,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Button x:Name="TutTabTodo" Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTodo}"
-                                Content="{Binding Todo.TabLabel}"
-                                AutomationProperties.Name="{loc:Tr TabTodoName}"
-                                Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Todo}" />
-                        <Button x:Name="TutTabTags" Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTags}"
-                                Content="{Binding TagPanel.TabLabel}"
-                                AutomationProperties.Name="{loc:Tr TabTagsName}"
-                                Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Tags}" />
-                        <Button x:Name="TutTabFiles" Grid.Column="2" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsFiles}"
-                                Content="{loc:Tr TabFiles}"
-                                AutomationProperties.Name="{loc:Tr TabFilesName}"
-                                Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Files}" />
-                    </Grid>
-                    <Border Grid.Row="1" Height="1" Background="{DynamicResource Daynote.Product.Brush.Stroke}" Margin="0,8,0,0" />
+                    <!-- Tab row: v3 segmented control on a Seg-colored track -->
+                    <Border Grid.Row="0" Margin="10,10,10,8" Background="{DynamicResource Daynote.Product.Brush.Seg}"
+                            CornerRadius="9" Padding="3">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="TutTabTodo" Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTodo}"
+                                    Content="{Binding Todo.TabLabel}"
+                                    AutomationProperties.Name="{loc:Tr TabTodoName}"
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Todo}" />
+                            <Button x:Name="TutTabTags" Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTags}"
+                                    Content="{Binding TagPanel.TabLabel}"
+                                    AutomationProperties.Name="{loc:Tr TabTagsName}"
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Tags}" />
+                            <Button x:Name="TutTabFiles" Grid.Column="2" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsFiles}"
+                                    Content="{loc:Tr TabFiles}"
+                                    AutomationProperties.Name="{loc:Tr TabFilesName}"
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Files}" />
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="1" Height="1" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
                     <!-- Todo tab -->
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8"
@@ -414,8 +448,8 @@
                         <StackPanel>
                             <StackPanel.Resources>
                                 <DataTemplate x:Key="Daynote.Product.Template.TodoItem" DataType="{x:Type product:TodoItemViewModel}">
-                                        <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
-                                                BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="9,8" Margin="0,0,0,4">
+                                        <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
+                                                BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="11,9" Margin="0,0,0,5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
@@ -423,7 +457,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <Button Grid.Column="0" Width="16" Height="16" VerticalAlignment="Top" Margin="0,1,9,0"
                                                         Command="{Binding ToggleCommand}" Style="{DynamicResource Daynote.Product.Style.GhostButton}">
-                                                    <Border CornerRadius="{DynamicResource Daynote.Product.Radius.Chip}" BorderThickness="1"
+                                                    <Border CornerRadius="5" BorderThickness="1.5"
                                                             BorderBrush="{DynamicResource Daynote.Product.Brush.Text2}">
                                                         <Border.Style>
                                                             <Style TargetType="Border">
@@ -506,8 +540,8 @@
                             <ItemsControl ItemsSource="{Binding TagPanel.Tags}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type product:TagItemViewModel}">
-                                        <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
-                                                BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="0" Margin="0,0,0,8">
+                                        <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
+                                                BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="0" Margin="0,0,0,5">
                                             <StackPanel>
                                                 <!-- Tag header: click to expand/collapse its occurrences. A Border (not the
                                                      ghost Button, whose template ignores Padding/stretch) so the vertical
@@ -601,7 +635,7 @@
                                                 PreviewMouseMove="OnFileCardMouseMove">
                                             <Border.Style>
                                                 <Style TargetType="Border">
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke2}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
                                                             <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />

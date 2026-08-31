@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>데이노트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; -webkit-font-smoothing: antialiased; }
+  :root {
+    --bg: #f4f4f5; --panel: #ffffff; --card: #ffffff; --stroke: #e7e7ea; --stroke2: #ececef;
+    --text: #1a1a1e; --text2: #77777e; --accent: #0067c0; --accent-soft: rgba(0,103,192,0.09);
+    --hover: rgba(0,0,0,0.045); --seg: #ededf0; --input: #ffffff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    --pop-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+  }
+  body.dark {
+    --bg: #121316; --panel: #1b1c20; --card: #222327; --stroke: #2a2b30; --stroke2: #26272c;
+    --text: #f2f2f3; --text2: #9a9aa2; --accent: #4cc2ff; --accent-soft: rgba(76,194,255,0.12);
+    --hover: rgba(255,255,255,0.06); --seg: #131417; --input: #232428;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+    --pop-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  textarea:focus, input:focus { outline: none; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 5px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="height:100vh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-size:13px; overflow:hidden;">
+
+  <!-- ═ Top bar ═ -->
+  <div style="height:56px; flex:none; display:grid; grid-template-columns:230px 1fr 320px; align-items:center; gap:12px; padding:0 16px; position:relative; z-index:40;">
+    <div style="display:flex; align-items:center; gap:9px;">
+      <div style="width:26px; height:26px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+        <svg width="15" height="15" viewBox="0 0 20 20"><rect x="2.5" y="3" width="15" height="14" rx="3" fill="none" stroke="#fff" stroke-width="1.8"></rect><path d="M6.5 12.5 a3.5 3.5 0 0 1 7 0" fill="#fff"></path><line x1="5" y1="12.5" x2="15" y2="12.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></line></svg>
+      </div>
+      <span style="font-size:14px; font-weight:700; letter-spacing:-0.01em;">데이노트</span>
+    </div>
+    <div style="display:flex; justify-content:center; position:relative;">
+      <div style="width:min(520px,100%); position:relative;">
+        <div style="display:flex; align-items:center; gap:9px; background:var(--input); border:1px solid var(--stroke); border-radius:99px; padding:0 8px 0 14px; height:36px; box-shadow:var(--shadow);">
+          <svg width="14" height="14" viewBox="0 0 16 16" style="flex:none;"><circle cx="7" cy="7" r="4.5" fill="none" stroke="var(--text2)" stroke-width="1.5"></circle><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round"></line></svg>
+          <input ref="{{ searchRef }}" value="{{ searchQ }}" onChange="{{ onSearch }}" placeholder="통합검색 — 노트, 파일, 날짜" style="flex:1; border:none; background:transparent; color:var(--text); font-size:13px; font-family:inherit; min-width:0;"></input>
+          <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ onClearSearch }}" style="cursor:pointer; color:var(--text2); font-size:13px; line-height:1; padding:4px;">✕</div>
+          </sc-if>
+          <sc-if value="{{ noQuery }}" hint-placeholder-val="{{ true }}">
+            <span style="flex:none; font-size:10.5px; color:var(--text2); border:1px solid var(--stroke); border-radius:5px; padding:2px 6px; background:var(--hover);">{{ searchKey }}</span>
+          </sc-if>
+        </div>
+        <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; top:42px; left:0; right:0; max-height:420px; overflow-y:auto; background:var(--card); border:1px solid var(--stroke); border-radius:12px; box-shadow:var(--pop-shadow); padding:6px;">
+            <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="0">
+              <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer;" style-hover="background:var(--hover)">
+                <span style="flex:none; font-size:10px; font-weight:700; color:var(--accent); background:var(--accent-soft); border-radius:5px; padding:2.5px 7px; min-width:36px; text-align:center;">{{ r.kind }}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:600; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.title }}</div>
+                  <div style="color:var(--text2); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.sub }}</div>
+                </div>
+                <span style="flex:none; color:var(--text2); font-size:11px;">{{ r.dateLabel }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:16px; text-align:center; color:var(--text2);">검색 결과가 없습니다</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px; justify-content:flex-end;">
+      <div onClick="{{ onToday }}" title="오늘로 이동 ({{ scToday }})" style="display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel); font-size:12.5px; font-weight:600; white-space:nowrap; box-shadow:var(--shadow);" style-hover="background:var(--hover)">
+        <svg width="12" height="12" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"></circle><circle cx="7" cy="7" r="1.8" fill="currentColor"></circle></svg>
+        오늘로 이동
+      </div>
+      <div onClick="{{ onToggleBoth }}" title="양쪽 패널 접기/펴기" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel); color:var(--text2); box-shadow:var(--shadow);" style-hover="background:var(--hover); color:var(--text)">
+        <svg width="13" height="13" viewBox="0 0 14 14"><path d="M5.5 3.5 L2 7 L5.5 10.5 M8.5 3.5 L12 7 L8.5 10.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div onClick="{{ onToggleView }}" title="타임라인 보기" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid {{ tlBorder }}; background:{{ tlBg }}; color:{{ tlFg }}; box-shadow:var(--shadow);" style-hover="filter:brightness(0.97)">
+        <svg width="13" height="13" viewBox="0 0 14 14"><circle cx="2.5" cy="2.8" r="1.3" fill="currentColor"></circle><circle cx="2.5" cy="7" r="1.3" fill="currentColor"></circle><circle cx="2.5" cy="11.2" r="1.3" fill="currentColor"></circle><line x1="5.8" y1="2.8" x2="12.5" y2="2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line><line x1="5.8" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line><line x1="5.8" y1="11.2" x2="12.5" y2="11.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line></svg>
+      </div>
+      <div onClick="{{ onToggleTheme }}" title="테마 전환 ({{ scTheme }})" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel); box-shadow:var(--shadow);" style-hover="background:var(--hover)">
+        <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+          <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4" fill="none" stroke="var(--text)" stroke-width="1.4"></circle><g stroke="var(--text)" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="0.8" x2="8" y2="2.6"></line><line x1="8" y1="13.4" x2="8" y2="15.2"></line><line x1="0.8" y1="8" x2="2.6" y2="8"></line><line x1="13.4" y1="8" x2="15.2" y2="8"></line><line x1="2.9" y1="2.9" x2="4.2" y2="4.2"></line><line x1="11.8" y1="11.8" x2="13.1" y2="13.1"></line><line x1="2.9" y1="13.1" x2="4.2" y2="11.8"></line><line x1="11.8" y1="4.2" x2="13.1" y2="2.9"></line></g></svg>
+        </sc-if>
+        <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+          <svg width="15" height="15" viewBox="0 0 16 16"><path d="M13.5 9.5 A 5.8 5.8 0 1 1 6.5 2.5 A 4.6 4.6 0 0 0 13.5 9.5 Z" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+        </sc-if>
+      </div>
+      <div onClick="{{ onOpenSettings }}" title="설정 ({{ scSettings }})" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel); color:var(--text); box-shadow:var(--shadow);" style-hover="background:var(--hover)">
+        <svg width="14" height="14" viewBox="0 0 14 14"><line x1="1.5" y1="3.5" x2="12.5" y2="3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line><line x1="1.5" y1="10.5" x2="12.5" y2="10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line><circle cx="9" cy="3.5" r="1.7" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"></circle><circle cx="5" cy="10.5" r="1.7" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"></circle></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═ Body ═ -->
+  <div style="flex:1; display:flex; gap:12px; padding:0 16px 16px; min-height:0;">
+
+    <!-- Left rail -->
+    <sc-if value="{{ leftCollapsed }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onToggleLeft }}" title="패널 펼치기" style="width:30px; flex:none; background:var(--panel); border:1px solid var(--stroke); border-radius:12px; box-shadow:var(--shadow); display:flex; align-items:flex-start; justify-content:center; padding-top:12px; cursor:pointer; color:var(--text2);" style-hover="color:var(--text)">
+        <svg width="11" height="11" viewBox="0 0 10 10"><path d="M3.5 1 L7.5 5 L3.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ leftOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:292px; flex:none; display:flex; flex-direction:column; gap:12px; min-height:0;">
+      <div style="background:var(--panel); border:1px solid var(--stroke); border-radius:14px; box-shadow:var(--shadow); padding:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-weight:700; font-size:14.5px; letter-spacing:-0.01em; padding-left:4px;">{{ monthLabel }}</span>
+          <div style="display:flex; gap:1px; align-items:center;">
+            <div onClick="{{ onPrevMonth }}" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg></div>
+            <div onClick="{{ onNextMonth }}" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.5 1 L7.5 5 L3.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg></div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px;">
+          <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+            <div style="text-align:center; font-size:10.5px; font-weight:600; color:{{ w.color }}; padding:2px 0;">{{ w.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;">
+          <sc-for list="{{ calCells }}" as="c" hint-placeholder-count="35">
+            <div onClick="{{ c.onClick }}" style="height:38px; border-radius:9px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:relative;" style-hover="background:var(--hover)">
+              <span style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:{{ c.fw }}; color:{{ c.fg }}; background:{{ c.circleBg }}; box-shadow:{{ c.circleRing }};">{{ c.day }}</span>
+              <div style="display:flex; gap:3px; height:5px; align-items:center;">
+                <sc-if value="{{ c.hasNotes }}" hint-placeholder-val="{{ false }}"><span style="width:5.5px; height:5.5px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 1px var(--panel);"></span></sc-if>
+                <sc-if value="{{ c.hasExtras }}" hint-placeholder-val="{{ false }}"><span style="width:5.5px; height:5.5px; border-radius:50%; background:#e8a33d; box-shadow:0 0 0 1px var(--panel);"></span></sc-if>
+              </div>
+              <sc-if value="{{ c.hasCount }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute; top:2px; right:4px; font-size:9.5px; font-weight:700; color:var(--accent);">{{ c.count }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1; min-height:0; background:var(--panel); border:1px solid var(--stroke); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 14px 10px;">
+          <div>
+            <div style="font-weight:700; font-size:13.5px; letter-spacing:-0.01em;">{{ dayLabel }}</div>
+            <div style="color:var(--text2); font-size:11px; margin-top:1px;">노트 {{ noteCount }}개</div>
+          </div>
+          <div onClick="{{ onNewNote }}" title="새 노트 ({{ scNew }})" style="display:flex; align-items:center; gap:5px; background:var(--accent); color:#fff; border-radius:99px; padding:6px 13px; cursor:pointer; font-size:12px; font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,0.12);" style-hover="filter:brightness(1.08)">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="5" y1="0.5" x2="5" y2="9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line><line x1="0.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line></svg>
+            새 노트
+          </div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:0 8px 10px; display:flex; flex-direction:column; gap:3px;">
+          <sc-for list="{{ dayNotes }}" as="n" hint-placeholder-count="2">
+            <div onClick="{{ n.onClick }}" style="padding:9px 11px; border-radius:10px; cursor:pointer; background:{{ n.bg }};" style-hover="background:var(--hover)">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="flex:1; font-weight:600; font-size:12.5px; color:{{ n.titleColor }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ n.title }}</span>
+                <sc-if value="{{ n.isFav }}" hint-placeholder-val="{{ false }}">
+                  <svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="#e8a33d"></path></svg>
+                </sc-if>
+              </div>
+              <div style="color:var(--text2); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">{{ n.preview }}</div>
+              <sc-if value="{{ n.hasTags }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; gap:4px; margin-top:6px; flex-wrap:wrap;">
+                  <sc-for list="{{ n.tags }}" as="t" hint-placeholder-count="1">
+                    <span style="font-size:10px; font-weight:600; color:var(--accent); background:var(--accent-soft); border-radius:99px; padding:1.5px 7px;">#{{ t.name }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ dayEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:26px 0; font-size:12px;">이 날짜에 노트가 없습니다</div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- Center -->
+    <div style="flex:1; min-width:0; background:var(--card); border:1px solid var(--stroke); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden;">
+
+      <sc-if value="{{ viewIsTimeline }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:18px 22px;">
+          <sc-for list="{{ tlGroups }}" as="g" hint-placeholder-count="2">
+            <div style="margin-bottom:26px;">
+              <div onClick="{{ g.onGoDate }}" style="cursor:pointer; display:inline-block;">
+                <div style="font-size:15px; font-weight:700; color:var(--accent); letter-spacing:-0.01em;">{{ g.header }}</div>
+                <div style="font-size:11px; color:var(--text2); margin-top:1px;">노트 {{ g.count }}개</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                <sc-for list="{{ g.notes }}" as="tn" hint-placeholder-count="1">
+                  <div style="background:var(--panel); border:1px solid var(--stroke2); border-radius:12px; padding:13px 15px;">
+                    <div onClick="{{ tn.onOpen }}" style="font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;" style-hover="color:var(--accent)">
+                      {{ tn.title }}
+                      <sc-if value="{{ tn.isFav }}" hint-placeholder-val="{{ false }}">
+                        <svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="#e8a33d"></path></svg>
+                      </sc-if>
+                    </div>
+                    <div style="font-size:12.5px; line-height:1.7; color:var(--text); white-space:pre-wrap; overflow-wrap:break-word; margin-top:6px; max-height:{{ tn.maxH }}; overflow:hidden;">{{ tn.body }}</div>
+                    <sc-if value="{{ tn.canExpand }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ tn.onToggleExpand }}" style="color:var(--accent); font-size:11.5px; font-weight:600; cursor:pointer; margin-top:7px; display:inline-block;">{{ tn.toggleLabel }}</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ tlEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:60px 0; font-size:13px;">아직 노트가 없습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewIsEditor }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ hasNote }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center; color:var(--text2); font-size:11.5px; padding-top:12px;">{{ dayLabel }}</div>
+        <div style="display:flex; align-items:center; gap:6px; padding:4px 22px 0;">
+          <input value="{{ noteTitle }}" onChange="{{ onTitleChange }}" placeholder="제목" style="flex:1; border:none; background:transparent; color:var(--text); font-size:20px; font-weight:700; letter-spacing:-0.015em; font-family:inherit; min-width:0;"></input>
+          <div onClick="{{ onNewNote }}" title="새 노트 ({{ scNew }})" style="width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="1.5" x2="7" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line><line x1="1.5" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line></svg>
+          </div>
+          <div onClick="{{ onToggleFav }}" title="즐겨찾기" style="width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer;" style-hover="background:var(--hover)">
+            <svg width="16" height="16" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="{{ favFill }}" stroke="{{ favStroke }}" stroke-width="1"></path></svg>
+          </div>
+          <div onClick="{{ onOpenPostIt }}" title="포스트잇으로 띄우기 ({{ scPostIt }})" style="width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 2 h10 v6.5 L8.5 12 H2 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path><path d="M12 8.5 H8.5 V12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+          </div>
+          <div onClick="{{ onDeleteNote }}" title="노트 삭제" style="width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:#e5484d">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 3.5 h10 M5.5 3.5 V2 h3 v1.5 M3.5 3.5 l0.7 8.5 h5.6 l0.7 -8.5 M5.8 6 v4 M8.2 6 v4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; padding:8px 22px 12px; flex-wrap:wrap;">
+          <sc-for list="{{ noteTags }}" as="t" hint-placeholder-count="0">
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-soft); border-radius:99px; padding:3px 10px;">#{{ t.name }}<span onClick="{{ t.onRemove }}" style="cursor:pointer; opacity:0.6; font-size:12px; line-height:1;">✕</span></span>
+          </sc-for>
+          <input value="{{ tagInput }}" onChange="{{ onTagInput }}" onKeyDown="{{ onTagKey }}" placeholder="+ 태그" style="border:none; background:transparent; color:var(--text2); font-size:11px; width:80px; font-family:inherit;"></input>
+        </div>
+        <div style="height:1px; background:var(--stroke2); margin:0 22px;"></div>
+        <div style="flex:1; min-height:0; position:relative;">
+          <div ref="{{ hlRef }}" style="position:absolute; inset:0; overflow:hidden; padding:16px 22px; font-size:14px; line-height:1.85; font-family:inherit; white-space:pre-wrap; overflow-wrap:break-word; color:var(--text); box-sizing:border-box; pointer-events:none;">{{ noteBodyHl }}</div>
+          <textarea ref="{{ bodyRef }}" value="{{ noteBody }}" onChange="{{ onBodyChange }}" onScroll="{{ onBodyScroll }}" spellCheck="{{ false }}" style="position:absolute; inset:0; width:100%; height:100%; resize:none; border:none; background:transparent; color:transparent; caret-color:var(--text); font-size:14px; line-height:1.85; padding:16px 22px; font-family:inherit; white-space:pre-wrap; overflow-wrap:break-word; box-sizing:border-box;"></textarea>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 22px; border-top:1px solid var(--stroke2); color:var(--text2); font-size:11px;">
+          <span>{{ noteMetaLeft }}</span>
+          <span>{{ noteMetaRight }}</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noNote }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text2);">
+          <svg width="44" height="44" viewBox="0 0 24 24"><path d="M5 3 h11 l3 3 v15 h-14 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" opacity="0.45"></path><path d="M8 9 h8 M8 12.5 h8 M8 16 h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.45"></path></svg>
+          <div style="font-size:13px;">왼쪽 목록에서 노트를 선택하거나 새 노트를 만드세요</div>
+        </div>
+      </sc-if>
+      </sc-if>
+    </div>
+
+    <!-- Right rail -->
+    <sc-if value="{{ rightCollapsed }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onToggleRight }}" title="패널 펼치기" style="width:30px; flex:none; background:var(--panel); border:1px solid var(--stroke); border-radius:12px; box-shadow:var(--shadow); display:flex; align-items:flex-start; justify-content:center; padding-top:12px; cursor:pointer; color:var(--text2);" style-hover="color:var(--text)">
+        <svg width="11" height="11" viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ rightOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:302px; flex:none; background:var(--panel); border:1px solid var(--stroke); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:0;">
+      <div style="display:flex; gap:8px; padding:10px 10px 8px; align-items:center;">
+        <div style="flex:1; display:flex; background:var(--seg); border-radius:9px; padding:3px; gap:2px;">
+          <div onClick="{{ tabTodoClick }}" title="할 일" style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:6px 0; cursor:pointer; color:{{ tabTodoFg }}; background:{{ tabTodoBg }}; border-radius:7px; box-shadow:{{ tabTodoShadow }};" style-hover="color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1.5" y="1.5" width="11" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"></rect><path d="M4.4 7.2 L6.2 9 L9.6 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="font-size:10.5px; font-weight:700;">{{ todoBadge }}</span>
+          </div>
+          <div onClick="{{ tabFavClick }}" title="즐겨찾기" style="flex:1; display:flex; align-items:center; justify-content:center; padding:6px 0; cursor:pointer; color:{{ tabFavFg }}; background:{{ tabFavBg }}; border-radius:7px; box-shadow:{{ tabFavShadow }};" style-hover="color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"></path></svg>
+          </div>
+          <div onClick="{{ tabTagsClick }}" title="태그" style="flex:1; display:flex; align-items:center; justify-content:center; padding:6px 0; cursor:pointer; color:{{ tabTagsFg }}; background:{{ tabTagsBg }}; border-radius:7px; box-shadow:{{ tabTagsShadow }};" style-hover="color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M1.5 6.2 V2.5 a1 1 0 0 1 1 -1 h3.7 a1.4 1.4 0 0 1 1 0.4 l5 5 a1.4 1.4 0 0 1 0 2 l-3.3 3.3 a1.4 1.4 0 0 1 -2 0 l-5 -5 a1.4 1.4 0 0 1 -0.4 -1 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path><circle cx="4.6" cy="4.6" r="1" fill="currentColor"></circle></svg>
+          </div>
+          <div onClick="{{ tabFileClick }}" title="파일" style="flex:1; display:flex; align-items:center; justify-content:center; padding:6px 0; cursor:pointer; color:{{ tabFileFg }}; background:{{ tabFileBg }}; border-radius:7px; box-shadow:{{ tabFileShadow }};" style-hover="color:var(--text)">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M4.5 7 l3.2 -3.2 a2 2 0 0 1 2.8 2.8 L6 11.1 a3.1 3.1 0 0 1 -4.4 -4.4 L6.3 2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+        </div>
+      </div>
+      <div style="height:1px; background:var(--stroke2);"></div>
+
+      <sc-if value="{{ tabIsTodo }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+          <sc-for list="{{ todoItems }}" as="td" hint-placeholder-count="3">
+            <div style="display:flex; gap:10px; padding:9px 11px; border-radius:10px; background:var(--card); border:1px solid var(--stroke2);">
+              <div onClick="{{ td.onToggle }}" style="width:16px; height:16px; flex:none; margin-top:1px; border-radius:5px; cursor:pointer; border:1.5px solid {{ td.boxBorder }}; background:{{ td.boxBg }}; display:flex; align-items:center; justify-content:center; box-sizing:border-box;">
+                <sc-if value="{{ td.checked }}" hint-placeholder-val="{{ false }}">
+                  <svg width="9" height="9" viewBox="0 0 10 10"><path d="M1.5 5.5 L4 8 L8.5 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </sc-if>
+              </div>
+              <div onClick="{{ td.onJump }}" style="flex:1; min-width:0; cursor:pointer;">
+                <div style="font-size:12.5px; line-height:1.45; text-decoration:{{ td.deco }}; color:{{ td.textColor }};">{{ td.text }}</div>
+                <div style="display:flex; gap:8px; margin-top:3px; font-size:10.5px; color:var(--text2);">
+                  <span>{{ td.noteTitle }}</span>
+                  <sc-if value="{{ td.hasDue }}" hint-placeholder-val="{{ false }}">
+                    <span style="color:{{ td.dueColor }}; font-weight:700;">{{ td.dueLabel }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ todoEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px; line-height:1.7;">노트에 <span style="font-family:ui-monospace,Consolas,monospace; background:var(--hover); border-radius:4px; padding:1px 5px;">-[] 할 일</span> 을 입력하면<br></br>여기에 자동으로 표시됩니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabIsFav }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+          <sc-for list="{{ favItems }}" as="fv" hint-placeholder-count="2">
+            <div onClick="{{ fv.onOpen }}" style="padding:10px 12px; border-radius:10px; background:var(--card); border:1px solid var(--stroke2); cursor:pointer;" style-hover="background:var(--hover)">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <svg width="12" height="12" viewBox="0 0 12 12" style="flex:none;"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="#e8a33d"></path></svg>
+                <span style="flex:1; font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ fv.title }}</span>
+                <span style="flex:none; font-size:10.5px; color:var(--text2);">{{ fv.dateLabel }}</span>
+              </div>
+              <div style="color:var(--text2); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;">{{ fv.preview }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ favEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px; line-height:1.7;">노트의 별표를 누르면<br></br>여기에 모아서 볼 수 있습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabIsTags }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+          <sc-for list="{{ tagRows }}" as="tg" hint-placeholder-count="2">
+            <div style="border-radius:10px; background:var(--card); border:1px solid var(--stroke2); overflow:hidden;">
+              <div onClick="{{ tg.onToggle }}" style="display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer;" style-hover="background:var(--hover)">
+                <span style="flex:1; font-size:12.5px; font-weight:700; color:var(--accent);">#{{ tg.name }}</span>
+                <span style="font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); border-radius:99px; padding:1.5px 8px;">{{ tg.count }}</span>
+              </div>
+              <sc-if value="{{ tg.expanded }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:1px solid var(--stroke2); padding:4px 6px 6px; display:flex; flex-direction:column;">
+                  <sc-for list="{{ tg.notes }}" as="tn" hint-placeholder-count="1">
+                    <div onClick="{{ tn.onOpen }}" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer;" style-hover="background:var(--hover)">
+                      <span style="flex:1; font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tn.title }}</span>
+                      <span style="flex:none; font-size:10.5px; color:var(--text2);">{{ tn.dateLabel }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ tagsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px; line-height:1.7;">노트에 태그를 추가하면<br></br>여기에 모아서 볼 수 있습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabIsFile }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+          <div onClick="{{ onAddFileClick }}" style="display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border:1px dashed var(--stroke); border-radius:10px; cursor:pointer; color:var(--text2); font-size:12px; font-weight:500;" style-hover="background:var(--hover); color:var(--text)">
+            <svg width="12" height="12" viewBox="0 0 14 14"><path d="M7 2 v10 M2 7 h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+            파일 · 이미지 추가
+          </div>
+          <input type="file" ref="{{ fileInputRef }}" onChange="{{ onFileChange }}" multiple="{{ true }}" style="display:none;"></input>
+          <sc-for list="{{ fileItems }}" as="f" hint-placeholder-count="0">
+            <div style="padding:9px 11px; border-radius:10px; background:var(--card); border:1px solid var(--stroke2); display:flex; flex-direction:column; gap:8px;">
+              <sc-if value="{{ f.hasThumb }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%; height:112px; border-radius:7px; background-color:var(--hover); background-image:{{ f.thumbCss }}; background-size:cover; background-position:center;"></div>
+              </sc-if>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <sc-if value="{{ f.isImage }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:36px; height:36px; flex:none; border-radius:8px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent);">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><circle cx="5.5" cy="6.3" r="1.2" fill="currentColor"></circle><path d="M2.5 12 L6.5 8.5 L9 10.5 L11.5 8 L13.5 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isDoc }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:36px; height:36px; flex:none; border-radius:8px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:9px; font-weight:700;">{{ f.ext }}</div>
+                </sc-if>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ f.name }}</div>
+                  <div style="color:var(--text2); font-size:10.5px; margin-top:1px;">{{ f.sizeLabel }}</div>
+                </div>
+                <span onClick="{{ f.onDelete }}" style="color:var(--text2); font-size:11px; cursor:pointer; flex:none;" style-hover="color:#e5484d">삭제</span>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ fileEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px;">이 날짜에 보관된 파일이 없습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+  </div>
+
+  <!-- ═ Post-it ═ -->
+  <sc-if value="{{ postItOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; right:26px; bottom:26px; width:264px; height:250px; background:#fdf0a0; border-radius:4px; box-shadow:0 12px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.15); z-index:70; display:flex; flex-direction:column; color:#3a3520;">
+      <div style="display:flex; align-items:center; gap:8px; padding:9px 12px 5px;">
+        <span style="flex:1; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ postItTitle }}</span>
+        <span onClick="{{ onClosePostIt }}" style="cursor:pointer; font-size:14px; line-height:1; opacity:0.55;" style-hover="opacity:1">✕</span>
+      </div>
+      <textarea value="{{ postItBody }}" onChange="{{ onBodyChange }}" spellCheck="{{ false }}" style="flex:1; resize:none; border:none; background:transparent; color:#3a3520; font-size:12.5px; line-height:1.65; padding:4px 12px 12px; font-family:inherit;"></textarea>
+    </div>
+  </sc-if>
+
+  <!-- ═ Settings modal ═ -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseSettings }}" style="position:fixed; inset:0; background:rgba(0,0,0,0.32); z-index:80; display:flex; align-items:center; justify-content:center;">
+      <div onClick="{{ stopClick }}" style="width:min(580px, calc(100vw - 48px)); max-height:82vh; background:var(--panel); border:1px solid var(--stroke); border-radius:16px; box-shadow:var(--pop-shadow); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 22px 12px;">
+          <span style="font-size:18px; font-weight:700; letter-spacing:-0.01em;">설정</span>
+          <span onClick="{{ onCloseSettings }}" style="cursor:pointer; font-size:17px; color:var(--text2); padding:4px;" style-hover="color:var(--text)">✕</span>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:0 22px 22px; display:flex; flex-direction:column; gap:12px;">
+
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+            <div style="font-size:13px; font-weight:700;">클라우드 동기화</div>
+            <div style="font-size:11.5px; color:var(--text2); line-height:1.6; margin-top:4px;">선택 기능입니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드되어 다른 기기와 동기화됩니다. 저장된 내용은 서버에서 열어볼 수 없습니다.</div>
+            <div style="font-size:11px; font-weight:600; color:var(--text2); margin-top:12px;">이메일</div>
+            <input placeholder="you@example.com" style="width:100%; box-sizing:border-box; margin-top:4px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px;"></input>
+            <div style="font-size:11px; font-weight:600; color:var(--text2); margin-top:10px;">비밀번호</div>
+            <input type="password" style="width:100%; box-sizing:border-box; margin-top:4px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px;"></input>
+            <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
+              <div style="background:var(--accent); color:#fff; border-radius:8px; padding:7px 16px; cursor:pointer; font-size:12px; font-weight:600;" style-hover="filter:brightness(1.08)">로그인</div>
+              <div style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600;" style-hover="background:var(--hover)">계정 만들기</div>
+              <span onClick="{{ onToggleReset }}" style="margin-left:auto; font-size:11.5px; color:var(--accent); cursor:pointer;">비밀번호를 잊으셨나요?</span>
+            </div>
+            <sc-if value="{{ resetOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top:1px solid var(--stroke2); margin-top:14px; padding-top:12px;">
+                <div style="font-size:11.5px; color:var(--text2); line-height:1.6;">비밀번호를 바꾸면 계정에는 다시 들어올 수 있지만, 클라우드에 있는 노트는 복구 키가 있어야 열립니다. 이 PC에서 재설정하는 경우에는 자동으로 열립니다.</div>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                  <input placeholder="이메일" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
+                  <div style="border:1px solid var(--stroke); border-radius:8px; padding:7px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;" style-hover="background:var(--hover)">재설정 코드 받기</div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <input placeholder="재설정 코드" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
+                  <input type="password" placeholder="새 비밀번호" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
+                  <div style="background:var(--accent); color:#fff; border-radius:8px; padding:7px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;" style-hover="filter:brightness(1.08)">비밀번호 변경</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">로그인할 때 데이노트 실행</div>
+              <div style="font-size:11.5px; color:var(--text2); margin-top:3px;">로그인하면 데이노트가 자동으로 실행됩니다.</div>
+            </div>
+            <div onClick="{{ onToggleLaunch }}" style="width:40px; height:22px; flex:none; border-radius:99px; cursor:pointer; background:{{ launchBg }}; position:relative; transition:background 0.15s;">
+              <div style="position:absolute; top:2px; left:{{ launchKnobLeft }}; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:left 0.15s;"></div>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+            <div style="font-size:13px; font-weight:700;">단축키</div>
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-top:12px; padding-bottom:12px; border-bottom:1px solid var(--stroke2);">
+              <div style="flex:1;">
+                <div style="font-size:12.5px; font-weight:600;">전역 소환 단축키</div>
+                <div style="font-size:11px; color:var(--text2); line-height:1.55; margin-top:2px;">데이노트가 트레이에 숨어 있어도 이 조합을 누르면 어디서든 창이 바로 열립니다.</div>
+                <span style="display:inline-block; margin-top:6px; font-size:11px; font-weight:700; font-family:ui-monospace,Consolas,monospace; border:1px solid var(--stroke); border-radius:5px; padding:2px 7px; background:var(--hover);">{{ scGlobal }}</span>
+              </div>
+              <div onClick="{{ onChangeGlobal }}" style="border:1px solid var(--stroke); border-radius:7px; padding:5px 11px; cursor:pointer; font-size:11.5px; font-weight:600; flex:none;" style-hover="background:var(--hover)">변경</div>
+              <div onClick="{{ onResetGlobal }}" style="border:1px solid var(--stroke); border-radius:7px; padding:5px 11px; cursor:pointer; font-size:11.5px; font-weight:600; flex:none;" style-hover="background:var(--hover)">기본값</div>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:var(--text2); margin-top:12px;">앱 내 단축키</div>
+            <div style="display:flex; flex-direction:column; margin-top:4px;">
+              <sc-for list="{{ shortcutRows }}" as="sr" hint-placeholder-count="7">
+                <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--stroke2);">
+                  <span style="flex:1; font-size:12.5px;">{{ sr.label }}</span>
+                  <span style="font-size:11px; font-weight:700; font-family:ui-monospace,Consolas,monospace; border:1px solid var(--stroke); border-radius:5px; padding:2px 7px; background:var(--hover);">{{ sr.combo }}</span>
+                  <div onClick="{{ sr.onChange }}" style="border:1px solid var(--stroke); border-radius:7px; padding:4px 10px; cursor:pointer; font-size:11px; font-weight:600;" style-hover="background:var(--hover)">변경</div>
+                  <div onClick="{{ sr.onReset }}" style="border:1px solid var(--stroke); border-radius:7px; padding:4px 10px; cursor:pointer; font-size:11px; font-weight:600;" style-hover="background:var(--hover)">기본값</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">데이터 백업 및 복원</div>
+              <div style="font-size:11.5px; color:var(--text2); line-height:1.55; margin-top:3px;">모든 노트·첨부 파일·설정을 하나의 파일로 백업하거나, 백업 파일에서 복원합니다.</div>
+            </div>
+            <div onClick="{{ onBackup }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600; flex:none;" style-hover="background:var(--hover)">백업</div>
+            <div onClick="{{ onRestoreClick }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600; flex:none;" style-hover="background:var(--hover)">복원</div>
+            <input type="file" ref="{{ restoreRef }}" onChange="{{ onRestoreFile }}" accept=".json" style="display:none;"></input>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">저장 위치</div>
+              <div style="font-size:11.5px; color:var(--text2); margin-top:3px; font-family:ui-monospace,Consolas,monospace;">{{ storagePath }}</div>
+            </div>
+            <div onClick="{{ onChangePath }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600; flex:none;" style-hover="background:var(--hover)">변경</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#0067c0&quot;, &quot;options&quot;: [&quot;#0067c0&quot;, &quot;#6b4fbb&quot;, &quot;#0f7b5f&quot;, &quot;#c2410c&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;테마&quot;}, &quot;weekStart&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;일요일&quot;, &quot;options&quot;: [&quot;일요일&quot;, &quot;월요일&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;달력&quot;}, &quot;notePreview&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;노트 목록&quot;}}">
+class Component extends DCLogic {
+  state = Component.initialState();
+
+  static defaultShortcuts() {
+    return { global: 'Ctrl+Alt+D', newNote: 'Ctrl+N', today: 'Ctrl+T', settings: 'Ctrl+,', theme: 'Ctrl+Shift+L', leftPanel: 'Ctrl+Alt+←', rightPanel: 'Ctrl+Alt+→', postIt: 'Ctrl+Shift+S' };
+  }
+
+  static initialState() {
+    const today = Component.iso(new Date());
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('daynote-v1')); } catch (e) {}
+    if (!saved) { try { saved = JSON.parse(localStorage.getItem('winnote-v1')); } catch (e) {} }
+    const base = saved || Component.sampleData();
+    return {
+      theme: base.theme || 'light',
+      selectedDate: today,
+      cursorY: new Date().getFullYear(),
+      cursorM: new Date().getMonth(),
+      selectedNoteId: (base.notes.find(n => n.date === today) || {}).id || null,
+      tab: 'todo', view: 'editor', searchQ: '', tagInput: '',
+      leftOpen: true, rightOpen: true,
+      settingsOpen: false, resetOpen: false, postItId: null,
+      launchOnLogin: base.launchOnLogin !== undefined ? base.launchOnLogin : true,
+      shortcuts: Object.assign(Component.defaultShortcuts(), base.shortcuts || {}),
+      expandedTl: {}, expandedTags: {},
+      notes: base.notes, files: base.files || [],
+    };
+  }
+
+  static iso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  static sampleData() {
+    const dd = (off) => { const t = new Date(); t.setDate(t.getDate() + off); return Component.iso(t); };
+    const mmdd = (off) => { const t = new Date(); t.setDate(t.getDate() + off); return String(t.getMonth() + 1).padStart(2, '0') + '/' + String(t.getDate()).padStart(2, '0'); };
+    return {
+      theme: 'light',
+      notes: [
+        { id: 'n1', date: dd(0), title: '주간회의 준비', fav: true, tags: ['회의', '기획'], updated: dd(0) + ' 09:40',
+          body: '이번 주 주간회의 안건 정리\n\n1. 2분기 지표 리뷰\n2. 신규 기능 우선순위 논의\n3. 채용 진행 상황 공유\n\n-[] 회의자료 초안 공유 (' + mmdd(1) + ' 10:00)\n-[] 회의실 예약 확인 (' + mmdd(0) + ' 17:00)\n-[x] 지난주 액션아이템 정리' },
+        { id: 'n2', date: dd(0), title: '배포 체크리스트', fav: false, tags: ['배포'], updated: dd(0) + ' 11:12',
+          body: 'v2.4.0 배포 전 확인사항\n\n-[] 스테이징 회귀 테스트 (' + mmdd(2) + ' 14:00)\n-[] 릴리즈 노트 작성\n-[x] DB 마이그레이션 스크립트 리뷰\n\n※ 배포 후 30분간 에러 모니터링 필수' },
+        { id: 'n3', date: dd(-1), title: '고객 미팅 메모', fav: false, tags: ['고객'], updated: dd(-1) + ' 15:30',
+          body: 'A사 정기 미팅\n\n- 대시보드 로딩 속도 개선 요청\n- 엑셀 내보내기 기능 문의 → 8월 로드맵 안내\n- 계약 갱신은 9월 초 논의 예정\n\n-[] 속도 개선 이슈 티켓 생성 (' + mmdd(1) + ' 12:00)' },
+        { id: 'n4', date: dd(-4), title: '뉴스클리핑', fav: false, tags: ['뉴스클리핑'], updated: dd(-4) + ' 21:05',
+          body: '오늘의 업계 뉴스 정리\n\n- 관리단위 식별·연결 ID 플랫폼 사업 공고\n- NFC 기반 모바일 순찰관리 서비스 사례\n- 현장근무자용 모바일 업무 플랫폼 동향' },
+        { id: 'n5', date: dd(-6), title: '월간 보고 초안', fav: true, tags: ['보고'], updated: dd(-6) + ' 17:50',
+          body: '7월 월간 보고 핵심 요약\n\n- MAU 12.4만 (+8.2% MoM)\n- 신규 결제 전환율 3.1%\n- 주요 이슈: 검색 응답 지연 → 인덱스 개선으로 해결' },
+        { id: 'n6', date: dd(2), title: '휴가 전 인수인계', fav: false, tags: ['일정'], updated: dd(0) + ' 08:20',
+          body: '8월 첫째 주 휴가 전 정리할 것\n\n-[] 담당 이슈 재배정 (' + mmdd(2) + ' 18:00)\n-[] 자동응답 설정' },
+      ],
+      files: [
+        { id: 'f1', date: dd(0), name: '요구사항_정의서_v3.docx', size: 482134, thumb: null },
+        { id: 'f2', date: dd(0), name: '화면설계_홈.png', size: 1204833, thumb: null },
+        { id: 'f3', date: dd(-1), name: 'A사_미팅녹취.txt', size: 18422, thumb: null },
+      ],
+    };
+  }
+
+  matchCombo(e, combo) {
+    if (!combo) return false;
+    const parts = combo.split('+').map(p => p.trim());
+    const key = parts[parts.length - 1];
+    const needCtrl = parts.includes('Ctrl'), needAlt = parts.includes('Alt'), needShift = parts.includes('Shift');
+    if (needCtrl !== (e.ctrlKey || e.metaKey)) return false;
+    if (needAlt !== e.altKey) return false;
+    if (needShift !== e.shiftKey) return false;
+    const map = { '←': 'arrowleft', '→': 'arrowright', '↑': 'arrowup', '↓': 'arrowdown' };
+    const want = (map[key] || key).toLowerCase();
+    return e.key.toLowerCase() === want;
+  }
+
+  componentDidMount() {
+    this.fileRef = { current: null };
+    this.searchRef = { current: null };
+    this.restoreRef = { current: null };
+    this.keyHandler = (e) => {
+      const sc = this.state.shortcuts;
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (this.searchRef.current) this.searchRef.current.focus();
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (this.state.settingsOpen) { this.setState({ settingsOpen: false }); return; }
+        if (this.state.searchQ) { this.setState({ searchQ: '' }); return; }
+      }
+      if (this.matchCombo(e, sc.newNote)) { e.preventDefault(); this.newNote(); }
+      else if (this.matchCombo(e, sc.today)) { e.preventDefault(); this.goToday(); }
+      else if (this.matchCombo(e, sc.settings)) { e.preventDefault(); this.setState(s => ({ settingsOpen: !s.settingsOpen })); }
+      else if (this.matchCombo(e, sc.theme)) { e.preventDefault(); this.setState(s => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })); }
+      else if (this.matchCombo(e, sc.leftPanel)) { e.preventDefault(); this.setState(s => ({ leftOpen: !s.leftOpen })); }
+      else if (this.matchCombo(e, sc.rightPanel)) { e.preventDefault(); this.setState(s => ({ rightOpen: !s.rightOpen })); }
+      else if (this.matchCombo(e, sc.postIt)) { e.preventDefault(); if (this.state.selectedNoteId) this.setState(s => ({ postItId: s.postItId ? null : s.selectedNoteId })); }
+    };
+    window.addEventListener('keydown', this.keyHandler);
+    this.applyTheme();
+    this.forceUpdate();
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this.keyHandler); }
+  componentDidUpdate() { this.applyTheme(); this.persist(); }
+  applyTheme() {
+    document.body.classList.toggle('dark', this.state.theme === 'dark');
+    const acc = this.props.accent;
+    if (acc) { document.body.style.setProperty('--accent', acc); document.body.style.setProperty('--accent-soft', acc + '1a'); }
+    else { document.body.style.removeProperty('--accent'); document.body.style.removeProperty('--accent-soft'); }
+  }
+  persist() {
+    try { localStorage.setItem('daynote-v1', JSON.stringify({ theme: this.state.theme, notes: this.state.notes, files: this.state.files, shortcuts: this.state.shortcuts, launchOnLogin: this.state.launchOnLogin })); } catch (e) {}
+  }
+
+  newNote() {
+    const s = this.state;
+    const id = 'n' + Date.now();
+    const count = s.notes.filter(n => n.date === s.selectedDate).length;
+    const nn = { id, date: s.selectedDate, title: '노트 ' + (count + 1), fav: false, tags: [], body: '', updated: Component.iso(new Date()) + ' ' + new Date().toTimeString().slice(0, 5) };
+    this.setState(st => ({ notes: [nn, ...st.notes], selectedNoteId: id, view: 'editor' }));
+  }
+  goToday() {
+    const t = new Date(); const iso = Component.iso(t);
+    this.setState(s => ({ selectedDate: iso, cursorY: t.getFullYear(), cursorM: t.getMonth(), selectedNoteId: (s.notes.find(n => n.date === iso) || {}).id || null }));
+  }
+
+  highlightBody(body) {
+    if (!body) return React.createElement('span', { style: { color: 'var(--text2)' } }, "메모를 입력하세요.  '-[] 할 일 (07/25 14:00)' 형식으로 쓰면 할 일 패널에 자동 등록됩니다.");
+    const re = /(-\s?\[(?: |x|X)?\])|(\(\d{1,2}\/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))/g;
+    const parts = [];
+    let last = 0, m, k = 0;
+    while ((m = re.exec(body))) {
+      if (m.index > last) parts.push(body.slice(last, m.index));
+      parts.push(React.createElement('span', { key: k++, style: { color: 'var(--accent)', fontWeight: 600 } }, m[0]));
+      last = m.index + m[0].length;
+    }
+    if (last < body.length) parts.push(body.slice(last));
+    parts.push('\n');
+    return parts;
+  }
+
+  updateNote(id, patch) {
+    this.setState(s => ({ notes: s.notes.map(n => n.id === id ? { ...n, ...patch, updated: Component.iso(new Date()) + ' ' + new Date().toTimeString().slice(0, 5) } : n) }));
+  }
+
+  parseTodos() {
+    const out = [];
+    const now = new Date();
+    this.state.notes.forEach(note => {
+      note.body.split('\n').forEach((line, idx) => {
+        const m = line.match(/^\s*-\s?\[( |x|X)?\]\s*(.*)$/);
+        if (!m) return;
+        const checked = (m[1] || '').toLowerCase() === 'x';
+        let text = m[2];
+        let due = null, dueLabel = '';
+        const dm = text.match(/\((\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?\)\s*$/);
+        if (dm) {
+          due = new Date(now.getFullYear(), parseInt(dm[1], 10) - 1, parseInt(dm[2], 10), dm[3] ? parseInt(dm[3], 10) : 23, dm[4] ? parseInt(dm[4], 10) : 59);
+          dueLabel = dm[1] + '/' + dm[2] + (dm[3] ? ' ' + dm[3] + ':' + dm[4] : '');
+          text = text.replace(dm[0], '').trim();
+        }
+        out.push({ noteId: note.id, date: note.date, noteTitle: note.title, lineIdx: idx, checked, text: text || '(내용 없음)', due, dueLabel, overdue: due && !checked && due < now });
+      });
+    });
+    out.sort((a, b) => (a.checked - b.checked) || ((a.due ? a.due.getTime() : 8e15) - (b.due ? b.due.getTime() : 8e15)));
+    return out;
+  }
+
+  toggleTodo(noteId, lineIdx) {
+    const note = this.state.notes.find(n => n.id === noteId);
+    if (!note) return;
+    const lines = note.body.split('\n');
+    const m = lines[lineIdx].match(/^(\s*-\s?\[)( |x|X)?(\].*)$/);
+    if (!m) return;
+    lines[lineIdx] = m[1] + (((m[2] || '').toLowerCase() === 'x') ? ' ' : 'x') + m[3];
+    this.updateNote(noteId, { body: lines.join('\n') });
+  }
+
+  fmtDate(iso, withYear) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const wd = ['일', '월', '화', '수', '목', '금', '토'][new Date(y, m - 1, d).getDay()];
+    return (withYear ? y + '년 ' : '') + m + '월 ' + d + '일 (' + wd + ')';
+  }
+  fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : b > 1024 ? Math.round(b / 1024) + ' KB' : b + ' B'; }
+
+  buildSearch(q) {
+    const s = this.state, ql = q.toLowerCase(), res = [];
+    const go = (date, noteId, tab) => this.setState({ selectedDate: date, cursorY: +date.slice(0, 4), cursorM: +date.slice(5, 7) - 1, selectedNoteId: noteId !== undefined ? noteId : s.selectedNoteId, tab: tab || s.tab, searchQ: '', view: 'editor' });
+    s.notes.forEach(n => {
+      if ((n.title + ' ' + n.body + ' ' + n.tags.join(' ')).toLowerCase().includes(ql)) {
+        const bi = n.body.toLowerCase().indexOf(ql);
+        res.push({ kind: '노트', title: n.title, sub: bi >= 0 ? '…' + n.body.slice(Math.max(0, bi - 12), bi + 34).replace(/\n/g, ' ') + '…' : n.body.split('\n')[0], dateLabel: n.date.slice(5).replace('-', '/'), onClick: () => go(n.date, n.id) });
+      }
+    });
+    s.files.forEach(f => { if (f.name.toLowerCase().includes(ql)) res.push({ kind: '파일', title: f.name, sub: this.fmtSize(f.size), dateLabel: f.date.slice(5).replace('-', '/'), onClick: () => go(f.date, undefined, 'file') }); });
+    const dateSet = new Set([...s.notes.map(n => n.date), ...s.files.map(f => f.date)]);
+    dateSet.forEach(dt => {
+      const label = this.fmtDate(dt, true);
+      if (dt.includes(q) || dt.slice(5).replace('-', '/').includes(q) || label.replace(/\s/g, '').includes(q.replace(/\s/g, ''))) {
+        res.push({ kind: '날짜', title: label, sub: '노트 ' + s.notes.filter(n => n.date === dt).length + '개', dateLabel: '', onClick: () => go(dt, (s.notes.find(n => n.date === dt) || {}).id || null) });
+      }
+    });
+    return res.slice(0, 12);
+  }
+
+  download(name, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    if (!this.fileRef) this.fileRef = { current: null };
+    if (!this.searchRef) this.searchRef = { current: null };
+    if (!this.restoreRef) this.restoreRef = { current: null };
+    const todayIso = Component.iso(new Date());
+    const weekStartMon = (this.props.weekStart ?? '일요일') === '월요일';
+    const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform || '');
+
+    const first = new Date(s.cursorY, s.cursorM, 1);
+    const startOffset = (first.getDay() - (weekStartMon ? 1 : 0) + 7) % 7;
+    const daysIn = new Date(s.cursorY, s.cursorM + 1, 0).getDate();
+    const notesBy = {}, extrasBy = {};
+    s.notes.forEach(n => { notesBy[n.date] = (notesBy[n.date] || 0) + 1; });
+    s.files.forEach(f => { extrasBy[f.date] = true; });
+    const cells = [];
+    const total = Math.ceil((startOffset + daysIn) / 7) * 7;
+    for (let i = 0; i < total; i++) {
+      const dayNum = i - startOffset + 1;
+      const inMonth = dayNum >= 1 && dayNum <= daysIn;
+      const dt = new Date(s.cursorY, s.cursorM, dayNum);
+      const iso = Component.iso(dt);
+      const isSel = inMonth && iso === s.selectedDate, isToday = inMonth && iso === todayIso;
+      const dow = dt.getDay();
+      cells.push({
+        day: inMonth ? String(dayNum) : '',
+        circleBg: isSel ? 'var(--accent)' : 'transparent',
+        circleRing: !isSel && isToday ? 'inset 0 0 0 1.5px var(--accent)' : 'none',
+        fg: !inMonth ? 'transparent' : isSel ? '#fff' : isToday ? 'var(--accent)' : dow === 0 ? '#e5484d' : dow === 6 ? 'var(--accent)' : 'var(--text)',
+        fw: isSel || isToday ? '700' : '500',
+        hasNotes: inMonth && !!notesBy[iso],
+        hasExtras: inMonth && !!extrasBy[iso],
+        hasCount: inMonth && (notesBy[iso] || 0) > 0,
+        count: String(notesBy[iso] || ''),
+        onClick: inMonth ? () => this.setState({ selectedDate: iso, selectedNoteId: (s.notes.find(n => n.date === iso) || {}).id || null }) : () => {},
+      });
+    }
+    const wdBase = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdays = (weekStartMon ? [...wdBase.slice(1), '일'] : wdBase).map(w => ({ label: w, color: w === '일' ? '#e5484d' : w === '토' ? 'var(--accent)' : 'var(--text2)' }));
+
+    const dayNotes = s.notes.filter(n => n.date === s.selectedDate).map(n => ({
+      title: n.title || '(제목 없음)',
+      titleColor: n.id === s.selectedNoteId ? 'var(--accent)' : 'var(--text)',
+      preview: (this.props.notePreview ?? true) ? (n.body.split('\n').find(l => l.trim()) || '내용 없음') : '',
+      isFav: !!n.fav, hasTags: n.tags.length > 0, tags: n.tags.map(t => ({ name: t })),
+      bg: n.id === s.selectedNoteId ? 'var(--accent-soft)' : 'transparent',
+      onClick: () => this.setState({ selectedNoteId: n.id, view: 'editor' }),
+    }));
+
+    const note = s.notes.find(n => n.id === s.selectedNoteId && n.date === s.selectedDate) || null;
+
+    const todos = this.parseTodos();
+    const todoItems = todos.map(t => ({
+      checked: t.checked, text: t.text,
+      deco: t.checked ? 'line-through' : 'none',
+      textColor: t.checked ? 'var(--text2)' : 'var(--text)',
+      boxBg: t.checked ? 'var(--accent)' : 'transparent',
+      boxBorder: t.checked ? 'var(--accent)' : 'var(--text2)',
+      hasDue: !!t.due, dueLabel: t.dueLabel, dueColor: t.overdue ? '#e5484d' : 'var(--accent)',
+      noteTitle: t.noteTitle + ' · ' + t.date.slice(5).replace('-', '/'),
+      onToggle: () => this.toggleTodo(t.noteId, t.lineIdx),
+      onJump: () => this.setState({ selectedDate: t.date, cursorY: +t.date.slice(0, 4), cursorM: +t.date.slice(5, 7) - 1, selectedNoteId: t.noteId, view: 'editor' }),
+    }));
+
+    // tags aggregate
+    const tagMap = {};
+    s.notes.forEach(n => n.tags.forEach(t => {
+      if (!tagMap[t]) tagMap[t] = [];
+      tagMap[t].push(n);
+    }));
+    const tagNames = Object.keys(tagMap).sort((a, b) => tagMap[b].length - tagMap[a].length);
+    const tagRows = tagNames.map(name => ({
+      name, count: String(tagMap[name].length),
+      expanded: !!s.expandedTags[name],
+      onToggle: () => this.setState(st => ({ expandedTags: { ...st.expandedTags, [name]: !st.expandedTags[name] } })),
+      notes: tagMap[name].map(n => ({
+        title: n.title || '(제목 없음)', dateLabel: n.date.slice(5).replace('-', '/'),
+        onOpen: () => this.setState({ selectedDate: n.date, cursorY: +n.date.slice(0, 4), cursorM: +n.date.slice(5, 7) - 1, selectedNoteId: n.id, view: 'editor' }),
+      })),
+    }));
+
+    const fileItems = s.files.filter(f => f.date === s.selectedDate).map(f => {
+      const ext = (f.name.split('.').pop() || '').toUpperCase().slice(0, 4);
+      const isImage = !!f.thumb || ['PNG', 'JPG', 'JPEG', 'GIF', 'WEBP', 'BMP', 'SVG'].includes(ext);
+      return {
+        name: f.name, sizeLabel: this.fmtSize(f.size) + ' · ' + ext, ext,
+        hasThumb: !!f.thumb, isImage: isImage && !f.thumb, isDoc: !isImage && !f.thumb,
+        thumbCss: f.thumb ? 'url("' + f.thumb + '")' : 'none',
+        onDelete: () => this.setState(st => ({ files: st.files.filter(x => x.id !== f.id) })),
+      };
+    });
+
+    // timeline
+    const dates = [...new Set(s.notes.map(n => n.date))].sort().reverse();
+    const tlGroups = dates.map(dt => {
+      const list = s.notes.filter(n => n.date === dt);
+      return {
+        header: this.fmtDate(dt, dt.slice(0, 4) !== String(new Date().getFullYear())),
+        count: String(list.length),
+        onGoDate: () => this.setState({ selectedDate: dt, cursorY: +dt.slice(0, 4), cursorM: +dt.slice(5, 7) - 1, selectedNoteId: (list[0] || {}).id || null, view: 'editor' }),
+        notes: list.map(n => {
+          const long = n.body.length > 200 || n.body.split('\n').length > 5;
+          const expanded = !!s.expandedTl[n.id];
+          return {
+            title: n.title || '(제목 없음)', isFav: !!n.fav,
+            body: n.body || '내용 없음',
+            maxH: !long || expanded ? 'none' : '96px',
+            canExpand: long,
+            toggleLabel: expanded ? '접기' : '펼치기',
+            onToggleExpand: () => this.setState(st => ({ expandedTl: { ...st.expandedTl, [n.id]: !st.expandedTl[n.id] } })),
+            onOpen: () => this.setState({ selectedDate: n.date, cursorY: +n.date.slice(0, 4), cursorM: +n.date.slice(5, 7) - 1, selectedNoteId: n.id, view: 'editor' }),
+          };
+        }),
+      };
+    });
+
+    const searchQ = s.searchQ;
+    const searchResults = searchQ.trim() ? this.buildSearch(searchQ.trim()) : [];
+    const favItems = s.notes.filter(n => n.fav).sort((a, b) => b.date.localeCompare(a.date)).map(n => ({
+      title: n.title || '(제목 없음)',
+      dateLabel: n.date.slice(5).replace('-', '/'),
+      preview: n.body.split('\n').find(l => l.trim()) || '내용 없음',
+      onOpen: () => this.setState({ selectedDate: n.date, cursorY: +n.date.slice(0, 4), cursorM: +n.date.slice(5, 7) - 1, selectedNoteId: n.id, view: 'editor' }),
+    }));
+    const tabStyle = (key) => ({
+      fg: s.tab === key ? 'var(--accent)' : 'var(--text2)',
+      bg: s.tab === key ? 'var(--card)' : 'transparent',
+      shadow: s.tab === key ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+    });
+    const tSt = { todo: tabStyle('todo'), fav: tabStyle('fav'), tags: tabStyle('tags'), file: tabStyle('file') };
+    const sc = s.shortcuts;
+    const scLabels = { newNote: '새 노트', today: '오늘로 이동', settings: '설정 열기/닫기', theme: '테마 전환', leftPanel: '왼쪽 패널 접기/펴기', rightPanel: '오른쪽 패널 접기/펴기', postIt: '포스트잇으로 띄우기' };
+    const postNote = s.postItId ? s.notes.find(n => n.id === s.postItId) : null;
+
+    return {
+      isDark: s.theme === 'dark', isLight: s.theme !== 'dark',
+      onToggleTheme: () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      leftOpen: s.leftOpen, leftCollapsed: !s.leftOpen,
+      rightOpen: s.rightOpen, rightCollapsed: !s.rightOpen,
+      onToggleLeft: () => this.setState(st => ({ leftOpen: !st.leftOpen })),
+      onToggleRight: () => this.setState(st => ({ rightOpen: !st.rightOpen })),
+      onToggleBoth: () => this.setState(st => { const any = st.leftOpen || st.rightOpen; return { leftOpen: !any, rightOpen: !any }; }),
+      viewIsEditor: s.view === 'editor', viewIsTimeline: s.view === 'timeline',
+      onToggleView: () => this.setState(st => ({ view: st.view === 'timeline' ? 'editor' : 'timeline' })),
+      tlBg: s.view === 'timeline' ? 'var(--accent)' : 'var(--panel)',
+      tlFg: s.view === 'timeline' ? '#fff' : 'var(--text2)',
+      tlBorder: s.view === 'timeline' ? 'var(--accent)' : 'var(--stroke)',
+      tlGroups, tlEmpty: tlGroups.length === 0,
+      searchRef: this.searchRef, searchKey: isMac ? '⌘K' : 'Ctrl K',
+      searchQ, hasQuery: !!searchQ.trim(), noQuery: !searchQ.trim(), searchResults, noResults: !!searchQ.trim() && searchResults.length === 0,
+      onSearch: (e) => this.setState({ searchQ: e.target.value }),
+      onClearSearch: () => this.setState({ searchQ: '' }),
+      monthLabel: s.cursorY + '년 ' + (s.cursorM + 1) + '월',
+      weekdays, calCells: cells,
+      onPrevMonth: () => this.setState(st => ({ cursorM: st.cursorM === 0 ? 11 : st.cursorM - 1, cursorY: st.cursorM === 0 ? st.cursorY - 1 : st.cursorY })),
+      onNextMonth: () => this.setState(st => ({ cursorM: st.cursorM === 11 ? 0 : st.cursorM + 1, cursorY: st.cursorM === 11 ? st.cursorY + 1 : st.cursorY })),
+      onToday: () => this.goToday(),
+      dayLabel: this.fmtDate(s.selectedDate, false), noteCount: String(dayNotes.length),
+      dayNotes, dayEmpty: dayNotes.length === 0,
+      onNewNote: () => this.newNote(),
+      hasNote: !!note, noNote: !note,
+      noteTitle: note ? note.title : '',
+      onTitleChange: (e) => note && this.updateNote(note.id, { title: e.target.value }),
+      noteBody: note ? note.body : '',
+      noteBodyHl: this.highlightBody(note ? note.body : ''),
+      bodyRef: this.bodyRef || (this.bodyRef = { current: null }),
+      hlRef: this.hlRef || (this.hlRef = { current: null }),
+      onBodyScroll: (e) => { if (this.hlRef && this.hlRef.current) { this.hlRef.current.scrollTop = e.target.scrollTop; this.hlRef.current.scrollLeft = e.target.scrollLeft; } },
+      onBodyChange: (e) => { const id = s.postItId && !note ? s.postItId : (note && note.id); if (id) this.updateNote(id, { body: e.target.value }); },
+      favFill: note && note.fav ? '#e8a33d' : 'none',
+      favStroke: note && note.fav ? '#e8a33d' : 'var(--text2)',
+      onToggleFav: () => note && this.updateNote(note.id, { fav: !note.fav }),
+      onDeleteNote: () => { if (note && confirm('이 노트를 삭제할까요?')) this.setState(st => ({ notes: st.notes.filter(n => n.id !== note.id), selectedNoteId: null, postItId: st.postItId === note.id ? null : st.postItId })); },
+      noteTags: note ? note.tags.map(t => ({ name: t, onRemove: () => this.updateNote(note.id, { tags: note.tags.filter(x => x !== t) }) })) : [],
+      tagInput: s.tagInput,
+      onTagInput: (e) => this.setState({ tagInput: e.target.value }),
+      onTagKey: (e) => {
+        if (e.key === 'Enter' && note && s.tagInput.trim()) {
+          const t = s.tagInput.trim().replace(/^#/, '');
+          if (!note.tags.includes(t)) this.updateNote(note.id, { tags: [...note.tags, t] });
+          this.setState({ tagInput: '' });
+        }
+      },
+      noteMetaLeft: note ? note.body.length + '자 · ' + note.body.split('\n').length + '줄' : '',
+      noteMetaRight: note ? '수정: ' + note.updated : '',
+      todoBadge: String(todos.filter(t => !t.checked).length),
+      tabTodoClick: () => this.setState({ tab: 'todo' }), tabTodoFg: tSt.todo.fg, tabTodoBg: tSt.todo.bg, tabTodoShadow: tSt.todo.shadow,
+      tabFavClick: () => this.setState({ tab: 'fav' }), tabFavFg: tSt.fav.fg, tabFavBg: tSt.fav.bg, tabFavShadow: tSt.fav.shadow,
+      tabTagsClick: () => this.setState({ tab: 'tags' }), tabTagsFg: tSt.tags.fg, tabTagsBg: tSt.tags.bg, tabTagsShadow: tSt.tags.shadow,
+      tabFileClick: () => this.setState({ tab: 'file' }), tabFileFg: tSt.file.fg, tabFileBg: tSt.file.bg, tabFileShadow: tSt.file.shadow,
+      tabIsTodo: s.tab === 'todo', tabIsFav: s.tab === 'fav', tabIsTags: s.tab === 'tags', tabIsFile: s.tab === 'file',
+      favItems, favEmpty: favItems.length === 0,
+      todoItems, todoEmpty: todoItems.length === 0,
+      tagRows, tagsEmpty: tagRows.length === 0,
+      fileItems, fileEmpty: fileItems.length === 0,
+      fileInputRef: this.fileRef,
+      onAddFileClick: () => this.fileRef.current && this.fileRef.current.click(),
+      onFileChange: (e) => {
+        const list = Array.from(e.target.files || []);
+        list.forEach(f => {
+          const entry = { id: 'f' + Date.now() + Math.random().toString(36).slice(2, 6), date: s.selectedDate, name: f.name, size: f.size, thumb: null };
+          if (f.type.startsWith('image/') && f.size < 10000000) {
+            const reader = new FileReader();
+            reader.onload = () => { entry.thumb = reader.result; this.setState(st => ({ files: [entry, ...st.files.filter(x => x.id !== entry.id)] })); };
+            reader.readAsDataURL(f);
+          }
+          this.setState(st => ({ files: [entry, ...st.files] }));
+        });
+        e.target.value = '';
+      },
+      // post-it
+      postItOpen: !!postNote,
+      postItTitle: postNote ? postNote.title : '',
+      postItBody: postNote ? postNote.body : '',
+      onOpenPostIt: () => note && this.setState({ postItId: note.id }),
+      onClosePostIt: () => this.setState({ postItId: null }),
+      // settings
+      settingsOpen: s.settingsOpen,
+      onOpenSettings: () => this.setState({ settingsOpen: true }),
+      onCloseSettings: () => this.setState({ settingsOpen: false }),
+      stopClick: (e) => e.stopPropagation(),
+      resetOpen: s.resetOpen,
+      onToggleReset: () => this.setState(st => ({ resetOpen: !st.resetOpen })),
+      launchBg: s.launchOnLogin ? 'var(--accent)' : 'var(--seg)',
+      launchKnobLeft: s.launchOnLogin ? '20px' : '2px',
+      onToggleLaunch: () => this.setState(st => ({ launchOnLogin: !st.launchOnLogin })),
+      scGlobal: sc.global, scNew: sc.newNote, scToday: sc.today, scSettings: sc.settings, scTheme: sc.theme, scLeft: sc.leftPanel, scRight: sc.rightPanel, scPostIt: sc.postIt,
+      onChangeGlobal: () => { const v = prompt('전역 소환 단축키 (예: Ctrl+Alt+D)', sc.global); if (v) this.setState(st => ({ shortcuts: { ...st.shortcuts, global: v } })); },
+      onResetGlobal: () => this.setState(st => ({ shortcuts: { ...st.shortcuts, global: Component.defaultShortcuts().global } })),
+      shortcutRows: ['newNote', 'today', 'settings', 'theme', 'leftPanel', 'rightPanel', 'postIt'].map(key => ({
+        label: scLabels[key], combo: sc[key],
+        onChange: () => { const v = prompt(scLabels[key] + ' 단축키 (예: Ctrl+Shift+S)', sc[key]); if (v) this.setState(st => ({ shortcuts: { ...st.shortcuts, [key]: v } })); },
+        onReset: () => this.setState(st => ({ shortcuts: { ...st.shortcuts, [key]: Component.defaultShortcuts()[key] } })),
+      })),
+      onBackup: () => this.download('daynote-backup-' + todayIso + '.json', JSON.stringify({ theme: s.theme, notes: s.notes, files: s.files, shortcuts: s.shortcuts, launchOnLogin: s.launchOnLogin }, null, 2)),
+      restoreRef: this.restoreRef,
+      onRestoreClick: () => this.restoreRef.current && this.restoreRef.current.click(),
+      onRestoreFile: (e) => {
+        const f = (e.target.files || [])[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!Array.isArray(data.notes)) throw new Error('bad');
+            this.setState({ notes: data.notes, files: data.files || [], theme: data.theme || 'light', shortcuts: Object.assign(Component.defaultShortcuts(), data.shortcuts || {}), launchOnLogin: data.launchOnLogin !== undefined ? data.launchOnLogin : true, selectedNoteId: null });
+            alert('복원되었습니다.');
+          } catch (err) { alert('백업 파일을 읽을 수 없습니다.'); }
+        };
+        reader.readAsText(f);
+        e.target.value = '';
+      },
+      storagePath: isMac ? '~/Library/Application Support/Daynote' : 'C:\\Users\\사용자\\AppData\\Roaming\\Daynote',
+      onChangePath: () => alert('데스크톱 앱에서 폴더 선택 대화상자가 열립니다. (프로토타입)'),
+    };
+  }
+}
+</script>
+</body>
+</html>

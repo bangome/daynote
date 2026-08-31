@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>달력 노트</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font-family: 'Segoe UI Variable', 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  :root {
+    --bg1: #e8ecf4; --bg2: #dfe9f0;
+    --panel: rgba(255,255,255,0.72); --card: #ffffff; --stroke: rgba(0,0,0,0.08);
+    --text: #1b1b1b; --text2: #6a6a6a; --accent: #0067c0; --accent-soft: rgba(0,103,192,0.10);
+    --hover: rgba(0,0,0,0.045); --input: rgba(255,255,255,0.85); --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  body.dark {
+    --bg1: #1c1e24; --bg2: #23262e;
+    --panel: rgba(40,42,48,0.72); --card: #2b2d33; --stroke: rgba(255,255,255,0.09);
+    --text: #f0f0f0; --text2: #9d9fa5; --accent: #4cc2ff; --accent-soft: rgba(76,194,255,0.13);
+    --hover: rgba(255,255,255,0.06); --input: rgba(255,255,255,0.06); --shadow: 0 2px 10px rgba(0,0,0,0.35);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  textarea:focus, input:focus { outline: none; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.35); border-radius: 5px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="height:100vh; display:flex; flex-direction:column; background:linear-gradient(135deg, var(--bg1), var(--bg2)); color:var(--text); font-size:13px; overflow:hidden;">
+
+  <!-- ═ Titlebar ═ -->
+  <div style="height:48px; flex:none; display:flex; align-items:center; gap:12px; padding:0 8px 0 14px; position:relative; z-index:40;">
+    <div style="display:flex; align-items:center; gap:8px; width:250px; flex:none;">
+      <svg width="18" height="18" viewBox="0 0 20 20"><rect x="2" y="3" width="16" height="15" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.6"></rect><line x1="2" y1="7.5" x2="18" y2="7.5" stroke="var(--accent)" stroke-width="1.6"></line><line x1="6.5" y1="1.5" x2="6.5" y2="4.5" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"></line><line x1="13.5" y1="1.5" x2="13.5" y2="4.5" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"></line><rect x="5.5" y="10.5" width="4" height="4" rx="1" fill="var(--accent)"></rect></svg>
+      <span style="font-size:13px; font-weight:600;">달력 노트</span>
+    </div>
+    <div style="flex:1; display:flex; justify-content:center; position:relative;">
+      <div style="width:min(480px,100%); position:relative;">
+        <div style="display:flex; align-items:center; gap:8px; background:var(--input); border:1px solid var(--stroke); border-bottom:2px solid var(--stroke); border-radius:6px; padding:0 10px; height:32px; backdrop-filter:blur(20px);">
+          <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="var(--text2)" stroke-width="1.5"></circle><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round"></line></svg>
+          <input value="{{ searchQ }}" onChange="{{ onSearch }}" placeholder="통합검색 — 노트, 클립보드, 파일, 날짜" style="flex:1; border:none; background:transparent; color:var(--text); font-size:13px; font-family:inherit;"></input>
+          <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ onClearSearch }}" style="cursor:pointer; color:var(--text2); font-size:14px; line-height:1; padding:2px;">✕</div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; top:38px; left:0; right:0; max-height:420px; overflow-y:auto; background:var(--card); border:1px solid var(--stroke); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.18); padding:6px; backdrop-filter:blur(30px);">
+            <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="0">
+              <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; cursor:pointer;" style-hover="background:var(--hover)">
+                <span style="flex:none; font-size:10px; font-weight:600; color:var(--accent); background:var(--accent-soft); border-radius:4px; padding:2px 6px; min-width:38px; text-align:center;">{{ r.kind }}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:600; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.title }}</div>
+                  <div style="color:var(--text2); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.sub }}</div>
+                </div>
+                <span style="flex:none; color:var(--text2); font-size:11px;">{{ r.dateLabel }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px; text-align:center; color:var(--text2);">검색 결과가 없습니다</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:4px; width:250px; flex:none; justify-content:flex-end;">
+      <div onClick="{{ onToday }}" style="display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:6px; cursor:pointer; border:1px solid var(--stroke); background:var(--input); font-size:12px; font-weight:600; white-space:nowrap;" style-hover="background:var(--hover)">오늘로 이동</div>
+      <div onClick="{{ onToggleTheme }}" title="테마 전환" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer;" style-hover="background:var(--hover)">
+        <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+          <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4" fill="none" stroke="var(--text)" stroke-width="1.4"></circle><g stroke="var(--text)" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="0.8" x2="8" y2="2.6"></line><line x1="8" y1="13.4" x2="8" y2="15.2"></line><line x1="0.8" y1="8" x2="2.6" y2="8"></line><line x1="13.4" y1="8" x2="15.2" y2="8"></line><line x1="2.9" y1="2.9" x2="4.2" y2="4.2"></line><line x1="11.8" y1="11.8" x2="13.1" y2="13.1"></line><line x1="2.9" y1="13.1" x2="4.2" y2="11.8"></line><line x1="11.8" y1="4.2" x2="13.1" y2="2.9"></line></g></svg>
+        </sc-if>
+        <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+          <svg width="15" height="15" viewBox="0 0 16 16"><path d="M13.5 9.5 A 5.8 5.8 0 1 1 6.5 2.5 A 4.6 4.6 0 0 0 13.5 9.5 Z" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+        </sc-if>
+      </div>
+      <div style="display:flex; margin-left:8px; color:var(--text2);">
+        <div style="width:40px; height:32px; display:flex; align-items:center; justify-content:center; cursor:default;" style-hover="background:var(--hover)"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1"></line></svg></div>
+        <div style="width:40px; height:32px; display:flex; align-items:center; justify-content:center; cursor:default;" style-hover="background:var(--hover)"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"></rect></svg></div>
+        <div style="width:40px; height:32px; display:flex; align-items:center; justify-content:center; cursor:default; border-radius:0 6px 0 0;" style-hover="background:#c42b1c; color:#fff"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1"></line><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1"></line></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═ Body ═ -->
+  <div style="flex:1; display:flex; gap:10px; padding:0 10px 10px; min-height:0;">
+
+    <!-- Left: calendar + note list -->
+    <sc-if value="{{ leftCollapsed }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onToggleLeft }}" title="패널 펼치기" style="width:28px; flex:none; background:var(--panel); backdrop-filter:blur(30px); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); display:flex; align-items:flex-start; justify-content:center; padding-top:10px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)">
+        <svg width="11" height="11" viewBox="0 0 10 10"><path d="M3.5 1 L7.5 5 L3.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ leftOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:290px; flex:none; display:flex; flex-direction:column; gap:10px; min-height:0;">
+      <div style="background:var(--panel); backdrop-filter:blur(30px); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); padding:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-weight:600; font-size:14px; padding-left:4px;">{{ monthLabel }}</span>
+          <div style="display:flex; gap:2px;">
+            <div onClick="{{ onPrevMonth }}" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:5px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg></div>
+            <div onClick="{{ onNextMonth }}" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:5px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.5 1 L7.5 5 L3.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg></div>
+            <div style="width:1px; height:16px; background:var(--stroke); margin:6px 4px;"></div>
+            <div onClick="{{ onToggleLeft }}" title="패널 접기" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:5px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><line x1="1" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line></svg></div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+          <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+            <div style="text-align:center; font-size:11px; color:{{ w.color }}; padding:2px 0;">{{ w.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;">
+          <sc-for list="{{ calCells }}" as="c" hint-placeholder-count="35">
+            <div onClick="{{ c.onClick }}" style="height:36px; border-radius:6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; background:{{ c.bg }}; border:1px solid {{ c.border }}; position:relative;" style-hover="background:var(--hover)">
+              <span style="font-size:12px; font-weight:{{ c.fw }}; color:{{ c.fg }};">{{ c.day }}</span>
+              <div style="display:flex; gap:2px; height:4px; align-items:center;">
+                <sc-if value="{{ c.hasNotes }}" hint-placeholder-val="{{ false }}"><span style="width:4px; height:4px; border-radius:50%; background:var(--accent);"></span></sc-if>
+                <sc-if value="{{ c.hasExtras }}" hint-placeholder-val="{{ false }}"><span style="width:4px; height:4px; border-radius:50%; background:#e8a33d;"></span></sc-if>
+              </div>
+              <sc-if value="{{ c.hasCount }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute; top:2px; right:3px; font-size:9px; color:var(--text2);">{{ c.count }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1; min-height:0; background:var(--panel); backdrop-filter:blur(30px); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 12px 8px;">
+          <div>
+            <div style="font-weight:600; font-size:13px;">{{ dayLabel }}</div>
+            <div style="color:var(--text2); font-size:11px;">노트 {{ noteCount }}개</div>
+          </div>
+          <div onClick="{{ onNewNote }}" style="display:flex; align-items:center; gap:5px; background:var(--accent); color:#fff; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.15);" style-hover="filter:brightness(1.08)">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="5" y1="0.5" x2="5" y2="9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line><line x1="0.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line></svg>
+            새 노트
+          </div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:0 8px 8px; display:flex; flex-direction:column; gap:4px;">
+          <sc-for list="{{ dayNotes }}" as="n" hint-placeholder-count="2">
+            <div onClick="{{ n.onClick }}" style="padding:8px 10px; border-radius:6px; cursor:pointer; background:{{ n.bg }}; border-left:3px solid {{ n.barColor }};" style-hover="background:var(--hover)">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="flex:1; font-weight:600; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ n.title }}</span>
+                <sc-if value="{{ n.isFav }}" hint-placeholder-val="{{ false }}">
+                  <svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="#e8a33d"></path></svg>
+                </sc-if>
+              </div>
+              <div style="color:var(--text2); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">{{ n.preview }}</div>
+              <sc-if value="{{ n.hasTags }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; gap:4px; margin-top:5px; flex-wrap:wrap;">
+                  <sc-for list="{{ n.tags }}" as="t" hint-placeholder-count="1">
+                    <span style="font-size:10px; color:var(--accent); background:var(--accent-soft); border-radius:4px; padding:1px 6px;">#{{ t.name }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ dayEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:24px 0; font-size:12px;">이 날짜에 노트가 없습니다</div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- Center: editor -->
+    <div style="flex:1; min-width:0; background:var(--card); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden;">
+      <sc-if value="{{ hasNote }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px 0;">
+          <input value="{{ noteTitle }}" onChange="{{ onTitleChange }}" placeholder="제목" style="flex:1; border:none; background:transparent; color:var(--text); font-size:18px; font-weight:600; font-family:inherit; border-bottom:1px solid transparent;"></input>
+          <div onClick="{{ onToggleFav }}" title="즐겨찾기" style="width:30px; height:30px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer;" style-hover="background:var(--hover)">
+            <svg width="15" height="15" viewBox="0 0 12 12"><path d="M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z" fill="{{ favFill }}" stroke="{{ favStroke }}" stroke-width="1"></path></svg>
+          </div>
+          <div onClick="{{ onDeleteNote }}" title="노트 삭제" style="width:30px; height:30px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:#c42b1c">
+            <svg width="13" height="13" viewBox="0 0 14 14"><path d="M2 3.5 h10 M5.5 3.5 V2 h3 v1.5 M3.5 3.5 l0.7 8.5 h5.6 l0.7 -8.5 M5.8 6 v4 M8.2 6 v4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; padding:8px 16px; flex-wrap:wrap;">
+          <sc-for list="{{ noteTags }}" as="t" hint-placeholder-count="0">
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--accent); background:var(--accent-soft); border-radius:10px; padding:2px 9px;">#{{ t.name }}<span onClick="{{ t.onRemove }}" style="cursor:pointer; opacity:0.65; font-size:12px; line-height:1;">✕</span></span>
+          </sc-for>
+          <input value="{{ tagInput }}" onChange="{{ onTagInput }}" onKeyDown="{{ onTagKey }}" placeholder="+ 태그" style="border:none; background:transparent; color:var(--text2); font-size:11px; width:80px; font-family:inherit;"></input>
+        </div>
+        <div style="height:1px; background:var(--stroke); margin:0 16px;"></div>
+        <div style="flex:1; min-height:0; position:relative;">
+          <div ref="{{ hlRef }}" style="position:absolute; inset:0; overflow:hidden; padding:12px 16px; font-size:13.5px; line-height:1.75; font-family:'Consolas','Segoe UI','Malgun Gothic',monospace; white-space:pre-wrap; overflow-wrap:break-word; color:var(--text); box-sizing:border-box; pointer-events:none;">{{ noteBodyHl }}</div>
+          <textarea ref="{{ bodyRef }}" value="{{ noteBody }}" onChange="{{ onBodyChange }}" onScroll="{{ onBodyScroll }}" spellCheck="{{ false }}" style="position:absolute; inset:0; width:100%; height:100%; resize:none; border:none; background:transparent; color:transparent; caret-color:var(--text); font-size:13.5px; line-height:1.75; padding:12px 16px; font-family:'Consolas','Segoe UI','Malgun Gothic',monospace; white-space:pre-wrap; overflow-wrap:break-word; box-sizing:border-box;"></textarea>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 16px; border-top:1px solid var(--stroke); color:var(--text2); font-size:11px;">
+          <span>{{ noteMetaLeft }}</span>
+          <span>{{ noteMetaRight }}</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noNote }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--text2);">
+          <svg width="44" height="44" viewBox="0 0 24 24"><path d="M5 3 h11 l3 3 v15 h-14 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" opacity="0.5"></path><path d="M8 9 h8 M8 12.5 h8 M8 16 h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.5"></path></svg>
+          <div style="font-size:13px;">왼쪽 목록에서 노트를 선택하거나 새 노트를 만드세요</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- Right: Todo / clipboard / files -->
+    <sc-if value="{{ rightCollapsed }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onToggleRight }}" title="패널 펼치기" style="width:28px; flex:none; background:var(--panel); backdrop-filter:blur(30px); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); display:flex; align-items:flex-start; justify-content:center; padding-top:10px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)">
+        <svg width="11" height="11" viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ rightOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:300px; flex:none; background:var(--panel); backdrop-filter:blur(30px); border:1px solid var(--stroke); border-radius:8px; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:0;">
+      <div style="display:flex; gap:2px; padding:8px 8px 0; align-items:center;">
+        <div onClick="{{ onToggleRight }}" title="패널 접기" style="width:26px; height:26px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:5px; cursor:pointer; color:var(--text2);" style-hover="background:var(--hover); color:var(--text)"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.5 1 L7.5 5 L3.5 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><line x1="9" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line></svg></div>
+        <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+          <div onClick="{{ tb.onClick }}" style="flex:1; text-align:center; padding:7px 0 9px; cursor:pointer; font-size:12px; font-weight:{{ tb.fw }}; color:{{ tb.fg }}; position:relative;" style-hover="color:var(--text)">
+            {{ tb.label }}
+            <div style="position:absolute; bottom:0; left:25%; right:25%; height:3px; border-radius:2px; background:{{ tb.bar }};"></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="height:1px; background:var(--stroke);"></div>
+
+      <sc-if value="{{ tabIsTodo }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px;">
+          <sc-for list="{{ todoItems }}" as="td" hint-placeholder-count="3">
+            <div style="display:flex; gap:9px; padding:8px 9px; border-radius:6px; background:var(--card); border:1px solid var(--stroke);">
+              <div onClick="{{ td.onToggle }}" style="width:16px; height:16px; flex:none; margin-top:1px; border-radius:4px; cursor:pointer; border:1px solid {{ td.boxBorder }}; background:{{ td.boxBg }}; display:flex; align-items:center; justify-content:center;">
+                <sc-if value="{{ td.checked }}" hint-placeholder-val="{{ false }}">
+                  <svg width="9" height="9" viewBox="0 0 10 10"><path d="M1.5 5.5 L4 8 L8.5 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </sc-if>
+              </div>
+              <div onClick="{{ td.onJump }}" style="flex:1; min-width:0; cursor:pointer;">
+                <div style="font-size:12.5px; line-height:1.45; text-decoration:{{ td.deco }}; color:{{ td.textColor }};">{{ td.text }}</div>
+                <div style="display:flex; gap:8px; margin-top:3px; font-size:10.5px; color:var(--text2);">
+                  <span>{{ td.noteTitle }}</span>
+                  <sc-if value="{{ td.hasDue }}" hint-placeholder-val="{{ false }}">
+                    <span style="color:{{ td.dueColor }}; font-weight:600;">{{ td.dueLabel }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ todoEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px; line-height:1.7;">노트에 <span style="font-family:Consolas,monospace; background:var(--hover); border-radius:4px; padding:1px 5px;">-[] 할 일</span> 을 입력하면<br></br>여기에 자동으로 표시됩니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabIsClip }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px;">
+          <div onClick="{{ onAddClip }}" style="display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; border:1px dashed var(--stroke); border-radius:6px; cursor:pointer; color:var(--text2); font-size:12px;" style-hover="background:var(--hover); color:var(--text)">
+            <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="1.5" width="8" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"></rect><path d="M3.5 3 h-1 a1 1 0 0 0 -1 1 v8 a1 1 0 0 0 1 1 h9 a1 1 0 0 0 1 -1 v-8 a1 1 0 0 0 -1 -1 h-1" fill="none" stroke="currentColor" stroke-width="1.2"></path></svg>
+            현재 클립보드 저장
+          </div>
+          <sc-for list="{{ clipItems }}" as="cp" hint-placeholder-count="2">
+            <div style="padding:9px 10px; border-radius:6px; background:var(--card); border:1px solid var(--stroke);">
+              <div style="font-size:12px; line-height:1.55; word-break:break-all; white-space:pre-wrap; max-height:72px; overflow:hidden;">{{ cp.text }}</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px;">
+                <span style="color:var(--text2); font-size:10.5px;">{{ cp.timeLabel }}</span>
+                <div style="display:flex; gap:8px;">
+                  <span onClick="{{ cp.onCopy }}" style="color:var(--accent); font-size:11px; cursor:pointer; font-weight:600;">복사</span>
+                  <span onClick="{{ cp.onDelete }}" style="color:var(--text2); font-size:11px; cursor:pointer;" style-hover="color:#c42b1c">삭제</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ clipEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px;">이 날짜에 저장된 클립보드가 없습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabIsFile }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px;">
+          <div onClick="{{ onAddFileClick }}" style="display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; border:1px dashed var(--stroke); border-radius:6px; cursor:pointer; color:var(--text2); font-size:12px;" style-hover="background:var(--hover); color:var(--text)">
+            <svg width="12" height="12" viewBox="0 0 14 14"><path d="M7 2 v10 M2 7 h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+            파일 · 이미지 추가
+          </div>
+          <input type="file" ref="{{ fileInputRef }}" onChange="{{ onFileChange }}" multiple="{{ true }}" style="display:none;"></input>
+          <sc-for list="{{ fileItems }}" as="f" hint-placeholder-count="0">
+            <div style="padding:8px 10px; border-radius:6px; background:var(--card); border:1px solid var(--stroke); display:flex; flex-direction:column; gap:8px;">
+              <sc-if value="{{ f.hasThumb }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%; height:110px; border-radius:5px; background-color:var(--hover); background-image:{{ f.thumbCss }}; background-size:cover; background-position:center;"></div>
+              </sc-if>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <sc-if value="{{ f.isImage }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:38px; height:38px; flex:none; border-radius:5px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent);">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><circle cx="5.5" cy="6.3" r="1.2" fill="currentColor"></circle><path d="M2.5 12 L6.5 8.5 L9 10.5 L11.5 8 L13.5 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isDoc }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:38px; height:38px; flex:none; border-radius:5px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:9px; font-weight:700;">{{ f.ext }}</div>
+                </sc-if>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ f.name }}</div>
+                  <div style="color:var(--text2); font-size:10.5px; margin-top:1px;">{{ f.sizeLabel }}</div>
+                </div>
+                <span onClick="{{ f.onDelete }}" style="color:var(--text2); font-size:11px; cursor:pointer; flex:none;" style-hover="color:#c42b1c">삭제</span>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ fileEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center; color:var(--text2); padding:28px 12px; font-size:12px;">이 날짜에 보관된 파일이 없습니다</div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#0067c0&quot;, &quot;options&quot;: [&quot;#0067c0&quot;, &quot;#6b4fbb&quot;, &quot;#0f7b5f&quot;, &quot;#c2410c&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;테마&quot;}, &quot;weekStart&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;일요일&quot;, &quot;options&quot;: [&quot;일요일&quot;, &quot;월요일&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;달력&quot;}, &quot;notePreview&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;노트 목록&quot;}}">
+class Component extends DCLogic {
+  state = Component.initialState();
+
+  static initialState() {
+    const today = Component.iso(new Date());
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('winnote-v1')); } catch (e) {}
+    const base = saved || Component.sampleData();
+    return {
+      theme: base.theme || 'light',
+      selectedDate: today,
+      cursorY: new Date().getFullYear(),
+      cursorM: new Date().getMonth(),
+      selectedNoteId: (base.notes.find(n => n.date === today) || {}).id || null,
+      tab: 'todo', searchQ: '', tagInput: '', leftOpen: true, rightOpen: true,
+      notes: base.notes, clips: base.clips, files: base.files,
+    };
+  }
+
+  static iso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  static sampleData() {
+    const y = new Date().getFullYear(), m = String(new Date().getMonth() + 1).padStart(2, '0');
+    const d = (day) => y + '-' + m + '-' + String(day).padStart(2, '0');
+    const today = new Date().getDate();
+    const dd = (off) => { const t = new Date(); t.setDate(t.getDate() + off); return Component.iso(t); };
+    const mmdd = (off) => { const t = new Date(); t.setDate(t.getDate() + off); return String(t.getMonth() + 1).padStart(2, '0') + '/' + String(t.getDate()).padStart(2, '0'); };
+    return {
+      theme: 'light',
+      notes: [
+        { id: 'n1', date: dd(0), title: '주간회의 준비', fav: true, tags: ['회의', '기획'], updated: dd(0) + ' 09:40',
+          body: '이번 주 주간회의 안건 정리\n\n1. 2분기 지표 리뷰\n2. 신규 기능 우선순위 논의\n3. 채용 진행 상황 공유\n\n-[] 회의자료 초안 공유 (' + mmdd(1) + ' 10:00)\n-[] 회의실 예약 확인 (' + mmdd(0) + ' 17:00)\n-[x] 지난주 액션아이템 정리' },
+        { id: 'n2', date: dd(0), title: '배포 체크리스트', fav: false, tags: ['배포'], updated: dd(0) + ' 11:12',
+          body: 'v2.4.0 배포 전 확인사항\n\n-[] 스테이징 회귀 테스트 (' + mmdd(2) + ' 14:00)\n-[] 릴리즈 노트 작성\n-[x] DB 마이그레이션 스크립트 리뷰\n\n※ 배포 후 30분간 에러 모니터링 필수' },
+        { id: 'n3', date: dd(-1), title: '고객 미팅 메모', fav: false, tags: ['고객'], updated: dd(-1) + ' 15:30',
+          body: 'A사 정기 미팅\n\n- 대시보드 로딩 속도 개선 요청\n- 엑셀 내보내기 기능 문의 → 8월 로드맵 안내\n- 계약 갱신은 9월 초 논의 예정\n\n-[] 속도 개선 이슈 티켓 생성 (' + mmdd(1) + ' 12:00)' },
+        { id: 'n4', date: dd(-4), title: '아이디어 스케치', fav: false, tags: ['아이디어'], updated: dd(-4) + ' 21:05',
+          body: '온보딩 개선 아이디어\n\n- 첫 로그인 시 샘플 데이터 자동 생성\n- 체크리스트형 가이드 (3단계)\n- 완료 시 작은 축하 애니메이션' },
+        { id: 'n5', date: dd(-6), title: '월간 보고 초안', fav: true, tags: ['보고'], updated: dd(-6) + ' 17:50',
+          body: '7월 월간 보고 핵심 요약\n\n- MAU 12.4만 (+8.2% MoM)\n- 신규 결제 전환율 3.1%\n- 주요 이슈: 검색 응답 지연 → 인덱스 개선으로 해결' },
+        { id: 'n6', date: dd(2), title: '휴가 전 인수인계', fav: false, tags: ['일정'], updated: dd(0) + ' 08:20',
+          body: '8월 첫째 주 휴가 전 정리할 것\n\n-[] 담당 이슈 재배정 (' + mmdd(2) + ' 18:00)\n-[] 자동응답 설정' },
+      ],
+      clips: [
+        { id: 'c1', date: dd(0), time: '09:12', text: 'https://github.com/acme/webapp/pull/1284' },
+        { id: 'c2', date: dd(0), time: '10:47', text: '스테이징 서버: stg-03.acme.internal (10.20.3.14)' },
+        { id: 'c3', date: dd(-1), time: '15:41', text: 'A사 담당자: 김민준 매니저 / mj.kim@acorp.co.kr / 02-1234-5678' },
+      ],
+      files: [
+        { id: 'f1', date: dd(0), name: '요구사항_정의서_v3.docx', size: 482134, thumb: null },
+        { id: 'f2', date: dd(0), name: '화면설계_홈.png', size: 1204833, thumb: null },
+        { id: 'f3', date: dd(-1), name: 'A사_미팅녹취.txt', size: 18422, thumb: null },
+      ],
+    };
+  }
+
+  componentDidMount() {
+    this.fileRef = React.createRef ? React.createRef() : { current: null };
+    this.applyTheme();
+    this.forceUpdate();
+  }
+  componentDidUpdate() { this.applyTheme(); this.persist(); }
+  applyTheme() {
+    document.body.classList.toggle('dark', this.state.theme === 'dark');
+    const acc = this.props.accent;
+    if (acc) { document.body.style.setProperty('--accent', acc); document.body.style.setProperty('--accent-soft', acc + '1f'); }
+    else { document.body.style.removeProperty('--accent'); document.body.style.removeProperty('--accent-soft'); }
+  }
+  persist() {
+    try { localStorage.setItem('winnote-v1', JSON.stringify({ theme: this.state.theme, notes: this.state.notes, clips: this.state.clips, files: this.state.files })); } catch (e) {}
+  }
+
+  highlightBody(body) {
+    if (!body) return React.createElement('span', { style: { color: 'var(--text2)' } }, "메모를 입력하세요.  '-[] 할 일 (07/25 14:00)' 형식으로 쓰면 Todo 패널에 자동 등록됩니다.");
+    const re = /(-\s?\[(?: |x|X)?\])|(\(\d{1,2}\/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))/g;
+    const parts = [];
+    let last = 0, m, k = 0;
+    while ((m = re.exec(body))) {
+      if (m.index > last) parts.push(body.slice(last, m.index));
+      parts.push(React.createElement('span', { key: k++, style: { color: 'var(--accent)', fontWeight: 600 } }, m[0]));
+      last = m.index + m[0].length;
+    }
+    if (last < body.length) parts.push(body.slice(last));
+    parts.push('\n');
+    return parts;
+  }
+
+  updateNote(id, patch) {
+    this.setState(s => ({ notes: s.notes.map(n => n.id === id ? { ...n, ...patch, updated: Component.iso(new Date()) + ' ' + new Date().toTimeString().slice(0, 5) } : n) }));
+  }
+
+  parseTodos() {
+    const out = [];
+    const now = new Date();
+    this.state.notes.forEach(note => {
+      note.body.split('\n').forEach((line, idx) => {
+        const m = line.match(/^\s*-\s?\[( |x|X)?\]\s*(.*)$/);
+        if (!m) return;
+        const checked = (m[1] || '').toLowerCase() === 'x';
+        let text = m[2];
+        let due = null, dueLabel = '';
+        const dm = text.match(/\((\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?\)\s*$/);
+        if (dm) {
+          due = new Date(now.getFullYear(), parseInt(dm[1], 10) - 1, parseInt(dm[2], 10), dm[3] ? parseInt(dm[3], 10) : 23, dm[4] ? parseInt(dm[4], 10) : 59);
+          dueLabel = dm[1] + '/' + dm[2] + (dm[3] ? ' ' + dm[3] + ':' + dm[4] : '');
+          text = text.replace(dm[0], '').trim();
+        }
+        out.push({ noteId: note.id, date: note.date, noteTitle: note.title, lineIdx: idx, checked, text: text || '(내용 없음)', due, dueLabel, overdue: due && !checked && due < now });
+      });
+    });
+    out.sort((a, b) => (a.checked - b.checked) || ((a.due ? a.due.getTime() : 8e15) - (b.due ? b.due.getTime() : 8e15)));
+    return out;
+  }
+
+  toggleTodo(noteId, lineIdx) {
+    const note = this.state.notes.find(n => n.id === noteId);
+    if (!note) return;
+    const lines = note.body.split('\n');
+    const m = lines[lineIdx].match(/^(\s*-\s?\[)( |x|X)?(\].*)$/);
+    if (!m) return;
+    lines[lineIdx] = m[1] + (((m[2] || '').toLowerCase() === 'x') ? ' ' : 'x') + m[3];
+    this.updateNote(noteId, { body: lines.join('\n') });
+  }
+
+  fmtDate(iso, withYear) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const wd = ['일', '월', '화', '수', '목', '금', '토'][new Date(y, m - 1, d).getDay()];
+    return (withYear ? y + '년 ' : '') + m + '월 ' + d + '일 (' + wd + ')';
+  }
+  fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : b > 1024 ? Math.round(b / 1024) + ' KB' : b + ' B'; }
+
+  buildSearch(q) {
+    const s = this.state, ql = q.toLowerCase(), res = [];
+    const go = (date, noteId, tab) => this.setState({ selectedDate: date, cursorY: +date.slice(0, 4), cursorM: +date.slice(5, 7) - 1, selectedNoteId: noteId !== undefined ? noteId : s.selectedNoteId, tab: tab || s.tab, searchQ: '' });
+    s.notes.forEach(n => {
+      if ((n.title + ' ' + n.body + ' ' + n.tags.join(' ')).toLowerCase().includes(ql)) {
+        const bi = n.body.toLowerCase().indexOf(ql);
+        res.push({ kind: '노트', title: n.title, sub: bi >= 0 ? '…' + n.body.slice(Math.max(0, bi - 12), bi + 34).replace(/\n/g, ' ') + '…' : n.body.split('\n')[0], dateLabel: n.date.slice(5).replace('-', '/'), onClick: () => go(n.date, n.id) });
+      }
+    });
+    s.clips.forEach(c => { if (c.text.toLowerCase().includes(ql)) res.push({ kind: '클립', title: c.text.slice(0, 44), sub: '클립보드 · ' + c.time, dateLabel: c.date.slice(5).replace('-', '/'), onClick: () => go(c.date, undefined, 'clip') }); });
+    s.files.forEach(f => { if (f.name.toLowerCase().includes(ql)) res.push({ kind: '파일', title: f.name, sub: this.fmtSize(f.size), dateLabel: f.date.slice(5).replace('-', '/'), onClick: () => go(f.date, undefined, 'file') }); });
+    const dateSet = new Set([...s.notes.map(n => n.date), ...s.clips.map(c => c.date), ...s.files.map(f => f.date)]);
+    dateSet.forEach(dt => {
+      const label = this.fmtDate(dt, true);
+      if (dt.includes(q) || dt.slice(5).replace('-', '/').includes(q) || label.replace(/\s/g, '').includes(q.replace(/\s/g, ''))) {
+        res.push({ kind: '날짜', title: label, sub: '노트 ' + s.notes.filter(n => n.date === dt).length + '개', dateLabel: '', onClick: () => go(dt, (s.notes.find(n => n.date === dt) || {}).id || null) });
+      }
+    });
+    return res.slice(0, 12);
+  }
+
+  renderVals() {
+    const s = this.state;
+    if (!this.fileRef) this.fileRef = { current: null };
+    const todayIso = Component.iso(new Date());
+    const weekStartMon = (this.props.weekStart ?? '일요일') === '월요일';
+
+    // calendar
+    const first = new Date(s.cursorY, s.cursorM, 1);
+    const startOffset = (first.getDay() - (weekStartMon ? 1 : 0) + 7) % 7;
+    const daysIn = new Date(s.cursorY, s.cursorM + 1, 0).getDate();
+    const notesBy = {}, extrasBy = {};
+    s.notes.forEach(n => { notesBy[n.date] = (notesBy[n.date] || 0) + 1; });
+    s.clips.forEach(c => { extrasBy[c.date] = true; });
+    s.files.forEach(f => { extrasBy[f.date] = true; });
+    const cells = [];
+    const total = Math.ceil((startOffset + daysIn) / 7) * 7;
+    for (let i = 0; i < total; i++) {
+      const dayNum = i - startOffset + 1;
+      const inMonth = dayNum >= 1 && dayNum <= daysIn;
+      const dt = new Date(s.cursorY, s.cursorM, dayNum);
+      const iso = Component.iso(dt);
+      const isSel = inMonth && iso === s.selectedDate, isToday = inMonth && iso === todayIso;
+      const dow = dt.getDay();
+      cells.push({
+        day: inMonth ? String(dayNum) : '',
+        bg: isSel ? 'var(--accent-soft)' : 'transparent',
+        border: isToday ? 'var(--accent)' : 'transparent',
+        fg: !inMonth ? 'transparent' : isSel ? 'var(--accent)' : dow === 0 ? '#d13438' : dow === 6 ? 'var(--accent)' : 'var(--text)',
+        fw: isSel || isToday ? '700' : '400',
+        hasNotes: inMonth && !!notesBy[iso],
+        hasExtras: inMonth && !!extrasBy[iso],
+        hasCount: inMonth && (notesBy[iso] || 0) > 0,
+        count: String(notesBy[iso] || ''),
+        onClick: inMonth ? () => this.setState({ selectedDate: iso, selectedNoteId: (s.notes.find(n => n.date === iso) || {}).id || null }) : () => {},
+      });
+    }
+    const wdBase = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdays = (weekStartMon ? [...wdBase.slice(1), '일'] : wdBase).map(w => ({ label: w, color: w === '일' ? '#d13438' : w === '토' ? 'var(--accent)' : 'var(--text2)' }));
+
+    // notes for selected date
+    const dayNotes = s.notes.filter(n => n.date === s.selectedDate).map(n => ({
+      title: n.title || '(제목 없음)',
+      preview: (this.props.notePreview ?? true) ? (n.body.split('\n').find(l => l.trim()) || '내용 없음') : '',
+      isFav: !!n.fav, hasTags: n.tags.length > 0, tags: n.tags.map(t => ({ name: t })),
+      bg: n.id === s.selectedNoteId ? 'var(--accent-soft)' : 'transparent',
+      barColor: n.id === s.selectedNoteId ? 'var(--accent)' : 'transparent',
+      onClick: () => this.setState({ selectedNoteId: n.id }),
+    }));
+
+    const note = s.notes.find(n => n.id === s.selectedNoteId && n.date === s.selectedDate) || null;
+
+    // todos
+    const todos = this.parseTodos();
+    const todoItems = todos.map(t => ({
+      checked: t.checked, text: t.text,
+      deco: t.checked ? 'line-through' : 'none',
+      textColor: t.checked ? 'var(--text2)' : 'var(--text)',
+      boxBg: t.checked ? 'var(--accent)' : 'transparent',
+      boxBorder: t.checked ? 'var(--accent)' : 'var(--text2)',
+      hasDue: !!t.due, dueLabel: t.dueLabel, dueColor: t.overdue ? '#d13438' : 'var(--accent)',
+      noteTitle: t.noteTitle + ' · ' + t.date.slice(5).replace('-', '/'),
+      onToggle: () => this.toggleTodo(t.noteId, t.lineIdx),
+      onJump: () => this.setState({ selectedDate: t.date, cursorY: +t.date.slice(0, 4), cursorM: +t.date.slice(5, 7) - 1, selectedNoteId: t.noteId }),
+    }));
+
+    // clips & files for selected date
+    const clipItems = s.clips.filter(c => c.date === s.selectedDate).map(c => ({
+      text: c.text, timeLabel: c.time,
+      onCopy: () => { try { navigator.clipboard.writeText(c.text); } catch (e) {} },
+      onDelete: () => this.setState(st => ({ clips: st.clips.filter(x => x.id !== c.id) })),
+    }));
+    const fileItems = s.files.filter(f => f.date === s.selectedDate).map(f => {
+      const ext = (f.name.split('.').pop() || '').toUpperCase().slice(0, 4);
+      const isImage = !!f.thumb || ['PNG', 'JPG', 'JPEG', 'GIF', 'WEBP', 'BMP', 'SVG'].includes(ext);
+      return {
+        name: f.name, sizeLabel: this.fmtSize(f.size) + ' · ' + ext, ext,
+        hasThumb: !!f.thumb, isImage: isImage && !f.thumb, isDoc: !isImage && !f.thumb,
+        thumbCss: f.thumb ? 'url("' + f.thumb + '")' : 'none',
+        onDelete: () => this.setState(st => ({ files: st.files.filter(x => x.id !== f.id) })),
+      };
+    });
+
+    const searchQ = s.searchQ;
+    const searchResults = searchQ.trim() ? this.buildSearch(searchQ.trim()) : [];
+    const tabDefs = [['todo', 'Todo (' + todos.filter(t => !t.checked).length + ')'], ['clip', '클립보드'], ['file', '파일']];
+
+    return {
+      isDark: s.theme === 'dark', isLight: s.theme !== 'dark',
+      leftOpen: s.leftOpen, leftCollapsed: !s.leftOpen,
+      rightOpen: s.rightOpen, rightCollapsed: !s.rightOpen,
+      onToggleLeft: () => this.setState(st => ({ leftOpen: !st.leftOpen })),
+      onToggleRight: () => this.setState(st => ({ rightOpen: !st.rightOpen })),
+      onToggleTheme: () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      // search
+      searchQ, hasQuery: !!searchQ.trim(), searchResults, noResults: !!searchQ.trim() && searchResults.length === 0,
+      onSearch: (e) => this.setState({ searchQ: e.target.value }),
+      onClearSearch: () => this.setState({ searchQ: '' }),
+      // calendar
+      monthLabel: s.cursorY + '년 ' + (s.cursorM + 1) + '월',
+      weekdays, calCells: cells,
+      onPrevMonth: () => this.setState(st => ({ cursorM: st.cursorM === 0 ? 11 : st.cursorM - 1, cursorY: st.cursorM === 0 ? st.cursorY - 1 : st.cursorY })),
+      onNextMonth: () => this.setState(st => ({ cursorM: st.cursorM === 11 ? 0 : st.cursorM + 1, cursorY: st.cursorM === 11 ? st.cursorY + 1 : st.cursorY })),
+      onToday: () => { const t = new Date(); const iso = Component.iso(t); this.setState({ selectedDate: iso, cursorY: t.getFullYear(), cursorM: t.getMonth(), selectedNoteId: (s.notes.find(n => n.date === iso) || {}).id || null }); },
+      // note list
+      dayLabel: this.fmtDate(s.selectedDate, false), noteCount: String(dayNotes.length),
+      dayNotes, dayEmpty: dayNotes.length === 0,
+      onNewNote: () => {
+        const id = 'n' + Date.now();
+        const nn = { id, date: s.selectedDate, title: '새 노트', fav: false, tags: [], body: '', updated: todayIso + ' ' + new Date().toTimeString().slice(0, 5) };
+        this.setState(st => ({ notes: [nn, ...st.notes], selectedNoteId: id }));
+      },
+      // editor
+      hasNote: !!note, noNote: !note,
+      noteTitle: note ? note.title : '',
+      onTitleChange: (e) => note && this.updateNote(note.id, { title: e.target.value }),
+      noteBody: note ? note.body : '',
+      noteBodyHl: this.highlightBody(note ? note.body : ''),
+      bodyRef: this.bodyRef || (this.bodyRef = { current: null }),
+      hlRef: this.hlRef || (this.hlRef = { current: null }),
+      onBodyScroll: (e) => { if (this.hlRef && this.hlRef.current) { this.hlRef.current.scrollTop = e.target.scrollTop; this.hlRef.current.scrollLeft = e.target.scrollLeft; } },
+      onBodyChange: (e) => note && this.updateNote(note.id, { body: e.target.value }),
+      favFill: note && note.fav ? '#e8a33d' : 'none',
+      favStroke: note && note.fav ? '#e8a33d' : 'var(--text2)',
+      onToggleFav: () => note && this.updateNote(note.id, { fav: !note.fav }),
+      onDeleteNote: () => { if (note && confirm('이 노트를 삭제할까요?')) this.setState(st => ({ notes: st.notes.filter(n => n.id !== note.id), selectedNoteId: null })); },
+      noteTags: note ? note.tags.map(t => ({ name: t, onRemove: () => this.updateNote(note.id, { tags: note.tags.filter(x => x !== t) }) })) : [],
+      tagInput: s.tagInput,
+      onTagInput: (e) => this.setState({ tagInput: e.target.value }),
+      onTagKey: (e) => {
+        if (e.key === 'Enter' && note && s.tagInput.trim()) {
+          const t = s.tagInput.trim().replace(/^#/, '');
+          if (!note.tags.includes(t)) this.updateNote(note.id, { tags: [...note.tags, t] });
+          this.setState({ tagInput: '' });
+        }
+      },
+      noteMetaLeft: note ? note.body.length + '자 · ' + note.body.split('\n').length + '줄' : '',
+      noteMetaRight: note ? '수정: ' + note.updated : '',
+      // right panel
+      tabs: tabDefs.map(([key, label]) => ({
+        label, onClick: () => this.setState({ tab: key }),
+        fw: s.tab === key ? '600' : '400',
+        fg: s.tab === key ? 'var(--text)' : 'var(--text2)',
+        bar: s.tab === key ? 'var(--accent)' : 'transparent',
+      })),
+      tabIsTodo: s.tab === 'todo', tabIsClip: s.tab === 'clip', tabIsFile: s.tab === 'file',
+      todoItems, todoEmpty: todoItems.length === 0,
+      clipItems, clipEmpty: clipItems.length === 0,
+      onAddClip: async () => {
+        let text = '';
+        try { text = await navigator.clipboard.readText(); } catch (e) {}
+        if (!text) text = prompt('저장할 텍스트를 입력하세요') || '';
+        if (!text.trim()) return;
+        const c = { id: 'c' + Date.now(), date: s.selectedDate, time: new Date().toTimeString().slice(0, 5), text: text.trim() };
+        this.setState(st => ({ clips: [c, ...st.clips], tab: 'clip' }));
+      },
+      fileItems, fileEmpty: fileItems.length === 0,
+      fileInputRef: this.fileRef,
+      onAddFileClick: () => this.fileRef.current && this.fileRef.current.click(),
+      onFileChange: (e) => {
+        const list = Array.from(e.target.files || []);
+        list.forEach(f => {
+          const entry = { id: 'f' + Date.now() + Math.random().toString(36).slice(2, 6), date: s.selectedDate, name: f.name, size: f.size, thumb: null };
+          if (f.type.startsWith('image/') && f.size < 10000000) {
+            const reader = new FileReader();
+            reader.onload = () => { entry.thumb = reader.result; this.setState(st => ({ files: [entry, ...st.files.filter(x => x.id !== entry.id)] })); };
+            reader.readAsDataURL(f);
+          }
+          this.setState(st => ({ files: [entry, ...st.files] }));
+        });
+        e.target.value = '';
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -20,8 +20,7 @@
                         <!-- Prominent date boundary: a top hairline divider, a large heading, and the count. -->
                         <DataTemplate DataType="{x:Type product:TimelineDateHeaderRow}">
                             <StackPanel Margin="0,22,0,10">
-                                <Border Height="1" Background="{DynamicResource Daynote.Product.Brush.Stroke}" Margin="0,0,0,10" />
-                                <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold"
+                                <TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="Bold"
                                            Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
                                 <TextBlock Text="{Binding CountText}" FontSize="11" Margin="0,1,0,0"
                                            Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
@@ -29,12 +28,12 @@
                         </DataTemplate>
                         <!-- Read-only note card: title (+ favorite star), truncated body, expand/collapse. -->
                         <DataTemplate DataType="{x:Type product:TimelineNoteRow}">
-                            <Border Background="{DynamicResource Daynote.Product.Brush.Card}"
-                                    CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"
-                                    Padding="14" Margin="0,0,0,8" Cursor="Hand">
+                            <Border Background="{DynamicResource Daynote.Product.Brush.Panel}"
+                                    CornerRadius="12"
+                                    Padding="15,13" Margin="0,0,0,8" Cursor="Hand">
                                 <Border.Style>
                                     <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke2}" />
                                         <Setter Property="BorderThickness" Value="1" />
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
@@ -56,7 +55,7 @@
                                               Visibility="{Binding IsFavorite, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                                     </Grid>
                                     <TextBlock Text="{Binding DisplayBody}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
-                                               Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                               Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
                                     <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="8,3"
                                             Style="{DynamicResource Daynote.Product.Style.GhostButton}"
                                             Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}"

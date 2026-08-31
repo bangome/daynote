@@ -22,17 +22,17 @@
     <sys:Double x:Key="Daynote.Product.Type.MetaSmall">10.5</sys:Double>
     <sys:Double x:Key="Daynote.Product.Type.Tag">10</sys:Double>
     <sys:Double x:Key="Daynote.Product.Type.Badge">9</sys:Double>
-    <sys:Double x:Key="Daynote.Product.Type.Title">18</sys:Double>
+    <sys:Double x:Key="Daynote.Product.Type.Title">20</sys:Double>
     <sys:Double x:Key="Daynote.Product.Type.Month">14</sys:Double>
     <sys:Double x:Key="Daynote.Product.Type.Editor">13.5</sys:Double>
 
-    <!-- Radii -->
-    <CornerRadius x:Key="Daynote.Product.Radius.Card">8</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Panel">6</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Control">6</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Small">5</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Chip">4</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Pill">10</CornerRadius>
+    <!-- Radii (v3: 14 cards, 10 rows, 8 controls, pill chips/buttons) -->
+    <CornerRadius x:Key="Daynote.Product.Radius.Card">14</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Panel">10</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Control">8</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Small">7</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Chip">99</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Pill">99</CornerRadius>
 
     <!-- Icon geometries (recreated from the design's inline SVG path data) -->
     <Geometry x:Key="Daynote.Product.Geo.ChevronRight">M3.5,1 L7.5,5 L3.5,9</Geometry>
@@ -196,29 +196,65 @@
         </Setter>
     </Style>
 
-    <!-- Secondary bordered button ("오늘로 이동") -->
+    <!-- Secondary bordered pill ("오늘로 이동"): v3 panel-surface pill with hairline stroke -->
     <Style x:Key="Daynote.Product.Style.Button.Secondary" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Input}" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Panel}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
         <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
         <Setter Property="FontSize" Value="{DynamicResource Daynote.Product.Type.Small}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="12,5" />
+        <Setter Property="Padding" Value="14,5" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}"
-                            CornerRadius="{DynamicResource Daynote.Product.Radius.Control}">
+                            CornerRadius="{DynamicResource Daynote.Product.Radius.Pill}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Round titlebar icon button (v3: 34px circle, panel surface, hairline stroke).
+         Tag="Active" flips it to an accent-filled circle (timeline mode toggle). -->
+    <Style x:Key="Daynote.Product.Style.Button.Round" TargetType="Button">
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Panel}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="17">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+                        </DataTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4" />
                         </Trigger>
@@ -236,13 +272,13 @@
         <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
         <Setter Property="FontSize" Value="{DynamicResource Daynote.Product.Type.Small}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="Padding" Value="13,6" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
-                            CornerRadius="{DynamicResource Daynote.Product.Radius.Control}">
+                            CornerRadius="{DynamicResource Daynote.Product.Radius.Pill}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -298,30 +334,30 @@
         <Setter Property="SelectionBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
     </Style>
 
-    <!-- Right-panel tab header: label + 3px accent bottom bar when active (Tag bound to the active flag) -->
+    <!-- Right-panel tab header: v3 segmented control — the row sits on a Seg-colored track and the
+         active tab is a raised Card-colored pill with accent text (Tag bound to the active flag). -->
     <Style x:Key="Daynote.Product.Style.TabHeader" TargetType="Button">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
-        <Setter Property="FontSize" Value="{DynamicResource Daynote.Product.Type.Small}" />
+        <Setter Property="FontSize" Value="{DynamicResource Daynote.Product.Type.Meta}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid Background="Transparent">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,7,0,9" />
-                        <Border x:Name="Bar" Height="3" VerticalAlignment="Bottom" Margin="14,0" CornerRadius="2"
-                                Background="Transparent" />
-                    </Grid>
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="7" Margin="1,0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6" />
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
                         </Trigger>
                         <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
-                            <Setter Property="FontWeight" Value="SemiBold" />
-                            <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+                            <Setter TargetName="Bd" Property="Effect" Value="{DynamicResource Daynote.Product.Effect.CardShadow}" />
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -3,33 +3,38 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
 
-    <!-- Product Dark theme brushes. Mirrors Daynote.Product.Light.xaml key-for-key. -->
-    <Color x:Key="Daynote.Product.Color.Bg1">#FF1C1E24</Color>
-    <Color x:Key="Daynote.Product.Color.Bg2">#FF23262E</Color>
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF1C1E24" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FF23262E" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#B8282A30" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FF2B2D33" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#17FFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FFF0F0F0" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF9D9FA5" po:Freeze="True" />
+    <!-- Product Dark theme brushes (Daynote v3.dc.html tokens). Mirrors Daynote.Product.Light.xaml key-for-key. -->
+    <Color x:Key="Daynote.Product.Color.Bg1">#FF121316</Color>
+    <Color x:Key="Daynote.Product.Color.Bg2">#FF121316</Color>
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF121316" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FF121316" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FF1B1C20" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FF222327" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#FF2A2B30" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke2" Color="#FF26272C" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FFF2F2F3" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF9A9AA2" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Accent" Color="#FF4CC2FF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#214CC2FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#1F4CC2FF" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Hover" Color="#0FFFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#0FFFFFFF" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FF10151B" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FF131417" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FF232428" po:Freeze="True" />
+    <!-- v3 keeps white on accent in dark too (calendar selected day, 새 노트 pill) -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FF5B4A20" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.StickyStroke" Color="#FF907B3B" po:Freeze="True" />
+    <!-- v3 post-it: fixed warm yellow in both themes, with its own ink color -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FFFDF0A0" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.StickyStroke" Color="#FFE3D276" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.StickyText" Color="#FF3A3520" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.CloseHover" Color="#FFC42B1C" po:Freeze="True" />
-    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFD13438" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFE5484D" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF4CC2FF" po:Freeze="True" />
     <!-- The onboarding overlay's dimming scrim. Deliberately the same value in both themes: it dims
          the real UI around a cut-out, so it is judged against the app behind it, not the palette. -->
     <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim" Color="#8C000000" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFF2686C" po:Freeze="True" />
 
-    <DropShadowEffect x:Key="Daynote.Product.Effect.CardShadow" BlurRadius="10" ShadowDepth="1" Direction="270" Opacity="0.35" Color="#000000" />
-    <DropShadowEffect x:Key="Daynote.Product.Effect.DropdownShadow" BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.45" Color="#000000" />
+    <DropShadowEffect x:Key="Daynote.Product.Effect.CardShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.30" Color="#000000" />
+    <DropShadowEffect x:Key="Daynote.Product.Effect.DropdownShadow" BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="0.50" Color="#000000" />
 </ResourceDictionary>
