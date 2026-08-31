@@ -248,50 +248,11 @@
                                             AutomationProperties.Name="{Binding DayText}">
                                         <Grid>
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                <!-- v3: day number sits inside a 24px circle — accent-filled when selected,
-                                                     accent-ringed on today, weekend-tinted otherwise -->
-                                                <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Center">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="Transparent" />
-                                                            <Setter Property="BorderThickness" Value="1.5" />
-                                                            <Setter Property="BorderBrush" Value="Transparent" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                                                    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock x:Name="DayNum" Text="{Binding DayText}" FontSize="12" TextAlignment="Center"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
-                                                                <Setter Property="FontWeight" Value="Medium" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsSunday}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsSaturday}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                                                        <Setter Property="FontWeight" Value="Bold" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
-                                                                        <Setter Property="FontWeight" Value="Bold" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
+                                                <!-- v3: day number in a 24px circle (selected fill / today ring / weekend
+                                                     tints); both styles live in Daynote.Product.Styles.xaml -->
+                                                <Border Style="{DynamicResource Daynote.Product.Style.Calendar.DayCircle}">
+                                                    <TextBlock x:Name="DayNum" Text="{Binding DayText}"
+                                                               Style="{DynamicResource Daynote.Product.Style.Calendar.DayNumber}" />
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Height="5" Margin="0,2,0,0">
                                                     <Ellipse Width="5" Height="5" Margin="1.5,0" Fill="{DynamicResource Daynote.Product.Brush.Accent}"
