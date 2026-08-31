@@ -279,9 +279,14 @@ internal static class KoreanStrings
         ["TabTagsFormat"] = "태그 ({0})",
         ["TabTagsName"] = "태그 탭",
         ["TabFiles"] = "파일",
+        ["TabFavoritesName"] = "즐겨찾기 탭",
 
         // Tags tab
         ["TagPanelEmpty"] = "본문에 #태그를 입력하면 여기 모입니다.",
+
+        // Favorites tab
+        ["FavoritesPanelEmpty"] = "노트의 별표를 누르면 여기에 모아서 볼 수 있습니다.",
+        ["FavoritesPreviewEmpty"] = "내용 없음",
 
         // Todo tab
         ["TodoEmptyText"] = "(내용 없음)",

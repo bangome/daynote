@@ -271,9 +271,14 @@ public static class AppStrings
     public static string TabTagsFormat => LocalizationService.Instance[nameof(TabTagsFormat)];
     public static string TabTagsName => LocalizationService.Instance[nameof(TabTagsName)];
     public static string TabFiles => LocalizationService.Instance[nameof(TabFiles)];
+    public static string TabFavoritesName => LocalizationService.Instance[nameof(TabFavoritesName)];
 
     // Tags tab
     public static string TagPanelEmpty => LocalizationService.Instance[nameof(TagPanelEmpty)];
+
+    // Favorites tab
+    public static string FavoritesPanelEmpty => LocalizationService.Instance[nameof(FavoritesPanelEmpty)];
+    public static string FavoritesPreviewEmpty => LocalizationService.Instance[nameof(FavoritesPreviewEmpty)];
 
     // Todo tab
     public static string TodoEmptyText => LocalizationService.Instance[nameof(TodoEmptyText)];

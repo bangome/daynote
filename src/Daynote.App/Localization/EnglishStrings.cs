@@ -288,9 +288,14 @@ internal static class EnglishStrings
         ["TabTagsFormat"] = "Tags ({0})",
         ["TabTagsName"] = "Tags tab",
         ["TabFiles"] = "Files",
+        ["TabFavoritesName"] = "Favorites tab",
 
         // Tags tab
         ["TagPanelEmpty"] = "Type #tags in your notes and they'll gather here.",
+
+        // Favorites tab
+        ["FavoritesPanelEmpty"] = "Star a note and it will be collected here.",
+        ["FavoritesPreviewEmpty"] = "No content",
 
         // Todo tab
         ["TodoEmptyText"] = "(empty)",

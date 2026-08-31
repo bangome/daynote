@@ -58,6 +58,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
         Todo = new TodoPanelViewModel(repository, clock, ToggleTodoAsync, JumpToTodoAsync);
+        Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
@@ -73,6 +74,8 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     public CalendarMonthViewModel Calendar { get; }
 
     public TodoPanelViewModel Todo { get; }
+
+    public FavoritesPanelViewModel Favorites { get; }
 
     public TagPanelViewModel TagPanel { get; }
 
@@ -131,6 +134,8 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
     public bool TabIsTodo => ActiveTab == RightTab.Todo;
 
+    public bool TabIsFavorites => ActiveTab == RightTab.Favorites;
+
     public bool TabIsTags => ActiveTab == RightTab.Tags;
 
     public bool TabIsFiles => ActiveTab == RightTab.Files;
@@ -138,6 +143,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     partial void OnActiveTabChanged(RightTab value)
     {
         OnPropertyChanged(nameof(TabIsTodo));
+        OnPropertyChanged(nameof(TabIsFavorites));
         OnPropertyChanged(nameof(TabIsTags));
         OnPropertyChanged(nameof(TabIsFiles));
     }
@@ -174,6 +180,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         await Files.LoadForDateAsync(today, cancellationToken).ConfigureAwait(true);
         await Calendar.ShowSelectedAsync(today, cancellationToken).ConfigureAwait(true);
         await Todo.RefreshAsync(cancellationToken).ConfigureAwait(true);
+        await Favorites.RefreshAsync(cancellationToken).ConfigureAwait(true);
         await TagPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
         RefreshHeader();
     }
@@ -267,12 +274,19 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
             RefreshHeader();
             await Calendar.LoadAsync().ConfigureAwait(true);
             await Todo.RefreshAsync().ConfigureAwait(true);
+            await Favorites.RefreshAsync().ConfigureAwait(true);
             await TagPanel.RefreshAsync().ConfigureAwait(true);
         }
     }
 
     [RelayCommand]
-    private Task ToggleFavorite() => Notes.ToggleFavoriteAsync(Notes.SelectedTab, CancellationToken.None);
+    private async Task ToggleFavorite()
+    {
+        if (await Notes.ToggleFavoriteAsync(Notes.SelectedTab, CancellationToken.None).ConfigureAwait(true))
+        {
+            await Favorites.RefreshAsync().ConfigureAwait(true);
+        }
+    }
 
     [RelayCommand]
     private async Task CommitTag()
@@ -353,75 +367,12 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         IsTimelineMode = true;
     }
 
-    /// <summary>Leaves timeline mode and opens the picked note in the editor on its own date.</summary>
-    private async Task OpenFromTimelineAsync(Guid id, LocalDate date)
-    {
-        IsTimelineMode = false;
-        if (await SelectDateAsync(date).ConfigureAwait(true))
-        {
-            DomainResult<NoteId> nid = NoteId.Create(id);
-            if (nid.IsSuccess)
-            {
-                await Notes.SelectNoteByIdAsync(nid.Value).ConfigureAwait(true);
-            }
-        }
-    }
-
-    private async Task JumpToTodoAsync(TodoLine line)
-    {
-        if (await SelectDateAsync(line.Date).ConfigureAwait(true))
-        {
-            DomainResult<NoteId> id = NoteId.Create(line.NoteId);
-            if (id.IsSuccess)
-            {
-                await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true);
-            }
-        }
-    }
-
-    /// <summary>Navigates to the tag occurrence's note and selects the '#tag' span in the editor.</summary>
-    private async Task JumpToTagAsync(TagOccurrence occ)
-    {
-        if (await SelectDateAsync(occ.Date).ConfigureAwait(true))
-        {
-            DomainResult<NoteId> id = NoteId.Create(occ.NoteId);
-            if (id.IsSuccess)
-            {
-                await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true);
-
-                // +1 covers the leading '#' that Tag omits.
-                EditorSelectRequested?.Invoke(occ.CharIndex, occ.Tag.Length + 1);
-            }
-        }
-    }
-
-    private async Task NavigateAsync(SearchNavigation navigation)
-    {
-        if (!await SelectDateAsync(navigation.Date).ConfigureAwait(true))
-        {
-            return;
-        }
-
-        if (navigation.NoteId is { } noteId)
-        {
-            DomainResult<NoteId> id = NoteId.Create(noteId);
-            if (id.IsSuccess)
-            {
-                await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true);
-            }
-        }
-
-        if (navigation.Tab is { } tab)
-        {
-            ActiveTab = tab;
-        }
-    }
-
     private void OnNotesPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus) && Notes.SaveStatus == SaveStatusKind.Saved)
         {
             _ = Todo.RefreshAsync();
+            _ = Favorites.RefreshAsync();
             _ = TagPanel.RefreshAsync();
         }
         else if (e.PropertyName == nameof(NoteWorkspaceViewModel.SelectedTab))
@@ -450,6 +401,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         {
             await Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken).ConfigureAwait(true);
             await Todo.RefreshAsync(cancellationToken).ConfigureAwait(true);
+            await Favorites.RefreshAsync(cancellationToken).ConfigureAwait(true);
             await TagPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
