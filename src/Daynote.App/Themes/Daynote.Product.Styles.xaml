@@ -31,8 +31,11 @@
     <CornerRadius x:Key="Daynote.Product.Radius.Panel">10</CornerRadius>
     <CornerRadius x:Key="Daynote.Product.Radius.Control">8</CornerRadius>
     <CornerRadius x:Key="Daynote.Product.Radius.Small">7</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Chip">99</CornerRadius>
-    <CornerRadius x:Key="Daynote.Product.Radius.Pill">99</CornerRadius>
+    <!-- WPF renders CornerRadius greater than half the element height as a squashed ellipse (arcs
+         overlap, no straight edge), so the "pill" radii are fixed values sized to their consumers:
+         Chip = ~20px tag/count chips, Pill = ~28-30px buttons and the 34px search bar. -->
+    <CornerRadius x:Key="Daynote.Product.Radius.Chip">9</CornerRadius>
+    <CornerRadius x:Key="Daynote.Product.Radius.Pill">13</CornerRadius>
 
     <!-- Icon geometries (recreated from the design's inline SVG path data) -->
     <Geometry x:Key="Daynote.Product.Geo.ChevronRight">M3.5,1 L7.5,5 L3.5,9</Geometry>

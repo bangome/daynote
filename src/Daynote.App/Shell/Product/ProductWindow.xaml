@@ -81,7 +81,7 @@
                   MaxWidth="444" MinWidth="120" Margin="12,0" WindowChrome.IsHitTestVisibleInChrome="True">
                 <Border Background="{DynamicResource Daynote.Product.Brush.Input}"
                         BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
-                        CornerRadius="{DynamicResource Daynote.Product.Radius.Pill}" Height="34" Padding="14,0,8,0">
+                        CornerRadius="17" Height="34" Padding="14,0,8,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

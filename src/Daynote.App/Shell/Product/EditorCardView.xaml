@@ -108,7 +108,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource Daynote.Product.Brush.AccentSoft}"
-                                        CornerRadius="{DynamicResource Daynote.Product.Radius.Pill}" Padding="9,2" Margin="0,0,6,0">
+                                        CornerRadius="{DynamicResource Daynote.Product.Radius.Chip}" Padding="9,2" Margin="0,0,6,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Accent}">
                                             <Run Text="#" /><Run Text="{Binding Mode=OneWay}" />
