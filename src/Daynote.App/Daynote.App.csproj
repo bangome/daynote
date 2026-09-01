@@ -14,6 +14,8 @@
     <Resource Include="Assets\Brand\daynote-logo-transparent-v1.png" />
     <Resource Include="Assets\Brand\daynote-logo-trimmed.png" />
     <Resource Include="Assets\Brand\daynote-logo-en-trimmed.png" />
+    <Resource Include="Assets\Brand\daynote-logo-dark-trimmed.png" />
+    <Resource Include="Assets\Brand\daynote-logo-en-dark-trimmed.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />

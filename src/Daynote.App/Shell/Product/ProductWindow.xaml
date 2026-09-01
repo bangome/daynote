@@ -63,11 +63,19 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
                 <!-- Full brand logo (icon + wordmark), trimmed of padding so it fills the titlebar height;
                      icon-only when the titlebar compacts. Nudged slightly right of the window edge. -->
-                <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}}"
-                       Height="24" VerticalAlignment="Center"
-                       RenderOptions.BitmapScalingMode="HighQuality"
-                       AutomationProperties.Name="{loc:Tr AppTitle}"
-                       Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                <Grid Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+                    <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}}"
+                           Height="24" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           AutomationProperties.Name="{loc:Tr AppTitle}"
+                           Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                    <!-- Dark theme: light-ink wordmark variant so the brand stays readable -->
+                    <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}, ConverterParameter=Dark}"
+                           Height="24" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           AutomationProperties.Name="{loc:Tr AppTitle}"
+                           Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                </Grid>
                 <Image Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-favicon-trimmed.png"
                        Height="24" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality"
