@@ -60,16 +60,16 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
                 <!-- Full brand logo (icon + wordmark), trimmed of padding so it fills the titlebar height;
-                     icon-only when the titlebar compacts -->
+                     icon-only when the titlebar compacts. Nudged slightly right of the window edge. -->
                 <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}}"
-                       Height="24" Margin="0,0,0,0" VerticalAlignment="Center"
+                       Height="24" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality"
                        AutomationProperties.Name="{loc:Tr AppTitle}"
                        Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
                 <Image Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-favicon-trimmed.png"
-                       Height="24" Margin="0,0,0,0" VerticalAlignment="Center"
+                       Height="24" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality"
                        AutomationProperties.Name="{loc:Tr AppTitle}"
                        Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
