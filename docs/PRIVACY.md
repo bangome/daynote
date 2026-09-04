@@ -54,12 +54,28 @@ Daynote has no accounts and no cloud sync. There is no sign-in, nothing is uploa
 opens no network connection. If you have read about cloud sync elsewhere, it is built but not
 released.
 
-When it does ship it will be optional and off until you sign in, and it is designed so that the
-service stores only ciphertext it cannot open: notes are encrypted on your PC with a key derived from
-your password, and that key never leaves your device. This document will be replaced with the
-specifics — including what the service can still see, such as your email address and when each note
-changed — in the same release that turns it on. Until then, treat any description of it as a plan
-rather than a description of the app you are running.
+When it does ship it will be optional and off until you sign in with Google, and it will **not** be
+end-to-end encrypted. Your notes are encrypted in transit and encrypted at rest on the service, but
+the service also holds the key that opens them, so whoever runs it can read what is stored. That is
+the direct consequence of signing in with an identity provider instead of a password: Google proves
+who you are, but it gives the app no secret to build an encryption key from.
+
+You will be able to turn that off. **Locking your notes** is an opt-in switch in the same settings
+panel: it re-encrypts the data key with a passphrase only you know and asks the service to destroy
+its own copy, after which nobody running the service can read your notes. The cost is that you enter
+that passphrase once on each new PC, and that a forgotten passphrase needs the recovery key shown
+when you turn the lock on — with the service's copy gone, there is nothing else that can open the
+cloud copy.
+
+Cloud sync is a paid subscription. **Daynote never sees your card details**: checkout happens on a
+page hosted by Paddle, our payment provider and merchant of record, and what reaches our service is
+a subscription status and a renewal date. If a subscription ends, syncing stops and **nothing is
+deleted** — the notes on your PC are untouched and the copy already uploaded is kept.
+
+Either way the service holds your Google account id and email address, and the times each note
+changed. This document will be replaced with the full specifics in the same release that turns cloud
+sync on. Until then, treat any description of it as a plan rather than a description of the app you
+are running.
 
 ## Daynote only stores what you create — no background capture
 

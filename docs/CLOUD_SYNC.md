@@ -1,10 +1,17 @@
-# Cloud sync design (Cloudflare Workers + D1 + R2, end-to-end encrypted)
+# Cloud sync design (Cloudflare Workers + D1 + R2, Google sign-in)
 
-> Status: **Phases 1–6 built and deployed, but held back from release.** The Worker serves
-> `https://daynote.arachat.cc` against D1 and is verified in production, while the app ships with
-> cloud sync **off** — no account section, no network calls — because password-reset mail has never
-> been verified end to end. See §12 for the flag and what turning it on requires. The Worker lives in
-> [`cloud/worker/`](../cloud/worker/README.md); the remaining email setup is in
+> **Revision 2026-09-02 — identity moved to Google OAuth and the design is no longer end-to-end
+> encrypted.** Sign-in is Google; the data key is generated, held, and re-issued by the Worker, so
+> the service can decrypt what it stores. §4 below still describes the password-derived key
+> hierarchy that was replaced — it is kept as the record of what was built and why it was dropped,
+> and **§4.1a states what is actually implemented**. Everything downstream of the key (the AES-GCM
+> envelope, per-record derivation, the sync engine, conflict handling) is unchanged.
+>
+> Status: built and deployed, still held back from release. The Worker serves
+> `https://daynote.arachat.cc` against D1; the app ships with cloud sync **off** — no account
+> section, no network calls — until the Google flow has been exercised end to end against the
+> deployment. See §12 for the flag and what turning it on requires. The Worker lives in
+> [`cloud/worker/`](../cloud/worker/README.md), its setup in
 > [`cloud/worker/DEPLOY.md`](../cloud/worker/DEPLOY.md). [PRIVACY.md](PRIVACY.md) describes the
 > shipped build, which makes no network calls. Phase 7 (R2 attachments) is still plan, not code.
 
@@ -12,13 +19,23 @@
 
 | Question | Decision |
 | --- | --- |
-| Login | Email + password, authenticated by our own Cloudflare Worker (no third-party IdP) |
+| Login | **Google OAuth** (desktop flow: system browser, PKCE, loopback redirect). Apple may follow; the client abstracts over `IIdentityProvider` |
 | Sync scope | Everything: notes, note tags, per-note title flag, day files, and the attachment bytes |
 | Conflict policy | Last-write-wins on `updated_utc`, with delete tombstones |
-| **Encryption** | **End-to-end. The server stores ciphertext only and cannot read note content.** |
-| **Password reset** | **In scope. Takes on the transactional-email dependency.** |
-| **Reset + E2EE recovery** | **Recovery key issued at signup, plus device-assisted re-wrap** |
+| **Encryption** | **Encrypted in transit and at rest. NOT end-to-end: the Worker holds the data key and can read note content.** |
+| **Password reset** | **Gone with the password.** Account recovery is Google's problem now, which removes the transactional-email dependency entirely |
+| **Recovery key** | **Gone.** There is no user-held secret to lose, and nothing for a recovery key to unlock |
 | Rollout | Design first (this document), then implement in phases |
+
+### Why not end-to-end
+
+An identity provider proves who you are; it does not hand the client a secret. With no password
+there is nothing to derive a key-encryption key from, so the choices were: ask for a separate
+encryption passphrase (keeps E2EE, but the user still memorises a secret), make the recovery key the
+only unlock (keeps E2EE, but a new device needs the key pasted in), or hold the key server-side.
+**The third was chosen deliberately, for one-click sign-in.** The cost is stated plainly in the app,
+in [PRIVACY.md](PRIVACY.md), and in the Store listing: whoever runs the service can read the notes
+it stores. Every claim to the contrary was removed in the same change.
 
 Sync is **opt-in**. A signed-out Daynote stays exactly as it is today: local-only, no network calls.
 
@@ -70,7 +87,84 @@ untouched. (Local plaintext remains a documented property — see [PRIVACY.md](P
 
 ## 4. Auth and key hierarchy
 
-### 4.1 What the password must do
+### 4.1a What is implemented (Google sign-in, server-held key)
+
+```
+Daynote (WPF)                          Worker                              Google
+  browser + PKCE  ──── code ────►  /v1/auth/google  ── code+secret ──►  token endpoint
+                                          │                                  │
+                                          │◄──────────── id_token ───────────┘
+                                   upsert user by `sub`
+                                   first sign-in: generate 32-byte DEK,
+                                     seal under DEK_WRAP_KEY, store in D1
+  ◄──── access + refresh tokens, DEK (base64url over TLS) ────
+```
+
+- **The client never holds the OAuth client secret.** The authorization code is redeemed by the
+  Worker, because a secret shipped in a WPF binary is a published secret.
+- **The DEK is sealed at rest** under a Worker secret (`cloud/worker/src/dek.ts`), so a D1 dump
+  alone yields nothing. That is defence in depth, not a privacy guarantee — the Worker can open
+  every one of them.
+- **`google_sub` is the identity**, never the address: Google lets an address change, and matching
+  on it would either lose the account or hand it to whoever holds the address next.
+- Per-record keys, the AES-GCM envelope, and the AAD binding in §4.4–4.5 are **unchanged**: the DEK
+  arrives from the server instead of being unwrapped locally, and everything below it is the same.
+- Client: `IIdentityProvider` / `GoogleIdentityProvider` (loopback listener), `AccountService`,
+  `HttpAuthApiClient`. Server: `src/google.ts`, `src/dek.ts`, `src/auth.ts`, migration `0004_oauth.sql`.
+
+### 4.1b Optional end-to-end encryption — BUILT 2026-09-02
+
+Server-held keys are the default because they buy one-click sign-in. They are not the only option a
+user should have, so E2EE comes back as an **opt-in per account**, not as the deleted design
+restored wholesale. Everything below the data key is untouched either way; only how the DEK is
+wrapped changes.
+
+| | `protection = 'server'` (default) | `protection = 'passphrase'` (opt-in) |
+| --- | --- | --- |
+| Sign-in | Google only | Google, plus the lock passphrase once per device |
+| Server stores | DEK sealed under `DEK_WRAP_KEY` | the passphrase and recovery envelopes only |
+| Can the service read notes? | Yes | **No** |
+| `GET /v1/auth/data-key` | returns the key | returns the envelopes; the client opens them |
+| Forgotten passphrase | n/a | recovery key, then the local copy, then discard |
+
+**Not a sign-up decision.** The client already holds the DEK, so switching is a re-wrap either way:
+
+- `POST /v1/auth/protect` — body carries `wrapped_dek_pw`, `wrapped_dek_rk`, and `kdf_params`. The
+  server stores them, sets `protection = 'passphrase'`, and **nulls its own sealed copy** in the same
+  statement. That last part is the whole feature; a server that kept its copy "just in case" would be
+  offering a lock with a spare key on the hook.
+- `POST /v1/auth/unprotect` — Bearer plus the raw DEK, going back to the default.
+
+Turning it on issues a **recovery key, shown once**. A forgotten passphrase then costs nothing if the
+recovery key is kept, and if both are lost the cloud copy is unreadable while the notes on the PC are
+untouched — so "sign in on a device that still works, turn the lock off, and re-upload" stays the
+last resort.
+
+What does **not** come back: password reset, its email dependency, and Resend. Account access is
+Google's job; the passphrase only ever guards the data key.
+
+Where it lives:
+
+| Piece | File |
+| --- | --- |
+| Schema and the invariant | `cloud/worker/migrations/0005_optional_lock.sql` |
+| `/v1/auth/protect`, `/unprotect`, and the branch in the key response | `cloud/worker/src/auth.ts` |
+| Passphrase derivation, wrapping, unwrapping | `AesGcmSyncCrypto`, `KdfParameters`, `RecoveryKey` |
+| Enable / disable / unlock / recovery-key unlock | `AccountService.Lock.cs` |
+| The settings surface, including the one-time key screen | `AccountViewModel.Lock.cs`, `AccountSection.xaml` |
+| Tests | `cloud/worker/test/lock.test.ts` (9), `tests/.../Sync/OptionalLockTests.cs` (10) |
+
+The invariant is enforced by a table CHECK, not just by the handler: a `server` row has a sealed key
+and no envelopes, a `passphrase` row has both envelopes and no sealed key. There is no third state in
+which the service keeps a spare.
+
+### 4.1 What the password must do — SUPERSEDED
+
+> Everything from here to §4.9 describes the password-derived hierarchy that 0004 replaced. It is
+> kept because the reasoning still explains why the envelope and AAD look the way they do, and
+> because it records what "not end-to-end" actually cost. None of it is in the code any more:
+> Argon2id, the auth key, the verifier, both wrapped envelopes, the recovery key, and the reset
+> endpoints were all deleted.
 
 The password has two jobs that must be kept separate, or E2EE collapses:
 
@@ -678,8 +772,10 @@ labelled "not yet synced" in the UI rather than failing quietly.
 
 - **Signed-out behaviour is unchanged.** No network calls, no background threads, no added startup
   latency for users who never sign in.
-- **The server never receives a key.** No endpoint accepts `kek`, `rkek`, `DEK`, the password, or
-  the recovery key. A code review that finds one of these in a request body is a blocker.
+- **The server holds the data key, and this is said out loud.** It was once a non-negotiable that no
+  endpoint accepted a key; with Google sign-in the Worker issues the key instead. What survives is
+  the honesty requirement: no UI string, document, or Store field may claim the service cannot read
+  note content.
 - **Never block an edit on the network.** Sync is strictly background; a failure shows a status
   chip, never a modal, and never prevents saving locally.
 - **A failed authentication tag is an error, not a skip.** Silently dropping an undecryptable record
@@ -716,10 +812,120 @@ At Cloudflare's current published tiers — verify against the live pricing page
 - **R2**: no egress fee; storage and class-A/B operations billed. Per-file size is already capped by
   `FileCapturePolicy.MaxFileBytes`; the `users.quota_bytes` column enforces an account-level cap
   (default 2 GB) so one account cannot run up an unbounded bill.
-- **Email**: Resend's free tier (3,000/month, 100/day) covers reset volume with room to spare. Note
-  that a reset code is not something a user requests often, so the daily cap is not the binding
-  constraint it would be for, say, a notification feature.
-- The client-side Argon2id at 64 MiB is a per-login cost on the user's PC, not ours.
+- **Email**: none. Transactional email left with the password reset, taking its vendor, its API key,
+  and its DNS records with it.
+- **Google OAuth**: free. The token exchange is one request per sign-in, from the Worker.
+- Key derivation is no longer done on the client, so the old per-login Argon2id cost (64 MiB, a few
+  hundred milliseconds) is gone too.
+
+## 14. Subscriptions — BUILT 2026-09-02
+
+Cloud sync is a paid feature. **The app is not**, and nothing in the billing layer touches local
+note-taking: a user who never subscribes, or who stops, keeps every note on their own PC and every
+feature that does not involve another device. That is not generosity, it is what "local-first"
+already committed to.
+
+| Question | Decision |
+| --- | --- |
+| Provider | **Paddle**, as merchant of record — it collects and remits VAT/sales tax in every jurisdiction it sells into, which a solo publisher otherwise does personally |
+| Free tier | **A 14-day trial**, granted once at sign-up, never re-granted |
+| When it lapses | **Sync stops. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
+| Card data | Never reaches Daynote or the Worker. The checkout is a hosted page in the system browser |
+| Enforcement | `/v1/sync/push` and `/pull` answer **402 `subscription_required`**; every other endpoint stays open |
+
+### 14.1 Why 402 and not 403
+
+The caller is authenticated and is who they say they are; what is missing is payment. The client
+turns exactly this code into `SyncOutcome.SubscriptionRequired`, which is deliberately neither an
+error nor a sign-out: signing out would discard the cached data key and lose local decryption for a
+billing problem.
+
+### 14.2 What the server holds
+
+`subscriptions` is one row per account — provider ids, a status, a period end, and a grace window —
+and `billing_events` records every webhook delivery by its event id. Nothing in either table has
+anything to do with note content, which is why the opt-in lock (§4.1b) and billing are completely
+independent: a locked account is billed exactly like any other, and the Worker still cannot read it.
+
+Three rules are encoded rather than trusted to a handler:
+
+- **Idempotency.** Paddle retries. `INSERT OR IGNORE` on the event id makes a repeat delivery a
+  no-op instead of a second application.
+- **A paid period is never shortened.** Events can arrive out of order, so the stored period end
+  only ever moves forward. Store policy 10.8.6 requires that a discontinued subscription keeps
+  delivering until it expires, and a cancelled-but-paid-up account therefore still syncs.
+- **Fail closed, keep the record.** A status this version does not recognise is stored verbatim and
+  treated as unentitled, so a later webhook can correct it without a migration.
+
+### 14.3 Signature verification
+
+`Paddle-Signature: ts=<unix>;h1=<hex>` is an HMAC-SHA256 over `<ts>:<raw body>`. The body is
+verified exactly as received — parsing and re-serialising it changes a byte and fails every
+signature — and a timestamp older than five minutes is refused so a captured delivery cannot be
+replayed. An unsigned webhook is refused outright: an endpoint that grants entitlement without
+authentication is a free subscription.
+
+### 14.4 Microsoft Store policy
+
+Verified against **Store Policies v7.19** (published 2025-09-10, effective 2025-10-14):
+
+- **10.8.1** requires Microsoft's in-product purchase API only for games and for products on Xbox
+  consoles. "Non-game products made available on PC devices may either use a secure third-party
+  purchase API or the Microsoft Store in-product purchase API."
+- **10.8.6** says the same for subscriptions: "Non-game products made available on PC devices may
+  either use a secure third-party or the Microsoft recurring billing API."
+
+The obligations that come with that choice are real and are listed in [STORE.md](STORE.md): declare
+the third-party purchase API in Partner Center, identify the commerce provider at the point of
+transaction, start the purchase in the app and continue it in the browser, state the price range and
+the trial terms in the listing, and never remove value from an existing subscriber. **10.8.3 may
+require a Company account** rather than an Individual one; that is a Partner Center question to
+settle before the first paid submission.
+
+### 14.5 Configuration
+
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `PADDLE_WEBHOOK_SECRET` | secret | Signs incoming events. Absent means every delivery is refused |
+| `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` | vars | The two recurring prices (`pri_...`): ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. The app POSTs `{"plan": "monthly" \| "annual"}` to `/v1/billing/checkout` (no body = annual) and `/v1/billing/status` lists the plans on sale in `plans`. The checkout is created server-side so the transaction can carry `custom_data.user_id`; a hosted-checkout link cannot |
+| `PADDLE_API_KEY` | secret | Mints customer-portal links. There is **no** portal URL to configure: Paddle's links are single-use and short-lived, so `/v1/billing/portal` creates one per click |
+
+Trial length lives in `entitlement.ts` (`TRIAL_DAYS`), the retry window in `GRACE_DAYS`. Tests:
+`cloud/worker/test/billing.test.ts` (15) and `tests/.../Account/SubscriptionViewModelTests.cs` (10).
+
+### 14.6 Where the account lives in the app — BUILT 2026-09-04
+
+The account left the settings panel and became a window of its own, following
+`docs/design-renewal/Daynote Account.dc.html` and the v3 titlebar in `Daynote v3.dc.html`.
+
+| Surface | What it shows | File |
+| --- | --- | --- |
+| Titlebar avatar | An accent disc with the address's first letter, and a status dot for sync. Stands where the settings gear did; the gear is now a button inside its menu. Signed out it is a person outline | `Account/AccountMenu.xaml` |
+| Its menu (290px) | Identity, plan pill, one sync row with **지금 동기화**, then **계정 · 구독 관리** and **설정** | same |
+| Account window (520px) | Signed out: hero, Google sign-in, terms/privacy links, three perk tiles, "keep using without an account". Signed in: identity, banner, sync, upgrade, subscription, note lock, notices, sign-out and the build | `Account/AccountWindow.xaml` + `AccountSignInView` / `AccountDetailsView` / `AccountLockSection` |
+| Settings | One row: avatar, address, plan pill, last sync, and a button into the window | `Account/AccountSection.xaml` |
+
+The sync-status chip is gone. Two indicators for one fact is one too many, and the dot on the
+avatar is the one the design keeps; the words survive as the avatar's tooltip and accessible help
+text, and as the sync row inside the menu.
+
+**Deliberately not built**, though the mock draws all three. Each would have to be filled with data
+that does not exist, and a billing screen is the worst place to guess:
+
+1. **Connected devices.** There is no device registry on the server — no table, no registration at
+   sign-in, no revoke endpoint. Every row would be invented. Building it is a real feature (§13.2),
+   not a layout change.
+2. **Invoice table, card last-four, "next retry" date.** These live at the payment provider. The
+   portal link is the honest route to them, and it is one button.
+3. **The in-app card form.** Paddle is the merchant of record precisely so Daynote never handles
+   card data, and Store policy 10.8.2 wants the purchase completed in the browser. `AccountWindowTests`
+   asserts that no file in the app mentions a card number or CVC, so a later screen cannot add one
+   quietly.
+
+The mock also shows a person's name above the address. Google's `profile` scope is requested but the
+name is not stored, so the address is the strong line and the avatar letter comes from it. Plumbing
+the name through would mean a migration and a new personal field on the server — a privacy decision,
+not a styling one, so it is not taken here.
 
 ## 13. Open questions
 
@@ -738,15 +944,15 @@ released build resolves no endpoint, registers no sync services, constructs no `
 account section in the settings panel, renders no status chip, and makes no network calls at all. The
 MSIX declares no `internetClient` capability to match.
 
-The reason is §4.9's dependency, not the sync engine: **password-reset mail has never been verified
-end to end.** In an end-to-end-encrypted system that is not a cosmetic gap. A user who signs up,
-forgets their password, and cannot receive a reset code has permanently lost their cloud copy — we
-hold no key that can recover it. Shipping the sign-up button before the recovery path works would
-hand people a way to lose data, and half a recovery story is worse than none.
+The reason that held it back for months — unverified password-reset mail, in a system where a lost
+password meant a permanently unreadable cloud copy — **is gone with the password**. Google owns
+account recovery now, and the data key is held by the service, so there is no user-held secret left
+to lose and no transactional-email dependency at all. Resend, the DNS records, and the reset
+endpoints were deleted in the same change.
 
-Everything else is built, deployed, and tested: 84 Worker cases, the client suites, and a live
-verification run against `https://daynote.arachat.cc` (§13). This is a release decision, not an
-unfinished implementation.
+What remains before it ships is verification, not implementation: the Google flow has to be
+exercised end to end against the live deployment (browser → loopback → Worker → D1 → sync), and the
+documents and Store declaration have to say the true thing about who can read the notes.
 
 ### Turning it on
 
@@ -754,13 +960,18 @@ One line. Set `SyncEnabledByDefault` to `true`, and in the same commit:
 
 - add `<Capability Name="internetClient" />` back to `packaging/Daynote.Package/Package.appxmanifest`
   and update `PackageManifestPolicy`, which currently pins its absence;
-- update the Store listing (STORE.md) to declare the account, the email address collected, and the
-  uploaded note content;
+- set the two Worker secrets, if they are not already set: `wrangler secret put GOOGLE_CLIENT_SECRET`
+  and `wrangler secret put DEK_WRAP_KEY`;
+- publish the Google OAuth consent screen (Google Cloud Console → Audience → **Publish**). Only
+  `openid email profile` is requested, which needs no Google verification review, but a client left
+  in Testing signs in test users only and expires their Google refresh tokens after seven days;
+- update the Store listing (STORE.md) to declare the account, the Google account id and email
+  address collected, and the uploaded note content **that the publisher can read**;
 - update PRIVACY.md, which currently states the app makes no network calls.
 
 `SyncEndpointTests` asserts the flag is false, so flipping it fails a test whose message says what
-else to change. That is deliberate: these four things have to move together or the app understates
-what it does.
+else to change. That is deliberate: these things have to move together or the app understates what
+it does.
 
 ### How the endpoint resolves
 

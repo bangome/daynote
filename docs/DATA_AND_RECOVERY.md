@@ -25,9 +25,10 @@ All Daynote data lives under:
 - Settings are stored inside the database.
 Two more files appear only once cloud sync ships, and neither exists in this version:
 
-- `credentials.dat` — the cloud-sync session and content key, encrypted with Windows DPAPI. Present
-  only while signed in, excluded from backups on purpose, and unusable on another PC or under another
-  Windows account.
+- `credentials.dat` — the cloud-sync session and the account's content key, encrypted with Windows
+  DPAPI. Present only while signed in, excluded from backups on purpose, and unusable on another PC
+  or under another Windows account. Losing it costs nothing: the key is held by the service and is
+  re-fetched, because sign-in is a Google account rather than a password only you know.
 - `conflicts\` — plain-text copies of note versions that a sync replaced with a newer version from
   another device. Nothing there is needed by the app; it exists so a sync never silently discards
   something you wrote.

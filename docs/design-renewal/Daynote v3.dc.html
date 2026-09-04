@@ -96,10 +96,37 @@
           <svg width="15" height="15" viewBox="0 0 16 16"><path d="M13.5 9.5 A 5.8 5.8 0 1 1 6.5 2.5 A 4.6 4.6 0 0 0 13.5 9.5 Z" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
         </sc-if>
       </div>
-      <div onClick="{{ onOpenSettings }}" title="설정 ({{ scSettings }})" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); background:var(--panel); color:var(--text); box-shadow:var(--shadow);" style-hover="background:var(--hover)">
-        <svg width="14" height="14" viewBox="0 0 14 14"><line x1="1.5" y1="3.5" x2="12.5" y2="3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line><line x1="1.5" y1="10.5" x2="12.5" y2="10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line><circle cx="9" cy="3.5" r="1.7" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"></circle><circle cx="5" cy="10.5" r="1.7" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"></circle></svg>
+      <div style="width:1px; height:20px; background:var(--stroke); margin:0 2px;"></div>
+      <div onClick="{{ onToggleAccount }}" title="{{ acctTooltip }}" style="position:relative; width:34px; height:34px; flex:none; border-radius:50%; cursor:pointer; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; box-shadow:var(--shadow);" style-hover="filter:brightness(1.08)">
+        {{ acctInitial }}
+        <span style="position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; background:{{ syncDotColor }}; border:2px solid var(--bg); box-sizing:border-box;"></span>
       </div>
     </div>
+
+    <sc-if value="{{ accountOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; top:52px; right:16px; width:290px; background:var(--card); border:1px solid var(--stroke); border-radius:12px; box-shadow:var(--pop-shadow); padding:14px; z-index:50;">
+        <div style="display:flex; align-items:center; gap:11px;">
+          <div style="width:38px; height:38px; flex:none; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">{{ acctInitial }}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ acctName }}</div>
+            <div style="font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">{{ acctEmail }}</div>
+          </div>
+          <span style="flex:none; font-size:10px; font-weight:700; color:{{ acctPlanFg }}; background:{{ acctPlanBg }}; border-radius:99px; padding:2px 8px;">{{ acctPlan }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; background:var(--panel); border:1px solid var(--stroke2); border-radius:10px; padding:10px 12px; margin-top:12px;">
+          <span style="width:8px; height:8px; flex:none; border-radius:50%; background:{{ syncDotColor }};"></span>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:600;">{{ syncLabel }}</div>
+            <div style="font-size:10.5px; color:var(--text2); margin-top:1px;">{{ syncDetail }}</div>
+          </div>
+          <span onClick="{{ onSyncNow }}" style="flex:none; font-size:11px; font-weight:600; color:var(--accent); cursor:pointer;">지금</span>
+        </div>
+        <div style="display:flex; gap:7px; margin-top:11px;">
+          <a href="Daynote Account.dc.html" target="_blank" style="flex:1; text-align:center; background:var(--accent); color:#fff; border-radius:9px; padding:8px 0; font-size:12px; font-weight:700; text-decoration:none;" style-hover="filter:brightness(1.08)">계정 · 구독 관리</a>
+          <div onClick="{{ onOpenSettingsFromAccount }}" style="border:1px solid var(--stroke); border-radius:9px; padding:8px 13px; cursor:pointer; font-size:12px; font-weight:600; flex:none;" style-hover="background:var(--hover)">설정</div>
+        </div>
+      </div>
+    </sc-if>
   </div>
 
   <!-- ═ Body ═ -->
@@ -413,32 +440,16 @@
         </div>
         <div style="flex:1; overflow-y:auto; padding:0 22px 22px; display:flex; flex-direction:column; gap:12px;">
 
-          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
-            <div style="font-size:13px; font-weight:700;">클라우드 동기화</div>
-            <div style="font-size:11.5px; color:var(--text2); line-height:1.6; margin-top:4px;">선택 기능입니다. 로그인하면 노트가 이 PC에서 암호화된 뒤 업로드되어 다른 기기와 동기화됩니다. 저장된 내용은 서버에서 열어볼 수 없습니다.</div>
-            <div style="font-size:11px; font-weight:600; color:var(--text2); margin-top:12px;">이메일</div>
-            <input placeholder="you@example.com" style="width:100%; box-sizing:border-box; margin-top:4px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px;"></input>
-            <div style="font-size:11px; font-weight:600; color:var(--text2); margin-top:10px;">비밀번호</div>
-            <input type="password" style="width:100%; box-sizing:border-box; margin-top:4px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px;"></input>
-            <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
-              <div style="background:var(--accent); color:#fff; border-radius:8px; padding:7px 16px; cursor:pointer; font-size:12px; font-weight:600;" style-hover="filter:brightness(1.08)">로그인</div>
-              <div style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600;" style-hover="background:var(--hover)">계정 만들기</div>
-              <span onClick="{{ onToggleReset }}" style="margin-left:auto; font-size:11.5px; color:var(--accent); cursor:pointer;">비밀번호를 잊으셨나요?</span>
-            </div>
-            <sc-if value="{{ resetOpen }}" hint-placeholder-val="{{ false }}">
-              <div style="border-top:1px solid var(--stroke2); margin-top:14px; padding-top:12px;">
-                <div style="font-size:11.5px; color:var(--text2); line-height:1.6;">비밀번호를 바꾸면 계정에는 다시 들어올 수 있지만, 클라우드에 있는 노트는 복구 키가 있어야 열립니다. 이 PC에서 재설정하는 경우에는 자동으로 열립니다.</div>
-                <div style="display:flex; gap:8px; margin-top:10px;">
-                  <input placeholder="이메일" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
-                  <div style="border:1px solid var(--stroke); border-radius:8px; padding:7px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;" style-hover="background:var(--hover)">재설정 코드 받기</div>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                  <input placeholder="재설정 코드" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
-                  <input type="password" placeholder="새 비밀번호" style="flex:1; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:8px 10px; min-width:0;"></input>
-                  <div style="background:var(--accent); color:#fff; border-radius:8px; padding:7px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;" style-hover="filter:brightness(1.08)">비밀번호 변경</div>
-                </div>
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; flex:none; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">{{ acctInitial }}</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px;">
+                {{ acctName }}
+                <span style="font-size:10px; font-weight:700; color:{{ acctPlanFg }}; background:{{ acctPlanBg }}; border-radius:99px; padding:2px 8px;">{{ acctPlan }}</span>
               </div>
-            </sc-if>
+              <div style="font-size:11.5px; color:var(--text2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ acctSub }}</div>
+            </div>
+            <a href="Daynote Account.dc.html" target="_blank" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; flex:none; color:var(--text); text-decoration:none;" style-hover="background:var(--hover)">계정 · 구독 관리</a>
           </div>
 
           <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px;">
@@ -521,7 +532,7 @@ class Component extends DCLogic {
       selectedNoteId: (base.notes.find(n => n.date === today) || {}).id || null,
       tab: 'todo', view: 'editor', searchQ: '', tagInput: '',
       leftOpen: true, rightOpen: true,
-      settingsOpen: false, resetOpen: false, postItId: null,
+      settingsOpen: false, resetOpen: false, postItId: null, accountOpen: false,
       launchOnLogin: base.launchOnLogin !== undefined ? base.launchOnLogin : true,
       shortcuts: Object.assign(Component.defaultShortcuts(), base.shortcuts || {}),
       expandedTl: {}, expandedTags: {},
@@ -585,6 +596,7 @@ class Component extends DCLogic {
         return;
       }
       if (e.key === 'Escape') {
+        if (this.state.accountOpen) { this.setState({ accountOpen: false }); return; }
         if (this.state.settingsOpen) { this.setState({ settingsOpen: false }); return; }
         if (this.state.searchQ) { this.setState({ searchQ: '' }); return; }
       }
@@ -932,8 +944,17 @@ class Component extends DCLogic {
       onOpenSettings: () => this.setState({ settingsOpen: true }),
       onCloseSettings: () => this.setState({ settingsOpen: false }),
       stopClick: (e) => e.stopPropagation(),
-      resetOpen: s.resetOpen,
-      onToggleReset: () => this.setState(st => ({ resetOpen: !st.resetOpen })),
+      acctInitial: '박', acctName: '박지원', acctEmail: 'jiwon.park@aegisep.com',
+      acctSub: 'jiwon.park@aegisep.com · 방금 동기화됨',
+      acctPlan: 'Pro', acctPlanFg: '#fff', acctPlanBg: 'var(--accent)',
+      acctTooltip: '박지원 · Pro · 방금 동기화됨',
+      accountOpen: s.accountOpen,
+      onToggleAccount: () => this.setState(st => ({ accountOpen: !st.accountOpen })),
+      onOpenSettingsFromAccount: () => this.setState({ accountOpen: false, settingsOpen: true }),
+      syncDotColor: '#3dd68c',
+      syncLabel: '동기화됨',
+      syncDetail: '방금 · 노트 128개, 첨부 14개',
+      onSyncNow: () => alert('동기화를 시작했습니다. (프로토타입)'),
       launchBg: s.launchOnLogin ? 'var(--accent)' : 'var(--seg)',
       launchKnobLeft: s.launchOnLogin ? '20px' : '2px',
       onToggleLaunch: () => this.setState(st => ({ launchOnLogin: !st.launchOnLogin })),

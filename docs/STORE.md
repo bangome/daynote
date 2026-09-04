@@ -21,8 +21,31 @@ can only be done in your Partner Center account; the rest are already wired in t
    account, collects no email address, uploads nothing, and declares no `internetClient`
    capability. Declare no account and no data collection.
    **When cloud sync ships**, this listing has to change in the same release: an account
-   exists, an email address is collected, and note content is uploaded — encrypted on the
-   device, but uploaded. See [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for the full checklist.
+   exists (Google sign-in), the Google account id and email address are collected, and note
+   content is uploaded. Declare note content as personal data the publisher **can** access:
+   it is encrypted in transit and at rest, but by default the service holds the key. The
+   opt-in lock (CLOUD_SYNC.md §4.1b) removes that access for users who turn it on, which is
+   worth describing in the listing but must not be used to claim the default is
+   end-to-end-encrypted. See [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for the checklist.
+
+   Cloud sync is also **a paid subscription** billed through Paddle, which policy 10.8.1 and
+   10.8.6 permit for a non-game PC app. That permission comes with obligations, all of which
+   are submission-blocking:
+
+   - **Tick the third-party purchase API box** in Partner Center (10.8.2). It is a checkbox on
+     the submission, not something certification infers.
+   - **Account type**: 10.8.3 requires a Company account for a product that requires financial
+     account information. Cloud sync is optional rather than primary functionality, so this may
+     not bite — settle it with Partner Center **before** the first paid submission rather than
+     discovering it in review.
+   - **Listing content** (10.8.4): state the subscription price range and the trial terms,
+     including that syncing stops when the trial ends. Say plainly that nothing is deleted.
+   - **Purchase flow** (10.8.2): the purchase starts in the app and continues in the browser,
+     which is what the settings panel does. The hosted page identifies Paddle as the commerce
+     provider, which is the requirement.
+   - **Never remove value** from an existing subscriber (10.8.6), and if the subscription is
+     ever discontinued, keep serving it until each period expires. The Worker already refuses
+     to shorten a paid period; the listing must not promise less.
 
 ## 1. Reserve the app + get its identity **(you)**
 

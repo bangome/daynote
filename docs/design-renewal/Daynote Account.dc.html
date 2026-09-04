@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8">
+<title>데이노트 계정</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; -webkit-font-smoothing: antialiased; background: #e9e9ec; }
+  :root {
+    --bg: #f4f4f5; --panel: #ffffff; --card: #ffffff; --stroke: #e7e7ea; --stroke2: #ececef;
+    --text: #1a1a1e; --text2: #77777e; --accent: #0067c0; --accent-soft: rgba(0,103,192,0.09);
+    --hover: rgba(0,0,0,0.045); --seg: #ededf0; --input: #ffffff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    --pop-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+    --warn: #b25e09; --warn-soft: rgba(232,163,61,0.14); --danger: #c62a2f; --danger-soft: rgba(229,72,77,0.12);
+    --ok: #0f7b5f; --ok-soft: rgba(15,123,95,0.11);
+  }
+  body.dark {
+    --bg: #121316; --panel: #1b1c20; --card: #222327; --stroke: #2a2b30; --stroke2: #26272c;
+    --text: #f2f2f3; --text2: #9a9aa2; --accent: #4cc2ff; --accent-soft: rgba(76,194,255,0.12);
+    --hover: rgba(255,255,255,0.06); --seg: #131417; --input: #232428;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+    --pop-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+    --warn: #e8a33d; --warn-soft: rgba(232,163,61,0.16); --danger: #ff6369; --danger-soft: rgba(255,99,105,0.15);
+    --ok: #3dd68c; --ok-soft: rgba(61,214,140,0.14);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  input:focus { outline: none; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 5px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px 20px; box-sizing:border-box; background:var(--bg); color:var(--text); font-size:13px;">
+
+  <!-- state switcher (prototype only) -->
+  <div style="position:fixed; top:14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--stroke); border-radius:99px; padding:5px 6px; box-shadow:var(--pop-shadow); z-index:60;">
+    <span style="font-size:10.5px; font-weight:700; color:var(--text2); padding:0 6px;">상태</span>
+    <sc-for list="{{ stateChips }}" as="sw" hint-placeholder-count="6">
+      <div onClick="{{ sw.onClick }}" style="font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:99px; cursor:pointer; color:{{ sw.fg }}; background:{{ sw.bg }}; white-space:nowrap;" style-hover="filter:brightness(0.96)">{{ sw.label }}</div>
+    </sc-for>
+    <div onClick="{{ onToggleTheme }}" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:99px; cursor:pointer; border:1px solid var(--stroke); margin-left:2px;" style-hover="background:var(--hover)">
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+        <svg width="13" height="13" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4" fill="none" stroke="var(--text)" stroke-width="1.4"></circle><g stroke="var(--text)" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="1.2" x2="8" y2="2.8"></line><line x1="8" y1="13.2" x2="8" y2="14.8"></line><line x1="1.2" y1="8" x2="2.8" y2="8"></line><line x1="13.2" y1="8" x2="14.8" y2="8"></line></g></svg>
+      </sc-if>
+      <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M13.5 9.5 A 5.8 5.8 0 1 1 6.5 2.5 A 4.6 4.6 0 0 0 13.5 9.5 Z" fill="none" stroke="var(--text)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- window -->
+  <div style="width:min(520px,100%); background:var(--panel); border:1px solid var(--stroke); border-radius:14px; box-shadow:var(--pop-shadow); overflow:hidden; margin-top:26px;">
+
+    <!-- window titlebar -->
+    <div style="height:44px; display:flex; align-items:center; gap:9px; padding:0 6px 0 14px; border-bottom:1px solid var(--stroke2);">
+      <div style="width:20px; height:20px; border-radius:6px; background:var(--accent); display:flex; align-items:center; justify-content:center; flex:none;">
+        <svg width="11" height="11" viewBox="0 0 20 20"><rect x="2.5" y="3" width="15" height="14" rx="3" fill="none" stroke="#fff" stroke-width="2"></rect><line x1="5" y1="12.5" x2="15" y2="12.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"></line></svg>
+      </div>
+      <span style="flex:1; font-size:12.5px; font-weight:700; letter-spacing:-0.01em;">데이노트 계정</span>
+      <div style="display:flex; color:var(--text2);">
+        <div style="width:36px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:default;" style-hover="background:var(--hover)"><svg width="9" height="9" viewBox="0 0 10 10"><line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.1"></line></svg></div>
+        <div style="width:36px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:default;" style-hover="background:var(--hover)"><svg width="9" height="9" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.1"></rect></svg></div>
+        <div style="width:36px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:default;" style-hover="background:var(--danger); color:#fff"><svg width="9" height="9" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.1"></line><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.1"></line></svg></div>
+      </div>
+    </div>
+
+    <div style="max-height:calc(100vh - 150px); overflow-y:auto;">
+
+      <!-- ══ Signed out ══ -->
+      <sc-if value="{{ isSignedOut }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:34px 32px 32px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+          <div style="width:52px; height:52px; border-radius:15px; background:var(--accent); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,0.14);">
+            <svg width="27" height="27" viewBox="0 0 20 20"><rect x="2.5" y="3" width="15" height="14" rx="3" fill="none" stroke="#fff" stroke-width="1.7"></rect><path d="M6.5 12.5 a3.5 3.5 0 0 1 7 0" fill="#fff"></path><line x1="5" y1="12.5" x2="15" y2="12.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"></line></svg>
+          </div>
+          <div style="font-size:19px; font-weight:700; letter-spacing:-0.015em; margin-top:16px;">데이노트에 로그인</div>
+          <div style="font-size:12.5px; color:var(--text2); line-height:1.65; margin-top:7px; max-width:340px;">노트는 이 기기에 그대로 저장됩니다. 로그인은 여러 기기에서 같은 노트를 보고 싶을 때만 필요합니다.</div>
+
+          <div onClick="{{ onGoogleSignIn }}" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; max-width:320px; margin-top:22px; padding:12px 0; border-radius:10px; border:1px solid var(--stroke); background:var(--card); cursor:pointer; font-size:13.5px; font-weight:600; box-shadow:var(--shadow);" style-hover="background:var(--hover)">
+            <svg width="17" height="17" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62Z" fill="#4285F4"></path><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86a5.33 5.33 0 0 1-5-3.68H1v2.34A9 9 0 0 0 9 18Z" fill="#34A853"></path><path d="M4 10.74a5.4 5.4 0 0 1 0-3.48V4.96H1a9 9 0 0 0 0 8.08L4 10.74Z" fill="#FBBC05"></path><path d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.59A9 9 0 0 0 1 4.96l3 2.3A5.33 5.33 0 0 1 9 3.58Z" fill="#EA4335"></path></svg>
+            Google로 계속하기
+          </div>
+          <div style="font-size:11px; color:var(--text2); line-height:1.6; margin-top:14px; max-width:330px;">계속하면 <a href="#terms">이용약관</a>과 <a href="#privacy">개인정보 처리방침</a>에 동의하게 됩니다.</div>
+
+          <div style="width:100%; height:1px; background:var(--stroke2); margin:24px 0 18px;"></div>
+          <div style="display:flex; gap:9px; width:100%; text-align:left;">
+            <sc-for list="{{ signedOutPerks }}" as="p" hint-placeholder-count="3">
+              <div style="flex:1; background:var(--card); border:1px solid var(--stroke2); border-radius:11px; padding:12px;">
+                <div style="font-size:11.5px; font-weight:700;">{{ p.title }}</div>
+                <div style="font-size:11px; color:var(--text2); line-height:1.55; margin-top:3px;">{{ p.desc }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ onSkip }}" style="font-size:12px; color:var(--text2); cursor:pointer; margin-top:20px;" style-hover="color:var(--text)">로그인 없이 계속 사용하기</div>
+        </div>
+      </sc-if>
+
+      <!-- ══ Signed in ══ -->
+      <sc-if value="{{ isSignedIn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:20px 22px 24px; display:flex; flex-direction:column; gap:12px;">
+
+          <!-- account row -->
+          <div style="display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:14px 16px;">
+            <div style="width:40px; height:40px; flex:none; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">{{ initial }}</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ userName }}</div>
+              <div style="font-size:11.5px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">{{ userEmail }}</div>
+            </div>
+            <span style="flex:none; font-size:10.5px; font-weight:700; color:{{ planFg }}; background:{{ planBg }}; border-radius:99px; padding:3px 10px;">{{ planBadge }}</span>
+          </div>
+
+          <!-- status banner -->
+          <sc-if value="{{ hasBanner }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:11px; background:{{ bannerBg }}; border:1px solid {{ bannerBorder }}; border-radius:12px; padding:14px 16px;">
+              <div style="flex:none; width:20px; height:20px; border-radius:50%; background:{{ bannerFg }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; line-height:1; margin-top:1px;">{{ bannerIcon }}</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:12.5px; font-weight:700; color:{{ bannerFg }};">{{ bannerTitle }}</div>
+                <div style="font-size:11.5px; line-height:1.6; color:var(--text2); margin-top:3px;">{{ bannerBody }}</div>
+                <sc-if value="{{ hasBannerAction }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; gap:8px; margin-top:11px;">
+                    <div onClick="{{ onBannerPrimary }}" style="background:{{ bannerFg }}; color:#fff; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:11.5px; font-weight:700;" style-hover="filter:brightness(1.08)">{{ bannerPrimary }}</div>
+                    <sc-if value="{{ hasBannerSecondary }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ onBannerSecondary }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:11.5px; font-weight:600;" style-hover="background:var(--hover)">{{ bannerSecondary }}</div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- sync -->
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="flex:1;">
+                <div style="font-size:13px; font-weight:700;">클라우드 동기화</div>
+                <div style="font-size:11.5px; color:var(--text2); line-height:1.6; margin-top:3px;">{{ syncDesc }}</div>
+              </div>
+              <sc-if value="{{ syncAllowed }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ onToggleSync }}" style="width:40px; height:22px; flex:none; border-radius:99px; cursor:pointer; background:{{ syncBg }}; position:relative;">
+                  <div style="position:absolute; top:2px; left:{{ syncKnob }}; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:left 0.15s;"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ syncLocked }}" hint-placeholder-val="{{ true }}">
+                <span style="flex:none; font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); border-radius:99px; padding:3px 10px;">Pro</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ syncOn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:8px; border-top:1px solid var(--stroke2); margin-top:13px; padding-top:12px;">
+                <span style="width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none;"></span>
+                <span style="flex:1; font-size:11.5px; color:var(--text2);">{{ syncStatus }}</span>
+                <div onClick="{{ onSyncNow }}" style="border:1px solid var(--stroke); border-radius:7px; padding:5px 11px; cursor:pointer; font-size:11.5px; font-weight:600;" style-hover="background:var(--hover)">지금 동기화</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- devices -->
+          <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="flex:1; font-size:13px; font-weight:700;">연결된 기기</span>
+              <span style="font-size:11px; color:var(--text2);">{{ deviceCountLabel }}</span>
+            </div>
+            <div style="display:flex; flex-direction:column; margin-top:6px;">
+              <sc-for list="{{ devices }}" as="d" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:11px; padding:10px 0; border-bottom:1px solid var(--stroke2);">
+                  <div style="width:30px; height:30px; flex:none; border-radius:8px; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center;">
+                    <svg width="15" height="15" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><line x1="5" y1="13.5" x2="11" y2="13.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></line></svg>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                      {{ d.name }}
+                      <sc-if value="{{ d.isCurrent }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-size:9.5px; font-weight:700; color:var(--ok); background:var(--ok-soft); border-radius:99px; padding:1.5px 7px;">이 기기</span>
+                      </sc-if>
+                    </div>
+                    <div style="font-size:11px; color:var(--text2); margin-top:1px;">{{ d.meta }}</div>
+                  </div>
+                  <sc-if value="{{ d.canRemove }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ d.onRemove }}" style="font-size:11.5px; color:var(--text2); cursor:pointer; flex:none;" style-hover="color:var(--danger)">연결 해제</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ deviceLimited }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:11.5px; color:var(--text2); line-height:1.6; margin-top:12px;">무료 플랜은 기기 1대만 사용할 수 있습니다. Pro로 업그레이드하면 기기 수 제한 없이 연결됩니다.</div>
+            </sc-if>
+          </div>
+
+          <!-- plans (free / past_due upgrade path) -->
+          <sc-if value="{{ showPlans }}" hint-placeholder-val="{{ true }}">
+            <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="flex:1; font-size:13px; font-weight:700;">Pro로 업그레이드</span>
+                <div style="display:flex; background:var(--seg); border-radius:8px; padding:3px; gap:2px;">
+                  <div onClick="{{ onCycleMonthly }}" style="padding:4px 12px; border-radius:6px; cursor:pointer; font-size:11.5px; font-weight:700; color:{{ mFg }}; background:{{ mBg }}; box-shadow:{{ mShadow }};">월간</div>
+                  <div onClick="{{ onCycleYearly }}" style="padding:4px 12px; border-radius:6px; cursor:pointer; font-size:11.5px; font-weight:700; color:{{ yFg }}; background:{{ yBg }}; box-shadow:{{ yShadow }};">연간</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; gap:8px; margin-top:14px;">
+                <span style="font-size:29px; font-weight:800; letter-spacing:-0.02em; line-height:1;">{{ priceMain }}</span>
+                <span style="font-size:12px; color:var(--text2); padding-bottom:3px;">{{ priceUnit }}</span>
+                <sc-if value="{{ isYearly }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:10.5px; font-weight:700; color:var(--ok); background:var(--ok-soft); border-radius:99px; padding:3px 9px; margin-bottom:4px;">31% 절약</span>
+                </sc-if>
+              </div>
+              <div style="font-size:11.5px; color:var(--text2); margin-top:5px;">{{ priceSub }}</div>
+              <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px;">
+                <sc-for list="{{ proFeatures }}" as="pf" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:9px;">
+                    <svg width="13" height="13" viewBox="0 0 14 14" style="flex:none;"><circle cx="7" cy="7" r="6.2" fill="var(--accent-soft)"></circle><path d="M4.2 7.2 L6.1 9 L9.8 4.9" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <span style="font-size:12.5px;">{{ pf.text }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div onClick="{{ onCheckout }}" style="margin-top:16px; background:var(--accent); color:#fff; border-radius:10px; padding:11px 0; text-align:center; cursor:pointer; font-size:13px; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,0.13);" style-hover="filter:brightness(1.08)">{{ ctaLabel }}</div>
+              <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--text2);">
+                <svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 1 L10.5 2.6 v3.2 c0 2.6 -1.9 4.3 -4.5 5.2 C3.4 10.1 1.5 8.4 1.5 5.8 V2.6 Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"></path></svg>
+                Paddle이 결제를 안전하게 처리합니다 · 언제든 해지 가능
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- subscription detail -->
+          <sc-if value="{{ showSubscription }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="flex:1; font-size:13px; font-weight:700;">구독 정보</span>
+                <span style="font-size:11px; color:var(--text2);">Paddle</span>
+              </div>
+              <div style="display:flex; flex-direction:column; margin-top:8px;">
+                <sc-for list="{{ subRows }}" as="sr" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--stroke2);">
+                    <span style="flex:none; width:106px; font-size:11.5px; color:var(--text2);">{{ sr.label }}</span>
+                    <span style="flex:1; font-size:12.5px; font-weight:600; color:{{ sr.color }};">{{ sr.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
+                <div onClick="{{ onManagePayment }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 13px; cursor:pointer; font-size:11.5px; font-weight:600;" style-hover="background:var(--hover)">결제 수단 변경</div>
+                <div onClick="{{ onSwitchCycle }}" style="border:1px solid var(--stroke); border-radius:8px; padding:7px 13px; cursor:pointer; font-size:11.5px; font-weight:600;" style-hover="background:var(--hover)">{{ switchCycleLabel }}</div>
+                <sc-if value="{{ canCancel }}" hint-placeholder-val="{{ true }}">
+                  <div onClick="{{ onCancel }}" style="margin-left:auto; border:1px solid var(--stroke); border-radius:8px; padding:7px 13px; cursor:pointer; font-size:11.5px; font-weight:600; color:var(--text2);" style-hover="border-color:var(--danger); color:var(--danger)">구독 해지</div>
+                </sc-if>
+                <sc-if value="{{ canResume }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ onResume }}" style="margin-left:auto; background:var(--accent); color:#fff; border-radius:8px; padding:7px 13px; cursor:pointer; font-size:11.5px; font-weight:700;" style-hover="filter:brightness(1.08)">구독 계속하기</div>
+                </sc-if>
+              </div>
+            </div>
+
+            <div style="background:var(--card); border:1px solid var(--stroke2); border-radius:12px; padding:16px;">
+              <div style="font-size:13px; font-weight:700;">결제 내역</div>
+              <div style="display:flex; flex-direction:column; margin-top:6px;">
+                <sc-for list="{{ invoices }}" as="iv" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--stroke2);">
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:12.5px; font-weight:600;">{{ iv.date }}</div>
+                      <div style="font-size:11px; color:var(--text2); margin-top:1px;">{{ iv.plan }}</div>
+                    </div>
+                    <span style="flex:none; font-size:12.5px; font-weight:600;">{{ iv.amount }}</span>
+                    <span style="flex:none; font-size:10.5px; font-weight:700; color:{{ iv.statusFg }}; background:{{ iv.statusBg }}; border-radius:99px; padding:2.5px 9px;">{{ iv.status }}</span>
+                    <span onClick="{{ iv.onReceipt }}" style="flex:none; font-size:11.5px; color:var(--accent); cursor:pointer; font-weight:600;">영수증</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; align-items:center; gap:10px; padding:2px 4px;">
+            <span onClick="{{ onSignOut }}" style="font-size:12px; color:var(--text2); cursor:pointer;" style-hover="color:var(--text)">로그아웃</span>
+            <span style="color:var(--stroke); font-size:12px;">·</span>
+            <span onClick="{{ onDeleteAccount }}" style="font-size:12px; color:var(--text2); cursor:pointer;" style-hover="color:var(--danger)">계정 삭제</span>
+            <span style="margin-left:auto; font-size:11px; color:var(--text2);">데이노트 2.4.0</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- ══ Paddle checkout overlay ══ -->
+  <sc-if value="{{ checkoutOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseCheckout }}" style="position:fixed; inset:0; background:rgba(0,0,0,0.42); z-index:90; display:flex; align-items:center; justify-content:center; padding:20px;">
+      <div onClick="{{ stopClick }}" style="width:min(420px,100%); background:var(--panel); border-radius:14px; box-shadow:var(--pop-shadow); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:9px; padding:15px 18px; border-bottom:1px solid var(--stroke2);">
+          <span style="flex:1; font-size:12.5px; font-weight:700;">Paddle 보안 결제</span>
+          <span onClick="{{ onCloseCheckout }}" style="cursor:pointer; color:var(--text2); font-size:15px;" style-hover="color:var(--text)">✕</span>
+        </div>
+        <div style="padding:18px;">
+          <sc-if value="{{ checkoutForm }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--stroke2); border-radius:10px; padding:12px 14px;">
+              <div style="flex:1;">
+                <div style="font-size:12.5px; font-weight:700;">데이노트 Pro · {{ checkoutCycle }}</div>
+                <div style="font-size:11px; color:var(--text2); margin-top:2px;">{{ checkoutRenew }}</div>
+              </div>
+              <span style="font-size:15px; font-weight:800;">{{ checkoutAmount }}</span>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:var(--text2); margin-top:14px;">카드 번호</div>
+            <input placeholder="1234 5678 9012 3456" style="width:100%; box-sizing:border-box; margin-top:4px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:9px 11px;"></input>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input placeholder="MM / YY" style="flex:1; min-width:0; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:9px 11px;"></input>
+              <input placeholder="CVC" style="flex:1; min-width:0; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:9px 11px;"></input>
+            </div>
+            <input placeholder="{{ userEmail }}" style="width:100%; box-sizing:border-box; margin-top:8px; border:1px solid var(--stroke); border-radius:8px; background:var(--input); color:var(--text); font-size:12.5px; font-family:inherit; padding:9px 11px;"></input>
+            <div onClick="{{ onPay }}" style="margin-top:14px; background:var(--accent); color:#fff; border-radius:10px; padding:11px 0; text-align:center; cursor:pointer; font-size:13px; font-weight:700;" style-hover="filter:brightness(1.08)">{{ checkoutAmount }} 결제하기</div>
+            <div style="font-size:10.5px; color:var(--text2); line-height:1.6; margin-top:10px; text-align:center;">Paddle.com이 판매자로서 결제와 세금을 처리합니다. 결제 정보는 데이노트에 저장되지 않습니다.</div>
+          </sc-if>
+          <sc-if value="{{ checkoutDone }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 0 6px;">
+              <div style="width:44px; height:44px; border-radius:50%; background:var(--ok-soft); color:var(--ok); display:flex; align-items:center; justify-content:center;">
+                <svg width="22" height="22" viewBox="0 0 20 20"><path d="M5 10.5 L8.5 14 L15 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="font-size:15px; font-weight:700; margin-top:13px;">Pro 구독이 시작되었습니다</div>
+              <div style="font-size:12px; color:var(--text2); line-height:1.65; margin-top:6px;">이제 모든 기기에서 노트가 동기화됩니다. 영수증은 {{ userEmail }} 로 발송했습니다.</div>
+              <div onClick="{{ onCloseCheckout }}" style="margin-top:16px; background:var(--accent); color:#fff; border-radius:9px; padding:9px 22px; cursor:pointer; font-size:12.5px; font-weight:700;" style-hover="filter:brightness(1.08)">완료</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#0067c0&quot;, &quot;options&quot;: [&quot;#0067c0&quot;, &quot;#6b4fbb&quot;, &quot;#0f7b5f&quot;, &quot;#c2410c&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;테마&quot;}, &quot;name&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;박지원&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;샘플 계정&quot;}, &quot;email&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;jiwon.park@aegisep.com&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;샘플 계정&quot;}}">
+class Component extends DCLogic {
+  state = {
+    theme: 'light',
+    status: 'signed_out',
+    cycle: 'monthly',
+    syncOn: true,
+    checkout: null,
+    devices: [
+      { id: 'd1', name: 'DESKTOP-WORK', meta: 'Windows 11 · 방금 동기화', current: true },
+      { id: 'd2', name: 'MacBook Air', meta: 'macOS 15 · 어제 21:40', current: false },
+      { id: 'd3', name: 'HOME-PC', meta: 'Windows 11 · 8월 28일', current: false },
+    ],
+  };
+
+  componentDidMount() { this.applyTheme(); }
+  componentDidUpdate() { this.applyTheme(); }
+  applyTheme() {
+    document.body.classList.toggle('dark', this.state.theme === 'dark');
+    const acc = this.props.accent;
+    if (acc) { document.body.style.setProperty('--accent', acc); document.body.style.setProperty('--accent-soft', acc + '1a'); }
+    else { document.body.style.removeProperty('--accent'); document.body.style.removeProperty('--accent-soft'); }
+  }
+
+  fmtDate(d) { return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; }
+  shift(days) { const t = new Date(); t.setDate(t.getDate() + days); return t; }
+
+  renderVals() {
+    const s = this.state;
+    const st = s.status;
+    const email = this.props.email ?? 'jiwon.park@aegisep.com';
+    const name = this.props.name ?? '박지원';
+    const monthly = 2900, yearly = 24000;
+    const won = (n) => n.toLocaleString('ko-KR') + '원';
+    const isYearly = s.cycle === 'yearly';
+
+    const isPro = ['active', 'trial', 'past_due', 'cancel_scheduled'].includes(st);
+    const planBadge = st === 'free' ? '무료' : st === 'trial' ? '체험 중' : st === 'past_due' ? '결제 실패' : st === 'cancel_scheduled' ? '해지 예약' : 'Pro';
+    const planColors = {
+      '무료': ['var(--text2)', 'var(--hover)'],
+      '체험 중': ['var(--accent)', 'var(--accent-soft)'],
+      '결제 실패': ['var(--danger)', 'var(--danger-soft)'],
+      '해지 예약': ['var(--warn)', 'var(--warn-soft)'],
+      'Pro': ['#fff', 'var(--accent)'],
+    }[planBadge];
+
+    const banners = {
+      free: null,
+      trial: { icon: '✦', fg: 'var(--accent)', bg: 'var(--accent-soft)', border: 'var(--accent-soft)',
+        title: 'Pro 체험 기간이 11일 남았습니다',
+        body: this.fmtDate(this.shift(11)) + '에 체험이 끝납니다. 그때까지 결제 수단을 등록하면 동기화가 끊기지 않습니다.',
+        primary: '지금 Pro 구독하기', secondary: null },
+      past_due: { icon: '!', fg: 'var(--danger)', bg: 'var(--danger-soft)', border: 'var(--danger-soft)',
+        title: '결제에 실패했습니다',
+        body: '등록된 카드로 ' + won(isYearly ? yearly : monthly) + ' 결제가 처리되지 않았습니다. ' + this.fmtDate(this.shift(4)) + '까지 해결하지 않으면 동기화가 중단되고 무료 플랜으로 전환됩니다.',
+        primary: '결제 수단 업데이트', secondary: '다시 시도' },
+      cancel_scheduled: { icon: '·', fg: 'var(--warn)', bg: 'var(--warn-soft)', border: 'var(--warn-soft)',
+        title: '해지가 예약되었습니다',
+        body: this.fmtDate(this.shift(17)) + '까지는 Pro 기능을 그대로 쓸 수 있고, 이후 무료 플랜으로 전환됩니다. 노트는 삭제되지 않습니다.',
+        primary: '구독 계속하기', secondary: null },
+      active: null,
+    };
+    const banner = banners[st] || null;
+
+    const syncAllowed = isPro && st !== 'past_due';
+    const devices = s.devices
+      .filter(d => (isPro ? true : d.current))
+      .map(d => ({ name: d.name, meta: d.meta, isCurrent: d.current, canRemove: !d.current,
+        onRemove: () => this.setState(x => ({ devices: x.devices.filter(v => v.id !== d.id) })) }));
+
+    const subRows = st === 'past_due' ? [
+      { label: '플랜', value: 'Pro ' + (isYearly ? '연간' : '월간'), color: 'var(--text)' },
+      { label: '상태', value: '결제 실패 · 재시도 대기', color: 'var(--danger)' },
+      { label: '재시도 예정', value: this.fmtDate(this.shift(2)), color: 'var(--text)' },
+      { label: '결제 수단', value: 'Visa •••• 4242 (만료됨)', color: 'var(--danger)' },
+    ] : st === 'cancel_scheduled' ? [
+      { label: '플랜', value: 'Pro ' + (isYearly ? '연간' : '월간'), color: 'var(--text)' },
+      { label: '상태', value: '해지 예약됨', color: 'var(--warn)' },
+      { label: '이용 종료일', value: this.fmtDate(this.shift(17)), color: 'var(--text)' },
+      { label: '결제 수단', value: 'Visa •••• 4242', color: 'var(--text)' },
+    ] : [
+      { label: '플랜', value: 'Pro ' + (isYearly ? '연간' : '월간') + ' · ' + won(isYearly ? yearly : monthly), color: 'var(--text)' },
+      { label: '상태', value: st === 'trial' ? '체험 중' : '이용 중', color: 'var(--ok)' },
+      { label: '다음 결제일', value: this.fmtDate(this.shift(isYearly ? 243 : 18)) + ' · ' + won(isYearly ? yearly : monthly), color: 'var(--text)' },
+      { label: '결제 수단', value: 'Visa •••• 4242', color: 'var(--text)' },
+    ];
+
+    const invBase = [
+      { off: -18, amount: won(monthly), status: st === 'past_due' ? '실패' : '결제 완료' },
+      { off: -48, amount: won(monthly), status: '결제 완료' },
+      { off: -78, amount: won(monthly), status: '결제 완료' },
+    ];
+    const invoices = invBase.map(iv => ({
+      date: this.fmtDate(this.shift(iv.off)),
+      plan: 'Pro 월간',
+      amount: iv.amount,
+      status: iv.status,
+      statusFg: iv.status === '실패' ? 'var(--danger)' : 'var(--ok)',
+      statusBg: iv.status === '실패' ? 'var(--danger-soft)' : 'var(--ok-soft)',
+      onReceipt: () => alert('Paddle 영수증 페이지가 브라우저에서 열립니다. (프로토타입)'),
+    }));
+
+    const stateDefs = [
+      ['signed_out', '로그아웃'], ['free', '무료'], ['trial', '체험'],
+      ['active', '구독중'], ['past_due', '결제실패'], ['cancel_scheduled', '해지예약'],
+    ];
+
+    return {
+      isDark: s.theme === 'dark', isLight: s.theme !== 'dark',
+      onToggleTheme: () => this.setState(x => ({ theme: x.theme === 'dark' ? 'light' : 'dark' })),
+      stateChips: stateDefs.map(([key, label]) => ({
+        label, onClick: () => this.setState({ status: key, checkout: null }),
+        fg: st === key ? '#fff' : 'var(--text2)',
+        bg: st === key ? 'var(--accent)' : 'transparent',
+      })),
+      isSignedOut: st === 'signed_out', isSignedIn: st !== 'signed_out',
+      signedOutPerks: [
+        { title: '기기 간 동기화', desc: '노트북과 데스크톱에서 같은 노트를' },
+        { title: '종단간 암호화', desc: '이 기기에서 암호화한 뒤 업로드' },
+        { title: '언제든 내보내기', desc: '백업 파일로 전체 저장 가능' },
+      ],
+      onGoogleSignIn: () => this.setState({ status: 'free' }),
+      onSkip: () => alert('로그인 없이 로컬에서만 사용합니다. (프로토타입)'),
+
+      userName: name, userEmail: email, initial: name.slice(0, 1),
+      planBadge, planFg: planColors[0], planBg: planColors[1],
+
+      hasBanner: !!banner,
+      bannerIcon: banner ? banner.icon : '', bannerFg: banner ? banner.fg : 'var(--accent)',
+      bannerBg: banner ? banner.bg : 'transparent', bannerBorder: banner ? banner.border : 'transparent',
+      bannerTitle: banner ? banner.title : '', bannerBody: banner ? banner.body : '',
+      hasBannerAction: !!(banner && banner.primary), bannerPrimary: banner ? banner.primary : '',
+      hasBannerSecondary: !!(banner && banner.secondary), bannerSecondary: banner && banner.secondary ? banner.secondary : '',
+      onBannerPrimary: () => {
+        if (st === 'trial') this.setState({ checkout: 'form' });
+        else if (st === 'past_due') alert('Paddle 결제 수단 업데이트 창이 열립니다. (프로토타입)');
+        else if (st === 'cancel_scheduled') this.setState({ status: 'active' });
+      },
+      onBannerSecondary: () => alert('결제를 다시 시도합니다. (프로토타입)'),
+
+      syncAllowed, syncLocked: !syncAllowed,
+      syncOn: syncAllowed && s.syncOn,
+      syncBg: s.syncOn ? 'var(--accent)' : 'var(--seg)',
+      syncKnob: s.syncOn ? '20px' : '2px',
+      onToggleSync: () => this.setState(x => ({ syncOn: !x.syncOn })),
+      syncDesc: syncAllowed
+        ? '노트는 이 기기에서 암호화된 뒤 업로드됩니다. 서버에서는 내용을 열어볼 수 없습니다.'
+        : st === 'past_due' ? '결제가 정상 처리되면 동기화가 다시 시작됩니다.' : 'Pro 플랜에서 여러 기기 간 노트를 동기화할 수 있습니다.',
+      syncStatus: '방금 동기화됨 · 노트 128개, 첨부 14개',
+      onSyncNow: () => alert('동기화를 시작했습니다. (프로토타입)'),
+
+      devices, deviceCountLabel: isPro ? devices.length + '대 · 제한 없음' : devices.length + ' / 1대',
+      deviceLimited: !isPro,
+
+      showPlans: st === 'free',
+      isYearly,
+      onCycleMonthly: () => this.setState({ cycle: 'monthly' }),
+      onCycleYearly: () => this.setState({ cycle: 'yearly' }),
+      mFg: !isYearly ? 'var(--accent)' : 'var(--text2)', mBg: !isYearly ? 'var(--card)' : 'transparent', mShadow: !isYearly ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+      yFg: isYearly ? 'var(--accent)' : 'var(--text2)', yBg: isYearly ? 'var(--card)' : 'transparent', yShadow: isYearly ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+      priceMain: won(isYearly ? yearly : monthly),
+      priceUnit: isYearly ? '/ 년' : '/ 월',
+      priceSub: isYearly ? '월 2,000원 상당 · 연 1회 결제' : '매월 자동 결제 · 언제든 해지',
+      proFeatures: [
+        { text: '모든 기기 간 클라우드 동기화' },
+        { text: '연결 기기 수 제한 없음' },
+        { text: '종단간 암호화 백업' },
+        { text: '노트·첨부 파일 용량 제한 없음' },
+      ],
+      ctaLabel: 'Pro 구독하기 · ' + won(isYearly ? yearly : monthly),
+      onCheckout: () => this.setState({ checkout: 'form' }),
+
+      showSubscription: isPro,
+      subRows, invoices,
+      canCancel: st === 'active' || st === 'trial',
+      canResume: st === 'cancel_scheduled',
+      switchCycleLabel: isYearly ? '월간으로 변경' : '연간으로 변경 (31% 절약)',
+      onManagePayment: () => alert('Paddle 결제 수단 관리 창이 열립니다. (프로토타입)'),
+      onSwitchCycle: () => this.setState(x => ({ cycle: x.cycle === 'yearly' ? 'monthly' : 'yearly' })),
+      onCancel: () => { if (confirm('구독을 해지하시겠습니까? 남은 기간까지는 Pro를 계속 사용할 수 있습니다.')) this.setState({ status: 'cancel_scheduled' }); },
+      onResume: () => this.setState({ status: 'active' }),
+      onSignOut: () => this.setState({ status: 'signed_out', checkout: null }),
+      onDeleteAccount: () => alert('계정 삭제는 확인 이메일을 거쳐 진행됩니다. 이 기기의 노트는 삭제되지 않습니다. (프로토타입)'),
+
+      checkoutOpen: !!s.checkout,
+      checkoutForm: s.checkout === 'form', checkoutDone: s.checkout === 'done',
+      checkoutCycle: isYearly ? '연간' : '월간',
+      checkoutAmount: won(isYearly ? yearly : monthly),
+      checkoutRenew: isYearly ? '1년마다 자동 갱신 · ' + this.fmtDate(this.shift(365)) + ' 다음 결제' : '매월 자동 갱신 · ' + this.fmtDate(this.shift(30)) + ' 다음 결제',
+      onPay: () => this.setState({ checkout: 'done', status: 'active' }),
+      onCloseCheckout: () => this.setState({ checkout: null }),
+      stopClick: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>
