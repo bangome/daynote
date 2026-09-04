@@ -13,10 +13,17 @@ preview_urls = false
 # Generate one with:
 #   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
-# Password-reset email, over Resend. The API key is a secret:
-#   wrangler secret put RESEND_API_KEY
-# No DKIM key lives here: Resend holds the private half and gives you a public key to publish. See
-# DEPLOY.md for the three DNS records daynote.arachat.cc needs.
+# Google sign-in. The client id below is public; the matching secret is a Worker secret so it never
+# ships inside the app:
+#   wrangler secret put GOOGLE_CLIENT_SECRET
+#
+# Seals each account's data key at rest (src/dek.ts):
+#   wrangler secret put DEK_WRAP_KEY
+#
+# Subscriptions, over Paddle (docs/CLOUD_SYNC.md §14, DEPLOY.md §2b):
+#   wrangler secret put PADDLE_WEBHOOK_SECRET   # Developer tools -> Notifications -> destination
+#   wrangler secret put PADDLE_API_KEY          # Developer tools -> Authentication
+#                                               # (creates the checkout and the portal link)
 
 # docs/PRIVACY.md is bundled as text so /privacy serves the repository's own policy rather than a
 # copy that has to be republished by hand. See src/privacy.ts.
@@ -27,11 +34,30 @@ globs = ["**/*.md"]
 # text imports for .txt/.html/.sql.
 fallthrough = true
 
+# The brand site (../site) rides on this Worker because daynote.arachat.cc is a Custom Domain of it,
+# and a Custom Domain cannot be shared with a second Worker on the same hostname. Everything not
+# listed in run_worker_first is answered by the static assets; the API and /privacy stay in code.
+# Build the pages first: `npm run build:site` (also runs as predeploy).
+[assets]
+directory = "../site/public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+run_worker_first = ["/v1/*", "/privacy"]
+
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "60"
-EMAIL_FROM = "no-reply@daynote.arachat.cc"
-EMAIL_FROM_NAME = "Daynote"
+GOOGLE_CLIENT_ID = "298036592294-mp11166n940ojbq4js3u5233ruvkk2ic.apps.googleusercontent.com"
+
+# The two prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"). Public,
+# so vars. Monthly ₩2,900 / $2.49, annual ₩24,000 / $19.99; the site's pricing page and the Store
+# listing state the same numbers. The app picks one and POSTs {"plan": "monthly" | "annual"}.
+# Neither the checkout nor the portal has a URL to configure: both are created per click by
+# /v1/billing/checkout and /v1/billing/portal. The checkout has to be, because only a
+# server-created transaction can carry the custom_data that ties it to an account.
+PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
+PADDLE_PRICE_ID_ANNUAL = "pri_01m1nb2txkj2aner6c88g1m2f4"
 
 [[d1_databases]]
 binding = "DB"

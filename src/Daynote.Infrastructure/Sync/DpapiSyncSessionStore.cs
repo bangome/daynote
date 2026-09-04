@@ -1,4 +1,4 @@
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -73,7 +73,8 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
                 credentials.DekGeneration,
                 // Null while the account is locked: the session must still persist, so the record
                 // carries no key rather than not existing.
-                credentials.DataKey is { } key ? Base64Url.EncodeToString(key.Span) : null));
+                credentials.DataKey is { } key ? Base64Url.EncodeToString(key.Span) : null,
+                credentials.Protection));
         }
         finally
         {
@@ -160,7 +161,8 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
             persisted.AccessExpiresUtc,
             persisted.RefreshToken,
             persisted.DekGeneration,
-            dataKey);
+            dataKey,
+            persisted.Protection);
     }
 
     private Persisted? ReadPersistedUnsynchronized()
@@ -219,6 +221,11 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
         }
     }
 
+    /// <summary>
+    /// The stored shape. <see cref="Protection"/> defaults to
+    /// <see cref="KeyProtection.Server"/> so a file written before the opt-in lock existed still
+    /// reads back as the account it describes.
+    /// </summary>
     private sealed record Persisted(
         string UserId,
         string Email,
@@ -226,5 +233,6 @@ public sealed class DpapiSyncSessionStore : ISyncSessionStore
         DateTimeOffset AccessExpiresUtc,
         string RefreshToken,
         int DekGeneration,
-        string? DataKey);
+        string? DataKey,
+        KeyProtection Protection = KeyProtection.Server);
 }

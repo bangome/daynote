@@ -34,7 +34,7 @@ public sealed class SyncConvergenceTests
             System.Globalization.DateTimeStyles.RoundtripKind);
         server = new InMemorySyncServer(() => now);
         // One account, so both devices unwrapped the same data key at sign-in.
-        dataKey = Crypto.GenerateDataKey();
+        dataKey = KeyMaterial.Random();
         alice = Device.Create("alice", server, dataKey, () => now);
         bob = Device.Create("bob", server, dataKey, () => now);
     }
@@ -339,7 +339,7 @@ public sealed class SyncConvergenceTests
         await alice.AddNote(1, "Title", "Body");
         await alice.Sync();
 
-        using KeyMaterial wrongKey = Crypto.GenerateDataKey();
+        using KeyMaterial wrongKey = KeyMaterial.Random();
         await using Device impostor = Device.Create("impostor", server, wrongKey, () => now);
 
         SyncReport report = await impostor.Sync();

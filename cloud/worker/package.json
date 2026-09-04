@@ -6,6 +6,8 @@
   "description": "Daynote cloud sync API: auth gateway in front of Cloudflare D1 and R2.",
   "scripts": {
     "dev": "wrangler dev",
+    "build:site": "node ../site/build.mjs",
+    "predeploy": "node ../site/build.mjs",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",

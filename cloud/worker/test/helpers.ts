@@ -3,9 +3,9 @@ import { env } from './env';
 /**
  * Test helpers.
  *
- * The client-side key derivation is NOT reproduced here: these tests exercise the server contract,
- * so an `auth_key` is just 32 random bytes, which is exactly what the server is entitled to assume.
- * Whether the client derives it correctly from a password is Phase 2's problem.
+ * Google is never contacted: `env.GOOGLE_EXCHANGE` is a seam on `Env`, and `signIn` installs a stub
+ * that turns a code into an identity. What is exercised here is this Worker's contract — account
+ * creation, sessions, and the data key — not Google's.
  */
 
 const BASE = 'https://daynote.test';
@@ -20,23 +20,16 @@ export function toBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 
-export function randomAuthKey(): string {
-  return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-}
-
-/** A structurally valid `v1.<12-byte nonce>.<48-byte ct+tag>` envelope. Opaque to the server. */
-export function fakeWrappedDek(): string {
-  const nonce = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));
-  const ciphertext = toBase64Url(crypto.getRandomValues(new Uint8Array(48)));
-  return `v1.${nonce}.${ciphertext}`;
-}
-
-export const KDF_PARAMS = { kdf: 'argon2id', m: 65536, t: 3, p: 4, v: 1 } as const;
+export const REDIRECT_URI = 'http://127.0.0.1:53219/';
 
 export async function resetDatabase(): Promise<void> {
-  for (const table of ['change_log', 'notes', 'reset_tokens', 'refresh_tokens', 'users', 'rate_limits']) {
+  for (const table of [
+    'change_log', 'notes', 'billing_events', 'subscriptions', 'refresh_tokens', 'users',
+    'rate_limits',
+  ]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
+  delete (env as { GOOGLE_EXCHANGE?: unknown }).GOOGLE_EXCHANGE;
 }
 
 export interface ApiResponse<T = Record<string, any>> {
@@ -80,42 +73,103 @@ export function get(path: string, options: { ip?: string; token?: string } = {})
   return call(path, { method: 'GET', headers, ip: options.ip });
 }
 
+/**
+ * Installs a stubbed Google exchange. `codes` maps an authorization code to the identity Google
+ * would have returned for it; an unknown code fails the way a replayed one does.
+ */
+export function stubGoogle(codes: Record<string, { subject: string; email: string }>): void {
+  (env as { GOOGLE_EXCHANGE?: unknown }).GOOGLE_EXCHANGE = async (code: string) => {
+    const identity = codes[code];
+    if (identity === undefined) {
+      const { ApiError } = await import('../src/http');
+      throw new ApiError('invalid_credentials', 'That Google sign-in is no longer valid. Try again.');
+    }
+    return identity;
+  };
+}
+
+/** A structurally valid `v1.<12-byte nonce>.<48-byte ct+tag>` envelope. Opaque to the server. */
+export function fakeWrappedDek(): string {
+  const nonce = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));
+  const ciphertext = toBase64Url(crypto.getRandomValues(new Uint8Array(48)));
+  return `v1.${nonce}.${ciphertext}`;
+}
+
+export const KDF_PARAMS = { kdf: 'argon2id', m: 65536, t: 3, p: 4, v: 1 } as const;
+
+/**
+ * Grants an account an active subscription directly, for tests that are about something else.
+ * The webhook path is exercised on its own in `billing.test.ts`.
+ */
+export async function grantSubscription(userId: string, days = 30): Promise<void> {
+  const ends = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  await env.DB.prepare(
+    `INSERT INTO subscriptions
+       (user_id, provider, customer_id, subscription_id, status, current_period_end_utc, updated_utc)
+     VALUES (?1, 'paddle', 'ctm_test', 'sub_test', 'active', ?2, ?2)
+     ON CONFLICT(user_id) DO UPDATE SET status = 'active', current_period_end_utc = excluded.current_period_end_utc`,
+  )
+    .bind(userId, ends)
+    .run();
+}
+
+/** Expires both the trial and any subscription, so the account is unentitled. */
+export async function expireEntitlement(userId: string): Promise<void> {
+  const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  await env.DB.prepare('UPDATE users SET trial_ends_utc = ?2 WHERE id = ?1').bind(userId, past).run();
+  await env.DB.prepare('DELETE FROM subscriptions WHERE user_id = ?1').bind(userId).run();
+}
+
 export interface Account {
+  subject: string;
   email: string;
-  authKey: string;
   userId: string;
-  wrappedPw: string;
+  dataKey: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 let counter = 0;
 
-export async function registerAccount(
-  overrides: { recoveryKey?: boolean } = {},
+/** Signs in as a fresh Google account, creating it on the way through. */
+export async function signIn(
+  overrides: { subject?: string; email?: string; device?: string } = {},
 ): Promise<Account> {
   counter += 1;
-  const email = `user${counter}-${crypto.randomUUID().slice(0, 8)}@example.test`;
-  const authKey = randomAuthKey();
-  const wrappedPw = fakeWrappedDek();
+  const subject = overrides.subject ?? `google-sub-${counter}-${crypto.randomUUID().slice(0, 8)}`;
+  const email = overrides.email ?? `user${counter}@example.test`;
+  const code = `code-${crypto.randomUUID()}`;
 
-  const response = await post('/v1/auth/register', {
-    email,
-    auth_key: authKey,
-    wrapped_dek_pw: wrappedPw,
-    wrapped_dek_rk: overrides.recoveryKey === false ? undefined : fakeWrappedDek(),
-    kdf_params: KDF_PARAMS,
+  stubGoogle({ [code]: { subject, email } });
+  const response = await post('/v1/auth/google', {
+    code,
+    code_verifier: 'a'.repeat(43),
+    redirect_uri: REDIRECT_URI,
+    device_name: overrides.device ?? 'Test PC',
   });
 
-  if (response.status !== 201) {
-    throw new Error(`register failed: ${response.status} ${JSON.stringify(response.body)}`);
+  if (response.status !== 200) {
+    throw new Error(`sign-in failed: ${response.status} ${JSON.stringify(response.body)}`);
   }
 
-  return { email, authKey, userId: response.body.user_id, wrappedPw };
+  return {
+    subject,
+    email,
+    userId: response.body.user_id,
+    dataKey: response.body.data_key,
+    accessToken: response.body.access_token,
+    refreshToken: response.body.refresh_token,
+  };
 }
 
-export async function loginAccount(account: Account, device = 'Test PC') {
-  return post('/v1/auth/login', {
-    email: account.email,
-    auth_key: account.authKey,
+/** Signs in again as an account that already exists, as a second device would. */
+export function signInAgain(account: Account, device = 'Second PC') {
+  const code = `code-${crypto.randomUUID()}`;
+  stubGoogle({ [code]: { subject: account.subject, email: account.email } });
+  return post('/v1/auth/google', {
+    code,
+    code_verifier: 'b'.repeat(43),
+    redirect_uri: REDIRECT_URI,
     device_name: device,
   });
 }

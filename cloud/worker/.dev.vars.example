@@ -1,0 +1,23 @@
+# Local secrets for `wrangler dev`. Copy to .dev.vars (git-ignored) and fill in. In production the
+# same names are Worker secrets: `npx wrangler secret put <NAME>`. Never commit real values.
+
+# HS256 signing secret for access tokens (>= 32 chars).
+#   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+JWT_SECRET=
+
+# Seals each account's data key at rest (src/dek.ts). Rotating it is a data-loss event.
+DEK_WRAP_KEY=
+
+# Google OAuth desktop client secret; the client id is a public var in wrangler.toml.
+GOOGLE_CLIENT_SECRET=
+
+# Paddle. Live values come from the live dashboard (Developer tools), sandbox values from the
+# sandbox dashboard; the two accounts are separate and their keys do not work across.
+#   Notifications -> destination -> "secret key" (pdl_ntfset_...)
+PADDLE_WEBHOOK_SECRET=
+#   Authentication -> API keys (server-side; never ships to the app or the site)
+PADDLE_API_KEY=
+
+# Public, non-secret Paddle values live elsewhere on purpose:
+#   PADDLE_PRICE_ID_MONTHLY / PADDLE_PRICE_ID_ANNUAL  -> wrangler.toml [vars]
+#   PADDLE_CLIENT_TOKEN (live_...) / PADDLE_ENVIRONMENT -> ../site/build.mjs (rendered into /checkout/)

@@ -1,4 +1,4 @@
-using Daynote.Core.Domain;
+﻿using Daynote.Core.Domain;
 
 namespace Daynote.Core.Sync;
 
@@ -29,6 +29,13 @@ public enum SyncOutcome
 
     /// <summary>The session is gone; only a fresh sign-in will help.</summary>
     SignInRequired,
+
+    /// <summary>
+    /// Cloud sync is not paid for. Not an error and not a sign-out: the session is fine, the notes
+    /// on this PC are untouched, and the copy already uploaded is kept until there is a
+    /// subscription again (docs/CLOUD_SYNC.md §14).
+    /// </summary>
+    SubscriptionRequired,
 }
 
 public sealed record SyncReport(
@@ -126,8 +133,12 @@ public sealed class SyncEngine
         {
             // Being offline is the normal state of a laptop, not a fault to report. Anything the
             // engine already wrote stays written; the queue and cursor make the next run resume.
-            return tally.ToReport(
-                transport.RequiresSignIn ? SyncOutcome.SignInRequired : SyncOutcome.Offline);
+            return tally.ToReport(transport switch
+            {
+                { RequiresSubscription: true } => SyncOutcome.SubscriptionRequired,
+                { RequiresSignIn: true } => SyncOutcome.SignInRequired,
+                _ => SyncOutcome.Offline,
+            });
         }
     }
 

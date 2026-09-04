@@ -1,4 +1,4 @@
-using Daynote.Core.Domain;
+﻿using Daynote.Core.Domain;
 
 namespace Daynote.Core.Sync;
 
@@ -6,13 +6,12 @@ namespace Daynote.Core.Sync;
 /// Everything this PC keeps about the signed-in account between launches.
 /// </summary>
 /// <remarks>
-/// <see cref="DataKey"/> is cached deliberately. It is what makes an ordinary forgotten-password
-/// reset lossless for someone still using their own PC (docs/CLOUD_SYNC.md §4.8b), so it is cleared
-/// only on explicit sign-out — never on a 401, and never as a reaction to a failed refresh.
+/// <see cref="DataKey"/> is cached deliberately: reading a note must not wait on the network. It is
+/// cleared only on explicit sign-out — never on a 401, and never as a reaction to a failed refresh.
 /// <para>
-/// It is null in exactly one state: signed in but locked, after a password reset the device cannot
-/// yet undo. The session still has to persist, or closing the app would strand the user with no way
-/// back to the unlock screen.
+/// It is null only when the stored blob predates the key or was written by a restore that lost it.
+/// The session still persists in that state, because the tokens are enough to fetch the key again
+/// (<see cref="AccountService.RestoreDataKeyAsync"/>) without another trip through the browser.
 /// </para>
 /// </remarks>
 public sealed record SyncCredentials(
@@ -22,9 +21,12 @@ public sealed record SyncCredentials(
     DateTimeOffset AccessExpiresUtc,
     string RefreshToken,
     int DekGeneration,
-    KeyMaterial? DataKey) : IDisposable
+    KeyMaterial? DataKey,
+    // Persisted so that a null key can be told apart from a locked account without asking the
+    // server: one is re-fetched silently, the other has to prompt for a passphrase.
+    KeyProtection Protection = KeyProtection.Server) : IDisposable
 {
-    /// <summary>False while the account is locked: signed in, but nothing here opens the content.</summary>
+    /// <summary>False when the session is present but its data key is not.</summary>
     public bool CanDecrypt => DataKey is not null;
 
     public void Dispose() => DataKey?.Dispose();
@@ -52,13 +54,17 @@ public interface ISyncSessionStore
     ValueTask ClearAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed record RegisteredAccount(string UserId, RecoveryKey RecoveryKey);
-
 public enum ResumeState
 {
     SignedOut,
 
-    /// <summary>Signed in, but no key on this device opens the content yet.</summary>
+    /// <summary>Signed in, but this device has no copy of the data key. Re-fetchable.</summary>
+    KeyMissing,
+
+    /// <summary>
+    /// Signed in to an account with the lock on, and this device has not been unlocked yet. Nothing
+    /// here can open the content until the passphrase or the recovery key is supplied.
+    /// </summary>
     Locked,
 
     Ready,
@@ -66,9 +72,11 @@ public enum ResumeState
 
 /// <summary>
 /// What a device can do right now. <see cref="Session"/> is non-null only for
-/// <see cref="ResumeState.Ready"/>, and the caller owns disposing its key.
+/// <see cref="ResumeState.Ready"/>, and the caller owns disposing its key. <see cref="Email"/> is
+/// the signed-in address, carried here so the settings panel can name the account without a
+/// network call.
 /// </summary>
-public sealed record ResumedSession(ResumeState State, SyncSession? Session)
+public sealed record ResumedSession(ResumeState State, SyncSession? Session, string? Email = null)
 {
     public static ResumedSession SignedOut { get; } = new(ResumeState.SignedOut, null);
 
@@ -77,38 +85,38 @@ public sealed record ResumedSession(ResumeState State, SyncSession? Session)
 
 public enum AccountFailure
 {
-    /// <summary>Wrong email or password. Indistinguishable by design.</summary>
+    /// <summary>The session is gone or was never established.</summary>
     InvalidCredentials,
 
-    EmailAlreadyRegistered,
-
-    InvalidEmail,
-
-    WeakPassword,
-
     /// <summary>
-    /// Signed in, but the stored envelope no longer opens with this password — the state after a
-    /// password reset. Needs the recovery key or a device that still holds the data key.
+    /// The browser window was closed, the wait timed out, or the provider reported that the person
+    /// declined. An ordinary outcome: it gets a quiet message, not an error banner.
     /// </summary>
-    RewrapRequired,
+    SignInCancelled,
 
-    /// <summary>
-    /// The account was created by a build using a key-derivation profile this one does not know.
-    /// Updating the app is the fix; guessing would just produce a wrong key.
-    /// </summary>
-    UnsupportedKdfProfile,
+    /// <summary>The Google account has no verified address, so it cannot be used to sign in.</summary>
+    UnverifiedIdentity,
 
-    /// <summary>The reset code was wrong, expired, already used, or out of attempts.</summary>
-    InvalidResetCode,
+    /// <summary>The passphrase did not open the stored envelope.</summary>
+    InvalidPassphrase,
 
     /// <summary>The recovery key did not open the stored envelope.</summary>
     InvalidRecoveryKey,
 
     /// <summary>
-    /// Nothing on this device can open the cloud copy, and no recovery key was supplied. The only
-    /// remaining options are another device or discarding the cloud copy.
+    /// The account is locked and this device holds nothing that opens it. Needs the passphrase, the
+    /// recovery key, or a device that is already unlocked.
     /// </summary>
-    NoWayToUnlock,
+    LockedOut,
+
+    /// <summary>
+    /// The account was locked by a build using a key-derivation profile this one does not know.
+    /// Updating the app is the fix; guessing would just produce a wrong key.
+    /// </summary>
+    UnsupportedKdfProfile,
+
+    /// <summary>A passphrase too short to be worth stretching.</summary>
+    WeakPassphrase,
 
     Offline,
 

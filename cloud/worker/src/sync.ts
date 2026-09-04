@@ -1,4 +1,5 @@
 import { authenticate } from './auth';
+import { resolve as resolveEntitlement } from './entitlement';
 import { ApiError, SYNC_BODY_LIMIT, json, readJsonObject } from './http';
 import { canonicalUtc, isCanonicalUtc } from './time';
 import type { Env } from './env';
@@ -133,8 +134,28 @@ async function readExisting(
   return known;
 }
 
+
+/**
+ * Refuses the request when the account is not entitled to sync.
+ *
+ * A lapse stops sync and nothing else: every row this Worker already holds stays exactly where it
+ * is (docs/CLOUD_SYNC.md §14). Resubscribing resumes from the same cursor, and in the meantime the
+ * user's own PC is unaffected — the local database is the source of truth and needs no account.
+ */
+async function requireEntitlement(env: Env, userId: string, now: Date): Promise<void> {
+  const entitlement = await resolveEntitlement(env, userId, now);
+  if (!entitlement.canSync) {
+    throw new ApiError(
+      'subscription_required',
+      'Cloud sync needs an active subscription. Your notes on this PC are unaffected, and the copy '
+        + 'already synced is kept.',
+    );
+  }
+}
+
 export async function push(request: Request, env: Env, now: Date): Promise<Response> {
   const user = await authenticate(request, env, now);
+  await requireEntitlement(env, user.id, now);
   const body = await readJsonObject(request, SYNC_BODY_LIMIT);
   const notes = parseNotes(body);
   const tombstones = parseTombstones(body);
@@ -241,6 +262,7 @@ interface ChangeRow {
 
 export async function pull(request: Request, env: Env, now: Date): Promise<Response> {
   const user = await authenticate(request, env, now);
+  await requireEntitlement(env, user.id, now);
   const url = new URL(request.url);
 
   const since = Number(url.searchParams.get('since') ?? '0');

@@ -1,41 +1,34 @@
-using System.Text.RegularExpressions;
-
-namespace Daynote.Core.Sync;
+﻿namespace Daynote.Core.Sync;
 
 /// <summary>
-/// Registration, sign-in, and sign-out: the only place a password is ever handled.
+/// Sign-in and sign-out for cloud sync.
 /// </summary>
 /// <remarks>
-/// The password reaches this class and stops here. It is turned into an auth key and a
-/// key-encryption key (<see cref="ISyncCrypto.DeriveKeys"/>) and neither the password nor the KEK is
-/// stored or transmitted. See docs/CLOUD_SYNC.md §4.
+/// Identity comes from Google (<see cref="IIdentityProvider"/>). By default the data key comes from
+/// the server too, so cloud sync is encrypted in transit and at rest but is not end-to-end encrypted
+/// (docs/CLOUD_SYNC.md §1) — an identity provider proves who you are but hands the client no secret
+/// to build a key from. An account can take that key away from the server with the opt-in lock; that
+/// half lives in AccountService.Lock.cs.
 /// </remarks>
 public sealed partial class AccountService
 {
     /// <summary>
-    /// The one key-derivation profile this protocol version uses. Login cannot ask the server which
-    /// profile an account uses without also answering "does this email exist?", so the profile is
-    /// pinned to the protocol version instead. The server still stores the account's parameters, so a
-    /// future v2 can be introduced and detected; a build meeting parameters it does not recognise
-    /// reports <see cref="AccountFailure.UnsupportedKdfProfile"/> rather than deriving a wrong key.
+    /// The data key does not rotate in this design — the server issues one per account and keeps it —
+    /// so the store's generation column is pinned. It is kept rather than dropped because the sync
+    /// store writes it alongside every row, and rewriting that schema would buy nothing.
     /// </summary>
-    private static KdfParameters Profile => KdfParameters.Argon2idDefault;
-
-    /// <summary>
-    /// A floor, not a policy. The KDF is what actually protects the password, and a length rule that
-    /// pushes people toward "Passw0rd!" would make things worse, so this only rejects the obviously
-    /// unusable.
-    /// </summary>
-    public const int MinimumPasswordLength = 10;
+    private const int DataKeyGeneration = 1;
 
     private readonly IAuthApiClient auth;
     private readonly ISyncCrypto crypto;
+    private readonly IIdentityProvider identity;
     private readonly ISyncSessionStore sessions;
     private readonly ISyncStore store;
     private readonly Func<string> deviceName;
 
     public AccountService(
         IAuthApiClient auth,
+        IIdentityProvider identity,
         ISyncCrypto crypto,
         ISyncSessionStore sessions,
         ISyncStore store,
@@ -43,122 +36,64 @@ public sealed partial class AccountService
     {
         this.auth = auth ?? throw new ArgumentNullException(nameof(auth));
         this.crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
+        this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
         this.sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         this.store = store ?? throw new ArgumentNullException(nameof(store));
         this.deviceName = deviceName ?? (static () => Environment.MachineName);
     }
 
     /// <summary>
-    /// Creates the account and signs in. Returns the recovery key, which the caller must show once
-    /// and never store: it is the only way back in if the password is forgotten
-    /// (docs/CLOUD_SYNC.md §4.6).
+    /// Runs the browser sign-in, redeems the code, and enrols existing local content for its first
+    /// push. Returns the signed-in address. Throws <see cref="AccountException"/> for every
+    /// user-facing outcome, including the user simply closing the browser.
     /// </summary>
-    public async ValueTask<RegisteredAccount> RegisterAsync(
-        string email,
-        string password,
-        CancellationToken cancellationToken = default)
+    public async ValueTask<string> SignInAsync(CancellationToken cancellationToken = default)
     {
-        string normalized = ValidateEmail(email);
-        ValidatePassword(password);
+        IdentityGrant grant = await identity.AuthorizeAsync(cancellationToken).ConfigureAwait(false);
 
-        RecoveryKey recoveryKey = RecoveryKey.Generate();
-        using SyncKeySet keys = crypto.DeriveKeys(password, normalized, Profile);
-        using KeyMaterial dataKey = crypto.GenerateDataKey();
-        using KeyMaterial recoveryKek = crypto.DeriveRecoveryKek(recoveryKey);
-
-        string wrappedByPassword = crypto.WrapDataKey(
-            dataKey,
-            keys.Kek,
-            CipherScope.DataKey(DataKeyPurpose.Password, normalized));
-        string wrappedByRecovery = crypto.WrapDataKey(
-            dataKey,
-            recoveryKek,
-            CipherScope.DataKey(DataKeyPurpose.Recovery, normalized));
-
-        string userId = await auth.RegisterAsync(
-            new RegisterRequest(
-                normalized,
-                keys.AuthKeyForServer(),
-                wrappedByPassword,
-                wrappedByRecovery,
-                Profile.ToJson()),
+        SessionResponse session = await auth.SignInWithGoogleAsync(
+            new GoogleSignInRequest(
+                grant.AuthorizationCode,
+                grant.CodeVerifier,
+                grant.RedirectUri,
+                deviceName()),
             cancellationToken).ConfigureAwait(false);
 
-        // Sign in through the ordinary path rather than assuming the registration succeeded into a
-        // usable state: this proves the envelope we just uploaded actually opens.
-        await SignInAsync(normalized, password, cancellationToken).ConfigureAwait(false);
-        return new RegisteredAccount(userId, recoveryKey);
-    }
-
-    /// <summary>
-    /// Derives the keys, authenticates, opens the data key, and enrols existing local content for its
-    /// first push. Throws <see cref="AccountException"/> for every user-facing outcome.
-    /// </summary>
-    public async ValueTask<string> SignInAsync(
-        string email,
-        string password,
-        CancellationToken cancellationToken = default)
-    {
-        string normalized = ValidateEmail(email);
-        if (string.IsNullOrEmpty(password))
+        if (session.Keys is not { } material)
         {
-            throw new AccountException(AccountFailure.InvalidCredentials, "A password is required.");
-        }
-
-        using SyncKeySet keys = crypto.DeriveKeys(password, normalized, Profile);
-        SessionResponse session = await auth.LoginAsync(
-            new LoginRequest(normalized, keys.AuthKeyForServer(), deviceName()),
-            cancellationToken).ConfigureAwait(false);
-
-        var accountProfile = KdfParameters.Parse(session.KdfParametersJson);
-        if (!accountProfile.IsSuccess || accountProfile.Value != Profile)
-        {
-            // Deriving with the wrong profile would produce a key that silently fails to unwrap, so
-            // say what is actually wrong instead.
             throw new AccountException(
-                AccountFailure.UnsupportedKdfProfile,
-                "This account was created by a newer version of Daynote. Update the app to sign in.");
+                AccountFailure.ServerError,
+                "Signed in, but the server sent no key material. Try again.");
         }
 
-        var opened = crypto.UnwrapDataKey(
-            session.WrappedDekPassword,
-            keys.Kek,
-            CipherScope.DataKey(DataKeyPurpose.Password, normalized));
-        // The password authenticated, so it is right — but if the envelope predates a reset it was
-        // never re-wrapped, and the content stays unreadable until §4.8 unlock runs. The session is
-        // persisted either way: without it there would be no valid token left to unlock with, and
-        // closing the app would strand the user.
-        await sessions.SaveAsync(
-            new SyncCredentials(
-                session.UserId,
-                normalized,
-                session.AccessToken,
-                session.AccessExpiresUtc,
-                session.RefreshToken,
-                session.DekGeneration,
-                opened.IsSuccess ? opened.Value : null),
-            cancellationToken).ConfigureAwait(false);
+        var credentials = new SyncCredentials(
+            session.UserId,
+            session.Email,
+            session.AccessToken,
+            session.AccessExpiresUtc,
+            session.RefreshToken,
+            DataKeyGeneration,
+            // Null for a locked account: the envelopes need a passphrase this device has not been
+            // given yet. The session is saved either way, or the app would have no token left to
+            // unlock with.
+            material.Protection == KeyProtection.Server ? DecodeDataKey(material) : null,
+            material.Protection);
 
-        if (!opened.IsSuccess)
+        await sessions.SaveAsync(credentials, cancellationToken).ConfigureAwait(false);
+        await store.SignInAsync(session.UserId, DataKeyGeneration, cancellationToken).ConfigureAwait(false);
+
+        if (material.Protection == KeyProtection.Passphrase)
         {
-            await store.SignInAsync(session.UserId, session.DekGeneration, cancellationToken)
-                .ConfigureAwait(false);
             await store.SetLockedAsync(true, cancellationToken).ConfigureAwait(false);
             throw new AccountException(
-                AccountFailure.RewrapRequired,
-                "Your notes are locked. Enter your recovery key, or sign in on a device you used before.");
-        }
-
-        await store.SignInAsync(session.UserId, session.DekGeneration, cancellationToken).ConfigureAwait(false);
-        if (session.RewrapPending)
-        {
-            await store.SetLockedAsync(true, cancellationToken).ConfigureAwait(false);
+                AccountFailure.LockedOut,
+                "This account is locked. Enter its passphrase to open your notes on this PC.");
         }
 
         // Content written before this PC ever signed in has no outbox entry, because the outbox is
         // trigger-fed. Without this, months of local notes would simply never reach the cloud.
         await store.EnrollExistingContentAsync(cancellationToken).ConfigureAwait(false);
-        return session.UserId;
+        return session.Email;
     }
 
     /// <summary>
@@ -189,12 +124,12 @@ public sealed partial class AccountService
     }
 
     /// <summary>
-    /// Resolves what this device can currently do.
+    /// Resolves what this device can currently do, without touching the network.
     /// </summary>
     /// <remarks>
-    /// The three states are genuinely different and collapsing them is a real bug: a locked account
-    /// reported as signed out makes the status chip disappear, which takes away the only route the
-    /// user has to the unlock screen.
+    /// A stored session whose data key is missing is reported as <see cref="ResumeState.KeyMissing"/>
+    /// rather than as signed out: the tokens are still good, so the key can be re-fetched with
+    /// <see cref="RestoreDataKeyAsync"/> instead of sending the user back through the browser.
     /// </remarks>
     public async ValueTask<ResumedSession> ResumeAsync(CancellationToken cancellationToken = default)
     {
@@ -206,44 +141,155 @@ public sealed partial class AccountService
 
         if (credentials.DataKey is not { } dataKey)
         {
-            // Signed in, but nothing here opens the content. Syncing would be worse than waiting.
             credentials.Dispose();
-            return ResumedSession.Locked;
+            // Two different states that look alike from here and must not be collapsed: a default
+            // account simply re-fetches its key, while a locked one has to ask for the passphrase.
+            return new ResumedSession(
+                credentials.Protection == KeyProtection.Passphrase
+                    ? ResumeState.Locked
+                    : ResumeState.KeyMissing,
+                null,
+                credentials.Email);
         }
 
-        return new ResumedSession(ResumeState.Ready, new SyncSession(credentials.UserId, dataKey));
+        return new ResumedSession(
+            ResumeState.Ready,
+            new SyncSession(credentials.UserId, dataKey),
+            credentials.Email);
     }
 
-    private static string ValidateEmail(string? email)
+    /// <summary>
+    /// Fetches the data key again for a session that has everything except the key. Cheap and safe
+    /// to call whenever <see cref="ResumeAsync"/> reports <see cref="ResumeState.KeyMissing"/>.
+    /// </summary>
+    /// <remarks>
+    /// Reports <see cref="AccountFailure.LockedOut"/> if the account turned out to be locked — the
+    /// server has no key to hand back, and the caller has to ask for the passphrase instead.
+    /// </remarks>
+    public async ValueTask RestoreDataKeyAsync(CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (credentials is null)
         {
-            throw new AccountException(AccountFailure.InvalidEmail, "An email address is required.");
+            throw new AccountException(AccountFailure.InvalidCredentials, "Sign in to restore the key.");
         }
 
-        string normalized = CipherScope.NormalizeEmail(email);
-        if (normalized.Length > 254 || !EmailPattern().IsMatch(normalized))
+        using (credentials)
         {
-            throw new AccountException(AccountFailure.InvalidEmail, "That does not look like an email address.");
-        }
+            KeyMaterialResponse material = await auth
+                .GetKeyMaterialAsync(credentials.AccessToken, cancellationToken)
+                .ConfigureAwait(false);
 
-        return normalized;
-    }
+            if (material.Protection == KeyProtection.Passphrase)
+            {
+                await sessions.SaveAsync(
+                    credentials with { DataKey = null, Protection = KeyProtection.Passphrase },
+                    cancellationToken).ConfigureAwait(false);
+                await store.SetLockedAsync(true, cancellationToken).ConfigureAwait(false);
+                throw new AccountException(
+                    AccountFailure.LockedOut,
+                    "This account is locked. Enter its passphrase to open your notes on this PC.");
+            }
 
-    private static void ValidatePassword(string? password)
-    {
-        if (password is null || password.Length < MinimumPasswordLength)
-        {
-            throw new AccountException(
-                AccountFailure.WeakPassword,
-                $"Use at least {MinimumPasswordLength} characters.");
+            await AdoptServerKeyAsync(credentials, material, cancellationToken).ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    /// A sanity check, not an RFC 5322 parser, and deliberately the same shape the server applies.
-    /// Real validity is established by the verification email.
+    /// Reads the billing state for the signed-in account (docs/CLOUD_SYNC.md §14). Separate from
+    /// sign-in because the settings panel asks for it whenever it opens, and because a lapse noticed
+    /// mid-session has to be re-read without another trip through the browser.
     /// </summary>
-    [GeneratedRegex(@"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$", RegexOptions.CultureInvariant)]
-    private static partial Regex EmailPattern();
+    public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> ReadBillingAsync(
+        CancellationToken cancellationToken = default)
+    {
+        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (credentials is null)
+        {
+            return (Entitlement.Unknown, BillingLinks.None);
+        }
+
+        using (credentials)
+        {
+            return await auth.GetBillingAsync(credentials.AccessToken, cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Creates a checkout for this account. Not cached: the transaction carries this account's id,
+    /// so a reused URL would bill the wrong person.
+    /// </summary>
+    public ValueTask<string> CreateCheckoutSessionAsync(
+        BillingPlan plan,
+        CancellationToken cancellationToken = default) =>
+        WithAccessTokenAsync(
+            (token, ct) => auth.CreateCheckoutSessionAsync(token, plan, ct),
+            cancellationToken);
+
+    /// <summary>
+    /// Mints a link to the provider's customer portal. Not cached: the link is single-use and
+    /// expires, so it is created when the user clicks and used immediately.
+    /// </summary>
+    public ValueTask<string> CreatePortalSessionAsync(CancellationToken cancellationToken = default) =>
+        WithAccessTokenAsync(auth.CreatePortalSessionAsync, cancellationToken);
+
+    private async ValueTask<string> WithAccessTokenAsync(
+        Func<string, CancellationToken, ValueTask<string>> call,
+        CancellationToken cancellationToken)
+    {
+        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (credentials is null)
+        {
+            throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
+        }
+
+        using (credentials)
+        {
+            return await call(credentials.AccessToken, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Caches a server-held key and clears any locked state left over from before.</summary>
+    private async ValueTask AdoptServerKeyAsync(
+        SyncCredentials credentials,
+        KeyMaterialResponse material,
+        CancellationToken cancellationToken)
+    {
+        await sessions.SaveAsync(
+            credentials with { DataKey = DecodeDataKey(material), Protection = KeyProtection.Server },
+            cancellationToken).ConfigureAwait(false);
+        await store.SetLockedAsync(false, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static KeyMaterial DecodeDataKey(KeyMaterialResponse material)
+    {
+        if (material.DataKeyBase64 is not { Length: > 0 } encoded)
+        {
+            throw new AccountException(AccountFailure.ServerError, "The server sent no data key.");
+        }
+
+        return DecodeDataKey(encoded);
+    }
+
+    private static KeyMaterial DecodeDataKey(string encoded)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = System.Buffers.Text.Base64Url.DecodeFromChars(encoded);
+        }
+        catch (FormatException)
+        {
+            throw new AccountException(AccountFailure.ServerError, "The server sent an unreadable data key.");
+        }
+
+        if (bytes.Length != KeyMaterial.Length)
+        {
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes);
+            throw new AccountException(AccountFailure.ServerError, "The server sent a data key of the wrong size.");
+        }
+
+        return KeyMaterial.Adopt(bytes);
+    }
 }

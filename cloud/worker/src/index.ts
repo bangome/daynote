@@ -3,30 +3,33 @@ import { privacyPage } from './privacy';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
 import * as auth from './auth';
-import * as reset from './reset';
+import * as billing from './billing';
 import * as sync from './sync';
 import type { Env } from './env';
 
 /**
- * Daynote cloud sync Worker — accounts, sessions, and note sync.
+ * Daynote cloud sync Worker — Google sign-in, sessions, and note sync.
  *
- * The asset routes land with the R2 phase. This Worker holds auth secrets but never a
- * content-encryption key: every note body it stores arrives already encrypted.
- * See docs/CLOUD_SYNC.md.
+ * The asset routes land with the R2 phase. Note bodies arrive encrypted; by default this Worker also
+ * holds the key that opens them (src/dek.ts), so sync is encrypted in transit and at rest but is NOT
+ * end-to-end encrypted. An account that turns on the opt-in lock takes that key away from us
+ * (/v1/auth/protect). See docs/CLOUD_SYNC.md §1 and §4.1b.
  */
 
 type Handler = (request: Request, env: Env, now: Date) => Promise<Response>;
 
 const ROUTES: Record<string, Handler> = {
-  'POST /v1/auth/register': auth.register,
-  'POST /v1/auth/login': auth.login,
+  'POST /v1/auth/google': auth.google,
   'POST /v1/auth/refresh': auth.refresh,
   'POST /v1/auth/logout': auth.logout,
-  'POST /v1/auth/password': auth.changePassword,
   'GET /v1/auth/me': auth.me,
-  'POST /v1/auth/reset/request': reset.requestReset,
-  'POST /v1/auth/reset/confirm': reset.confirmReset,
-  'POST /v1/auth/rewrap': reset.rewrap,
+  'GET /v1/auth/data-key': auth.dataKey,
+  'POST /v1/auth/protect': auth.protect,
+  'POST /v1/auth/unprotect': auth.unprotect,
+  'GET /v1/billing/status': billing.status,
+  'POST /v1/billing/checkout': billing.checkout,
+  'POST /v1/billing/portal': billing.portal,
+  'POST /v1/billing/webhook': billing.webhook,
   'POST /v1/sync/push': sync.push,
   'GET /v1/sync/pull': sync.pull,
 };

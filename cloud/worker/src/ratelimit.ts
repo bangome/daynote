@@ -67,11 +67,11 @@ export async function sweep(env: Env, now: Date): Promise<void> {
   await env.DB.prepare('DELETE FROM rate_limits WHERE expires_utc < ?1').bind(canonicalUtc(now)).run();
 }
 
-export const LOGIN_LIMITS = (email: string, ip: string): readonly Limit[] => [
-  { action: 'login', scope: 'email', value: email, max: 10 },
-  { action: 'login', scope: 'ip', value: ip, max: 30 },
-];
-
-export const REGISTER_LIMITS = (ip: string): readonly Limit[] => [
-  { action: 'register', scope: 'ip', value: ip, max: 5 },
+/**
+ * Sign-in is one Google authorization code being redeemed, so there is no per-account limit to
+ * apply: the caller has no account until the exchange succeeds. Per-IP only, sized so a person
+ * retrying a failed browser flow is never stopped.
+ */
+export const SIGNIN_LIMITS = (ip: string): readonly Limit[] => [
+  { action: 'signin', scope: 'ip', value: ip, max: 20 },
 ];

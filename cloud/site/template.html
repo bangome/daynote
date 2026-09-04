@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{canonical}}">
+<link rel="alternate" hreflang="ko" href="https://daynote.arachat.cc/">
+<link rel="alternate" hreflang="en" href="https://daynote.arachat.cc/en/">
+<link rel="alternate" hreflang="x-default" href="https://daynote.arachat.cc/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Daynote">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{description}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:image" content="https://daynote.arachat.cc/img/og-{{lang}}.jpg">
+<meta property="og:locale" content="{{ogLocale}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f8f6f2">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/icon-32.png">
+<link rel="apple-touch-icon" href="/img/icon-180.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Daynote",
+  "applicationCategory": "ProductivityApplication",
+  "operatingSystem": "Windows 11, Windows 10 (x64)",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "{{description}}",
+  "url": "https://daynote.arachat.cc/",
+  "image": "https://daynote.arachat.cc/img/og-{{lang}}.jpg"
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">{{skip}}</a>
+
+<header class="top">
+  <div class="wrap top__row">
+    <a class="brand" href="{{home}}" aria-label="Daynote">
+      <img src="/img/logo-{{lang}}.webp" width="150" height="42" alt="Daynote">
+    </a>
+    <nav class="top__nav" aria-label="{{navLabel}}">
+      <a href="#features">{{navFeatures}}</a>
+      <a href="#sync">{{navSync}}</a>
+      <a href="#privacy">{{navPrivacy}}</a>
+      <a href="#download">{{navDownload}}</a>
+      <a class="lang" href="{{altHref}}" lang="{{altLang}}" hreflang="{{altLang}}">{{altLabel}}</a>
+    </nav>
+    <a class="btn btn--ink btn--sm" href="{{storeUrl}}" rel="noopener">{{navGet}}</a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ───────── Hero ───────── -->
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <p class="eyebrow">{{heroEyebrow}}</p>
+      <h1 class="hero__title">{{heroTitle}}</h1>
+      <p class="hero__lede">{{heroLede}}</p>
+      <div class="hero__cta">
+        <a class="btn btn--accent" href="{{storeUrl}}" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+          {{heroCta}}
+        </a>
+        <a class="link-arrow" href="#features">{{heroSecondary}}</a>
+      </div>
+      <p class="hero__meta">{{heroMeta}}</p>
+    </div>
+    <figure class="hero__shot">
+      <img src="/img/hero-{{lang}}.webp" width="1046" height="714" alt="{{heroAlt}}" fetchpriority="high">
+    </figure>
+  </div>
+  <div class="horizon" aria-hidden="true"><span class="horizon__sun"></span></div>
+</section>
+
+<!-- ───────── Thesis ───────── -->
+<section class="thesis">
+  <div class="wrap thesis__grid">
+    <div class="thesis__cal" aria-hidden="true">
+      <div class="cal">
+        <div class="cal__head"><span>{{calMonth}}</span><span class="cal__nav">‹ ›</span></div>
+        <div class="cal__dow">{{calDow}}</div>
+        <div class="cal__days">{{calDays}}</div>
+      </div>
+    </div>
+    <div class="thesis__copy">
+      <h2 class="h2">{{thesisTitle}}</h2>
+      <p>{{thesisBody1}}</p>
+      <p>{{thesisBody2}}</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Features ───────── -->
+<section class="features" id="features">
+  <div class="wrap">
+    <p class="eyebrow">{{featEyebrow}}</p>
+    <h2 class="h2 features__title">{{featTitle}}</h2>
+  </div>
+
+  <ol class="feat-list">
+    <li class="wrap feat">
+      <div class="feat__num" aria-hidden="true">01</div>
+      <div class="feat__copy">
+        <h3>{{f1Title}}</h3>
+        <p>{{f1Body}}</p>
+      </div>
+      <div class="feat__demo demo-todo" aria-hidden="true">
+        <pre class="code">{{f1Demo}}</pre>
+        <div class="todo">
+          <div class="todo__group">{{f1Today}}</div>
+          <label class="todo__item"><span class="box"></span><span>{{f1Item1}}</span><time>7/27 10:00</time></label>
+          <label class="todo__item"><span class="box"></span><span>{{f1Item2}}</span><time>7/27 15:00</time></label>
+          <label class="todo__item done"><span class="box box--on"></span><span>{{f1Item3}}</span></label>
+        </div>
+      </div>
+    </li>
+
+    <li class="wrap feat feat--flip">
+      <div class="feat__num" aria-hidden="true">02</div>
+      <div class="feat__copy">
+        <h3>{{f2Title}}</h3>
+        <p>{{f2Body}}</p>
+      </div>
+      <div class="feat__demo demo-files" aria-hidden="true">
+        <div class="files">
+          <div class="files__drop">{{f2Drop}}</div>
+          <div class="files__row"><span class="files__icon files__icon--img"></span><span class="files__name">{{f2File1}}</span><span class="files__meta">344 KB · PNG</span></div>
+          <div class="files__row"><span class="files__icon files__icon--pdf"></span><span class="files__name">{{f2File2}}</span><span class="files__meta">1.2 MB · PDF</span></div>
+          <div class="files__row"><span class="files__icon files__icon--xls"></span><span class="files__name">{{f2File3}}</span><span class="files__meta">88 KB · XLSX</span></div>
+        </div>
+        <pre class="code code--inline">{{f2Demo}}</pre>
+      </div>
+    </li>
+
+    <li class="wrap feat">
+      <div class="feat__num" aria-hidden="true">03</div>
+      <div class="feat__copy">
+        <h3>{{f3Title}}</h3>
+        <p>{{f3Body}}</p>
+      </div>
+      <div class="feat__demo demo-search" aria-hidden="true">
+        <div class="search">
+          <div class="search__box"><span class="search__q">{{f3Query}}</span><span class="caret"></span></div>
+          <div class="search__res">
+            <div class="search__group">{{f3GroupNotes}}</div>
+            <div class="search__hit"><b>7/27</b> {{f3Hit1}}</div>
+            <div class="search__group">{{f3GroupClip}}</div>
+            <div class="search__hit"><b>7/24</b> {{f3Hit2}}</div>
+            <div class="search__group">{{f3GroupFiles}}</div>
+            <div class="search__hit"><b>7/21</b> {{f3Hit3}}</div>
+          </div>
+        </div>
+      </div>
+    </li>
+
+    <li class="wrap feat feat--flip">
+      <div class="feat__num" aria-hidden="true">04</div>
+      <div class="feat__copy">
+        <h3>{{f4Title}}</h3>
+        <p>{{f4Body}}</p>
+      </div>
+      <div class="feat__demo demo-keys" aria-hidden="true">
+        <dl class="keys">
+          <div><dt>{{f4K1}}</dt><dd><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>D</kbd></dd></div>
+          <div><dt>{{f4K2}}</dt><dd><kbd>Alt</kbd><kbd>`</kbd></dd></div>
+          <div><dt>{{f4K3}}</dt><dd><kbd>Ctrl</kbd><kbd>N</kbd></dd></div>
+          <div><dt>{{f4K4}}</dt><dd><kbd>Ctrl</kbd><kbd>T</kbd></dd></div>
+          <div><dt>{{f4K5}}</dt><dd><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd></dd></div>
+          <div><dt>{{f4K6}}</dt><dd><kbd>Ctrl</kbd><kbd>,</kbd></dd></div>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <div class="wrap more">
+    <h3 class="more__title">{{moreTitle}}</h3>
+    <ul class="more__list">
+      <li><b>{{m1T}}</b> {{m1B}}</li>
+      <li><b>{{m2T}}</b> {{m2B}}</li>
+      <li><b>{{m3T}}</b> {{m3B}}</li>
+      <li><b>{{m4T}}</b> {{m4B}}</li>
+      <li><b>{{m5T}}</b> {{m5B}}</li>
+      <li><b>{{m6T}}</b> {{m6B}}</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ───────── Screens ───────── -->
+<section class="screens" aria-labelledby="screens-title">
+  <div class="wrap">
+    <h2 class="h2" id="screens-title">{{shotsTitle}}</h2>
+  </div>
+  <div class="screens__strip" tabindex="0">
+    <figure><img loading="lazy" src="/img/shot-{{lang}}-01-overview.webp" width="1200" height="675" alt="{{shot1}}"><figcaption>{{shot1}}</figcaption></figure>
+    <figure><img loading="lazy" src="/img/shot-{{lang}}-03-files.webp" width="1200" height="675" alt="{{shot3}}"><figcaption>{{shot3}}</figcaption></figure>
+    <figure><img loading="lazy" src="/img/shot-{{lang}}-04-shortcuts.webp" width="1200" height="675" alt="{{shot4}}"><figcaption>{{shot4}}</figcaption></figure>
+  </div>
+</section>
+
+<!-- ───────── Cloud sync ───────── -->
+<section class="sync" id="sync">
+  <div class="wrap sync__grid">
+    <div class="sync__copy">
+      <p class="eyebrow">{{syncEyebrow}}</p>
+      <h2 class="h2">{{syncTitle}}</h2>
+      <p class="sync__lede">{{syncLede}}</p>
+      <p class="sync__note">{{syncNote}}</p>
+      <p class="sync__links"><a class="link-arrow" href="{{pricingHref}}">{{navPricing}}</a></p>
+    </div>
+    <ol class="steps">
+      <li><span class="steps__n">1</span><div><b>{{st1T}}</b><p>{{st1B}}</p></div></li>
+      <li><span class="steps__n">2</span><div><b>{{st2T}}</b><p>{{st2B}}</p></div></li>
+      <li><span class="steps__n">3</span><div><b>{{st3T}}</b><p>{{st3B}}</p></div></li>
+      <li><span class="steps__n">4</span><div><b>{{st4T}}</b><p>{{st4B}}</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ───────── Privacy ───────── -->
+<section class="privacy" id="privacy">
+  <div class="wrap privacy__grid">
+    <div>
+      <p class="eyebrow eyebrow--light">{{privEyebrow}}</p>
+      <h2 class="privacy__title">{{privTitle}}</h2>
+      <p class="privacy__lede">{{privLede}}</p>
+      <a class="link-arrow link-arrow--light" href="/privacy">{{privLink}}</a>
+    </div>
+    <ul class="facts">
+      <li><span class="facts__k">{{p1K}}</span><span class="facts__v">{{p1V}}</span></li>
+      <li><span class="facts__k">{{p2K}}</span><span class="facts__v">{{p2V}}</span></li>
+      <li><span class="facts__k">{{p3K}}</span><span class="facts__v">{{p3V}}</span></li>
+      <li><span class="facts__k">{{p4K}}</span><span class="facts__v">{{p4V}}</span></li>
+      <li><span class="facts__k">{{p5K}}</span><span class="facts__v">{{p5V}}</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ───────── Download ───────── -->
+<section class="download" id="download">
+  <div class="wrap download__grid">
+    <div>
+      <h2 class="h2">{{dlTitle}}</h2>
+      <p class="download__lede">{{dlLede}}</p>
+      <a class="btn btn--accent btn--lg" href="{{storeUrl}}" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+        {{dlCta}}
+      </a>
+    </div>
+    <dl class="specs">
+      <div><dt>{{s1K}}</dt><dd>{{s1V}}</dd></div>
+      <div><dt>{{s2K}}</dt><dd>{{s2V}}</dd></div>
+      <div><dt>{{s5K}}</dt><dd>{{s5V}}</dd></div>
+      <div><dt>{{s3K}}</dt><dd><code>%LocalAppData%\Daynote</code></dd></div>
+      <div><dt>{{s4K}}</dt><dd>{{s4V}}</dd></div>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__row">
+    <img src="/img/mark.webp" width="22" height="24" alt="" aria-hidden="true">
+    <span>© 2026 Daynote</span>
+    <nav aria-label="{{footNavLabel}}">
+      <a href="{{pricingHref}}">{{navPricing}}</a>
+      <a href="{{termsHref}}">{{navTerms}}</a>
+      <a href="{{refundHref}}">{{navRefund}}</a>
+      <a href="/privacy">{{navPrivacy}}</a>
+      <a href="{{supportHref}}">{{navSupport}}</a>
+      <a href="{{altHref}}" lang="{{altLang}}">{{altLabel}}</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

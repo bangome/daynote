@@ -1,182 +1,27 @@
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using Daynote.Core.Domain;
 using Daynote.Core.Sync;
 using Daynote.Infrastructure.Sync;
 
 namespace Daynote.Infrastructure.Tests.Sync;
 
+/// <summary>
+/// Content encryption. The derivation, wrapping, and recovery-key cases went with the password
+/// model: the data key is now issued by the server, so this device derives nothing. What is still
+/// asserted is the part that did not change — a blob decrypts in exactly the slot it was written
+/// for, and any tampering is detected rather than skipped.
+/// </summary>
 [TestClass]
 public sealed class AesGcmSyncCryptoTests
 {
-    private const string Email = "alice@example.test";
     private const string UserId = "11111111-1111-4111-8111-111111111111";
     private const string NoteId = "22222222-2222-4222-8222-222222222222";
 
     private static readonly AesGcmSyncCrypto Crypto = new();
 
-    /// <summary>
-    /// The real profile costs 64 MiB and three passes per call, which is correct for a once-per-login
-    /// derivation but would make this suite crawl. Tests that only need *a* key pair use the cheapest
-    /// parameters the validator accepts; <see cref="ShippingArgon2idProfileDerivesAKey"/> covers the
-    /// profile that actually ships.
-    /// </summary>
-    private static KdfParameters CheapArgon2id =>
-        KdfParameters.Parse("""{"kdf":"argon2id","m":8192,"t":1,"p":1,"v":1}""").Value;
-
-    private static KeyMaterial NewDataKey() => Crypto.GenerateDataKey();
+    private static KeyMaterial NewDataKey() => KeyMaterial.Random();
 
     private static CipherScope NoteScope => CipherScope.Note(UserId, NoteId);
-
-    [TestMethod]
-    public void ShippingArgon2idProfileDerivesAKey()
-    {
-        using SyncKeySet keys = Crypto.DeriveKeys("correct horse battery staple", Email, KdfParameters.Argon2idDefault);
-
-        Assert.AreEqual(KeyMaterial.Length, keys.AuthKey.Span.Length);
-        Assert.AreEqual(KeyMaterial.Length, keys.Kek.Span.Length);
-    }
-
-    [TestMethod]
-    public void DerivationIsDeterministicForTheSamePasswordAndEmail()
-    {
-        using SyncKeySet first = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        using SyncKeySet second = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-
-        // Sign-in on a second device must reach the same keys with no server-held salt.
-        Assert.IsTrue(first.AuthKey.Equals(second.AuthKey));
-        Assert.IsTrue(first.Kek.Equals(second.Kek));
-    }
-
-    [TestMethod]
-    public void TheAuthKeySentToTheServerCannotUnwrapAnything()
-    {
-        // This is the whole end-to-end property: the server holds a verifier over auth_key, so if
-        // auth_key could also open the envelope, the operator could read every note.
-        using SyncKeySet keys = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        using KeyMaterial dataKey = NewDataKey();
-        CipherScope scope = CipherScope.DataKey(DataKeyPurpose.Password, Email);
-        string envelope = Crypto.WrapDataKey(dataKey, keys.Kek, scope);
-
-        Assert.IsFalse(keys.AuthKey.Equals(keys.Kek));
-
-        DomainResult<KeyMaterial> opened = Crypto.UnwrapDataKey(envelope, keys.AuthKey, scope);
-        Assert.IsFalse(opened.IsSuccess);
-        Assert.AreEqual(DomainErrorCode.CiphertextAuthenticationFailed, opened.Error.Code);
-    }
-
-    [TestMethod]
-    public void EmailIsNormalisedSoCaseAndPaddingDoNotChangeTheKeys()
-    {
-        // The server lowercases and trims; if the client did not, an account registered as
-        // "Alice@..." could never be unlocked after signing in as "alice@...".
-        using SyncKeySet canonical = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        using SyncKeySet messy = Crypto.DeriveKeys("pw", "  ALICE@Example.TEST ", CheapArgon2id);
-
-        Assert.IsTrue(canonical.Kek.Equals(messy.Kek));
-    }
-
-    [TestMethod]
-    public void DifferentEmailsGiveDifferentKeysForTheSamePassword()
-    {
-        using SyncKeySet alice = Crypto.DeriveKeys("shared", Email, CheapArgon2id);
-        using SyncKeySet bob = Crypto.DeriveKeys("shared", "bob@example.test", CheapArgon2id);
-
-        Assert.IsFalse(alice.Kek.Equals(bob.Kek));
-    }
-
-    [TestMethod]
-    public void WrongPasswordFailsToUnwrapTheDataKey()
-    {
-        using SyncKeySet real = Crypto.DeriveKeys("right", Email, CheapArgon2id);
-        using SyncKeySet wrong = Crypto.DeriveKeys("wrong", Email, CheapArgon2id);
-        using KeyMaterial dataKey = NewDataKey();
-        CipherScope scope = CipherScope.DataKey(DataKeyPurpose.Password, Email);
-
-        string envelope = Crypto.WrapDataKey(dataKey, real.Kek, scope);
-
-        Assert.IsFalse(Crypto.UnwrapDataKey(envelope, wrong.Kek, scope).IsSuccess);
-
-        DomainResult<KeyMaterial> opened = Crypto.UnwrapDataKey(envelope, real.Kek, scope);
-        Assert.IsTrue(opened.IsSuccess);
-        using KeyMaterial recovered = opened.Value;
-        Assert.IsTrue(dataKey.Equals(recovered));
-    }
-
-    [TestMethod]
-    public void TheRecoveryKeyOpensTheSameDataKeyAsThePassword()
-    {
-        // The §4.8a promise: a user who lost their password but kept the recovery key gets their
-        // notes back, because both envelopes wrap one data key.
-        using SyncKeySet keys = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        using KeyMaterial dataKey = NewDataKey();
-        RecoveryKey recoveryKey = RecoveryKey.Generate();
-        using KeyMaterial recoveryKek = Crypto.DeriveRecoveryKek(recoveryKey);
-
-        string byPassword = Crypto.WrapDataKey(
-            dataKey, keys.Kek, CipherScope.DataKey(DataKeyPurpose.Password, Email));
-        string byRecovery = Crypto.WrapDataKey(
-            dataKey, recoveryKek, CipherScope.DataKey(DataKeyPurpose.Recovery, Email));
-
-        using KeyMaterial viaPassword = Crypto
-            .UnwrapDataKey(byPassword, keys.Kek, CipherScope.DataKey(DataKeyPurpose.Password, Email))
-            .Value;
-        using KeyMaterial viaRecovery = Crypto
-            .UnwrapDataKey(byRecovery, recoveryKek, CipherScope.DataKey(DataKeyPurpose.Recovery, Email))
-            .Value;
-
-        Assert.IsTrue(viaPassword.Equals(viaRecovery));
-        Assert.IsTrue(viaPassword.Equals(dataKey));
-    }
-
-    [TestMethod]
-    public void RecoveryKeyParsedFromItsDisplayFormStillOpensTheEnvelope()
-    {
-        // The user retypes the key from paper, so the round trip through the display form is the
-        // path that actually matters, not the in-memory key.
-        using KeyMaterial dataKey = NewDataKey();
-        RecoveryKey generated = RecoveryKey.Generate();
-        CipherScope scope = CipherScope.DataKey(DataKeyPurpose.Recovery, Email);
-
-        string envelope;
-        using (KeyMaterial kek = Crypto.DeriveRecoveryKek(generated))
-        {
-            envelope = Crypto.WrapDataKey(dataKey, kek, scope);
-        }
-
-        RecoveryKey retyped = RecoveryKey.Parse(generated.ToDisplayString()).Value;
-        using KeyMaterial retypedKek = Crypto.DeriveRecoveryKek(retyped);
-
-        using KeyMaterial opened = Crypto.UnwrapDataKey(envelope, retypedKek, scope).Value;
-        Assert.IsTrue(dataKey.Equals(opened));
-    }
-
-    [TestMethod]
-    public void ADifferentRecoveryKeyDoesNotOpenTheEnvelope()
-    {
-        using KeyMaterial dataKey = NewDataKey();
-        CipherScope scope = CipherScope.DataKey(DataKeyPurpose.Recovery, Email);
-        using KeyMaterial mine = Crypto.DeriveRecoveryKek(RecoveryKey.Generate());
-        using KeyMaterial theirs = Crypto.DeriveRecoveryKek(RecoveryKey.Generate());
-
-        string envelope = Crypto.WrapDataKey(dataKey, mine, scope);
-
-        Assert.IsFalse(Crypto.UnwrapDataKey(envelope, theirs, scope).IsSuccess);
-    }
-
-    [TestMethod]
-    public void ThePasswordAndRecoveryEnvelopesAreNotInterchangeable()
-    {
-        // Distinct scopes mean the server cannot serve the recovery envelope where the password
-        // envelope belongs and have the client silently accept it.
-        using KeyMaterial dataKey = NewDataKey();
-        using SyncKeySet keys = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        CipherScope passwordScope = CipherScope.DataKey(DataKeyPurpose.Password, Email);
-        CipherScope recoveryScope = CipherScope.DataKey(DataKeyPurpose.Recovery, Email);
-
-        string envelope = Crypto.WrapDataKey(dataKey, keys.Kek, passwordScope);
-
-        Assert.IsFalse(Crypto.UnwrapDataKey(envelope, keys.Kek, recoveryScope).IsSuccess);
-    }
 
     [TestMethod]
     public void ContentRoundTrips()
@@ -378,71 +223,6 @@ public sealed class AesGcmSyncCryptoTests
         Assert.AreNotEqual(
             Crypto.BlindAssetKey(dataKey, new string('a', 64)),
             Crypto.BlindAssetKey(dataKey, new string('b', 64)));
-    }
-
-    [TestMethod]
-    public void TheAuthKeyIsSentAsThirtyTwoBase64UrlBytes()
-    {
-        using SyncKeySet keys = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-
-        string wire = keys.AuthKeyForServer();
-
-        // The Worker rejects anything that is not exactly 32 base64url bytes
-        // (cloud/worker/src/validate.ts).
-        Assert.AreEqual(43, wire.Length);
-        Assert.AreEqual(KeyMaterial.Length, Base64Url.DecodeFromChars(wire).Length);
-    }
-
-    [TestMethod]
-    public void Pbkdf2FallbackProducesUsableKeys()
-    {
-        // The fallback exists for a build that cannot take the Argon2id dependency; it must produce
-        // a working, distinct key set rather than silently degrading to the Argon2id path.
-        KdfParameters cheapPbkdf2 = KdfParameters.Parse("""{"kdf":"pbkdf2-sha256","i":100000,"v":1}""").Value;
-        using SyncKeySet viaPbkdf2 = Crypto.DeriveKeys("pw", Email, cheapPbkdf2);
-        using SyncKeySet viaArgon2 = Crypto.DeriveKeys("pw", Email, CheapArgon2id);
-        using KeyMaterial dataKey = NewDataKey();
-        CipherScope scope = CipherScope.DataKey(DataKeyPurpose.Password, Email);
-
-        string envelope = Crypto.WrapDataKey(dataKey, viaPbkdf2.Kek, scope);
-
-        Assert.IsFalse(viaPbkdf2.Kek.Equals(viaArgon2.Kek));
-        Assert.IsTrue(Crypto.UnwrapDataKey(envelope, viaPbkdf2.Kek, scope).IsSuccess);
-        Assert.IsFalse(Crypto.UnwrapDataKey(envelope, viaArgon2.Kek, scope).IsSuccess);
-    }
-
-    [TestMethod]
-    public void KdfParametersRoundTripThroughTheWireFormat()
-    {
-        foreach (KdfParameters original in new[] { KdfParameters.Argon2idDefault, KdfParameters.Pbkdf2Default })
-        {
-            DomainResult<KdfParameters> parsed = KdfParameters.Parse(original.ToJson());
-
-            Assert.IsTrue(parsed.IsSuccess, original.ToString());
-            Assert.AreEqual(original, parsed.Value);
-        }
-    }
-
-    [TestMethod]
-    [DataRow(null, DisplayName = "null")]
-    [DataRow("", DisplayName = "empty")]
-    [DataRow("not json", DisplayName = "not json")]
-    [DataRow("[]", DisplayName = "array")]
-    [DataRow("""{"kdf":"bcrypt"}""", DisplayName = "unsupported kdf")]
-    [DataRow("""{"kdf":"argon2id","t":3,"p":4}""", DisplayName = "missing memory")]
-    [DataRow("""{"kdf":"argon2id","m":"lots","t":3,"p":4}""", DisplayName = "non-numeric memory")]
-    [DataRow("""{"kdf":"argon2id","m":1024,"t":3,"p":4}""", DisplayName = "memory below the floor")]
-    [DataRow("""{"kdf":"argon2id","m":4194304,"t":3,"p":4}""", DisplayName = "memory above the ceiling")]
-    [DataRow("""{"kdf":"argon2id","m":65536,"t":0,"p":4}""", DisplayName = "zero iterations")]
-    [DataRow("""{"kdf":"pbkdf2-sha256","i":1000}""", DisplayName = "too few pbkdf2 iterations")]
-    public void HostileKdfParametersAreRejected(string? json)
-    {
-        // A compromised server that could dictate m=8 or t=0 would reduce the password derivation to
-        // nothing; one that could dictate m=8 GiB would wedge the app at the sign-in screen.
-        DomainResult<KdfParameters> parsed = KdfParameters.Parse(json);
-
-        Assert.IsFalse(parsed.IsSuccess);
-        Assert.AreEqual(DomainErrorCode.InvalidKdfParameters, parsed.Error.Code);
     }
 
     [TestMethod]

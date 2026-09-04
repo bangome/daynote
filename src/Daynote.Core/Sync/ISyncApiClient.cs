@@ -1,4 +1,4 @@
-namespace Daynote.Core.Sync;
+﻿namespace Daynote.Core.Sync;
 
 /// <summary>A note as it travels: an opaque envelope plus the clock the server orders it by.</summary>
 public sealed record EncryptedNote(string Id, string Payload, DateTimeOffset UpdatedUtc);
@@ -52,6 +52,13 @@ public sealed class SyncTransportException(string message, int? status = null, E
 
     /// <summary>True when the session is gone and only a fresh sign-in will help.</summary>
     public bool RequiresSignIn => Status == 401;
+
+    /// <summary>
+    /// True when the account is simply not paying for sync. Distinct from 401 on purpose: the
+    /// session is valid, so signing out and back in would fix nothing and would lose the cached
+    /// data key for no reason.
+    /// </summary>
+    public bool RequiresSubscription => Status == 402;
 }
 
 /// <summary>

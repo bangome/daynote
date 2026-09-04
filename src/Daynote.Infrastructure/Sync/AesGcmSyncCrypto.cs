@@ -1,20 +1,26 @@
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using System.Security.Cryptography;
+using Konscious.Security.Cryptography;
 using System.Text;
 using Daynote.Core.Domain;
 using Daynote.Core.Sync;
-using Konscious.Security.Cryptography;
 
 namespace Daynote.Infrastructure.Sync;
 
 /// <summary>
-/// The client-side crypto for cloud sync: Argon2id (or PBKDF2) for the password, HKDF-SHA256 for
-/// every derived key, and AES-256-GCM for everything stored. See docs/CLOUD_SYNC.md §4.
+/// The client-side crypto for cloud sync: HKDF-SHA256 for per-record keys and AES-256-GCM for
+/// everything stored. See docs/CLOUD_SYNC.md §4.
 /// </summary>
 /// <remarks>
+/// Two halves. Content encryption is used by every account. The derivation and wrapping half is used
+/// only by an account that has switched cloud sync to the opt-in lock (docs/CLOUD_SYNC.md §4.1b):
+/// there the data key is wrapped under a passphrase and a recovery key instead of being held by the
+/// server, so this device has to derive those wrapping keys itself.
+/// <para>
 /// All primitives come from the BCL except Argon2id, which is a pure-managed package
 /// (<c>Konscious.Security.Cryptography.Argon2</c>) chosen over a native build so the MSIX payload
 /// stays architecture-independent.
+/// </para>
 /// </remarks>
 public sealed class AesGcmSyncCrypto : ISyncCrypto
 {
@@ -73,8 +79,6 @@ public sealed class AesGcmSyncCrypto : ISyncCrypto
         // would add cost without adding strength.
         return KeyMaterial.Adopt(Expand(recoveryKey.Span, RecoveryInfo));
     }
-
-    public KeyMaterial GenerateDataKey() => KeyMaterial.Random();
 
     public string WrapDataKey(KeyMaterial dataKey, KeyMaterial wrappingKey, CipherScope scope)
     {

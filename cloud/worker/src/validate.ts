@@ -1,4 +1,3 @@
-import { AUTH_KEY_BYTES } from './verifier';
 import { fromBase64Url } from './bytes';
 import { ApiError } from './http';
 
@@ -7,53 +6,56 @@ import { ApiError } from './http';
  * malformed field never reaches D1 and never becomes a 500.
  */
 
-/**
- * Deliberately permissive: this is a sanity check, not an RFC 5322 parser. Real address validity is
- * established by the verification email, not by a regex.
- */
-const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
-const EMAIL_MAX = 254;
+const DEVICE_NAME_MAX = 64;
+const CONTROL_CHARS = /[\p{Cc}\p{Cf}]/gu;
+
+/** OAuth codes and PKCE verifiers are short; anything longer is not one of ours. */
+const CODE_MAX = 2048;
 
 /**
  * A wrapped DEK is AES-256-GCM over exactly 32 bytes: a 12-byte nonce (16 base64url chars) and a
  * 48-byte ciphertext+tag (64 chars). Fixed sizes, so validate them exactly — a wrong length here
- * means a client bug that would otherwise be discovered only at decrypt time on another device.
+ * means a client bug that would otherwise be discovered only at unlock time on another device.
  */
 const WRAPPED_DEK = /^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{64}$/;
 
+/** The raw data key handed back when the lock is turned off, base64url over TLS. */
+const RAW_DEK = /^[A-Za-z0-9_-]{43}$/;
+
 const KDF_PARAMS_MAX = 256;
-const DEVICE_NAME_MAX = 64;
-const CONTROL_CHARS = /[\p{Cc}\p{Cf}]/gu;
 
 export function requireString(body: Record<string, unknown>, field: string): string {
   const value = body[field];
-  if (typeof value !== 'string' || value.length === 0) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > CODE_MAX) {
     throw new ApiError('bad_request', `Field '${field}' is required.`);
   }
   return value;
 }
 
-export function normalizeEmail(body: Record<string, unknown>): string {
-  const raw = requireString(body, 'email').trim().toLowerCase();
-  if (raw.length > EMAIL_MAX || !EMAIL.test(raw)) {
-    throw new ApiError('bad_request', "Field 'email' is not a valid address.");
-  }
-  return raw;
-}
+/**
+ * The loopback address the app listened on, echoed back to Google in the token exchange because the
+ * two must match exactly.
+ *
+ * Restricted to loopback http, which is the only redirect a desktop OAuth client is allowed to use.
+ * Accepting any URL here would let a caller point the exchange at a host of its choosing, and the
+ * value is passed straight to Google.
+ */
+export function requireRedirectUri(body: Record<string, unknown>): string {
+  const value = requireString(body, 'redirect_uri');
 
-/** Decodes and length-checks a base64url auth key. The password itself must never arrive here. */
-export function requireAuthKey(body: Record<string, unknown>, field = 'auth_key'): Uint8Array {
-  if ('password' in body) {
-    // A client sending a password has misunderstood the protocol; failing loudly beats silently
-    // accepting a plaintext password the server should never see. See docs/CLOUD_SYNC.md §10.
-    throw new ApiError('bad_request', 'Send auth_key, never a password. See docs/CLOUD_SYNC.md §4.2.');
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new ApiError('bad_request', "Field 'redirect_uri' is not a URL.");
   }
 
-  const decoded = fromBase64Url(requireString(body, field));
-  if (decoded === null || decoded.length !== AUTH_KEY_BYTES) {
-    throw new ApiError('bad_request', `Field '${field}' must be ${AUTH_KEY_BYTES} base64url bytes.`);
+  const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]' ||
+    parsed.hostname === 'localhost';
+  if (parsed.protocol !== 'http:' || !loopback) {
+    throw new ApiError('bad_request', "Field 'redirect_uri' must be an http loopback address.");
   }
-  return decoded;
+  return value;
 }
 
 export function requireWrappedDek(body: Record<string, unknown>, field: string): string {
@@ -64,17 +66,22 @@ export function requireWrappedDek(body: Record<string, unknown>, field: string):
   return value;
 }
 
-export function optionalWrappedDek(body: Record<string, unknown>, field: string): string | null {
-  const value = body[field];
-  if (value === undefined || value === null) {
-    return null;
+/**
+ * The unwrapped data key, sent only when an account turns the lock off and hands custody back.
+ * Checked for shape and length so a truncated key cannot be sealed and stored as if it were whole.
+ */
+export function requireRawDek(body: Record<string, unknown>): Uint8Array {
+  const value = requireString(body, 'data_key');
+  const decoded = RAW_DEK.test(value) ? fromBase64Url(value) : null;
+  if (decoded === null || decoded.length !== 32) {
+    throw new ApiError('bad_request', "Field 'data_key' must be 32 base64url bytes.");
   }
-  return requireWrappedDek(body, field);
+  return decoded;
 }
 
 /**
- * The client's own KDF parameters, stored opaquely and echoed back at login so the client can
- * re-derive with the parameters that were in force when the account was created. The server has no
+ * The client's own KDF parameters, stored opaquely and echoed back at sign-in so a device can
+ * re-derive with the parameters that were in force when the lock was turned on. The server has no
  * business interpreting them beyond a shape check.
  */
 export function requireKdfParams(body: Record<string, unknown>): string {

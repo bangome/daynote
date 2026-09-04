@@ -1,3 +1,4 @@
+﻿using System.Buffers.Text;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -26,53 +27,21 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         this.http = http ?? throw new ArgumentNullException(nameof(http));
     }
 
-    public async ValueTask<string> RegisterAsync(
-        RegisterRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var body = new JsonObject
-        {
-            ["email"] = request.Email,
-            ["auth_key"] = request.AuthKey,
-            ["wrapped_dek_pw"] = request.WrappedDekPassword,
-            ["kdf_params"] = JsonNode.Parse(request.KdfParametersJson),
-        };
-        if (request.WrappedDekRecovery is not null)
-        {
-            body["wrapped_dek_rk"] = request.WrappedDekRecovery;
-        }
-
-        using HttpResponseMessage response = await SendAsync(
-            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/register")
-            {
-                Content = JsonContent.Create(body, options: Json),
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        RegisterBody? parsed = await response.Content
-            .ReadFromJsonAsync<RegisterBody>(Json, cancellationToken)
-            .ConfigureAwait(false);
-        return parsed?.UserId
-            ?? throw new AccountException(AccountFailure.ServerError, "Registration returned no account id.");
-    }
-
-    public async ValueTask<SessionResponse> LoginAsync(
-        LoginRequest request,
+    public async ValueTask<SessionResponse> SignInWithGoogleAsync(
+        GoogleSignInRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         using HttpResponseMessage response = await SendAsync(
-            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/login")
+            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/google")
             {
                 Content = JsonContent.Create(
                     new
                     {
-                        email = request.Email,
-                        auth_key = request.AuthKey,
+                        code = request.AuthorizationCode,
+                        code_verifier = request.CodeVerifier,
+                        redirect_uri = request.RedirectUri,
                         device_name = request.DeviceName,
                     },
                     options: Json),
@@ -122,13 +91,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
 
         using HttpResponseMessage response = await SendAsync(
-            () =>
-            {
-                var message = new HttpRequestMessage(HttpMethod.Get, "v1/auth/me");
-                message.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-                return message;
-            },
+            () => Authorized(HttpMethod.Get, "v1/auth/me", accessToken),
             cancellationToken).ConfigureAwait(false);
 
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
@@ -149,96 +112,87 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 RequireTimestamp(device.ExpiresUtc)));
         }
 
-        return new AccountSummary(
-            body.UserId,
-            body.Email,
-            body.RecoveryKeySet,
-            body.RewrapPending,
-            body.DekGeneration,
-            devices,
-            body.WrappedDekRk);
+        return new AccountSummary(body.UserId, body.Email, devices);
     }
 
-    public async ValueTask RequestPasswordResetAsync(
-        string email,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email);
-
-        using HttpResponseMessage response = await SendAsync(
-            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/reset/request")
-            {
-                Content = JsonContent.Create(new { email }, options: Json),
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        // 204 whether or not the address exists. Nothing here may reveal which.
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async ValueTask ConfirmPasswordResetAsync(
-        ResetConfirmRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        using HttpResponseMessage response = await SendAsync(
-            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/reset/confirm")
-            {
-                Content = JsonContent.Create(
-                    new
-                    {
-                        email = request.Email,
-                        reset_token = request.Code,
-                        new_auth_key = request.NewAuthKey,
-                        kdf_params = JsonNode.Parse(request.KdfParametersJson),
-                    },
-                    options: Json),
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.BadRequest)
-        {
-            // A wrong, expired, used, or burned-out code all arrive here, and the server will not say
-            // which. Reporting one specific reason would be inventing detail we do not have.
-            throw new AccountException(
-                AccountFailure.InvalidResetCode,
-                "That reset code is not valid. Request a new one.");
-        }
-
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async ValueTask<int> RewrapAsync(
+    public async ValueTask<KeyMaterialResponse> GetKeyMaterialAsync(
         string accessToken,
-        string wrappedDekPassword,
-        int dekGeneration,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
-        ArgumentException.ThrowIfNullOrWhiteSpace(wrappedDekPassword);
+
+        using HttpResponseMessage response = await SendAsync(
+            () => Authorized(HttpMethod.Get, "v1/auth/data-key", accessToken),
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        KeysBody? body = await response.Content
+            .ReadFromJsonAsync<KeysBody>(Json, cancellationToken)
+            .ConfigureAwait(false);
+
+        return ToKeys(body
+            ?? throw new AccountException(AccountFailure.ServerError, "The key response was empty."));
+    }
+
+    public async ValueTask ProtectAsync(
+        string accessToken,
+        string wrappedDekPassphrase,
+        string wrappedDekRecovery,
+        string kdfParametersJson,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(wrappedDekPassphrase);
+        ArgumentException.ThrowIfNullOrWhiteSpace(wrappedDekRecovery);
 
         using HttpResponseMessage response = await SendAsync(
             () =>
             {
-                var message = new HttpRequestMessage(HttpMethod.Post, "v1/auth/rewrap")
-                {
-                    Content = JsonContent.Create(
-                        new { new_wrapped_dek_pw = wrappedDekPassword, dek_generation = dekGeneration },
-                        options: Json),
-                };
-                message.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                HttpRequestMessage message = Authorized(HttpMethod.Post, "v1/auth/protect", accessToken);
+                message.Content = JsonContent.Create(
+                    new JsonObject
+                    {
+                        ["wrapped_dek_pw"] = wrappedDekPassphrase,
+                        ["wrapped_dek_rk"] = wrappedDekRecovery,
+                        ["kdf_params"] = JsonNode.Parse(kdfParametersJson),
+                    },
+                    options: Json);
                 return message;
             },
             cancellationToken).ConfigureAwait(false);
 
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        RewrapBody? body = await response.Content
-            .ReadFromJsonAsync<RewrapBody>(Json, cancellationToken)
-            .ConfigureAwait(false);
-        return body?.DekGeneration
-            ?? throw new AccountException(AccountFailure.ServerError, "The re-wrap returned no generation.");
+    }
+
+    public async ValueTask UnprotectAsync(
+        string accessToken,
+        KeyMaterial dataKey,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentNullException.ThrowIfNull(dataKey);
+
+        using HttpResponseMessage response = await SendAsync(
+            () =>
+            {
+                HttpRequestMessage message =
+                    Authorized(HttpMethod.Post, "v1/auth/unprotect", accessToken);
+                message.Content = JsonContent.Create(
+                    new { data_key = Base64Url.EncodeToString(dataKey.Span) },
+                    options: Json);
+                return message;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static HttpRequestMessage Authorized(HttpMethod method, string path, string accessToken)
+    {
+        var message = new HttpRequestMessage(method, path);
+        message.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        return message;
     }
 
     private async ValueTask<HttpResponseMessage> SendAsync(
@@ -268,22 +222,18 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             return;
         }
 
-        // The server deliberately gives the same answer for a wrong password and an unknown email, so
-        // the message here must not try to be more specific than that.
         AccountFailure failure = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => AccountFailure.InvalidCredentials,
-            HttpStatusCode.Conflict => AccountFailure.EmailAlreadyRegistered,
-            HttpStatusCode.TooManyRequests => AccountFailure.ServerError,
             _ => AccountFailure.ServerError,
         };
 
-        string message = failure switch
+        string message = response.StatusCode switch
         {
-            AccountFailure.InvalidCredentials => "That email address or password is incorrect.",
-            AccountFailure.EmailAlreadyRegistered => "That email address is already registered.",
-            _ when response.StatusCode == HttpStatusCode.TooManyRequests =>
-                "Too many attempts. Wait a few minutes and try again.",
+            // 401 on these endpoints means the Google grant was stale or the session is gone. Both
+            // are fixed by signing in again, which is what the UI offers.
+            HttpStatusCode.Unauthorized => "That sign-in is no longer valid. Sign in again.",
+            HttpStatusCode.TooManyRequests => "Too many attempts. Wait a few minutes and try again.",
             _ => $"The sync service returned an error ({(int)response.StatusCode}).",
         };
 
@@ -303,16 +253,33 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 
     private static SessionResponse ToSession(SessionBody body) => new(
         body.UserId,
+        body.Email,
         body.AccessToken,
         DateTimeOffset.FromUnixTimeSeconds(body.AccessExpiresEpoch),
         body.RefreshToken,
-        body.WrappedDekPw,
-        body.WrappedDekRk,
-        body.KdfParams?.ToJsonString()
-            ?? throw new AccountException(AccountFailure.ServerError, "The session response had no KDF parameters."),
-        body.DekGeneration,
-        body.RewrapPending,
+        // Absent on refresh: a refresh renews a session, not key custody.
+        body.DataKey is null && body.WrappedDekPw is null ? null : ToKeys(body),
+        body.Entitlement is null ? Entitlement.Unknown : ToEntitlement(body.Entitlement),
         RequireTimestamp(body.ServerUtc));
+
+    /// <summary>
+    /// Reads whichever custody the account is in. An unknown value is refused rather than defaulted:
+    /// treating it as server-held would be the one wrong guess that hands a key request to an
+    /// account that is supposed to be locked.
+    /// </summary>
+    private static KeyMaterialResponse ToKeys(IKeyBody body) => body.Protection switch
+    {
+        "passphrase" => new KeyMaterialResponse(
+            KeyProtection.Passphrase,
+            null,
+            body.WrappedDekPw,
+            body.WrappedDekRk,
+            body.KdfParams?.ToJsonString()),
+        "server" or null => new KeyMaterialResponse(KeyProtection.Server, body.DataKey, null, null, null),
+        _ => throw new AccountException(
+            AccountFailure.ServerError,
+            "The sync service reported a key protection this version does not understand."),
+    };
 
     private static DateTimeOffset RequireTimestamp(string? value)
     {
@@ -324,30 +291,178 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 $"The sync service sent an unreadable timestamp: '{value}'.");
     }
 
-    private sealed record RegisterBody(string UserId, bool RecoveryKeySet);
+    public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> GetBillingAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
 
-    private sealed record RewrapBody(int DekGeneration, bool RewrapPending);
+        using HttpResponseMessage response = await SendAsync(
+            () => Authorized(HttpMethod.Get, "v1/billing/status", accessToken),
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        BillingBody? body = await response.Content
+            .ReadFromJsonAsync<BillingBody>(Json, cancellationToken)
+            .ConfigureAwait(false);
+        if (body is null)
+        {
+            throw new AccountException(AccountFailure.ServerError, "The billing endpoint returned no body.");
+        }
+
+        // An older Worker that does not list plans sells both; an empty list means neither.
+        string[] plans = body.Plans ?? ["monthly", "annual"];
+        return (
+            ToEntitlement(body),
+            new BillingLinks(
+                body.CanCheckout,
+                body.CanManage,
+                OffersMonthly: plans.Contains("monthly", StringComparer.Ordinal),
+                OffersAnnual: plans.Contains("annual", StringComparer.Ordinal)));
+    }
+
+    public ValueTask<string> CreateCheckoutSessionAsync(
+        string accessToken,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default) =>
+        CreateSessionAsync(
+            "v1/billing/checkout",
+            accessToken,
+            cancellationToken,
+            payload: new { plan = plan.ToWire() });
+
+    public ValueTask<string> CreatePortalSessionAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default) =>
+        CreateSessionAsync("v1/billing/portal", accessToken, cancellationToken, payload: null);
+
+    /// <summary>
+    /// Asks the Worker for a one-shot billing URL. Both billing pages work this way, so the only
+    /// difference between them is the path.
+    /// </summary>
+    private async ValueTask<string> CreateSessionAsync(
+        string path,
+        string accessToken,
+        CancellationToken cancellationToken,
+        object? payload)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        using HttpResponseMessage response = await SendAsync(
+            () =>
+            {
+                HttpRequestMessage message = Authorized(HttpMethod.Post, path, accessToken);
+                if (payload is not null)
+                {
+                    message.Content = JsonContent.Create(payload, options: Json);
+                }
+
+                return message;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        SessionUrlBody? body = await response.Content
+            .ReadFromJsonAsync<SessionUrlBody>(Json, cancellationToken)
+            .ConfigureAwait(false);
+
+        return body?.Url is { Length: > 0 } url
+            ? url
+            : throw new AccountException(AccountFailure.ServerError, "The billing link was empty.");
+    }
+
+    /// <summary>
+    /// Reads the billing state. An unrecognised state is treated as
+    /// <see cref="EntitlementState.Expired"/> rather than guessed at — failing closed on a value
+    /// this build does not know is the only safe direction, and `can_sync` from the server still
+    /// decides whether syncing is attempted.
+    /// </summary>
+    private static Entitlement ToEntitlement(IEntitlementBody body)
+    {
+        EntitlementState state = body.State switch
+        {
+            "trial" => EntitlementState.Trial,
+            "active" => EntitlementState.Active,
+            "grace" => EntitlementState.Grace,
+            "expired" => EntitlementState.Expired,
+            _ => EntitlementState.Expired,
+        };
+
+        DateTimeOffset? until = null;
+        if (body.Until is { Length: > 0 } value)
+        {
+            var parsed = SyncTimestamps.ParseWire(value);
+            until = parsed.IsSuccess ? parsed.Value : null;
+        }
+
+        return new Entitlement(state, until, body.CanSync, body.HasSubscribed);
+    }
+
+    /// <summary>The key-custody fields, shared by the session and key-material responses.</summary>
+    private interface IKeyBody
+    {
+        string? Protection { get; }
+
+        string? DataKey { get; }
+
+        string? WrappedDekPw { get; }
+
+        string? WrappedDekRk { get; }
+
+        JsonNode? KdfParams { get; }
+    }
 
     private sealed record SessionBody(
         string UserId,
+        string Email,
         string AccessToken,
         long AccessExpiresEpoch,
         string RefreshToken,
-        string WrappedDekPw,
+        string? Protection,
+        string? DataKey,
+        string? WrappedDekPw,
         string? WrappedDekRk,
         JsonNode? KdfParams,
-        int DekGeneration,
-        bool RewrapPending,
-        string? ServerUtc);
+        EntitlementBody? Entitlement,
+        string? ServerUtc) : IKeyBody;
 
-    private sealed record MeBody(
-        string UserId,
-        string Email,
-        IReadOnlyList<DeviceBody>? Devices,
-        bool RecoveryKeySet,
-        bool RewrapPending,
-        int DekGeneration,
-        string? WrappedDekRk);
+    /// <summary>The entitlement fields, shared by the session and billing responses.</summary>
+    private interface IEntitlementBody
+    {
+        string? State { get; }
+
+        string? Until { get; }
+
+        bool CanSync { get; }
+
+        bool HasSubscribed { get; }
+    }
+
+    private sealed record EntitlementBody(
+        string? State,
+        string? Until,
+        bool CanSync,
+        bool HasSubscribed) : IEntitlementBody;
+
+    private sealed record BillingBody(
+        string? State,
+        string? Until,
+        bool CanSync,
+        bool HasSubscribed,
+        bool CanCheckout,
+        bool CanManage,
+        string[]? Plans) : IEntitlementBody;
+
+    private sealed record SessionUrlBody(string? Url);
+
+    private sealed record KeysBody(
+        string? Protection,
+        string? DataKey,
+        string? WrappedDekPw,
+        string? WrappedDekRk,
+        JsonNode? KdfParams) : IKeyBody;
+
+    private sealed record MeBody(string UserId, string Email, IReadOnlyList<DeviceBody>? Devices);
 
     private sealed record DeviceBody(string DeviceName, string IssuedUtc, string ExpiresUtc);
 }
@@ -356,9 +471,9 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 /// Hands the sync transport a live access token, refreshing it when it has expired or been rejected.
 /// </summary>
 /// <remarks>
-/// A failed refresh clears the tokens but deliberately leaves the cached data key alone: that key is
-/// what makes an ordinary password reset lossless on the user's own PC (docs/CLOUD_SYNC.md §4.8b).
-/// Only an explicit sign-out discards it.
+/// A failed refresh deliberately leaves the cached data key alone. Only an explicit sign-out
+/// discards it, so a network outage or an expired session never costs the user local access to
+/// their own notes.
 /// </remarks>
 public sealed class SyncTokenProvider : ISyncTokenProvider
 {

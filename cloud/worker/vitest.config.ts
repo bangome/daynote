@@ -21,6 +21,7 @@ export default defineConfig(async () => {
         miniflare: {
           bindings: {
             JWT_SECRET: 'test-secret-that-is-long-enough-to-pass-validation',
+            DEK_WRAP_KEY: 'test-dek-wrap-key-that-is-long-enough-too',
             ACCESS_TOKEN_TTL_SECONDS: '900',
             REFRESH_TOKEN_TTL_DAYS: '60',
           },

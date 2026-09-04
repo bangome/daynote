@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결제 — Daynote</title>
+<meta name="description" content="Daynote 클라우드 동기화 구독 결제.">
+<link rel="canonical" href="https://daynote.arachat.cc/checkout/">
+<link rel="alternate" hreflang="ko" href="https://daynote.arachat.cc/checkout/">
+<link rel="alternate" hreflang="en" href="https://daynote.arachat.cc/en/checkout/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Daynote">
+<meta property="og:title" content="결제 — Daynote">
+<meta property="og:description" content="Daynote 클라우드 동기화 구독 결제.">
+<meta property="og:url" content="https://daynote.arachat.cc/checkout/">
+<meta property="og:image" content="https://daynote.arachat.cc/img/og-ko.jpg">
+<meta name="theme-color" content="#f8f6f2">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/icon-32.png">
+<link rel="apple-touch-icon" href="/img/icon-180.png">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script>
+  // Paddle opens server-created transactions here via ?_ptxn=txn_...; Paddle.Initialize picks the
+  // parameter up on its own. Without a client token the page only shows the explanatory text.
+  (function () {
+    var token = "live_1a35a8eff5ee10bb87eeac3b922";
+    if (!token || !window.Paddle) return;
+    if ("production" === 'sandbox') Paddle.Environment.set('sandbox');
+    // Retain: the Worker appends the returning customer's Paddle id (ctm_...) to the checkout URL.
+    var ctm = new URLSearchParams(location.search).get('ctm');
+    var init = { token: token, checkout: { settings: { displayMode: 'inline', frameTarget: 'checkout-frame', frameInitialHeight: '480', frameStyle: 'width:100%;min-width:312px;background-color:transparent;border:none;' } } };
+    if (ctm && /^ctm_[a-z0-9]+$/.test(ctm)) init.pwCustomer = { id: ctm };
+    Paddle.Initialize(init);
+    var wait = document.querySelector('.checkout-wait'); if (wait) wait.remove();
+  })();
+</script>
+<meta name="robots" content="noindex">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="top">
+  <div class="wrap top__row">
+    <a class="brand" href="/" aria-label="Daynote">
+      <img src="/img/logo-ko.webp" width="150" height="42" alt="Daynote">
+    </a>
+    <nav class="top__nav" aria-label="주 메뉴">
+      <a href="/#features">기능</a>
+      <a href="/pricing/">요금</a>
+      <a href="/privacy">프라이버시</a>
+      <a class="lang" href="/en/checkout/" lang="en" hreflang="en">EN</a>
+    </nav>
+    <a class="btn btn--ink btn--sm" href="https://apps.microsoft.com/search?query=Daynote" rel="noopener">Store에서 받기</a>
+  </div>
+</header>
+
+<main id="main" class="page page--checkout">
+  <div class="wrap">
+    <header class="page__head">
+      <p class="eyebrow">클라우드 동기화</p>
+      <h1 class="page__title">결제</h1>
+      <p class="page__meta">Paddle이 처리하는 안전한 결제</p>
+    </header>
+    <div class="page__body">
+<p class="lead">이 페이지는 Daynote 앱에서 시작한 구독 결제가 이어지는 곳입니다. 결제 창이 열리지 않으면 앱의 설정 → 계정에서 "구독"을 다시 눌러 주세요.</p>
+<div class="checkout-frame" id="checkout-frame" aria-live="polite">
+  <p class="checkout-wait">결제 창을 불러오는 중…</p>
+</div>
+<p class="checkout-note">결제는 판매자 Paddle이 처리합니다. Daynote는 카드 정보를 받지 않습니다. <a href="/terms/">이용약관</a> · <a href="/refund/">환불 정책</a> · <a href="/privacy">프라이버시</a></p>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__row">
+    <img src="/img/mark.webp" width="22" height="24" alt="" aria-hidden="true">
+    <span>© 2026 Daynote</span>
+    <nav aria-label="바닥글 메뉴">
+      <a href="/pricing/">요금</a>
+      <a href="/terms/">이용약관</a>
+      <a href="/refund/">환불 정책</a>
+      <a href="/privacy">프라이버시</a>
+      <a href="/support/">지원</a>
+      <a href="/en/checkout/" lang="en">EN</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

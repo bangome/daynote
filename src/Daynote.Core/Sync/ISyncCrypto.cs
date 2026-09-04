@@ -1,11 +1,12 @@
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using Daynote.Core.Domain;
 
 namespace Daynote.Core.Sync;
 
 /// <summary>
-/// The two keys derived from the password. <see cref="AuthKey"/> is sent to the server;
-/// <see cref="Kek"/> must never leave the device.
+/// The two keys derived from a lock passphrase. <see cref="AuthKey"/> is reserved for a server that
+/// wants to prove the passphrase before handing back an envelope; <see cref="Kek"/> must never leave
+/// the device — sending it would end the lock's guarantee.
 /// </summary>
 public sealed class SyncKeySet : IDisposable
 {
@@ -17,13 +18,11 @@ public sealed class SyncKeySet : IDisposable
         Kek = kek;
     }
 
-    /// <summary>Proves identity to the server. Useless for decrypting anything.</summary>
     public KeyMaterial AuthKey { get; }
 
-    /// <summary>Unwraps the data key. Sending this anywhere would end the end-to-end guarantee.</summary>
+    /// <summary>Unwraps the data key. Sending this anywhere would end the lock's guarantee.</summary>
     public KeyMaterial Kek { get; }
 
-    /// <summary>The wire encoding the auth endpoints expect for <c>auth_key</c>.</summary>
     public string AuthKeyForServer() => Base64Url.EncodeToString(AuthKey.Span);
 
     public void Dispose()
@@ -37,36 +36,32 @@ public sealed class SyncKeySet : IDisposable
 /// Every cryptographic operation cloud sync performs on this device. See docs/CLOUD_SYNC.md §4.
 /// </summary>
 /// <remarks>
-/// The whole end-to-end property rests on what is absent from this interface: nothing here returns
-/// the password, the KEK, the recovery key, or an unwrapped data key in a form intended for
-/// transmission. The only method producing something meant for the server is
-/// <see cref="SyncKeySet.AuthKeyForServer"/>.
+/// Content encryption is used by every account. Derivation and wrapping are used only by an account
+/// with the opt-in lock on (docs/CLOUD_SYNC.md §4.1b): by default the data key is issued by the
+/// server, and this device derives nothing. Per-record keys are always derived from the data key, so
+/// no two records share a nonce space and a blob written for one note cannot be replayed as another.
 /// </remarks>
 public interface ISyncCrypto
 {
     /// <summary>
-    /// Derives the auth key and KEK from a password. Deliberately expensive — hundreds of
-    /// milliseconds — so call it off the UI thread, once per sign-in, and cache the result.
+    /// Derives the wrapping keys from a lock passphrase. Deliberately expensive — hundreds of
+    /// milliseconds — so call it off the UI thread, once per unlock, and cache the result.
     /// </summary>
     SyncKeySet DeriveKeys(string password, string email, KdfParameters parameters);
 
     /// <summary>Derives the wrapping key for the recovery envelope. Cheap: the input is already random.</summary>
     KeyMaterial DeriveRecoveryKek(RecoveryKey recoveryKey);
 
-    /// <summary>A fresh data key. Generated once per account and never derived from anything.</summary>
-    KeyMaterial GenerateDataKey();
-
     /// <summary>
-    /// Wraps the data key under <paramref name="wrappingKey"/> (a KEK or recovery KEK) using
-    /// <paramref name="scope"/> as AAD. Unlike <see cref="Encrypt"/>, the wrapping key is used
-    /// directly rather than via a per-record derivation: there is exactly one data key per wrapping
-    /// key, so there is no nonce space to separate.
+    /// Wraps the data key under <paramref name="wrappingKey"/> using <paramref name="scope"/> as AAD.
+    /// The wrapping key is used directly rather than via a per-record derivation: there is exactly
+    /// one data key per wrapping key, so there is no nonce space to separate.
     /// </summary>
     string WrapDataKey(KeyMaterial dataKey, KeyMaterial wrappingKey, CipherScope scope);
 
     /// <summary>
-    /// Fails rather than throws for a wrong password or a tampered envelope, since both are ordinary
-    /// user-facing outcomes at the sign-in and unlock screens.
+    /// Fails rather than throws for a wrong passphrase or a tampered envelope, since both are
+    /// ordinary user-facing outcomes at the unlock prompt.
     /// </summary>
     DomainResult<KeyMaterial> UnwrapDataKey(string envelope, KeyMaterial wrappingKey, CipherScope scope);
 

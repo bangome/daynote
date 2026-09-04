@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
@@ -10,11 +10,11 @@
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <!-- Argon2id for the cloud-sync master key (docs/CLOUD_SYNC.md §4.2). Pure managed, no native
          binaries, so it adds nothing to the MSIX per-architecture payload. -->
-    <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <!-- DPAPI for credentials.dat: tokens and the cached data key must not live in the database,
          which is copied verbatim into the plaintext backup zip. -->
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
     <PackageVersion Include="MSTest.Sdk" Version="4.3.2" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
   </ItemGroup>
 </Project>

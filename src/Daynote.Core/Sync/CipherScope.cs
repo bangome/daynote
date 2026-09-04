@@ -1,9 +1,10 @@
-namespace Daynote.Core.Sync;
+﻿namespace Daynote.Core.Sync;
 
+/// <summary>Which wrapping key an envelope was sealed under, so the two cannot be interchanged.</summary>
 public enum DataKeyPurpose
 {
-    /// <summary>Wrapped under the key-encryption key derived from the password.</summary>
-    Password,
+    /// <summary>Wrapped under the key derived from the lock passphrase.</summary>
+    Passphrase,
 
     /// <summary>Wrapped under the key derived from the recovery key.</summary>
     Recovery,
@@ -18,10 +19,6 @@ public enum DataKeyPurpose
 /// and the client would accept it: same key, valid tag, wrong note. The AAD is authenticated but not
 /// encrypted, so it must contain nothing sensitive — ids are random UUIDs, and the email is already
 /// known to the server.
-/// <para>
-/// The data-key scope is keyed on the email rather than the user id because the client wraps its data
-/// key during registration, before the server has assigned an id.
-/// </para>
 /// </remarks>
 public readonly record struct CipherScope
 {
@@ -42,10 +39,15 @@ public readonly record struct CipherScope
     public static CipherScope Asset(string userId, string contentHash) =>
         Entity("asset", userId, contentHash);
 
+    /// <summary>
+    /// The slot a wrapped data key occupies. Keyed on the account's address rather than its id only
+    /// because the address is what the passphrase derivation is already salted with, so the two
+    /// cannot disagree.
+    /// </summary>
     public static CipherScope DataKey(DataKeyPurpose purpose, string email)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(email);
-        string name = purpose == DataKeyPurpose.Password ? "password" : "recovery";
+        string name = purpose == DataKeyPurpose.Passphrase ? "password" : "recovery";
         return new CipherScope($"{Version}|dek|{name}|{NormalizeEmail(email)}");
     }
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{pageTitle}} — Daynote</title>
+<meta name="description" content="{{pageDescription}}">
+<link rel="canonical" href="{{canonical}}">
+<link rel="alternate" hreflang="ko" href="https://daynote.arachat.cc/{{slug}}/">
+<link rel="alternate" hreflang="en" href="https://daynote.arachat.cc/en/{{slug}}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Daynote">
+<meta property="og:title" content="{{pageTitle}} — Daynote">
+<meta property="og:description" content="{{pageDescription}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:image" content="https://daynote.arachat.cc/img/og-{{lang}}.jpg">
+<meta name="theme-color" content="#f8f6f2">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/icon-32.png">
+<link rel="apple-touch-icon" href="/img/icon-180.png">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap">
+<link rel="stylesheet" href="/site.css">
+{{head}}
+</head>
+<body>
+<a class="skip" href="#main">{{skip}}</a>
+
+<header class="top">
+  <div class="wrap top__row">
+    <a class="brand" href="{{home}}" aria-label="Daynote">
+      <img src="/img/logo-{{lang}}.webp" width="150" height="42" alt="Daynote">
+    </a>
+    <nav class="top__nav" aria-label="{{navLabel}}">
+      <a href="{{home}}#features">{{navFeatures}}</a>
+      <a href="{{pricingHref}}">{{navPricing}}</a>
+      <a href="/privacy">{{navPrivacy}}</a>
+      <a class="lang" href="{{altHref}}" lang="{{altLang}}" hreflang="{{altLang}}">{{altLabel}}</a>
+    </nav>
+    <a class="btn btn--ink btn--sm" href="{{storeUrl}}" rel="noopener">{{navGet}}</a>
+  </div>
+</header>
+
+<main id="main" class="page {{pageClass}}">
+  <div class="wrap">
+    <header class="page__head">
+      <p class="eyebrow">{{pageEyebrow}}</p>
+      <h1 class="page__title">{{pageTitle}}</h1>
+      <p class="page__meta">{{pageMeta}}</p>
+    </header>
+    <div class="page__body">
+{{body}}
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__row">
+    <img src="/img/mark.webp" width="22" height="24" alt="" aria-hidden="true">
+    <span>© 2026 Daynote</span>
+    <nav aria-label="{{footNavLabel}}">
+      <a href="{{pricingHref}}">{{navPricing}}</a>
+      <a href="{{termsHref}}">{{navTerms}}</a>
+      <a href="{{refundHref}}">{{navRefund}}</a>
+      <a href="/privacy">{{navPrivacy}}</a>
+      <a href="{{supportHref}}">{{navSupport}}</a>
+      <a href="{{altHref}}" lang="{{altLang}}">{{altLabel}}</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

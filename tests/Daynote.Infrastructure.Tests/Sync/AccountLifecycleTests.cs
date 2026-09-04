@@ -1,4 +1,4 @@
-using Daynote.Core.Domain;
+﻿using Daynote.Core.Domain;
 using Daynote.Core.Domain.Notes;
 using Daynote.Core.Notes;
 using Daynote.Core.Sync;
@@ -9,8 +9,8 @@ using Daynote.Infrastructure.Tests.Persistence;
 namespace Daynote.Infrastructure.Tests.Sync;
 
 /// <summary>
-/// Phase 5's acceptance test: register, sync, sign out, then sign in again on a data root that has
-/// never seen this account and get the notes back.
+/// The account acceptance test: sign in with Google, sync, sign out, then sign in again on a data
+/// root that has never seen this account and get the notes back.
 /// </summary>
 [TestClass]
 public sealed class AccountLifecycleTests
@@ -18,7 +18,9 @@ public sealed class AccountLifecycleTests
     private static readonly LocalDate Date = LocalDate.Parse("2026-08-20").Value;
     private static readonly AesGcmSyncCrypto Crypto = new();
     private const string Email = "alice@example.test";
-    private const string Password = "correct horse battery staple";
+
+    /// <summary>The Google `sub`. Identity is keyed on this, not on the address.</summary>
+    private const string Subject = "google-sub-alice";
 
     private DateTimeOffset now;
     private FakeAuthServer authServer = null!;
@@ -46,36 +48,22 @@ public sealed class AccountLifecycleTests
     }
 
     [TestMethod]
-    public async Task Registering_returns_a_recovery_key_and_signs_the_device_in()
+    public async Task Signing_in_creates_the_account_and_signs_this_device_in()
     {
         await using Pc pc = NewPc();
 
-        RegisteredAccount account = await pc.Accounts.RegisterAsync(Email, Password);
+        string email = await pc.Accounts.SignInAsync();
 
-        Assert.IsTrue(account.RecoveryKey.IsValid);
-        Assert.AreEqual(32, account.RecoveryKey.ToDisplayString().Length);
+        Assert.AreEqual(Email, email);
+        Assert.AreEqual(1, authServer.AccountCount);
         Assert.IsTrue((await pc.Store.ReadStateAsync()).IsSignedIn);
-    }
-
-    [TestMethod]
-    public async Task The_recovery_key_differs_every_time()
-    {
-        // A constant here would let anyone who saw one recovery key open every account.
-        await using Pc first = NewPc();
-        RegisteredAccount one = await first.Accounts.RegisterAsync(Email, Password);
-
-        authServer = new FakeAuthServer(() => now);
-        await using Pc second = NewPc(freshRoot: true);
-        RegisteredAccount two = await second.Accounts.RegisterAsync("bob@example.test", Password);
-
-        Assert.AreNotEqual(one.RecoveryKey.ToDisplayString(), two.RecoveryKey.ToDisplayString());
     }
 
     [TestMethod]
     public async Task Content_survives_sign_out_and_a_fresh_sign_in_on_an_empty_data_root()
     {
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.AddNote(1, "회의록", "분기 계획 논의");
         await pc.SetTags(1, ["프로젝트"]);
         await pc.Sync();
@@ -87,7 +75,7 @@ public sealed class AccountLifecycleTests
         await using Pc reinstalled = NewPc(freshRoot: true);
         Assert.AreEqual(0, (await reinstalled.Notes()).Count);
 
-        await reinstalled.Accounts.SignInAsync(Email, Password);
+        await reinstalled.Accounts.SignInAsync();
         await reinstalled.Sync();
 
         Note restored = (await reinstalled.Notes()).Single();
@@ -100,7 +88,7 @@ public sealed class AccountLifecycleTests
     public async Task Signing_out_discards_the_stored_key_material()
     {
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         Assert.IsTrue(File.Exists(Path.Combine(dataRoot, "credentials.dat")));
 
         await pc.Accounts.SignOutAsync();
@@ -111,89 +99,56 @@ public sealed class AccountLifecycleTests
     }
 
     [TestMethod]
-    public async Task Signing_in_again_after_sign_out_reuses_the_same_data_key()
+    public async Task Signing_in_a_second_time_reuses_the_account_rather_than_making_another()
     {
-        // If the key were regenerated, everything already in the cloud would become unreadable.
+        // The second sign-in redeems a different Google code for the same subject. Creating a second
+        // account there would strand every note written under the first one.
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
-        await pc.AddNote(1, "Before", "body");
-        await pc.Sync();
-
-        await pc.Accounts.SignOutAsync();
-        await pc.Accounts.SignInAsync(Email, Password);
-        SyncReport report = await pc.Sync();
-
-        Assert.AreEqual(0, report.Undecryptable);
-        Assert.AreEqual("Before", (await pc.Notes()).Single().Title);
-    }
-
-    [TestMethod]
-    public async Task A_wrong_password_is_refused_without_saying_which_part_was_wrong()
-    {
-        await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.Accounts.SignOutAsync();
 
-        AccountException wrongPassword = await Assert.ThrowsExactlyAsync<AccountException>(
-            async () => await pc.Accounts.SignInAsync(Email, "not the password"));
-        AccountException unknownEmail = await Assert.ThrowsExactlyAsync<AccountException>(
-            async () => await pc.Accounts.SignInAsync("nobody@example.test", Password));
+        await pc.Accounts.SignInAsync();
 
-        Assert.AreEqual(AccountFailure.InvalidCredentials, wrongPassword.Failure);
-        Assert.AreEqual(AccountFailure.InvalidCredentials, unknownEmail.Failure);
-        Assert.AreEqual(wrongPassword.Message, unknownEmail.Message);
+        Assert.AreEqual(1, authServer.AccountCount);
+        Assert.AreEqual(2, authServer.SignInCalls);
     }
 
     [TestMethod]
-    public async Task Registering_an_email_twice_is_refused()
+    public async Task Closing_the_browser_leaves_the_device_signed_out()
     {
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        pc.Identity.Cancel = true;
 
-        AccountException failure = await Assert.ThrowsExactlyAsync<AccountException>(
-            async () => await pc.Accounts.RegisterAsync(Email, Password));
+        var failure = await Assert.ThrowsExactlyAsync<AccountException>(
+            async () => await pc.Accounts.SignInAsync());
 
-        Assert.AreEqual(AccountFailure.EmailAlreadyRegistered, failure.Failure);
+        Assert.AreEqual(AccountFailure.SignInCancelled, failure.Failure);
+        Assert.IsNull(await pc.Sessions.LoadAsync());
+        Assert.AreEqual(0, authServer.SignInCalls);
     }
 
     [TestMethod]
-    public async Task Signing_in_with_a_differently_cased_email_works()
-    {
-        // The derivation salt comes from the email, so a case mismatch would lock the account out.
-        await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
-        await pc.Accounts.SignOutAsync();
-
-        await pc.Accounts.SignInAsync("  Alice@Example.TEST ", Password);
-
-        Assert.IsTrue((await pc.Store.ReadStateAsync()).IsSignedIn);
-    }
-
-    [TestMethod]
-    [DataRow("", DisplayName = "empty")]
-    [DataRow("nope", DisplayName = "no domain")]
-    [DataRow("a@b", DisplayName = "no dot")]
-    public async Task A_malformed_email_is_refused_before_any_network_call(string email)
+    public async Task A_session_that_lost_its_data_key_is_restored_without_the_browser()
     {
         await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
 
-        AccountException failure = await Assert.ThrowsExactlyAsync<AccountException>(
-            async () => await pc.Accounts.RegisterAsync(email, Password));
+        // What a restored profile looks like: the tokens survived, the key did not.
+        SyncCredentials stored = (await pc.Sessions.LoadAsync())!;
+        using (stored)
+        {
+            await pc.Sessions.SaveAsync(stored with { DataKey = null });
+        }
 
-        Assert.AreEqual(AccountFailure.InvalidEmail, failure.Failure);
-        Assert.AreEqual(0, authServer.RegisterCalls);
-    }
+        Assert.AreEqual(ResumeState.KeyMissing, (await pc.Accounts.ResumeAsync()).State);
 
-    [TestMethod]
-    public async Task A_password_too_short_to_be_worth_stretching_is_refused()
-    {
-        await using Pc pc = NewPc();
+        await pc.Accounts.RestoreDataKeyAsync();
 
-        AccountException failure = await Assert.ThrowsExactlyAsync<AccountException>(
-            async () => await pc.Accounts.RegisterAsync(Email, "short"));
-
-        Assert.AreEqual(AccountFailure.WeakPassword, failure.Failure);
-        Assert.AreEqual(0, authServer.RegisterCalls);
+        ResumedSession resumed = await pc.Accounts.ResumeAsync();
+        Assert.AreEqual(ResumeState.Ready, resumed.State);
+        resumed.Session!.DataKey.Dispose();
+        // No second trip through the browser: the tokens were enough.
+        Assert.AreEqual(1, pc.Identity.AuthorizeCalls);
     }
 
     [TestMethod]
@@ -202,29 +157,28 @@ public sealed class AccountLifecycleTests
         await using Pc pc = NewPc();
         await pc.AddNote(1, "Written months ago", "body");
 
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.Sync();
 
         await using Pc other = NewPc(freshRoot: true);
-        await other.Accounts.SignInAsync(Email, Password);
+        await other.Accounts.SignInAsync();
         await other.Sync();
 
         Assert.AreEqual("Written months ago", (await other.Notes()).Single().Title);
     }
 
     [TestMethod]
-    public async Task The_server_never_receives_the_password_or_a_usable_key()
+    public async Task Note_content_never_leaves_this_PC_in_the_clear()
     {
+        // The server holds the key, so it CAN read what it stores — but the blob must still travel
+        // and rest encrypted, or the ciphertext would be decoration.
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.AddNote(1, "Title", "SECRET-BODY");
         await pc.Sync();
 
         foreach (string seen in authServer.EverythingReceived.Concat(syncServer.StoredBlobs))
         {
-            Assert.IsFalse(
-                seen.Contains(Password, StringComparison.Ordinal),
-                "The password reached the server.");
             Assert.IsFalse(
                 seen.Contains("SECRET-BODY", StringComparison.Ordinal),
                 "Note content reached the server in the clear.");
@@ -235,7 +189,7 @@ public sealed class AccountLifecycleTests
     public async Task An_expired_access_token_is_renewed_without_asking_the_user()
     {
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.AddNote(1, "Title", "body");
 
         // Past the 15-minute access-token lifetime, but well inside the refresh token's.
@@ -252,7 +206,7 @@ public sealed class AccountLifecycleTests
     {
         // What a copied profile or a restored machine image looks like. It must not be an error.
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await File.WriteAllTextAsync(Path.Combine(dataRoot, "credentials.dat"), "not a DPAPI blob");
 
         Assert.IsNull(await pc.Sessions.LoadAsync());
@@ -262,13 +216,13 @@ public sealed class AccountLifecycleTests
     public async Task Conflicting_versions_land_in_the_conflicts_folder_as_plain_text()
     {
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         NoteId id = await pc.AddNote(1, "Title", "Mine");
         await pc.Sync();
 
         // Another device wrote a newer version of the same note.
         await using Pc other = NewPc(freshRoot: true);
-        await other.Accounts.SignInAsync(Email, Password);
+        await other.Accounts.SignInAsync();
         await other.Sync();
         now = now.AddMinutes(5);
         await other.EditNote(id, "Title", "Theirs");
@@ -290,7 +244,7 @@ public sealed class AccountLifecycleTests
         // A backup that carried credentials.dat would export the data key in a file the user is told
         // to copy onto other media.
         await using Pc pc = NewPc();
-        await pc.Accounts.RegisterAsync(Email, Password);
+        await pc.Accounts.SignInAsync();
         await pc.AddNote(1, "Title", "body");
 
         string zipPath = Path.Combine(dataRoot, "backup.zip");
@@ -336,6 +290,7 @@ public sealed class AccountLifecycleTests
             SyncEngine engine,
             AccountService accounts,
             ISyncSessionStore sessions,
+            FakeIdentityProvider identity,
             Func<DateTimeOffset> utcNow)
         {
             this.owned = owned;
@@ -347,6 +302,7 @@ public sealed class AccountLifecycleTests
             Store = store;
             Accounts = accounts;
             Sessions = sessions;
+            Identity = identity;
         }
 
         internal SqliteSyncStore Store { get; }
@@ -354,6 +310,8 @@ public sealed class AccountLifecycleTests
         internal AccountService Accounts { get; }
 
         internal ISyncSessionStore Sessions { get; }
+
+        internal FakeIdentityProvider Identity { get; }
 
         internal string DataRoot => root;
 
@@ -370,7 +328,10 @@ public sealed class AccountLifecycleTests
             var repository = new SqliteNoteRepository(fixture.Database, utcNow);
             var store = new SqliteSyncStore(fixture.Database, utcNow);
             var sessions = new DpapiSyncSessionStore(root);
-            var accounts = new AccountService(authServer, Crypto, sessions, store, () => "Test PC");
+            // Every simulated PC signs in as the same Google account, which is what makes "a fresh
+            // data root gets the notes back" a real test rather than two unrelated accounts.
+            var identity = new FakeIdentityProvider(authServer, Subject, Email);
+            var accounts = new AccountService(authServer, identity, Crypto, sessions, store, () => "Test PC");
             var tokens = new SyncTokenProvider(authServer, sessions, utcNow);
             var engine = new SyncEngine(
                 new TokenAwareSyncClient(syncServer.ClientFor(root), tokens),
@@ -379,7 +340,8 @@ public sealed class AccountLifecycleTests
                 utcNow,
                 new FileSystemConflictSink(root));
 
-            return new Pc(fixture, root, deleteRoot, repository, store, engine, accounts, sessions, utcNow);
+            return new Pc(
+                fixture, root, deleteRoot, repository, store, engine, accounts, sessions, identity, utcNow);
         }
 
         internal async ValueTask<SyncReport> Sync()
@@ -388,7 +350,7 @@ public sealed class AccountLifecycleTests
             if (resumed.Session is not { } session)
             {
                 return SyncReport.For(
-                    resumed.State == ResumeState.Locked ? SyncOutcome.Locked : SyncOutcome.SignedOut);
+                    resumed.State == ResumeState.KeyMissing ? SyncOutcome.Locked : SyncOutcome.SignedOut);
             }
 
             using (session.DataKey)

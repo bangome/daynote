@@ -42,3 +42,10 @@ x86/
 # OS
 Thumbs.db
 Desktop.ini
+
+# Local tool state
+.omc/
+.wrangler/
+
+# Design-tool exports the user drops in for reference, not source
+docs/*.zip

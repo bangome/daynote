@@ -1,21 +1,19 @@
-using System.Security.Cryptography;
-using Daynote.Core.Sync;
+﻿using Daynote.Core.Sync;
 
 namespace Daynote.Infrastructure.Tests.Sync;
 
 /// <summary>
 /// An in-memory stand-in for the Worker's account endpoints, mirroring
-/// <c>cloud/worker/src/auth.ts</c>: the same stored shape (a verifier over the auth key plus sealed
-/// envelopes), the same refusal to distinguish a wrong password from an unknown email, and the same
-/// rotating refresh tokens.
+/// <c>cloud/worker/src/auth.ts</c>: an account per Google subject, created on first sign-in, one
+/// server-held data key per account, and rotating refresh tokens.
 /// </summary>
 /// <remarks>
 /// A mirror, so the two can drift; the Worker's own behaviour is pinned by
 /// <c>cloud/worker/test/auth.test.ts</c>. What this buys is exercising the client's account flow —
-/// derivation, wrapping, unwrapping, persistence — without a network.
+/// session persistence, enrolment, sign-out — without a network or a browser.
 /// <para>
-/// <see cref="EverythingReceived"/> records every value the client sent, so tests can assert the
-/// password and the plaintext key never appear in it.
+/// <see cref="EverythingReceived"/> records every value the client sent, so a test can assert what
+/// does and does not leave the device.
 /// </para>
 /// </remarks>
 internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClient
@@ -23,60 +21,56 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
     private readonly Dictionary<string, Account> accounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Session> refreshTokens = new(StringComparer.Ordinal);
 
+    /// <summary>Codes the fake Google will redeem, mapped to the identity behind them.</summary>
+    internal Dictionary<string, (string Subject, string Email)> Codes { get; } =
+        new(StringComparer.Ordinal);
+
     internal List<string> EverythingReceived { get; } = [];
 
-    internal int RegisterCalls { get; private set; }
+    internal int SignInCalls { get; private set; }
 
     internal int RefreshCalls { get; private set; }
 
-    public ValueTask<string> RegisterAsync(
-        RegisterRequest request,
+    /// <summary>How many accounts exist, so a test can prove a second sign-in did not create one.</summary>
+    internal int AccountCount => accounts.Count;
+
+    public ValueTask<SessionResponse> SignInWithGoogleAsync(
+        GoogleSignInRequest request,
         CancellationToken cancellationToken = default)
     {
-        RegisterCalls += 1;
-        Record(request.Email, request.AuthKey, request.WrappedDekPassword, request.WrappedDekRecovery);
+        SignInCalls += 1;
+        Record(request.AuthorizationCode, request.CodeVerifier, request.RedirectUri, request.DeviceName);
 
-        if (accounts.ContainsKey(request.Email))
+        if (!Codes.TryGetValue(request.AuthorizationCode, out (string Subject, string Email) identity))
         {
-            throw new AccountException(
-                AccountFailure.EmailAlreadyRegistered,
-                "That email address is already registered.");
-        }
-
-        string userId = Guid.NewGuid().ToString("D");
-        accounts[request.Email] = new Account(
-            userId,
-            // The real server stores PBKDF2 over the auth key; a hash is enough to reproduce the
-            // "cannot be replayed as a key" property that matters to these tests.
-            Convert.ToHexStringLower(SHA256.HashData(Convert.FromHexString(ToHex(request.AuthKey)))),
-            request.WrappedDekPassword,
-            request.WrappedDekRecovery,
-            request.KdfParametersJson,
-            Generation: 1,
-            RewrapPending: false);
-        LastResetCode = null;
-
-        return ValueTask.FromResult(userId);
-    }
-
-    public ValueTask<SessionResponse> LoginAsync(
-        LoginRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        Record(request.Email, request.AuthKey, request.DeviceName);
-
-        if (!accounts.TryGetValue(request.Email, out Account? account) ||
-            account.Verifier != Convert.ToHexStringLower(
-                SHA256.HashData(Convert.FromHexString(ToHex(request.AuthKey)))))
-        {
-            // One answer for both, exactly as the Worker does: anything more specific is an
-            // account-enumeration oracle.
+            // A code that was already redeemed, expired, or never issued. The Worker turns Google's
+            // invalid_grant into exactly this.
             throw new AccountException(
                 AccountFailure.InvalidCredentials,
-                "That email address or password is incorrect.");
+                "That Google sign-in is no longer valid. Try again.");
         }
 
-        return ValueTask.FromResult(IssueSession(account));
+        if (!accounts.TryGetValue(identity.Subject, out Account? account))
+        {
+            account = new Account(
+                Guid.NewGuid().ToString("D"),
+                identity.Email,
+                // The real server generates this and seals it under a Worker secret; what matters to
+                // the client is that the same account always gets the same key back.
+                KeyMaterial.Random(),
+                KeyProtection.Server,
+                null,
+                null,
+                null);
+            accounts[identity.Subject] = account;
+        }
+        else
+        {
+            account = account with { Email = identity.Email };
+            accounts[identity.Subject] = account;
+        }
+
+        return ValueTask.FromResult(NewSession(account, includeKeys: true));
     }
 
     public ValueTask<SessionResponse> RefreshAsync(
@@ -84,17 +78,27 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
         CancellationToken cancellationToken = default)
     {
         RefreshCalls += 1;
-        if (!refreshTokens.Remove(refreshToken, out Session? session))
+
+        if (!refreshTokens.TryGetValue(refreshToken, out Session? session) || session.Revoked)
         {
             throw new AccountException(AccountFailure.InvalidCredentials, "The refresh token is not valid.");
         }
 
-        return ValueTask.FromResult(IssueSession(accounts[session.Email]));
+        // Rotation: the presented token is spent, and presenting it again is treated as theft.
+        refreshTokens[refreshToken] = session with { Revoked = true };
+        Account account = accounts.Values.Single(candidate => candidate.UserId == session.UserId);
+
+        // No key material on refresh, matching the Worker: a refresh renews a session.
+        return ValueTask.FromResult(NewSession(account, includeKeys: false));
     }
 
     public ValueTask LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
-        refreshTokens.Remove(refreshToken);
+        if (refreshTokens.TryGetValue(refreshToken, out Session? session))
+        {
+            refreshTokens[refreshToken] = session with { Revoked = true };
+        }
+
         return ValueTask.CompletedTask;
     }
 
@@ -102,128 +106,201 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
         string accessToken,
         CancellationToken cancellationToken = default)
     {
-        Account account = accounts.Values.FirstOrDefault()
-            ?? throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
-        return ValueTask.FromResult(new AccountSummary(
-            account.UserId,
-            accounts.First(pair => pair.Value == account).Key,
-            account.WrappedDekRecovery is not null,
-            account.RewrapPending,
-            account.Generation,
-            [],
-            account.WrappedDekRecovery));
+        Account account = Authenticate(accessToken);
+        return ValueTask.FromResult(new AccountSummary(account.UserId, account.Email, []));
     }
 
-    /// <summary>Simulates a password reset: the stored envelope no longer opens with the password.</summary>
-    internal void MarkRewrapPending(string email)
-    {
-        accounts[email] = accounts[email] with { RewrapPending = true };
-    }
-
-    /// <summary>The code the last reset request produced, as the email would have carried it.</summary>
-    internal string? LastResetCode { get; private set; }
-
-    internal int RewrapCalls { get; private set; }
-
-    public ValueTask RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
-    {
-        Record(email);
-        // Always succeeds, even for an unknown address: saying otherwise would be an enumeration
-        // oracle, and the client must not be able to tell either.
-        LastResetCode = accounts.ContainsKey(email) ? "ABCD-2345" : null;
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask ConfirmPasswordResetAsync(
-        ResetConfirmRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        Record(request.Email, request.NewAuthKey, request.Code);
-
-        if (LastResetCode is null || request.Code != LastResetCode || !accounts.ContainsKey(request.Email))
-        {
-            throw new AccountException(
-                AccountFailure.InvalidResetCode,
-                "That reset code is not valid. Request a new one.");
-        }
-
-        LastResetCode = null;
-        // The verifier rotates and the account is flagged, but wrapped_dek_pw is deliberately left
-        // alone: the server cannot re-wrap a key it cannot read.
-        accounts[request.Email] = accounts[request.Email] with
-        {
-            Verifier = Verify(request.NewAuthKey),
-            RewrapPending = true,
-        };
-        refreshTokens.Clear();
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask<int> RewrapAsync(
+    public ValueTask<KeyMaterialResponse> GetKeyMaterialAsync(
         string accessToken,
-        string wrappedDekPassword,
-        int dekGeneration,
         CancellationToken cancellationToken = default)
     {
-        RewrapCalls += 1;
-        Record(wrappedDekPassword);
-
-        string email = accounts.Keys.Single();
-        Account account = accounts[email];
-        if (account.Generation != dekGeneration)
-        {
-            throw new AccountException(
-                AccountFailure.ServerError,
-                "The account was updated elsewhere. Sign in again and retry.");
-        }
-
-        accounts[email] = account with
-        {
-            WrappedDekPassword = wrappedDekPassword,
-            Generation = dekGeneration + 1,
-            RewrapPending = false,
-        };
-        return ValueTask.FromResult(dekGeneration + 1);
+        return ValueTask.FromResult(KeysFor(Authenticate(accessToken)));
     }
 
-    private static string Verify(string authKey) =>
-        Convert.ToHexStringLower(SHA256.HashData(Convert.FromHexString(ToHex(authKey))));
-
-    private SessionResponse IssueSession(Account account)
+    public ValueTask ProtectAsync(
+        string accessToken,
+        string wrappedDekPassphrase,
+        string wrappedDekRecovery,
+        string kdfParametersJson,
+        CancellationToken cancellationToken = default)
     {
-        string email = accounts.First(pair => pair.Value == account).Key;
-        string refresh = Guid.NewGuid().ToString("N");
-        refreshTokens[refresh] = new Session(email);
+        Account account = Authenticate(accessToken);
+        Record(wrappedDekPassphrase, wrappedDekRecovery, kdfParametersJson);
+
+        // The server destroys its own copy in the same step, exactly as the Worker does. Keeping it
+        // here would let a test pass that the real thing would fail.
+        Replace(account with
+        {
+            Protection = KeyProtection.Passphrase,
+            ServerKey = null,
+            WrappedPassphrase = wrappedDekPassphrase,
+            WrappedRecovery = wrappedDekRecovery,
+            KdfParametersJson = kdfParametersJson,
+        });
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask UnprotectAsync(
+        string accessToken,
+        KeyMaterial dataKey,
+        CancellationToken cancellationToken = default)
+    {
+        Account account = Authenticate(accessToken);
+        Replace(account with
+        {
+            Protection = KeyProtection.Server,
+            ServerKey = KeyMaterial.CopyFrom(dataKey.Span),
+            WrappedPassphrase = null,
+            WrappedRecovery = null,
+            KdfParametersJson = null,
+        });
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<(Entitlement Entitlement, BillingLinks Links)> GetBillingAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        _ = Authenticate(accessToken);
+        return ValueTask.FromResult((Entitlement, new BillingLinks(true, true)));
+    }
+
+    public ValueTask<string> CreateCheckoutSessionAsync(
+        string accessToken,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default)
+    {
+        Account account = Authenticate(accessToken);
+        return ValueTask.FromResult($"https://pay.test/checkout?user={account.UserId}&plan={plan.ToWire()}");
+    }
+
+    public ValueTask<string> CreatePortalSessionAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        Account account = Authenticate(accessToken);
+        return ValueTask.FromResult($"https://pay.test/manage/{account.UserId}?token=single-use");
+    }
+
+    /// <summary>
+    /// The billing state this fake reports. Defaults to an active subscription so the account and
+    /// lock suites are about what they are about; the entitlement rules themselves are pinned by
+    /// the Worker's own tests.
+    /// </summary>
+    internal Entitlement Entitlement { get; set; } =
+        new(EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(30), true, true);
+
+    /// <summary>True once the account has taken its key away from this server.</summary>
+    internal bool IsLocked =>
+        accounts.Values.Any(account => account.Protection == KeyProtection.Passphrase);
+
+    /// <summary>The key the server still holds, or null once the lock is on.</summary>
+    internal KeyMaterial? ServerHeldKey =>
+        accounts.Values.SingleOrDefault()?.ServerKey;
+
+    private static KeyMaterialResponse KeysFor(Account account) =>
+        account.Protection == KeyProtection.Passphrase
+            ? new KeyMaterialResponse(
+                KeyProtection.Passphrase,
+                null,
+                account.WrappedPassphrase,
+                account.WrappedRecovery,
+                account.KdfParametersJson)
+            : new KeyMaterialResponse(
+                KeyProtection.Server,
+                System.Buffers.Text.Base64Url.EncodeToString(account.ServerKey!.Span),
+                null,
+                null,
+                null);
+
+    private void Replace(Account updated)
+    {
+        string subject = accounts.Single(entry => entry.Value.UserId == updated.UserId).Key;
+        accounts[subject] = updated;
+    }
+
+    /// <summary>Issues a code the way Google would, so a test can drive one sign-in.</summary>
+    internal string IssueCode(string subject, string email)
+    {
+        string code = $"code-{Guid.NewGuid():N}";
+        Codes[code] = (subject, email);
+        return code;
+    }
+
+    private Account Authenticate(string accessToken)
+    {
+        Account? account = accounts.Values.FirstOrDefault(
+            candidate => accessToken == $"access-{candidate.UserId}");
+        return account
+            ?? throw new AccountException(AccountFailure.InvalidCredentials, "The access token is not valid.");
+    }
+
+    private SessionResponse NewSession(Account account, bool includeKeys)
+    {
+        string refreshToken = $"refresh-{Guid.NewGuid():N}";
+        refreshTokens[refreshToken] = new Session(account.UserId, Revoked: false);
 
         return new SessionResponse(
             account.UserId,
-            AccessToken: Guid.NewGuid().ToString("N"),
-            // Matches the Worker's 15-minute access token, so token renewal is exercised for real.
-            AccessExpiresUtc: utcNow().AddMinutes(15),
-            RefreshToken: refresh,
-            WrappedDekPassword: account.WrappedDekPassword,
-            WrappedDekRecovery: account.WrappedDekRecovery,
-            KdfParametersJson: account.KdfParametersJson,
-            DekGeneration: account.Generation,
-            RewrapPending: account.RewrapPending,
-            ServerUtc: utcNow());
+            account.Email,
+            $"access-{account.UserId}",
+            utcNow().AddMinutes(15),
+            refreshToken,
+            includeKeys ? KeysFor(account) : null,
+            Entitlement,
+            utcNow());
     }
 
-    private void Record(params string?[] values) =>
-        EverythingReceived.AddRange(values.Where(value => value is not null)!);
-
-    /// <summary>base64url to hex, so the fake can hash it the way the real verifier would.</summary>
-    private static string ToHex(string base64Url) =>
-        Convert.ToHexString(System.Buffers.Text.Base64Url.DecodeFromChars(base64Url));
+    private void Record(params string?[] values)
+    {
+        foreach (string? value in values)
+        {
+            if (value is not null)
+            {
+                EverythingReceived.Add(value);
+            }
+        }
+    }
 
     private sealed record Account(
         string UserId,
-        string Verifier,
-        string WrappedDekPassword,
-        string? WrappedDekRecovery,
-        string KdfParametersJson,
-        int Generation,
-        bool RewrapPending);
+        string Email,
+        KeyMaterial? ServerKey,
+        KeyProtection Protection,
+        string? WrappedPassphrase,
+        string? WrappedRecovery,
+        string? KdfParametersJson);
 
-    private sealed record Session(string Email);
+    private sealed record Session(string UserId, bool Revoked);
+}
+
+/// <summary>
+/// Stands in for the browser half of Google sign-in: hands back a grant for a code the fake server
+/// will redeem, without opening anything.
+/// </summary>
+internal sealed class FakeIdentityProvider(FakeAuthServer server, string subject, string email)
+    : IIdentityProvider
+{
+    /// <summary>Set to make the next attempt behave like the user closing the browser window.</summary>
+    internal bool Cancel { get; set; }
+
+    internal int AuthorizeCalls { get; private set; }
+
+    public ValueTask<IdentityGrant> AuthorizeAsync(CancellationToken cancellationToken = default)
+    {
+        AuthorizeCalls += 1;
+        if (Cancel)
+        {
+            throw new AccountException(
+                AccountFailure.SignInCancelled,
+                "The sign-in was not completed. Try again when you are ready.");
+        }
+
+        return ValueTask.FromResult(new IdentityGrant(
+            server.IssueCode(subject, email),
+            "verifier",
+            "http://127.0.0.1:53219/"));
+    }
 }

@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   env,
   get,
-  loginAccount,
   post,
-  registerAccount,
   resetDatabase,
+  signIn,
+  signInAgain,
   toBase64Url,
   type Account,
 } from './helpers';
@@ -32,9 +32,8 @@ function noteId(suffix: number): string {
 }
 
 async function signedIn(): Promise<{ account: Account; token: string }> {
-  const account = await registerAccount();
-  const login = await loginAccount(account);
-  return { account, token: login.body.access_token };
+  const account = await signIn();
+  return { account, token: account.accessToken };
 }
 
 describe('push', () => {
@@ -197,9 +196,9 @@ describe('pull', () => {
   });
 
   it('returns what another device pushed, with the payload untouched', async () => {
-    const account = await registerAccount();
-    const deskToken = (await loginAccount(account, 'Desktop')).body.access_token;
-    const laptopToken = (await loginAccount(account, 'Laptop')).body.access_token;
+    const account = await signIn({ device: 'Desktop' });
+    const deskToken = account.accessToken;
+    const laptopToken = (await signInAgain(account, 'Laptop')).body.access_token;
     const payload = envelope('from the desktop');
 
     await post('/v1/sync/push', { notes: [{ id: noteId(1), payload, updated_utc: stamp(0) }] }, { token: deskToken });
