@@ -9,50 +9,54 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance settings:SettingsViewModel}">
-    <Grid x:Name="SettingsRoot" Background="{DynamicResource Daynote.Brush.Canvas}">
-    <ContentControl
-        Style="{DynamicResource Daynote.Style.SearchOverlay}"
-        MaxWidth="560"
-        MaxHeight="{Binding ActualHeight, ElementName=SettingsRoot}"
-        HorizontalAlignment="Center"
-        VerticalAlignment="Center"
-        AutomationProperties.Name="{loc:Tr SettingsTitle}">
-        <!-- Title stays fixed; the rows scroll when the window is too short to show them all. -->
+    <!--
+      v3 settings modal (docs/design-renewal/Daynote v3.dc.html): a 580px panel floating on a scrim,
+      holding one 12px-radius card per topic. Card titles are 13/700 over an 11.5 Text2 description;
+      chords render as keycap chips; row actions are mini bordered buttons. Every style lives in
+      Themes/Daynote.Product.Settings.xaml so this file stays markup only.
+    -->
+    <Grid x:Name="SettingsRoot" Background="{DynamicResource Daynote.Product.Brush.Scrim.Modal}">
+    <Border Style="{DynamicResource Daynote.Product.Style.Settings.Dialog}"
+            MaxHeight="{Binding ActualHeight, ElementName=SettingsRoot}"
+            AutomationProperties.Name="{loc:Tr SettingsTitle}">
+        <!-- Title stays fixed; the cards scroll when the window is too short to show them all. -->
         <DockPanel>
-            <Grid DockPanel.Dock="Top">
+            <Grid DockPanel.Dock="Top" Margin="22,18,18,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Style.Type.PaneTitle}" Text="{loc:Tr SettingsTitle}" />
+                <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Settings.Title}" Text="{loc:Tr SettingsTitle}" />
                 <Button
                     Grid.Column="1"
                     x:Name="CloseButton"
-                    Style="{DynamicResource Daynote.Style.IconButton.Ghost}"
+                    Style="{DynamicResource Daynote.Product.Style.Button.Round}"
                     ToolTip="{loc:Tr CloseSettings}"
                     AutomationProperties.Name="{loc:Tr CloseSettings}">
-                    <Path Style="{DynamicResource Daynote.Style.IconPresenter}" Data="{DynamicResource Daynote.Icon.Geometry.Dismiss}" IsHitTestVisible="False" />
+                    <Path Width="10" Height="10" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Close}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.4" IsHitTestVisible="False" />
                 </Button>
             </Grid>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,4,0,0">
-              <StackPanel Margin="0,0,4,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="22,0,14,22">
+              <StackPanel Margin="0,0,8,0">
             <!-- Cloud sync: absent entirely when this build has no endpoint configured -->
             <account:AccountSection DataContext="{Binding Account}"
                                     Visibility="{Binding Account, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
 
             <!-- Display language: segments switch the whole UI live, no restart -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,16,0,0" AutomationProperties.Name="{loc:Tr SettingsLanguageRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsLanguageRow}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsLanguageLabel}" />
-                        <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsLanguageDesc}" TextWrapping="Wrap" />
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsLanguageLabel}" />
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SettingsLanguageDesc}" />
                     </StackPanel>
-                    <ItemsControl Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top" ItemsSource="{Binding LanguageOptions}">
+                    <ItemsControl Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" ItemsSource="{Binding LanguageOptions}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Horizontal" />
@@ -74,120 +78,108 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </Grid>
-            </ContentControl>
+            </Border>
 
-            <!-- Startup task -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsStartupRow}">
+            <!-- Startup task: a pill switch, because the change takes effect the moment it is flipped -->
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsStartupRow}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsStartupLabel}" />
-                        <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding StartupStateText}" TextWrapping="Wrap" />
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsStartupLabel}" />
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding StartupStateText}" />
                     </StackPanel>
                     <ToggleButton
                         Grid.Column="1"
-                        Style="{DynamicResource Daynote.Style.SettingsToggle}"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{DynamicResource Daynote.Product.Style.Switch}"
                         IsChecked="{Binding StartupIsOn, Mode=OneWay}"
                         IsEnabled="{Binding StartupToggleEnabled}"
                         Command="{Binding ToggleStartupCommand}"
-                        Content="{loc:Tr SettingsStartupLabel}"
                         AutomationProperties.Name="{loc:Tr SettingsStartupAutomation}" />
                 </Grid>
-            </ContentControl>
+            </Border>
 
-            <!-- Shortcuts: configurable global summon hotkey + fixed in-app list -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsShortcutsRow}">
+            <!-- Shortcuts: configurable global summon hotkey + the editable in-app list -->
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsShortcutsRow}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsShortcutsRow}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsShortcutsRow}" />
 
                     <!-- Global summon hotkey -->
-                    <Grid Margin="0,8,0,0">
+                    <Grid Margin="0,12,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsSummonHotkeyLabel}" />
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsSummonHotkeyDesc}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,4,0,0" FontWeight="SemiBold" Text="{Binding SummonHotkeyDisplay}" />
-                            <TextBlock Foreground="{DynamicResource Daynote.Brush.Accent}" Text="{Binding HotkeyStatusText}" TextWrapping="Wrap">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Daynote.Style.Type.Status}">
-                                        <Style.Triggers>
-                                            <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                            <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" FontWeight="SemiBold"
+                                       Text="{loc:Tr SettingsSummonHotkeyLabel}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,2,0,0"
+                                       Text="{loc:Tr SettingsSummonHotkeyDesc}" />
+                            <Border Style="{DynamicResource Daynote.Product.Style.Kbd}" Margin="0,6,0,0">
+                                <TextBlock Style="{DynamicResource Daynote.Product.Style.Kbd.Text}" Text="{Binding SummonHotkeyDisplay}" />
+                            </Border>
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Text="{Binding HotkeyStatusText}" />
                         </StackPanel>
-                        <Button
-                            Grid.Column="1"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Top"
-                            Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Content="{loc:Tr HotkeyChange}"
-                            Command="{Binding StartHotkeyCaptureCommand}"
-                            AutomationProperties.Name="{loc:Tr SettingsSummonHotkeyLabel}" />
-                        <Button
-                            Grid.Column="2"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Top"
-                            Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Content="{loc:Tr HotkeyReset}"
-                            Command="{Binding ResetSummonHotkeyCommand}"
-                            AutomationProperties.Name="{loc:Tr HotkeyReset}" />
+                        <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Top"
+                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                Content="{loc:Tr HotkeyChange}"
+                                Command="{Binding StartHotkeyCaptureCommand}"
+                                AutomationProperties.Name="{loc:Tr SettingsSummonHotkeyLabel}" />
+                        <Button Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Top"
+                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                Content="{loc:Tr HotkeyReset}"
+                                Command="{Binding ResetSummonHotkeyCommand}"
+                                AutomationProperties.Name="{loc:Tr HotkeyReset}" />
                     </Grid>
 
                     <!-- Editable in-app shortcuts: click 변경 then press a chord; 기본값 resets. -->
-                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsInAppShortcutsLabel}" />
-                    <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding InAppShortcuts}">
+                    <Border Style="{DynamicResource Daynote.Product.Style.Settings.Divider}" />
+                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Product.Style.Settings.FieldLabel}"
+                               FontWeight="Bold" Text="{loc:Tr SettingsInAppShortcutsLabel}" />
+                    <ItemsControl ItemsSource="{Binding InAppShortcuts}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,3">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding Label}" />
-                                        <TextBlock Foreground="{DynamicResource Daynote.Brush.Accent}" Text="{Binding StatusText}" TextWrapping="Wrap">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Daynote.Style.Type.Status}">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                                        <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" MinWidth="86" TextAlignment="Right" FontWeight="SemiBold" Text="{Binding Display}" />
-                                    <Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                                            Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                                            Content="{loc:Tr HotkeyChange}"
-                                            Command="{Binding StartCaptureCommand}"
-                                            AutomationProperties.Name="{Binding Label}" />
-                                    <Button Grid.Column="3" Margin="6,0,0,0" VerticalAlignment="Center"
-                                            Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                                            Content="{loc:Tr HotkeyReset}"
-                                            Command="{Binding ResetCommand}"
-                                            AutomationProperties.Name="{loc:Tr HotkeyReset}" />
-                                </Grid>
+                                <StackPanel>
+                                    <Grid Margin="0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" Text="{Binding Label}" />
+                                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,2,0,0" Text="{Binding StatusText}" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Kbd}" MinWidth="84">
+                                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Kbd.Text}" Text="{Binding Display}" />
+                                        </Border>
+                                        <Button Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                                Content="{loc:Tr HotkeyChange}"
+                                                Command="{Binding StartCaptureCommand}"
+                                                AutomationProperties.Name="{Binding Label}" />
+                                        <Button Grid.Column="3" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                                Content="{loc:Tr HotkeyReset}"
+                                                Command="{Binding ResetCommand}"
+                                                AutomationProperties.Name="{loc:Tr HotkeyReset}" />
+                                    </Grid>
+                                    <Border Style="{DynamicResource Daynote.Product.Style.Settings.Divider}" />
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </ContentControl>
+            </Border>
 
             <!-- Backup / restore -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsBackupRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsBackupRow}">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -196,53 +188,45 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsBackupLabel}" />
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsBackupDesc}" TextWrapping="Wrap" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsBackupLabel}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SettingsBackupDesc}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
-                                Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                        <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
                                 Content="{loc:Tr BackupButton}"
                                 IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
                                 Command="{Binding BackupCommand}"
                                 AutomationProperties.Name="{loc:Tr BackupButton}" />
-                        <Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top"
-                                Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                        <Button Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Center"
+                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
                                 Content="{loc:Tr RestoreButton}"
                                 IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
                                 Command="{Binding RestoreCommand}"
                                 AutomationProperties.Name="{loc:Tr RestoreButton}" />
                     </Grid>
-                    <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}" Text="{Binding BackupStatusText}" TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource Daynote.Style.Type.Status}">
-                                <Style.Triggers>
-                                    <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                    <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Text="{Binding BackupStatusText}" />
                 </StackPanel>
-            </ContentControl>
+            </Border>
 
-            <!-- Storage location -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsStorageRow}">
+            <!-- Storage location: the path itself is the content, so it is set in mono -->
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsStorageRow}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsStorageLabel}" />
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding StorageLocation}" TextWrapping="Wrap" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsStorageLabel}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}"
+                               FontFamily="{DynamicResource Daynote.Product.Font.Mono}" Text="{Binding StorageLocation}" />
                 </StackPanel>
-            </ContentControl>
+            </Border>
 
             <!-- Privacy -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsPrivacyRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsPrivacyRow}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsPrivacyLabel}" />
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding PrivacyText}" TextWrapping="Wrap" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsPrivacyLabel}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding PrivacyText}" />
                 </StackPanel>
-            </ContentControl>
+            </Border>
 
             <!-- AI integration (MCP): one-click registration of the server bundled in the package -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsMcpRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsMcpRow}">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -250,11 +234,11 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsMcpLabel}" />
-                            <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpDesc}" TextWrapping="Wrap" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsMcpLabel}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SettingsMcpDesc}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
-                                Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                        <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
                                 Content="{loc:Tr SettingsMcpRegister}"
                                 IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
                                 Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
@@ -263,78 +247,67 @@
                     </Grid>
 
                     <!-- Registration result, and the "nothing to register" explanation for a dev run. -->
-                    <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}" Text="{Binding McpStatusText}" TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource Daynote.Style.Type.Status}">
-                                <Style.Triggers>
-                                    <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                    <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource Daynote.Style.Type.Status}"
-                               Foreground="{DynamicResource Daynote.Brush.Text.Muted}"
-                               Text="{loc:Tr SettingsMcpUnavailable}" TextWrapping="Wrap"
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Text="{Binding McpStatusText}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}"
+                               Text="{loc:Tr SettingsMcpUnavailable}"
                                Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
 
                     <!-- Claude Code: the same server, added from a terminal instead. -->
                     <StackPanel Visibility="{Binding McpAvailable, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                        <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpCodeHint}" TextWrapping="Wrap" />
-                        <Grid Margin="0,4,0,0">
+                        <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SettingsMcpCodeHint}" />
+                        <Grid Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap"
+                            <TextBox Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap" VerticalAlignment="Center"
+                                     Style="{DynamicResource Daynote.Product.Style.Settings.TextBox}"
                                      FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                                     Background="{DynamicResource Daynote.Brush.Surface.Selected}"
-                                     Padding="8" BorderThickness="0" VerticalAlignment="Center"
                                      Text="{Binding McpCodeCommand, Mode=OneWay}" />
-                            <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top"
-                                    Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                            <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
                                     Content="{loc:Tr SettingsMcpCopy}"
                                     Command="{Binding CopyToClipboardCommand}"
                                     CommandParameter="{Binding McpCodeCommand}"
                                     AutomationProperties.Name="{loc:Tr SettingsMcpCopy}" />
                         </Grid>
-                        <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Daynote.Brush.Accent}"
-                                   Style="{DynamicResource Daynote.Style.Type.Status}"
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}"
                                    Text="{loc:Tr SettingsMcpCopied}"
                                    Visibility="{Binding McpCopied, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                     </StackPanel>
 
-                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr SettingsMcpFooter}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SettingsMcpFooter}" />
                 </StackPanel>
-            </ContentControl>
+            </Border>
 
             <!-- Help / tutorial -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsTutorialRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsTutorialRow}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsTutorialLabel}" />
-                    <Button Grid.Column="1" Style="{DynamicResource Daynote.Style.Button.Secondary}"
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                               Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsTutorialLabel}" />
+                    <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                            Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
                             Content="{loc:Tr SettingsTutorialButton}"
                             Command="{Binding ShowTutorialCommand}"
                             AutomationProperties.Name="{loc:Tr SettingsTutorialButton}" />
                 </Grid>
-            </ContentControl>
+            </Border>
 
             <!-- About / author -->
-            <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Tr SettingsAboutRow}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" AutomationProperties.Name="{loc:Tr SettingsAboutRow}">
                 <StackPanel>
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr SettingsAboutLabel}" />
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding AuthorName}" />
-                    <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding AuthorEmail}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr SettingsAboutLabel}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding AuthorName}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,2,0,0" Text="{Binding AuthorEmail}" />
                 </StackPanel>
-            </ContentControl>
+            </Border>
               </StackPanel>
             </ScrollViewer>
         </DockPanel>
-    </ContentControl>
+    </Border>
     </Grid>
 </UserControl>
-

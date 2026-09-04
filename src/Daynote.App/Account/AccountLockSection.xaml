@@ -1,0 +1,200 @@
+﻿<UserControl
+    x:Class="Daynote.App.Account.AccountLockSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:account="clr-namespace:Daynote.App.Account"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance account:AccountViewModel}">
+    <!--
+      The note lock, the unlock prompt, and the notices that must never be silent.
+
+      Lifted out of the settings panel unchanged when the account moved into its own window
+      (docs/design-renewal/Daynote Account.dc.html): it is the same feature in a new place, and the
+      one place in Daynote that asks for a secret. Sign-in itself has no password.
+
+      With the lock off the service holds the key and can read what it stores; with it on it cannot.
+      The footnote at the bottom says which of those is true rather than leaving it to the policy.
+    -->
+    <StackPanel>
+
+        <!-- ── Locked: this device has the session but not the passphrase ── -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Note}" Margin="0,12,0,0"
+                Visibility="{Binding IsLocked, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" FontWeight="SemiBold" Text="{loc:Tr AccountUnlockTitle}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr AccountUnlockBlurb}" />
+
+                <!-- The passphrase, from a PasswordBox: it must never live in a bindable
+                     property that could be serialised, logged, or captured in a crash dump. -->
+                <StackPanel Visibility="{Binding IsUsingRecoveryKey, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.FieldLabel}" Text="{loc:Tr AccountPassphrase}" />
+                    <PasswordBox x:Name="UnlockPassphraseBox"
+                                 Style="{DynamicResource Daynote.Product.Style.Settings.PasswordBox}"
+                                 AutomationProperties.Name="{loc:Tr AccountPassphrase}" />
+                </StackPanel>
+                <StackPanel Visibility="{Binding IsUsingRecoveryKey, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.FieldLabel}" Text="{loc:Tr AccountRecoveryKeyLabel}" />
+                    <TextBox Style="{DynamicResource Daynote.Product.Style.Settings.TextBox}"
+                             FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
+                             Text="{Binding RecoveryKeyEntry, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{loc:Tr AccountRecoveryKeyLabel}" />
+                </StackPanel>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Click="OnUnlock" Content="{loc:Tr AccountUnlock}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr AccountUnlock}" />
+                    <Button Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                            Command="{Binding ToggleRecoveryKeyEntryCommand}">
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{loc:Tr AccountUseRecoveryKey}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsUsingRecoveryKey}" Value="True">
+                                            <Setter Property="Text" Value="{loc:Tr AccountUsePassphrase}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ── The lock itself. Hidden while this device is locked out: turning it on or off
+             needs the key, and offering the switch there would only fail. ── -->
+        <StackPanel Margin="0,14,0,0"
+                    Visibility="{Binding IsLocked, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Divider}" Margin="0,0,0,12" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" FontWeight="SemiBold" Text="{loc:Tr AccountLockTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr AccountLockBlurb}" />
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
+                               FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="11.5">
+                        <TextBlock.Style>
+                            <!-- Deliberately not BasedOn a StaticResource: the product
+                                 dictionaries are merged at runtime, after this BAML is
+                                 parsed, so the key would not resolve and the window would
+                                 fail to construct. -->
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="{loc:Tr AccountLockOff}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLockEnabled}" Value="True">
+                                        <Setter Property="Text" Value="{loc:Tr AccountLockOn}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+                <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                        Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                        Visibility="{Binding IsLockEnabled, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
+                        Command="{Binding ToggleEnableLockCommand}"
+                        Content="{loc:Tr AccountLockEnable}"
+                        AutomationProperties.Name="{loc:Tr AccountLockEnable}" />
+                <Button Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                        Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                        Visibility="{Binding IsLockEnabled, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                        Command="{Binding DisableLockCommand}"
+                        Content="{loc:Tr AccountLockDisable}"
+                        AutomationProperties.Name="{loc:Tr AccountLockDisable}" />
+            </Grid>
+
+            <!-- The passphrase form, folded away until the button above asks for it. -->
+            <StackPanel Margin="0,10,0,0"
+                        Visibility="{Binding IsEnablingLock, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.FieldLabel}" Text="{loc:Tr AccountPassphrase}" />
+                <PasswordBox x:Name="NewPassphraseBox"
+                             Style="{DynamicResource Daynote.Product.Style.Settings.PasswordBox}"
+                             AutomationProperties.Name="{loc:Tr AccountPassphrase}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding PassphraseHint}" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Click="OnEnableLock" Content="{loc:Tr AccountLockConfirm}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr AccountLockConfirm}" />
+                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                            Command="{Binding ToggleEnableLockCommand}" Content="{loc:Tr AccountLockCancel}"
+                            AutomationProperties.Name="{loc:Tr AccountLockCancel}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Shown once, immediately after the lock goes on. Dismissal is gated on the
+                 checkbox so the only copy of the key cannot scroll past unnoticed. -->
+            <Border Style="{DynamicResource Daynote.Product.Style.Settings.Note}" Margin="0,12,0,0"
+                    Visibility="{Binding IsShowingRecoveryKey, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" FontWeight="SemiBold" Text="{loc:Tr RecoveryKeyTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,4,0,0" Text="{loc:Tr RecoveryKeyBlurb}" />
+                    <TextBox Style="{DynamicResource Daynote.Product.Style.Settings.TextBox}" Margin="0,10,0,0" IsReadOnly="True"
+                             FontFamily="{DynamicResource Daynote.Product.Font.Mono}" FontSize="15"
+                             Text="{Binding RecoveryKeyDisplay, Mode=OneWay}"
+                             AutomationProperties.Name="{loc:Tr RecoveryKeyTitle}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                Command="{Binding CopyRecoveryKeyCommand}"
+                                Content="{loc:Tr RecoveryKeyCopy}" AutomationProperties.Name="{loc:Tr RecoveryKeyCopy}" />
+                        <Button Margin="6,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                                Command="{Binding SaveRecoveryKeyCommand}"
+                                Content="{loc:Tr RecoveryKeySaveToFile}"
+                                AutomationProperties.Name="{loc:Tr RecoveryKeySaveToFile}" />
+                        <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                   Style="{DynamicResource Daynote.Product.Style.Settings.Status}"
+                                   Text="{loc:Tr RecoveryKeyCopied}"
+                                   Visibility="{Binding RecoveryKeyCopied, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    </StackPanel>
+                    <CheckBox Margin="0,12,0,0" Content="{loc:Tr RecoveryKeyConfirm}"
+                              IsChecked="{Binding RecoveryKeyAcknowledged, Mode=TwoWay}"
+                              AutomationProperties.Name="{loc:Tr RecoveryKeyConfirm}" />
+                    <Button Margin="0,12,0,0" HorizontalAlignment="Left"
+                            Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Command="{Binding DismissRecoveryKeyCommand}" Content="{loc:Tr RecoveryKeyDone}"
+                            AutomationProperties.Name="{loc:Tr RecoveryKeyDone}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ── Notices: an error, and the edits last-write-wins replaced. Never silent. ── -->
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,12,0,0" Text="{Binding ErrorMessage}"
+                   Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+        <StackPanel Margin="0,12,0,0"
+                    Visibility="{Binding HasReplacedNotes, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}" Text="{Binding ReplacedNotesMessage}" />
+            <Button Margin="0,8,0,0" HorizontalAlignment="Left"
+                    Style="{DynamicResource Daynote.Product.Style.Button.Mini}"
+                    Command="{Binding OpenConflictsFolderCommand}" Content="{loc:Tr AccountOpenConflicts}"
+                    AutomationProperties.Name="{loc:Tr AccountOpenConflicts}" />
+        </StackPanel>
+
+        <!-- ── Standing footnote. Stated in the UI, not just the privacy policy. With the lock off
+             the service can read what it stores, and saying otherwise would be a lie; with it on,
+             the first line stops applying and the block above says so. ── -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Note}" Margin="0,14,0,0">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0" Text="{loc:Tr CloudSyncPrivacyNote}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,6,0,0" Text="{loc:Tr CloudSyncLocalNote}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

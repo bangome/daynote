@@ -1,4 +1,4 @@
-using Daynote.App.Account;
+﻿using Daynote.App.Account;
 using Daynote.App.Localization;
 using Daynote.Core.Sync;
 
@@ -6,8 +6,8 @@ namespace Daynote.App.Tests.Account;
 
 /// <summary>
 /// The account surface, driven through fakes. What matters here is what the user is told and when:
-/// the recovery key cannot be dismissed unacknowledged, offline is not an error, and no
-/// developer-facing English leaks into a Korean UI.
+/// closing the browser is not an error, offline is not an error, and no developer-facing English
+/// leaks into a Korean UI.
 /// </summary>
 [TestClass]
 public sealed class AccountViewModelTests
@@ -51,48 +51,43 @@ public sealed class AccountViewModelTests
     }
 
     [TestMethod]
-    public async Task Registering_shows_the_recovery_key_and_blocks_dismissal_until_acknowledged()
+    public async Task Signing_in_names_the_account_and_reports_synced()
     {
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
 
-        await vm.RegisterCommand.ExecuteAsync("correct horse battery staple");
+        await vm.SignInCommand.ExecuteAsync(null);
 
-        Assert.IsTrue(vm.IsShowingRecoveryKey);
-        Assert.AreEqual(32, vm.RecoveryKeyDisplay!.Length);
-        // The one time this key is ever visible, so it must not be dismissible by accident.
-        Assert.IsFalse(vm.DismissRecoveryKeyCommand.CanExecute(null));
-
-        vm.RecoveryKeyAcknowledged = true;
-        Assert.IsTrue(vm.DismissRecoveryKeyCommand.CanExecute(null));
+        Assert.IsTrue(vm.IsSignedIn);
+        Assert.AreEqual("alice@example.test", vm.SignedInEmail);
+        Assert.AreEqual(SyncStatusKind.Synced, vm.Status.Kind);
     }
 
     [TestMethod]
-    public async Task Dismissing_the_recovery_key_clears_it_from_memory()
+    public async Task Closing_the_browser_says_so_quietly_and_leaves_the_account_signed_out()
     {
+        // Cancelling is a decision, not a fault. Reporting "the sync service had a problem" here
+        // would send the user looking for a problem that does not exist.
+        accounts.NextIdentityFailure = new AccountException(
+            AccountFailure.SignInCancelled,
+            "developer-facing English");
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
-        await vm.RegisterCommand.ExecuteAsync("correct horse battery staple");
-        vm.RecoveryKeyAcknowledged = true;
 
-        await vm.DismissRecoveryKeyCommand.ExecuteAsync(null);
+        await vm.SignInCommand.ExecuteAsync(null);
 
-        Assert.IsNull(vm.RecoveryKeyDisplay);
-        Assert.IsFalse(vm.IsShowingRecoveryKey);
+        Assert.IsTrue(vm.IsSignedOut);
+        Assert.AreEqual(AppStrings.AccountErrorSignInCancelled, vm.ErrorMessage);
+        Assert.AreEqual(0, accounts.SignInCalls);
     }
 
     [TestMethod]
-    public async Task A_wrong_password_shows_localized_copy_and_not_the_exception_text()
+    public async Task A_failure_shows_localized_copy_and_not_the_exception_text()
     {
-        // AccountException messages are developer-facing English. Showing one in a Korean UI is a
-        // localization defect, so the view model maps the failure instead of forwarding the message.
         accounts.NextFailure = new AccountException(
             AccountFailure.InvalidCredentials,
-            "That email address or password is incorrect.");
+            "That sign-in is no longer valid. Sign in again.");
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
 
-        await vm.SignInCommand.ExecuteAsync("nope");
+        await vm.SignInCommand.ExecuteAsync(null);
 
         Assert.AreEqual(AppStrings.AccountErrorInvalidCredentials, vm.ErrorMessage);
         Assert.IsTrue(vm.IsSignedOut);
@@ -101,43 +96,55 @@ public sealed class AccountViewModelTests
     [TestMethod]
     public async Task Every_failure_maps_to_a_message_from_the_catalog()
     {
+        // A failure with no mapping would render as an untranslated exception message, which is a
+        // defect in a bilingual app rather than a cosmetic problem.
         foreach (AccountFailure failure in Enum.GetValues<AccountFailure>())
         {
-            accounts = new FakeAccounts(store) { NextFailure = new AccountException(failure, "developer text") };
+            accounts.NextFailure = new AccountException(failure, "developer-facing English");
             AccountViewModel vm = Create();
-            vm.Email = "alice@example.test";
 
-            await vm.SignInCommand.ExecuteAsync("password12");
+            await vm.SignInCommand.ExecuteAsync(null);
 
             Assert.IsNotNull(vm.ErrorMessage, failure.ToString());
-            Assert.AreNotEqual("developer text", vm.ErrorMessage, failure.ToString());
+            Assert.AreNotEqual("developer-facing English", vm.ErrorMessage, failure.ToString());
         }
     }
 
     [TestMethod]
-    public async Task A_reset_password_leaves_the_account_locked_rather_than_signed_out()
+    public async Task A_session_without_its_key_offers_to_fetch_it_again()
     {
-        accounts.NextFailure = new AccountException(AccountFailure.RewrapRequired, "locked");
+        accounts.WithholdDataKey = true;
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
 
-        await vm.SignInCommand.ExecuteAsync("password12");
+        // The server answered without a key, so signing in fails rather than half-succeeding.
+        await vm.SignInCommand.ExecuteAsync(null);
+        Assert.IsTrue(vm.IsSignedOut);
+        Assert.AreEqual(AppStrings.AccountErrorServer, vm.ErrorMessage);
 
-        // The password was right; only the envelope is stale. Showing the sign-in form again would
-        // invite the user to retype a password that already worked.
-        Assert.IsTrue(vm.IsLocked);
+        // With the key back, the ordinary path works and the prompt is gone.
+        accounts.WithholdDataKey = false;
+        await vm.SignInCommand.ExecuteAsync(null);
+
         Assert.IsTrue(vm.IsSignedIn);
+        Assert.IsFalse(vm.IsKeyMissing);
     }
 
     [TestMethod]
-    public async Task Signing_in_syncs_and_reports_synced()
+    public async Task Fetching_the_key_again_clears_the_locked_state()
     {
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
+        await vm.SignInCommand.ExecuteAsync(null);
 
-        await vm.SignInCommand.ExecuteAsync("password12");
+        nextReport = SyncReport.For(SyncOutcome.Locked);
+        await vm.SyncCommand.ExecuteAsync(null);
+        Assert.IsTrue(vm.IsKeyMissing);
+        Assert.AreEqual(SyncStatusKind.Locked, vm.Status.Kind);
 
-        Assert.IsTrue(vm.IsSignedIn);
+        nextReport = SyncReport.For(SyncOutcome.Completed);
+        await vm.RestoreKeyCommand.ExecuteAsync(null);
+
+        Assert.IsFalse(vm.IsKeyMissing);
+        Assert.IsFalse(store.State.IsLocked);
         Assert.AreEqual(SyncStatusKind.Synced, vm.Status.Kind);
     }
 
@@ -148,8 +155,7 @@ public sealed class AccountViewModelTests
         // user to ignore error messages.
         nextReport = SyncReport.For(SyncOutcome.Offline);
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
-        await vm.SignInCommand.ExecuteAsync("password12");
+        await vm.SignInCommand.ExecuteAsync(null);
 
         Assert.AreEqual(SyncStatusKind.Offline, vm.Status.Kind);
         Assert.IsNull(vm.ErrorMessage);
@@ -162,8 +168,7 @@ public sealed class AccountViewModelTests
         // Silently skipping it would look exactly like the note having been deleted.
         nextReport = new SyncReport(SyncOutcome.Completed, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5);
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
-        await vm.SignInCommand.ExecuteAsync("password12");
+        await vm.SignInCommand.ExecuteAsync(null);
 
         Assert.AreEqual(SyncStatusKind.Error, vm.Status.Kind);
         Assert.IsTrue(vm.Status.NeedsAttention);
@@ -174,8 +179,7 @@ public sealed class AccountViewModelTests
     {
         nextReport = new SyncReport(SyncOutcome.Completed, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2, 5);
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
-        await vm.SignInCommand.ExecuteAsync("password12");
+        await vm.SignInCommand.ExecuteAsync(null);
 
         Assert.IsTrue(vm.HasReplacedNotes);
         StringAssert.Contains(vm.ReplacedNotesMessage, "2");
@@ -190,14 +194,14 @@ public sealed class AccountViewModelTests
     public async Task Signing_out_hides_the_chip_and_forgets_the_account()
     {
         AccountViewModel vm = Create();
-        vm.Email = "alice@example.test";
-        await vm.SignInCommand.ExecuteAsync("password12");
+        await vm.SignInCommand.ExecuteAsync(null);
 
         await vm.SignOutCommand.ExecuteAsync(null);
 
         Assert.IsTrue(vm.IsSignedOut);
         Assert.IsFalse(vm.Status.IsVisible);
         Assert.IsTrue(accounts.SignedOut);
+        Assert.IsNull(await accounts.LoadSessionAsync());
     }
 
     [TestMethod]
@@ -221,17 +225,7 @@ public sealed class AccountViewModelTests
         }
     }
 
-    [TestMethod]
-    public void Only_locked_and_error_ask_for_attention()
-    {
-        foreach (SyncStatusKind kind in Enum.GetValues<SyncStatusKind>())
-        {
-            bool expected = kind is SyncStatusKind.Locked or SyncStatusKind.Error;
-            Assert.AreEqual(expected, new SyncStatusView(kind).NeedsAttention, kind.ToString());
-        }
-    }
-
-    private sealed class FakeExporter : IRecoveryKeyExporter
+    internal sealed class FakeExporter : IRecoveryKeyExporter
     {
         internal string? Copied { get; private set; }
 
@@ -244,4 +238,15 @@ public sealed class AccountViewModelTests
         public bool TrySaveToFile(string recoveryKey) => true;
     }
 
+    [TestMethod]
+    public void Only_the_states_the_user_can_act_on_ask_for_attention()
+    {
+        // Locked needs a passphrase, Error needs looking at, and Unpaid needs a subscription. The
+        // rest — synced, syncing, pending, offline — are states to read, not problems to solve.
+        foreach (SyncStatusKind kind in Enum.GetValues<SyncStatusKind>())
+        {
+            bool expected = kind is SyncStatusKind.Locked or SyncStatusKind.Error or SyncStatusKind.Unpaid;
+            Assert.AreEqual(expected, new SyncStatusView(kind).NeedsAttention, kind.ToString());
+        }
+    }
 }

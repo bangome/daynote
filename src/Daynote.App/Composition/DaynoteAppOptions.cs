@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 
 namespace Daynote.App.Composition;
 
@@ -59,6 +59,18 @@ public sealed class DaynoteAppOptions
     /// above is that the decision is now explicit.
     /// </remarks>
     public const string DeployedSyncEndpoint = "https://daynote.arachat.cc";
+
+    /// <summary>
+    /// The Google OAuth desktop client this app signs in with.
+    /// </summary>
+    /// <remarks>
+    /// Public by design: an installed app cannot keep a client id secret, and Google does not treat
+    /// it as one. Its matching client secret is NOT here — the authorization code is exchanged by
+    /// the Worker, which holds that secret, precisely so it never ships inside this binary. The same
+    /// value is in cloud/worker/wrangler.toml and the two must agree.
+    /// </remarks>
+    public const string GoogleClientId =
+        "298036592294-mp11166n940ojbq4js3u5233ruvkk2ic.apps.googleusercontent.com";
 
     /// <summary>
     /// Supplies the endpoint for a single run, overriding <see cref="SyncEnabledByDefault"/> in

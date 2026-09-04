@@ -1,4 +1,4 @@
-namespace Daynote.App.Localization;
+﻿namespace Daynote.App.Localization;
 
 /// <summary>
 /// Strongly typed access to user-visible product copy and UI Automation names. Members resolve
@@ -342,20 +342,29 @@ public static class AppStrings
     public static string CloudSyncBlurb => LocalizationService.Instance[nameof(CloudSyncBlurb)];
     public static string CloudSyncPrivacyNote => LocalizationService.Instance[nameof(CloudSyncPrivacyNote)];
     public static string CloudSyncLocalNote => LocalizationService.Instance[nameof(CloudSyncLocalNote)];
-    public static string AccountEmail => LocalizationService.Instance[nameof(AccountEmail)];
-    public static string AccountPassword => LocalizationService.Instance[nameof(AccountPassword)];
-    public static string AccountSignIn => LocalizationService.Instance[nameof(AccountSignIn)];
-    public static string AccountCreate => LocalizationService.Instance[nameof(AccountCreate)];
-    public static string AccountSignOut => LocalizationService.Instance[nameof(AccountSignOut)];
-    public static string AccountSyncNow => LocalizationService.Instance[nameof(AccountSyncNow)];
-    public static string AccountBusy => LocalizationService.Instance[nameof(AccountBusy)];
-    /// <summary>{0} = the signed-in email address.</summary>
-    public static string AccountSignedInAsFormat => LocalizationService.Instance[nameof(AccountSignedInAsFormat)];
-    /// <summary>{0} = a formatted local time.</summary>
-    public static string AccountLastSyncFormat => LocalizationService.Instance[nameof(AccountLastSyncFormat)];
-    public static string AccountNeverSynced => LocalizationService.Instance[nameof(AccountNeverSynced)];
-    /// <summary>{0} = the minimum password length.</summary>
-    public static string AccountPasswordHint => LocalizationService.Instance[nameof(AccountPasswordHint)];
+    public static string AccountSignInWithGoogle => LocalizationService.Instance[nameof(AccountSignInWithGoogle)];
+    public static string AccountSignInBrowserHint => LocalizationService.Instance[nameof(AccountSignInBrowserHint)];
+    public static string AccountKeyMissingBlurb => LocalizationService.Instance[nameof(AccountKeyMissingBlurb)];
+    public static string AccountRestoreKey => LocalizationService.Instance[nameof(AccountRestoreKey)];
+    public static string AccountErrorSignInCancelled => LocalizationService.Instance[nameof(AccountErrorSignInCancelled)];
+    public static string AccountErrorUnverifiedIdentity => LocalizationService.Instance[nameof(AccountErrorUnverifiedIdentity)];
+    public static string AccountLockTitle => LocalizationService.Instance[nameof(AccountLockTitle)];
+    public static string AccountLockBlurb => LocalizationService.Instance[nameof(AccountLockBlurb)];
+    public static string AccountLockOn => LocalizationService.Instance[nameof(AccountLockOn)];
+    public static string AccountLockOff => LocalizationService.Instance[nameof(AccountLockOff)];
+    public static string AccountLockEnable => LocalizationService.Instance[nameof(AccountLockEnable)];
+    public static string AccountLockDisable => LocalizationService.Instance[nameof(AccountLockDisable)];
+    public static string AccountLockConfirm => LocalizationService.Instance[nameof(AccountLockConfirm)];
+    public static string AccountLockCancel => LocalizationService.Instance[nameof(AccountLockCancel)];
+    public static string AccountPassphrase => LocalizationService.Instance[nameof(AccountPassphrase)];
+    public static string AccountPassphraseHint => LocalizationService.Instance[nameof(AccountPassphraseHint)];
+    public static string AccountUnlockTitle => LocalizationService.Instance[nameof(AccountUnlockTitle)];
+    public static string AccountUnlockBlurb => LocalizationService.Instance[nameof(AccountUnlockBlurb)];
+    public static string AccountUnlock => LocalizationService.Instance[nameof(AccountUnlock)];
+    public static string AccountUseRecoveryKey => LocalizationService.Instance[nameof(AccountUseRecoveryKey)];
+    public static string AccountUsePassphrase => LocalizationService.Instance[nameof(AccountUsePassphrase)];
+    public static string AccountRecoveryKeyLabel => LocalizationService.Instance[nameof(AccountRecoveryKeyLabel)];
+    public static string AccountLockedTitle => LocalizationService.Instance[nameof(AccountLockedTitle)];
     public static string RecoveryKeyTitle => LocalizationService.Instance[nameof(RecoveryKeyTitle)];
     public static string RecoveryKeyBlurb => LocalizationService.Instance[nameof(RecoveryKeyBlurb)];
     public static string RecoveryKeyCopy => LocalizationService.Instance[nameof(RecoveryKeyCopy)];
@@ -364,8 +373,35 @@ public static class AppStrings
     public static string RecoveryKeyConfirm => LocalizationService.Instance[nameof(RecoveryKeyConfirm)];
     public static string RecoveryKeyDone => LocalizationService.Instance[nameof(RecoveryKeyDone)];
     public static string RecoveryKeyFileFilter => LocalizationService.Instance[nameof(RecoveryKeyFileFilter)];
-    public static string AccountLockedTitle => LocalizationService.Instance[nameof(AccountLockedTitle)];
-    public static string AccountLockedBlurb => LocalizationService.Instance[nameof(AccountLockedBlurb)];
+    public static string AccountErrorInvalidPassphrase => LocalizationService.Instance[nameof(AccountErrorInvalidPassphrase)];
+    public static string AccountErrorInvalidRecoveryKey => LocalizationService.Instance[nameof(AccountErrorInvalidRecoveryKey)];
+    public static string AccountErrorLockedOut => LocalizationService.Instance[nameof(AccountErrorLockedOut)];
+    public static string AccountErrorWeakPassphrase => LocalizationService.Instance[nameof(AccountErrorWeakPassphrase)];
+    public static string AccountErrorUnsupportedVersion => LocalizationService.Instance[nameof(AccountErrorUnsupportedVersion)];
+    public static string BillingTitle => LocalizationService.Instance[nameof(BillingTitle)];
+    public static string BillingBlurb => LocalizationService.Instance[nameof(BillingBlurb)];
+    public static string BillingTrialFormat => LocalizationService.Instance[nameof(BillingTrialFormat)];
+    public static string BillingActive => LocalizationService.Instance[nameof(BillingActive)];
+    public static string BillingActiveFormat => LocalizationService.Instance[nameof(BillingActiveFormat)];
+    public static string BillingGraceFormat => LocalizationService.Instance[nameof(BillingGraceFormat)];
+    public static string BillingTrialOver => LocalizationService.Instance[nameof(BillingTrialOver)];
+    public static string BillingExpired => LocalizationService.Instance[nameof(BillingExpired)];
+    public static string BillingSubscribe => LocalizationService.Instance[nameof(BillingSubscribe)];
+    public static string BillingRenew => LocalizationService.Instance[nameof(BillingRenew)];
+    public static string BillingSubscribeAnnual => LocalizationService.Instance[nameof(BillingSubscribeAnnual)];
+    public static string BillingSubscribeMonthly => LocalizationService.Instance[nameof(BillingSubscribeMonthly)];
+    public static string BillingManage => LocalizationService.Instance[nameof(BillingManage)];
+    public static string BillingLapseNote => LocalizationService.Instance[nameof(BillingLapseNote)];
+    public static string BillingBrowserHint => LocalizationService.Instance[nameof(BillingBrowserHint)];
+    public static string SyncChipUnpaid => LocalizationService.Instance[nameof(SyncChipUnpaid)];
+    public static string AccountSignOut => LocalizationService.Instance[nameof(AccountSignOut)];
+    public static string AccountSyncNow => LocalizationService.Instance[nameof(AccountSyncNow)];
+    public static string AccountBusy => LocalizationService.Instance[nameof(AccountBusy)];
+    /// <summary>{0} = the signed-in email address.</summary>
+    public static string AccountSignedInAsFormat => LocalizationService.Instance[nameof(AccountSignedInAsFormat)];
+    /// <summary>{0} = a formatted local time.</summary>
+    public static string AccountLastSyncFormat => LocalizationService.Instance[nameof(AccountLastSyncFormat)];
+    public static string AccountNeverSynced => LocalizationService.Instance[nameof(AccountNeverSynced)];
     /// <summary>{0} = number of notes replaced by a newer version from another device.</summary>
     public static string AccountConflictsFormat => LocalizationService.Instance[nameof(AccountConflictsFormat)];
     public static string AccountOpenConflicts => LocalizationService.Instance[nameof(AccountOpenConflicts)];
@@ -377,35 +413,73 @@ public static class AppStrings
     public static string SyncChipError => LocalizationService.Instance[nameof(SyncChipError)];
     public static string SyncStatusAutomation => LocalizationService.Instance[nameof(SyncStatusAutomation)];
     public static string AccountErrorInvalidCredentials => LocalizationService.Instance[nameof(AccountErrorInvalidCredentials)];
-    public static string AccountErrorEmailTaken => LocalizationService.Instance[nameof(AccountErrorEmailTaken)];
-    public static string AccountErrorInvalidEmail => LocalizationService.Instance[nameof(AccountErrorInvalidEmail)];
-    /// <summary>{0} = the minimum password length.</summary>
-    public static string AccountErrorWeakPassword => LocalizationService.Instance[nameof(AccountErrorWeakPassword)];
-    public static string AccountErrorRewrapRequired => LocalizationService.Instance[nameof(AccountErrorRewrapRequired)];
-    public static string AccountErrorUnsupportedVersion => LocalizationService.Instance[nameof(AccountErrorUnsupportedVersion)];
     public static string AccountErrorOffline => LocalizationService.Instance[nameof(AccountErrorOffline)];
     public static string AccountErrorServer => LocalizationService.Instance[nameof(AccountErrorServer)];
 
-    // Cloud sync: password reset and unlock
-    public static string AccountForgotPassword => LocalizationService.Instance[nameof(AccountForgotPassword)];
-    public static string AccountResetSend => LocalizationService.Instance[nameof(AccountResetSend)];
-    /// <summary>{0} = the email address the code was sent to.</summary>
-    public static string AccountResetSentFormat => LocalizationService.Instance[nameof(AccountResetSentFormat)];
-    public static string AccountResetCode => LocalizationService.Instance[nameof(AccountResetCode)];
-    public static string AccountResetNewPassword => LocalizationService.Instance[nameof(AccountResetNewPassword)];
-    public static string AccountResetConfirm => LocalizationService.Instance[nameof(AccountResetConfirm)];
-    public static string AccountResetCancel => LocalizationService.Instance[nameof(AccountResetCancel)];
-    public static string AccountResetWarning => LocalizationService.Instance[nameof(AccountResetWarning)];
-    public static string AccountUnlockWithRecoveryKey => LocalizationService.Instance[nameof(AccountUnlockWithRecoveryKey)];
-    public static string AccountUnlockKeyLabel => LocalizationService.Instance[nameof(AccountUnlockKeyLabel)];
-    public static string AccountUnlockConfirm => LocalizationService.Instance[nameof(AccountUnlockConfirm)];
-    public static string AccountUnlockPasswordLabel => LocalizationService.Instance[nameof(AccountUnlockPasswordLabel)];
-    public static string AccountDiscardCloudCopy => LocalizationService.Instance[nameof(AccountDiscardCloudCopy)];
-    public static string AccountDiscardCloudCopyBlurb => LocalizationService.Instance[nameof(AccountDiscardCloudCopyBlurb)];
-    public static string AccountErrorInvalidResetCode => LocalizationService.Instance[nameof(AccountErrorInvalidResetCode)];
-    public static string AccountErrorInvalidRecoveryKeyEntered => LocalizationService.Instance[nameof(AccountErrorInvalidRecoveryKeyEntered)];
-    public static string AccountErrorNoWayToUnlock => LocalizationService.Instance[nameof(AccountErrorNoWayToUnlock)];
 
     /// <summary>Win32 file-dialog filter for backup archives.</summary>
     public static string BackupZipFilter => LocalizationService.Instance[nameof(BackupZipFilter)];
+
+    // Account window (docs/design-renewal/Daynote Account.dc.html)
+    public static string AccountWindowTitle => LocalizationService.Instance[nameof(AccountWindowTitle)];
+    public static string AccountMenuAutomation => LocalizationService.Instance[nameof(AccountMenuAutomation)];
+    public static string AccountManage => LocalizationService.Instance[nameof(AccountManage)];
+    /// <summary>{0} = email, {1} = plan, {2} = sync state.</summary>
+    public static string AccountAvatarTooltipFormat => LocalizationService.Instance[nameof(AccountAvatarTooltipFormat)];
+    public static string AccountSignInTitle => LocalizationService.Instance[nameof(AccountSignInTitle)];
+    public static string AccountSignInLead => LocalizationService.Instance[nameof(AccountSignInLead)];
+    public static string AccountSignInTerms => LocalizationService.Instance[nameof(AccountSignInTerms)];
+    public static string AccountTerms => LocalizationService.Instance[nameof(AccountTerms)];
+    public static string AccountPrivacy => LocalizationService.Instance[nameof(AccountPrivacy)];
+    public static string AccountSkipSignIn => LocalizationService.Instance[nameof(AccountSkipSignIn)];
+    public static string AccountPerkSyncTitle => LocalizationService.Instance[nameof(AccountPerkSyncTitle)];
+    public static string AccountPerkSyncDesc => LocalizationService.Instance[nameof(AccountPerkSyncDesc)];
+    public static string AccountPerkLockTitle => LocalizationService.Instance[nameof(AccountPerkLockTitle)];
+    public static string AccountPerkLockDesc => LocalizationService.Instance[nameof(AccountPerkLockDesc)];
+    public static string AccountPerkExportTitle => LocalizationService.Instance[nameof(AccountPerkExportTitle)];
+    public static string AccountPerkExportDesc => LocalizationService.Instance[nameof(AccountPerkExportDesc)];
+    public static string AccountPlanFree => LocalizationService.Instance[nameof(AccountPlanFree)];
+    public static string AccountPlanTrial => LocalizationService.Instance[nameof(AccountPlanTrial)];
+    public static string AccountPlanPro => LocalizationService.Instance[nameof(AccountPlanPro)];
+    public static string AccountPlanGrace => LocalizationService.Instance[nameof(AccountPlanGrace)];
+    /// <summary>{0} = whole days left.</summary>
+    public static string BillingTrialBannerTitleFormat => LocalizationService.Instance[nameof(BillingTrialBannerTitleFormat)];
+    public static string BillingTrialBannerBody => LocalizationService.Instance[nameof(BillingTrialBannerBody)];
+    public static string BillingGraceBannerTitle => LocalizationService.Instance[nameof(BillingGraceBannerTitle)];
+    /// <summary>{0} = whole days left.</summary>
+    public static string BillingGraceBannerBodyFormat => LocalizationService.Instance[nameof(BillingGraceBannerBodyFormat)];
+    public static string BillingExpiredBannerTitle => LocalizationService.Instance[nameof(BillingExpiredBannerTitle)];
+    public static string BillingUpgradeTitle => LocalizationService.Instance[nameof(BillingUpgradeTitle)];
+    public static string BillingPlanMonthly => LocalizationService.Instance[nameof(BillingPlanMonthly)];
+    public static string BillingPlanAnnual => LocalizationService.Instance[nameof(BillingPlanAnnual)];
+    public static string BillingPriceMonthly => LocalizationService.Instance[nameof(BillingPriceMonthly)];
+    public static string BillingPriceAnnual => LocalizationService.Instance[nameof(BillingPriceAnnual)];
+    public static string BillingPriceUnitMonthly => LocalizationService.Instance[nameof(BillingPriceUnitMonthly)];
+    public static string BillingPriceUnitAnnual => LocalizationService.Instance[nameof(BillingPriceUnitAnnual)];
+    public static string BillingPriceSubMonthly => LocalizationService.Instance[nameof(BillingPriceSubMonthly)];
+    public static string BillingPriceSubAnnual => LocalizationService.Instance[nameof(BillingPriceSubAnnual)];
+    public static string BillingAnnualSaving => LocalizationService.Instance[nameof(BillingAnnualSaving)];
+    public static string BillingFeatureSync => LocalizationService.Instance[nameof(BillingFeatureSync)];
+    public static string BillingFeatureDevices => LocalizationService.Instance[nameof(BillingFeatureDevices)];
+    public static string BillingFeatureLock => LocalizationService.Instance[nameof(BillingFeatureLock)];
+    public static string BillingFeatureQuota => LocalizationService.Instance[nameof(BillingFeatureQuota)];
+    /// <summary>{0} = price.</summary>
+    public static string BillingCheckoutFormat => LocalizationService.Instance[nameof(BillingCheckoutFormat)];
+    public static string BillingProviderNote => LocalizationService.Instance[nameof(BillingProviderNote)];
+    public static string BillingDetailTitle => LocalizationService.Instance[nameof(BillingDetailTitle)];
+    public static string BillingRowPlan => LocalizationService.Instance[nameof(BillingRowPlan)];
+    public static string BillingRowState => LocalizationService.Instance[nameof(BillingRowState)];
+    public static string BillingRowRenews => LocalizationService.Instance[nameof(BillingRowRenews)];
+    public static string BillingRowEnds => LocalizationService.Instance[nameof(BillingRowEnds)];
+    public static string BillingStateActive => LocalizationService.Instance[nameof(BillingStateActive)];
+    public static string BillingStateTrial => LocalizationService.Instance[nameof(BillingStateTrial)];
+    public static string BillingStateGrace => LocalizationService.Instance[nameof(BillingStateGrace)];
+    public static string BillingPortalNote => LocalizationService.Instance[nameof(BillingPortalNote)];
+    /// <summary>{0} = version, e.g. 1.5.0.</summary>
+    public static string AccountVersionFormat => LocalizationService.Instance[nameof(AccountVersionFormat)];
+    public static string AccountSyncState => LocalizationService.Instance[nameof(AccountSyncState)];
+    /// <summary>Path on the product site, appended to the service origin.</summary>
+    public static string AccountTermsUrl => LocalizationService.Instance[nameof(AccountTermsUrl)];
+    /// <summary>Path on the product site, appended to the service origin.</summary>
+    public static string AccountPrivacyUrl => LocalizationService.Instance[nameof(AccountPrivacyUrl)];
 }

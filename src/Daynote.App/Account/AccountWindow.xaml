@@ -1,0 +1,89 @@
+﻿<Window
+    x:Class="Daynote.App.Account.AccountWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:account="clr-namespace:Daynote.App.Account"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance account:AccountViewModel}"
+    Title="{loc:Tr AccountWindowTitle}"
+    Width="520" MinHeight="320" MaxHeight="820"
+    SizeToContent="Height"
+    ShowInTaskbar="False"
+    WindowStartupLocation="CenterOwner"
+    WindowStyle="None" ResizeMode="NoResize"
+    Background="Transparent" AllowsTransparency="True"
+    FontFamily="{DynamicResource Daynote.Product.Font.UI}"
+    Foreground="{DynamicResource Daynote.Product.Brush.Text}"
+    UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal"
+    AutomationProperties.Name="{loc:Tr AccountWindowTitle}">
+    <!--
+      The account, in a window of its own ("Daynote Account.dc.html").
+
+      It used to be a card inside settings. Moving it out is what the design asks for and what the
+      content had outgrown: a subscription, a trial countdown, a payment route and an encryption
+      lock are not preferences, and burying them under a gear made the paid feature the hardest
+      thing in the app to find. Settings keeps a one-line row that opens this.
+
+      Fixed width, height to content: everything here is a stack of cards, so a resizable frame
+      would only ever add empty space. Escape closes.
+    -->
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="0" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border Background="{DynamicResource Daynote.Product.Brush.Panel}"
+            BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
+            BorderThickness="1" CornerRadius="14"
+            Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ── Titlebar: mark, title, close. Only close, because a fixed-size dialog has nothing
+                 to minimize to and nothing to maximize into; the mock draws all three greyed out. ── -->
+            <Grid Grid.Row="0" Margin="14,0,6,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="20" Height="20" CornerRadius="6" VerticalAlignment="Center"
+                        Background="{DynamicResource Daynote.Product.Brush.Accent}">
+                    <Path Width="11" Height="11" Stretch="Uniform"
+                          Data="{DynamicResource Daynote.Product.Geo.CalendarGlyph}"
+                          Stroke="{DynamicResource Daynote.Product.Brush.OnAccent}"
+                          StrokeThickness="2" StrokeLineJoin="Round" Fill="{x:Null}" />
+                </Border>
+                <TextBlock Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center"
+                           FontSize="12.5" FontWeight="Bold"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text}"
+                           Text="{loc:Tr AccountWindowTitle}" />
+                <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True"
+                        Style="{DynamicResource Daynote.Product.Style.CaptionButton.Close}"
+                        Click="OnClose" AutomationProperties.Name="{loc:Tr WindowClose}">
+                    <Path Width="10" Height="10" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Close}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" />
+                </Button>
+            </Grid>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1"
+                    Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+
+            <!-- One state or the other, never both. -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0">
+                <Grid>
+                    <account:AccountSignInView
+                        Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <account:AccountDetailsView
+                        Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</Window>

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Localization;
@@ -11,9 +11,15 @@ namespace Daynote.App.Account;
 /// so there is a single answer to "are we signed in" and "what is sync doing".
 /// </summary>
 /// <remarks>
+/// Sign-in is one button. Everything it used to need — an address, a password, a recovery key, a
+/// reset code — left with the password model: Google establishes who you are, and the data key
+/// arrives with the session. The consequence is stated in the UI, not just the privacy policy: the
+/// server can read what it stores (docs/CLOUD_SYNC.md §1).
+/// <para>
 /// Failures are mapped from <see cref="AccountFailure"/> to localized copy here. The messages carried
 /// on <see cref="AccountException"/> are developer-facing English and must never reach the UI — this
 /// app ships in Korean and English, and an untranslated string is a defect.
+/// </para>
 /// </remarks>
 public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
 {
@@ -21,11 +27,8 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     private readonly Func<ValueTask<SyncReport>> syncNow;
     private readonly ISyncStore store;
     private readonly IRecoveryKeyExporter exporter;
-    private readonly Action<string> revealFolder;
+    private readonly Action<string> openExternal;
     private readonly string conflictsPath;
-
-    [ObservableProperty]
-    private string email = string.Empty;
 
     [ObservableProperty]
     private bool isBusy;
@@ -39,18 +42,9 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     [ObservableProperty]
     private string? lastSyncText;
 
+    /// <summary>Signed in, but this device holds no data key yet. Re-fetchable without the browser.</summary>
     [ObservableProperty]
-    private bool isLocked;
-
-    /// <summary>The one-time recovery key, shown only immediately after registering.</summary>
-    [ObservableProperty]
-    private string? recoveryKeyDisplay;
-
-    [ObservableProperty]
-    private bool recoveryKeyAcknowledged;
-
-    [ObservableProperty]
-    private bool recoveryKeyCopied;
+    private bool isKeyMissing;
 
     [ObservableProperty]
     private int replacedNoteCount;
@@ -62,23 +56,20 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         ISyncStore store,
         Func<ValueTask<SyncReport>> syncNow,
         IRecoveryKeyExporter exporter,
-        Action<string> revealFolder,
+        Action<string> openExternal,
         string conflictsPath)
     {
         this.accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
         this.store = store ?? throw new ArgumentNullException(nameof(store));
         this.syncNow = syncNow ?? throw new ArgumentNullException(nameof(syncNow));
         this.exporter = exporter ?? throw new ArgumentNullException(nameof(exporter));
-        this.revealFolder = revealFolder ?? throw new ArgumentNullException(nameof(revealFolder));
+        this.openExternal = openExternal ?? throw new ArgumentNullException(nameof(openExternal));
         this.conflictsPath = conflictsPath ?? throw new ArgumentNullException(nameof(conflictsPath));
     }
 
     public bool IsSignedIn => SignedInEmail is not null;
 
-    public bool IsSignedOut => SignedInEmail is null && RecoveryKeyDisplay is null && !IsResetting;
-
-    /// <summary>True while the one-time recovery key is on screen and unacknowledged.</summary>
-    public bool IsShowingRecoveryKey => RecoveryKeyDisplay is not null;
+    public bool IsSignedOut => SignedInEmail is null;
 
     public bool HasReplacedNotes => ReplacedNoteCount > 0;
 
@@ -94,13 +85,9 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
 
             status = value;
             OnPropertyChanged();
+            RefreshPresentation();
         }
     }
-
-    public string PasswordHint => string.Format(
-        CultureInfo.CurrentCulture,
-        AppStrings.AccountPasswordHint,
-        AccountService.MinimumPasswordLength);
 
     public string ReplacedNotesMessage => string.Format(
         CultureInfo.CurrentCulture,
@@ -117,74 +104,44 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         ResumedSession resumed = await accounts.ResumeAsync().ConfigureAwait(true);
         resumed.Session?.DataKey.Dispose();
 
-        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? Email : null;
-        IsLocked = state.IsLocked;
+        IsKeyMissing = resumed.State == ResumeState.KeyMissing;
+        IsLocked = resumed.State == ResumeState.Locked;
+        IsLockEnabled = IsLocked;
+        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? resumed.Email : null;
         ApplyLastSync(state.LastSyncUtc);
         RefreshStatus(state);
     }
 
+    /// <summary>
+    /// Opens the browser, signs in, and syncs. The browser wait is long, so this is the one command
+    /// that can sit busy for minutes; closing the window resolves it as a cancellation, not an error.
+    /// </summary>
     [RelayCommand]
-    private async Task SignInAsync(string? password)
+    private async Task SignInAsync()
     {
         await RunAsync(async () =>
         {
-            await accounts.SignInAsync(Email, password ?? string.Empty).ConfigureAwait(true);
-            SignedInEmail = Email;
+            SignedInEmail = await accounts.SignInAsync().ConfigureAwait(true);
+            IsKeyMissing = false;
             IsLocked = false;
+            IsLockEnabled = false;
+            await RefreshBillingAsync().ConfigureAwait(true);
             await SyncAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
     }
 
+    /// <summary>Re-fetches the data key for a session that still has valid tokens.</summary>
     [RelayCommand]
-    private async Task RegisterAsync(string? password)
+    private async Task RestoreKeyAsync()
     {
         await RunAsync(async () =>
         {
-            RegisteredAccount account = await accounts
-                .RegisterAsync(Email, password ?? string.Empty)
-                .ConfigureAwait(true);
-
-            // Shown once and never persisted anywhere: writing it down is the user's job, and keeping
-            // a copy would defeat the point of the password never being recoverable by us.
-            RecoveryKeyDisplay = account.RecoveryKey.ToDisplayString();
-            RecoveryKeyAcknowledged = false;
-            RecoveryKeyCopied = false;
-            SignedInEmail = Email;
-            IsLocked = false;
+            await accounts.RestoreDataKeyAsync().ConfigureAwait(true);
+            IsKeyMissing = false;
+            await store.SetLockedAsync(false).ConfigureAwait(true);
+            await SyncAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
     }
-
-    [RelayCommand]
-    private void CopyRecoveryKey()
-    {
-        if (RecoveryKeyDisplay is { } key && exporter.TryCopyToClipboard(key))
-        {
-            RecoveryKeyCopied = true;
-        }
-    }
-
-    [RelayCommand]
-    private void SaveRecoveryKey()
-    {
-        if (RecoveryKeyDisplay is { } key)
-        {
-            exporter.TrySaveToFile(key);
-        }
-    }
-
-    /// <summary>
-    /// Dismisses the recovery-key screen. Only enabled once the user has confirmed they saved it, so
-    /// the key cannot scroll away unnoticed on the one occasion it is visible.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanDismissRecoveryKey))]
-    private async Task DismissRecoveryKeyAsync()
-    {
-        RecoveryKeyDisplay = null;
-        RecoveryKeyCopied = false;
-        await SyncAsync().ConfigureAwait(true);
-    }
-
-    private bool CanDismissRecoveryKey() => RecoveryKeyAcknowledged;
 
     [RelayCommand]
     private async Task SignOutAsync()
@@ -192,8 +149,13 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         await RunAsync(async () =>
         {
             await accounts.SignOutAsync().ConfigureAwait(true);
+            Entitlement = Entitlement.Unknown;
+            Billing = BillingLinks.None;
             SignedInEmail = null;
+            IsKeyMissing = false;
             IsLocked = false;
+            IsLockEnabled = false;
+            IsEnablingLock = false;
             ReplacedNoteCount = 0;
             LastSyncText = null;
             Status = SyncStatusView.Hidden;
@@ -213,7 +175,13 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         {
             SyncReport report = await syncNow().ConfigureAwait(true);
             ReplacedNoteCount += report.ConflictsSaved;
-            IsLocked = report.Outcome == SyncOutcome.Locked;
+            IsKeyMissing = report.Outcome == SyncOutcome.Locked;
+            if (report.Outcome == SyncOutcome.SubscriptionRequired)
+            {
+                // The server just said the subscription lapsed. Re-reading it here means the panel
+                // and the chip agree without the user having to reopen settings.
+                await RefreshBillingAsync().ConfigureAwait(true);
+            }
 
             SyncStateSnapshot state = await store.ReadStateAsync().ConfigureAwait(true);
             ApplyLastSync(state.LastSyncUtc);
@@ -230,15 +198,20 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     [RelayCommand]
     private void OpenConflictsFolder()
     {
-        revealFolder(conflictsPath);
+        openExternal(conflictsPath);
         ReplacedNoteCount = 0;
     }
 
     public void OnLanguageChanged()
     {
-        OnPropertyChanged(nameof(PasswordHint));
         OnPropertyChanged(nameof(ReplacedNotesMessage));
+        OnPropertyChanged(nameof(EntitlementSummary));
+        OnPropertyChanged(nameof(PassphraseHint));
         OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(PriceUnit));
+        OnPropertyChanged(nameof(PriceSub));
+        OnPropertyChanged(nameof(SubscriptionPlanText));
+        RefreshPresentation();
     }
 
     private static SyncStatusView FromReport(SyncReport report) => report.Outcome switch
@@ -249,6 +222,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         // Offline is a state, not a fault: no message, and the next cycle retries.
         SyncOutcome.Offline => new SyncStatusView(SyncStatusKind.Offline),
         SyncOutcome.SignInRequired => new SyncStatusView(SyncStatusKind.Error),
+        SyncOutcome.SubscriptionRequired => new SyncStatusView(SyncStatusKind.Unpaid),
         // An unreadable record is not a transient hiccup: something is wrong with the key or the data
         // and the user needs to know rather than wonder why a note never arrived.
         _ when report.HasUnreadableRecords => new SyncStatusView(SyncStatusKind.Error),
@@ -259,7 +233,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     {
         Status = !state.IsSignedIn
             ? SyncStatusView.Hidden
-            : state.IsLocked
+            : state.IsLocked || IsKeyMissing || IsLocked
                 ? new SyncStatusView(SyncStatusKind.Locked)
                 : new SyncStatusView(state.LastSyncUtc is null ? SyncStatusKind.Pending : SyncStatusKind.Synced);
     }
@@ -288,10 +262,14 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         catch (AccountException failure)
         {
             ErrorMessage = Describe(failure.Failure);
-            if (failure.Failure == AccountFailure.RewrapRequired)
+            if (failure.Failure == AccountFailure.LockedOut)
             {
+                // Signed in, but this device holds nothing that opens the notes. Reporting it as a
+                // signed-out account would hide the only route to the unlock prompt.
                 IsLocked = true;
-                SignedInEmail = Email;
+                IsLockEnabled = true;
+                IsKeyMissing = false;
+                SignedInEmail ??= AppStrings.AccountLockedTitle;
             }
         }
         finally
@@ -303,23 +281,21 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     private static string Describe(AccountFailure failure) => failure switch
     {
         AccountFailure.InvalidCredentials => AppStrings.AccountErrorInvalidCredentials,
-        AccountFailure.EmailAlreadyRegistered => AppStrings.AccountErrorEmailTaken,
-        AccountFailure.InvalidEmail => AppStrings.AccountErrorInvalidEmail,
-        AccountFailure.WeakPassword => string.Format(
-            CultureInfo.CurrentCulture,
-            AppStrings.AccountErrorWeakPassword,
-            AccountService.MinimumPasswordLength),
-        AccountFailure.RewrapRequired => AppStrings.AccountErrorRewrapRequired,
+        // The lock failures were the whole point of asking for a passphrase, so each one says what
+        // the user can actually do about it rather than falling through to "try again later".
+        AccountFailure.InvalidPassphrase => AppStrings.AccountErrorInvalidPassphrase,
+        AccountFailure.InvalidRecoveryKey => AppStrings.AccountErrorInvalidRecoveryKey,
+        AccountFailure.LockedOut => AppStrings.AccountErrorLockedOut,
+        AccountFailure.WeakPassphrase => string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            AppStrings.AccountErrorWeakPassphrase,
+            AccountService.MinimumPassphraseLength),
         AccountFailure.UnsupportedKdfProfile => AppStrings.AccountErrorUnsupportedVersion,
+        // Closing the browser is a decision, not a failure, so it gets a plain sentence rather than
+        // an error banner that implies something broke.
+        AccountFailure.SignInCancelled => AppStrings.AccountErrorSignInCancelled,
+        AccountFailure.UnverifiedIdentity => AppStrings.AccountErrorUnverifiedIdentity,
         AccountFailure.Offline => AppStrings.AccountErrorOffline,
-        // The recovery failures were missing here, so every one of them rendered as the generic
-        // "the sync service had a problem, try again later". That is actively misleading on the one
-        // path where the user has something to do: a wrong reset code needs re-typing or a new code,
-        // a wrong recovery key needs the right one, and no-way-to-unlock needs another device or a
-        // deliberate discard. None of them are helped by waiting.
-        AccountFailure.InvalidResetCode => AppStrings.AccountErrorInvalidResetCode,
-        AccountFailure.InvalidRecoveryKey => AppStrings.AccountErrorInvalidRecoveryKeyEntered,
-        AccountFailure.NoWayToUnlock => AppStrings.AccountErrorNoWayToUnlock,
         _ => AppStrings.AccountErrorServer,
     };
 
@@ -328,19 +304,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         _ = value;
         OnPropertyChanged(nameof(IsSignedIn));
         OnPropertyChanged(nameof(IsSignedOut));
-    }
-
-    partial void OnRecoveryKeyDisplayChanged(string? value)
-    {
-        _ = value;
-        OnPropertyChanged(nameof(IsShowingRecoveryKey));
-        OnPropertyChanged(nameof(IsSignedOut));
-    }
-
-    partial void OnRecoveryKeyAcknowledgedChanged(bool value)
-    {
-        _ = value;
-        DismissRecoveryKeyCommand.NotifyCanExecuteChanged();
+        RefreshPresentation();
     }
 
     partial void OnReplacedNoteCountChanged(int value)
@@ -349,15 +313,4 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         OnPropertyChanged(nameof(HasReplacedNotes));
         OnPropertyChanged(nameof(ReplacedNotesMessage));
     }
-}
-
-/// <summary>
-/// Puts the one-time recovery key somewhere the user keeps it. Abstracted so the view model can be
-/// tested without a clipboard or a file dialog.
-/// </summary>
-public interface IRecoveryKeyExporter
-{
-    bool TryCopyToClipboard(string recoveryKey);
-
-    bool TrySaveToFile(string recoveryKey);
 }

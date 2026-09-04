@@ -96,6 +96,11 @@ public sealed partial class StringCatalogTests
             nameof(AppStrings.LanguageKorean),
             nameof(AppStrings.LanguageEnglish),
             nameof(AppStrings.TutorialProgressFormat),
+            // "Pro" is the plan's name, the avatar tooltip is pure separators, and the privacy page
+            // is one document at one path in both languages.
+            nameof(AppStrings.AccountPlanPro),
+            nameof(AppStrings.AccountAvatarTooltipFormat),
+            nameof(AppStrings.AccountPrivacyUrl),
         };
 
         string[] untranslated = [.. korean

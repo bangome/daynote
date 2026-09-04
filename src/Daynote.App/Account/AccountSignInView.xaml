@@ -1,0 +1,108 @@
+﻿<UserControl
+    x:Class="Daynote.App.Account.AccountSignInView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:account="clr-namespace:Daynote.App.Account"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance account:AccountViewModel}">
+    <!--
+      The signed-out half of the account window.
+
+      It leads with what stays true if you never sign in — the notes are already on this PC — because
+      an account window that opens with a sign-in wall implies the app needs one. Sign-in is a single
+      Google button, and the way out ("keep using Daynote without an account") is a visible control
+      rather than only the close box.
+    -->
+    <StackPanel Margin="32,34,32,32">
+        <Border Style="{DynamicResource Daynote.Product.Style.Account.HeroMark}">
+            <Path Width="27" Height="27" Stretch="Uniform"
+                  Data="{DynamicResource Daynote.Product.Geo.CalendarGlyph}"
+                  Stroke="{DynamicResource Daynote.Product.Brush.OnAccent}"
+                  StrokeThickness="1.7" StrokeLineJoin="Round" Fill="{x:Null}" />
+        </Border>
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.HeroTitle}" Text="{loc:Tr AccountSignInTitle}" />
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.HeroLead}" Text="{loc:Tr AccountSignInLead}" />
+
+        <Button Margin="0,22,0,0"
+                Style="{DynamicResource Daynote.Product.Style.Account.GoogleButton}"
+                Command="{Binding SignInCommand}"
+                IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                AutomationProperties.Name="{loc:Tr AccountSignInWithGoogle}">
+            <StackPanel Orientation="Horizontal">
+                <!-- Google's mark, in its own four colors: a sign-in button may not be recolored. -->
+                <!-- One Viewbox over one Canvas: the four segments share a coordinate space. Given a
+                     Stretch of their own, each would be scaled to fill the box separately and the
+                     mark would come apart. -->
+                <Viewbox Width="17" Height="17" VerticalAlignment="Center" Stretch="Uniform">
+                    <Canvas Width="18" Height="18">
+                        <Path Data="{DynamicResource Daynote.Product.Geo.GoogleBlue}" Fill="{DynamicResource Daynote.Product.Brush.Google.Blue}" />
+                        <Path Data="{DynamicResource Daynote.Product.Geo.GoogleGreen}" Fill="{DynamicResource Daynote.Product.Brush.Google.Green}" />
+                        <Path Data="{DynamicResource Daynote.Product.Geo.GoogleYellow}" Fill="{DynamicResource Daynote.Product.Brush.Google.Yellow}" />
+                        <Path Data="{DynamicResource Daynote.Product.Geo.GoogleRed}" Fill="{DynamicResource Daynote.Product.Brush.Google.Red}" />
+                    </Canvas>
+                </Viewbox>
+                <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr AccountSignInWithGoogle}" />
+            </StackPanel>
+        </Button>
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,10,0,0"
+                   TextAlignment="Center" MaxWidth="330" HorizontalAlignment="Center"
+                   Text="{loc:Tr AccountSignInBrowserHint}" />
+
+        <!-- The two documents the sentence above refers to, as links rather than as plain words:
+             consent that cannot be read is not consent. -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+            <Button Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                    Command="{Binding OpenTermsCommand}" Content="{loc:Tr AccountTerms}"
+                    AutomationProperties.Name="{loc:Tr AccountTerms}" />
+            <TextBlock Margin="8,0" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                       FontFamily="{DynamicResource Daynote.Product.Font.UI}" FontSize="11.5" Text="·" />
+            <Button Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                    Command="{Binding OpenPrivacyCommand}" Content="{loc:Tr AccountPrivacy}"
+                    AutomationProperties.Name="{loc:Tr AccountPrivacy}" />
+        </StackPanel>
+
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Divider}" Margin="0,24,0,18" />
+
+        <!-- What signing in adds. Three claims, each of which the product actually does. -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="9" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="9" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.Perk}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkTitle}" Text="{loc:Tr AccountPerkSyncTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkDesc}" Text="{loc:Tr AccountPerkSyncDesc}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{DynamicResource Daynote.Product.Style.Account.Perk}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkTitle}" Text="{loc:Tr AccountPerkLockTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkDesc}" Text="{loc:Tr AccountPerkLockDesc}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="4" Style="{DynamicResource Daynote.Product.Style.Account.Perk}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkTitle}" Text="{loc:Tr AccountPerkExportTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PerkDesc}" Text="{loc:Tr AccountPerkExportDesc}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Button Margin="0,20,0,0" HorizontalAlignment="Center"
+                Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                Click="OnSkip" Content="{loc:Tr AccountSkipSignIn}"
+                AutomationProperties.Name="{loc:Tr AccountSkipSignIn}" />
+
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,12,0,0"
+                   TextAlignment="Center" Text="{Binding ErrorMessage}"
+                   Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+    </StackPanel>
+</UserControl>

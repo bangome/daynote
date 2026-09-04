@@ -8,185 +8,65 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance account:AccountViewModel}">
-    <!-- Cloud sync lives inside the settings panel rather than in a window of its own: it is an
-         opt-in preference, and a modal sign-in box would imply the app needs an account to work. -->
-    <ContentControl Style="{DynamicResource Daynote.Style.SettingsRow}" Margin="0,16,0,0"
-                    AutomationProperties.Name="{loc:Tr CloudSyncTitle}">
-        <StackPanel>
-            <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr CloudSyncTitle}" />
-            <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr CloudSyncBlurb}" />
+    <!--
+      The account, as settings now shows it ("Daynote v3.dc.html").
 
-            <!-- Signed out: email, password, and the two ways in. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountEmail}" />
-                <TextBox x:Name="EmailBox" Margin="0,4,0,0" Padding="8"
-                         Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{loc:Tr AccountEmail}" />
-                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountPassword}" />
-                <!-- A PasswordBox, so the value never lives in a bindable property that could be
-                     serialised, logged, or captured in a crash dump. It is read once, on command. -->
-                <PasswordBox x:Name="PasswordBox" Margin="0,4,0,0" Padding="8"
-                             AutomationProperties.Name="{loc:Tr AccountPassword}" />
-                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding PasswordHint}" />
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Style="{DynamicResource Daynote.Style.Button.Primary}" Content="{loc:Tr AccountSignIn}"
-                            Click="OnSignIn" IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                            AutomationProperties.Name="{loc:Tr AccountSignIn}" />
-                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Content="{loc:Tr AccountCreate}" Click="OnRegister"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                            AutomationProperties.Name="{loc:Tr AccountCreate}" />
-                </StackPanel>
-                <Button Margin="0,8,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                        Command="{Binding BeginResetCommand}" Content="{loc:Tr AccountForgotPassword}"
-                        AutomationProperties.Name="{loc:Tr AccountForgotPassword}" />
-            </StackPanel>
+      One row: who you are, what plan, one sentence of state, and a button into the account window.
+      Everything that used to be here — sign-in, the subscription, the trial countdown, the note lock,
+      the conflict notices — moved into that window. None of it was a preference, and a settings
+      panel that also sells a subscription reads as neither.
+    -->
+    <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}"
+            AutomationProperties.Name="{loc:Tr AccountWindowTitle}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <!-- Reset. Two steps in one panel: ask for a code, then use it. The warning appears
-                 before the change, not after, because afterwards is too late to be useful. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding IsResetting, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr AccountForgotPassword}" />
-                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr AccountResetWarning}" />
-                <TextBox Margin="0,8,0,0" Padding="8"
-                         Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{loc:Tr AccountEmail}" />
-                <Button Margin="0,8,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                        Command="{Binding RequestResetCodeCommand}" Content="{loc:Tr AccountResetSend}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                        AutomationProperties.Name="{loc:Tr AccountResetSend}" />
-                <TextBlock Margin="0,6,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding ResetSentMessage}"
-                           Visibility="{Binding ResetSentTo, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
-                <TextBlock Margin="0,10,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountResetCode}" />
-                <TextBox Margin="0,4,0,0" Padding="8" FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                         Text="{Binding ResetCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{loc:Tr AccountResetCode}" />
-                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountResetNewPassword}" />
-                <PasswordBox x:Name="ResetPasswordBox" Margin="0,4,0,0" Padding="8"
-                             AutomationProperties.Name="{loc:Tr AccountResetNewPassword}" />
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Style="{DynamicResource Daynote.Style.Button.Primary}" Click="OnConfirmReset"
-                            Content="{loc:Tr AccountResetConfirm}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                            AutomationProperties.Name="{loc:Tr AccountResetConfirm}" />
-                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Command="{Binding CancelResetCommand}" Content="{loc:Tr AccountResetCancel}"
-                            AutomationProperties.Name="{loc:Tr AccountResetCancel}" />
-                </StackPanel>
-            </StackPanel>
-
-            <!-- Unlock. Only reached when the reset happened somewhere the key was not cached. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding IsUnlocking, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr AccountUnlockWithRecoveryKey}" />
-                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountUnlockKeyLabel}" />
-                <TextBox Margin="0,4,0,0" Padding="8" FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                         Text="{Binding RecoveryKeyEntry, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{loc:Tr AccountUnlockKeyLabel}" />
-                <TextBlock Margin="0,8,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" Text="{loc:Tr AccountUnlockPasswordLabel}" />
-                <PasswordBox x:Name="UnlockPasswordBox" Margin="0,4,0,0" Padding="8"
-                             AutomationProperties.Name="{loc:Tr AccountUnlockPasswordLabel}" />
-                <Button Margin="0,10,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Style.Button.Primary}" Click="OnUnlock"
-                        Content="{loc:Tr AccountUnlockConfirm}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                        AutomationProperties.Name="{loc:Tr AccountUnlockConfirm}" />
-
-                <TextBlock Margin="0,14,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr AccountDiscardCloudCopyBlurb}" />
-                <Button Margin="0,6,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                        Command="{Binding DiscardCloudCopyCommand}" Content="{loc:Tr AccountDiscardCloudCopy}"
-                        AutomationProperties.Name="{loc:Tr AccountDiscardCloudCopy}" />
-            </StackPanel>
-
-            <!-- Shown once, immediately after registering. Dismissal is gated on the confirmation
-                 checkbox so the only copy of the key cannot scroll past unnoticed. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding IsShowingRecoveryKey, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr RecoveryKeyTitle}" />
-                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr RecoveryKeyBlurb}" />
-                <TextBox Margin="0,8,0,0" IsReadOnly="True" Padding="10" BorderThickness="0"
-                         FontFamily="{DynamicResource Daynote.Product.Font.Mono}" FontSize="15"
-                         Background="{DynamicResource Daynote.Brush.Surface.Selected}"
-                         Text="{Binding RecoveryKeyDisplay, Mode=OneWay}"
-                         AutomationProperties.Name="{loc:Tr RecoveryKeyTitle}" />
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Command="{Binding CopyRecoveryKeyCommand}"
-                            Content="{loc:Tr RecoveryKeyCopy}" AutomationProperties.Name="{loc:Tr RecoveryKeyCopy}" />
-                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Command="{Binding SaveRecoveryKeyCommand}"
-                            Content="{loc:Tr RecoveryKeySaveToFile}"
-                            AutomationProperties.Name="{loc:Tr RecoveryKeySaveToFile}" />
-                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Style="{DynamicResource Daynote.Style.Type.Status}"
-                               Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr RecoveryKeyCopied}"
-                               Visibility="{Binding RecoveryKeyCopied, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                </StackPanel>
-                <CheckBox Margin="0,10,0,0" Content="{loc:Tr RecoveryKeyConfirm}"
-                          IsChecked="{Binding RecoveryKeyAcknowledged, Mode=TwoWay}"
-                          AutomationProperties.Name="{loc:Tr RecoveryKeyConfirm}" />
-                <Button Margin="0,10,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Style.Button.Primary}"
-                        Command="{Binding DismissRecoveryKeyCommand}" Content="{loc:Tr RecoveryKeyDone}"
-                        AutomationProperties.Name="{loc:Tr RecoveryKeyDone}" />
-            </StackPanel>
-
-            <!-- Signed in. -->
-            <StackPanel Margin="0,12,0,0"
+            <!-- Signed in: the avatar. Signed out: the same outline the titlebar shows. -->
+            <Grid Grid.Column="0" Width="38" Height="38" VerticalAlignment="Center">
+                <Border CornerRadius="19" Background="{DynamicResource Daynote.Product.Brush.Accent}"
                         Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" Text="{Binding SignedInEmail}" />
-                <TextBlock Margin="0,2,0,0" Style="{DynamicResource Daynote.Style.Type.Status}"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{Binding LastSyncText}" />
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Command="{Binding SyncCommand}" Content="{loc:Tr AccountSyncNow}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                            AutomationProperties.Name="{loc:Tr AccountSyncNow}" />
-                    <Button Margin="8,0,0,0" Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                            Command="{Binding SignOutCommand}" Content="{loc:Tr AccountSignOut}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
-                            AutomationProperties.Name="{loc:Tr AccountSignOut}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.AvatarText}"
+                               FontSize="14" Text="{Binding AvatarInitial}" />
+                </Border>
+                <Border CornerRadius="19" Background="{DynamicResource Daynote.Product.Brush.Hover}"
+                        Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <Path Width="18" Height="18" Stretch="Uniform" Fill="{x:Null}"
+                          Data="{DynamicResource Daynote.Product.Geo.Person}"
+                          Stroke="{DynamicResource Daynote.Product.Brush.Text2}"
+                          StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Border>
+            </Grid>
+
+            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}"
+                               FontWeight="Bold" TextTrimming="CharacterEllipsis"
+                               Text="{Binding DisplayName}"
+                               Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.RowLabel}"
+                               FontWeight="Bold" Text="{loc:Tr AccountSignInTitle}"
+                               Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <Border Margin="7,0,0,0" Style="{DynamicResource Daynote.Product.Style.Account.PlanPill}"
+                            Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PlanPillText}" Text="{Binding PlanBadge}" />
+                    </Border>
                 </StackPanel>
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,2,0,0"
+                           TextTrimming="CharacterEllipsis" Text="{Binding LastSyncText}"
+                           Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,2,0,0"
+                           Text="{loc:Tr CloudSyncTitle}"
+                           Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
             </StackPanel>
 
-            <!-- Locked: a password reset happened and this device cannot open the cloud copy yet. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding IsLocked, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Label}" Text="{loc:Tr AccountLockedTitle}" />
-                <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr AccountLockedBlurb}" />
-            </StackPanel>
-
-            <!-- Something the user lost an edit to. Never silent: this is the whole reason
-                 last-write-wins is acceptable. -->
-            <StackPanel Margin="0,12,0,0"
-                        Visibility="{Binding HasReplacedNotes, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <TextBlock Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                           Text="{Binding ReplacedNotesMessage}" />
-                <Button Margin="0,6,0,0" HorizontalAlignment="Left"
-                        Style="{DynamicResource Daynote.Style.Button.Secondary}"
-                        Command="{Binding OpenConflictsFolderCommand}" Content="{loc:Tr AccountOpenConflicts}"
-                        AutomationProperties.Name="{loc:Tr AccountOpenConflicts}" />
-            </StackPanel>
-
-            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Daynote.Brush.Text.Primary}" Text="{Binding ErrorMessage}"
-                       Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
-
-            <!-- Stated in the UI, not just the privacy policy: the posture change is the point. -->
-            <TextBlock Margin="0,12,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr CloudSyncPrivacyNote}" />
-            <TextBlock Margin="0,4,0,0" Style="{DynamicResource Daynote.Style.Type.Status}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Daynote.Brush.Text.Muted}" Text="{loc:Tr CloudSyncLocalNote}" />
-        </StackPanel>
-    </ContentControl>
+            <Button Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center"
+                    Style="{DynamicResource Daynote.Product.Style.Button.Secondary}"
+                    Click="OnManage" Content="{loc:Tr AccountManage}"
+                    AutomationProperties.Name="{loc:Tr AccountManage}" />
+        </Grid>
+    </Border>
 </UserControl>

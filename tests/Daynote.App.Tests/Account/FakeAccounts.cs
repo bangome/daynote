@@ -1,5 +1,4 @@
-using System.Buffers.Text;
-using Daynote.Core.Domain;
+﻿using System.Buffers.Text;
 using Daynote.Core.Sync;
 
 namespace Daynote.App.Tests.Account;
@@ -9,72 +8,111 @@ namespace Daynote.App.Tests.Account;
 /// while the tests stay fast.
 /// </summary>
 /// <remarks>
-/// The crypto fake derives instantly. Using the real Argon2 profile here would cost a third of a
-/// second per sign-in for no added coverage — that derivation is already pinned by
-/// <c>AesGcmSyncCryptoTests</c>, and this suite is about what the UI does with the result.
+/// Neither Google nor a browser is involved: <see cref="StubIdentity"/> returns a grant, and
+/// <see cref="StubAuth"/> redeems it. This suite is about what the UI does with the result.
 /// </remarks>
 internal sealed class FakeAccounts
 {
-    private readonly InstantCrypto crypto = new();
     private readonly MemorySessionStore sessions = new();
     private readonly StubAuth auth;
+    private readonly StubIdentity identity;
 
     internal FakeAccounts(ISyncStore? store = null)
     {
         auth = new StubAuth(this);
-        Store = store ?? new NullStore();
-        Service = new AccountService(auth, crypto, sessions, Store, () => "Test PC");
+        identity = new StubIdentity(this);
+        Store = store ?? new FakeSyncStore();
+        Service = new AccountService(
+            auth, identity, new Daynote.Infrastructure.Sync.AesGcmSyncCrypto(), sessions, Store,
+            () => "Test PC");
     }
 
     internal AccountService Service { get; }
 
     internal ISyncStore Store { get; }
 
+    /// <summary>The address the fake Google account signs in with.</summary>
+    internal string Email { get; set; } = "alice@example.test";
+
     /// <summary>Thrown by the next auth call, for the failure-path tests.</summary>
     internal AccountException? NextFailure { get; set; }
 
+    /// <summary>Thrown by the next browser step, for the cancellation path.</summary>
+    internal AccountException? NextIdentityFailure { get; set; }
+
+    /// <summary>Set to omit the data key from the sign-in response, as a broken server would.</summary>
+    internal bool WithholdDataKey { get; set; }
+
+    /// <summary>The billing state the fake server reports. Active by default.</summary>
+    internal Entitlement Entitlement { get; set; } =
+        new(EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(30), true, true);
+
+    internal BillingLinks Billing { get; set; } = new(true, true);
+
+    /// <summary>The one-shot links the fake provider mints.</summary>
+    internal string CheckoutUrl { get; set; } = "https://pay.test/checkout?txn=one-shot";
+
+    internal string PortalUrl { get; set; } = "https://pay.test/manage?token=single-use";
+
+    /// <summary>Which custody the fake account's key is in.</summary>
+    internal KeyProtection Protection { get; set; } = KeyProtection.Server;
+
+    internal string? WrappedPassphrase { get; set; }
+
+    internal string? WrappedRecovery { get; set; }
+
+    internal string? KdfParametersJson { get; set; }
+
     internal bool SignedOut { get; private set; }
 
-    /// <summary>Set when the server reports that the stored envelope no longer opens.</summary>
-    internal bool RewrapPending { get; set; }
+    internal int SignInCalls { get; private set; }
 
-    /// <summary>Simulates resetting on a device that never held the key, which lands locked.</summary>
-    internal bool LockAfterReset
+    /// <summary>How many links were minted, so a test can prove they are not reused.</summary>
+    internal int CheckoutSessionsMinted { get; set; }
+
+    /// <summary>The plan the last checkout was minted for, so a test can prove the choice travelled.</summary>
+    internal BillingPlan? LastCheckoutPlan { get; set; }
+
+    internal int PortalSessionsMinted { get; set; }
+
+    /// <summary>Reads the stored session, so a test can assert what sign-out actually cleared.</summary>
+    internal ValueTask<SyncCredentials?> LoadSessionAsync() => sessions.LoadAsync();
+
+    private sealed class StubIdentity(FakeAccounts owner) : IIdentityProvider
     {
-        get => crypto.FailUnwrap;
-        set => crypto.FailUnwrap = value;
+        public ValueTask<IdentityGrant> AuthorizeAsync(CancellationToken cancellationToken = default)
+        {
+            if (owner.NextIdentityFailure is { } failure)
+            {
+                owner.NextIdentityFailure = null;
+                throw failure;
+            }
+
+            return ValueTask.FromResult(new IdentityGrant("code", "verifier", "http://127.0.0.1:1/"));
+        }
     }
-
-    /// <summary>
-    /// Whether the account has a recovery envelope stored server-side. True by default: an account
-    /// registered with a recovery key has one, and /auth/me returns it as wrapped_dek_rk. Set false to
-    /// exercise the account that cannot be unlocked at all.
-    /// </summary>
-    internal bool RecoveryEnvelopeStored { get; set; } = true;
-
-    /// <summary>How many times a recovery key actually reached the unlock path.</summary>
-    internal int UnlockAttempts { get; private set; }
-
-    internal void RecordUnlockAttempt() => UnlockAttempts += 1;
 
     private sealed class StubAuth(FakeAccounts owner) : IAuthApiClient
     {
-        public ValueTask<string> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        private readonly string userId = Guid.NewGuid().ToString("D");
+        private readonly byte[] dataKey = KeyMaterial.Random().Span.ToArray();
+
+        public ValueTask<SessionResponse> SignInWithGoogleAsync(
+            GoogleSignInRequest request,
+            CancellationToken cancellationToken = default)
         {
+            owner.SignInCalls += 1;
             Throw();
-            return ValueTask.FromResult("11111111-1111-4111-8111-111111111111");
+            owner.SignedOut = false;
+            return ValueTask.FromResult(Session(includeKeys: true));
         }
 
-        public ValueTask<SessionResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+        public ValueTask<SessionResponse> RefreshAsync(
+            string refreshToken,
+            CancellationToken cancellationToken = default)
         {
             Throw();
-            return ValueTask.FromResult(Session());
-        }
-
-        public ValueTask<SessionResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
-        {
-            Throw();
-            return ValueTask.FromResult(Session());
+            return ValueTask.FromResult(Session(includeKeys: false));
         }
 
         public ValueTask LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
@@ -83,43 +121,91 @@ internal sealed class FakeAccounts
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<AccountSummary> GetAccountAsync(string accessToken, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(new AccountSummary(
-                "u",
-                "alice@example.test",
-                RecoveryKeySet: owner.RecoveryEnvelopeStored,
-                RewrapPending: false,
-                DekGeneration: 1,
-                Devices: [],
-                // This was omitted, so it defaulted to null and every unlock threw NoWayToUnlock
-                // before it could reach the recovery key at all — the fake was modelling an account
-                // with no recovery envelope while the tests were about one that has it.
-                WrappedDekRecovery: owner.RecoveryEnvelopeStored ? InstantCrypto.Envelope : null));
-
-        public ValueTask RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
-        {
-            Throw();
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask ConfirmPasswordResetAsync(ResetConfirmRequest request, CancellationToken cancellationToken = default)
-        {
-            Throw();
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask<int> RewrapAsync(
+        public ValueTask<AccountSummary> GetAccountAsync(
             string accessToken,
-            string wrappedDekPassword,
-            int dekGeneration,
             CancellationToken cancellationToken = default)
         {
-            owner.RecordUnlockAttempt();
             Throw();
-            // A successful re-wrap means the envelope now opens with the current password.
-            owner.LockAfterReset = false;
-            return ValueTask.FromResult(dekGeneration + 1);
+            return ValueTask.FromResult(new AccountSummary(userId, owner.Email, []));
         }
+
+        public ValueTask<KeyMaterialResponse> GetKeyMaterialAsync(
+            string accessToken,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            return ValueTask.FromResult(Keys());
+        }
+
+        public ValueTask ProtectAsync(
+            string accessToken,
+            string wrappedDekPassphrase,
+            string wrappedDekRecovery,
+            string kdfParametersJson,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.Protection = KeyProtection.Passphrase;
+            owner.WrappedPassphrase = wrappedDekPassphrase;
+            owner.WrappedRecovery = wrappedDekRecovery;
+            owner.KdfParametersJson = kdfParametersJson;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask UnprotectAsync(
+            string accessToken,
+            KeyMaterial key,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.Protection = KeyProtection.Server;
+            owner.WrappedPassphrase = null;
+            owner.WrappedRecovery = null;
+            owner.KdfParametersJson = null;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> GetBillingAsync(
+            string accessToken,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            return ValueTask.FromResult((owner.Entitlement, owner.Billing));
+        }
+
+        public ValueTask<string> CreateCheckoutSessionAsync(
+            string accessToken,
+            BillingPlan plan,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.CheckoutSessionsMinted += 1;
+            owner.LastCheckoutPlan = plan;
+            return ValueTask.FromResult(owner.CheckoutUrl);
+        }
+
+        public ValueTask<string> CreatePortalSessionAsync(
+            string accessToken,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.PortalSessionsMinted += 1;
+            return ValueTask.FromResult(owner.PortalUrl);
+        }
+
+        private KeyMaterialResponse Keys() => owner.Protection == KeyProtection.Passphrase
+            ? new KeyMaterialResponse(
+                KeyProtection.Passphrase,
+                null,
+                owner.WrappedPassphrase,
+                owner.WrappedRecovery,
+                owner.KdfParametersJson)
+            : new KeyMaterialResponse(
+                KeyProtection.Server,
+                owner.WithholdDataKey ? null : Base64Url.EncodeToString(dataKey),
+                null,
+                null,
+                null);
 
         private void Throw()
         {
@@ -130,73 +216,34 @@ internal sealed class FakeAccounts
             }
         }
 
-        private SessionResponse Session() => new(
-            "11111111-1111-4111-8111-111111111111",
-            "access",
+        private SessionResponse Session(bool includeKeys) => new(
+            userId,
+            owner.Email,
+            "access-token",
             DateTimeOffset.UtcNow.AddMinutes(15),
-            "refresh",
-            // The wrapped-DEK envelope the instant crypto below knows how to open.
-            InstantCrypto.Envelope,
-            InstantCrypto.Envelope,
-            KdfParameters.Argon2idDefault.ToJson(),
-            1,
-            owner.RewrapPending,
+            "refresh-token",
+            includeKeys ? Keys() : null,
+            owner.Entitlement,
             DateTimeOffset.UtcNow);
-    }
-
-    /// <summary>
-    /// A stand-in that satisfies the contract's shape without the cost. Wrapping is a fixed marker
-    /// rather than real ciphertext; unwrapping returns a key unless <see cref="FailUnwrap"/> is set.
-    /// </summary>
-    private sealed class InstantCrypto : ISyncCrypto
-    {
-        internal const string Envelope = "v1.AAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-        internal bool FailUnwrap { get; set; }
-
-        public SyncKeySet DeriveKeys(string password, string email, KdfParameters parameters) =>
-            new(KeyMaterial.Random(), KeyMaterial.Random());
-
-        public KeyMaterial DeriveRecoveryKek(RecoveryKey recoveryKey) => KeyMaterial.Random();
-
-        public KeyMaterial GenerateDataKey() => KeyMaterial.Random();
-
-        public string WrapDataKey(KeyMaterial dataKey, KeyMaterial wrappingKey, CipherScope scope) => Envelope;
-
-        public DomainResult<KeyMaterial> UnwrapDataKey(string envelope, KeyMaterial wrappingKey, CipherScope scope) =>
-            FailUnwrap
-                ? DomainResult<KeyMaterial>.Failure(
-                    DomainErrorCode.CiphertextAuthenticationFailed,
-                    "The data could not be decrypted with this key.")
-                : DomainResult<KeyMaterial>.Success(KeyMaterial.Random());
-
-        public string Encrypt(string plaintext, KeyMaterial dataKey, CipherScope scope) => Envelope;
-
-        public DomainResult<string> Decrypt(string envelope, KeyMaterial dataKey, CipherScope scope) =>
-            DomainResult<string>.Success("{}");
-
-        public string BlindAssetKey(KeyMaterial dataKey, string contentHash) =>
-            Base64Url.EncodeToString(dataKey.Span);
     }
 
     private sealed class MemorySessionStore : ISyncSessionStore
     {
-        private SyncCredentials? current;
+        private SyncCredentials? stored;
 
         public ValueTask<SyncCredentials?> LoadAsync(CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(current is null
+            ValueTask.FromResult(stored is null
                 ? null
-                // A copy, because the caller disposes what it is handed and the store keeps its own.
-                : current with
+                : stored with
                 {
-                    DataKey = current.DataKey is { } key ? KeyMaterial.CopyFrom(key.Span) : null,
+                    DataKey = stored.DataKey is null ? null : KeyMaterial.CopyFrom(stored.DataKey.Span),
                 });
 
         public ValueTask SaveAsync(SyncCredentials credentials, CancellationToken cancellationToken = default)
         {
-            current = credentials with
+            stored = credentials with
             {
-                DataKey = credentials.DataKey is { } key ? KeyMaterial.CopyFrom(key.Span) : null,
+                DataKey = credentials.DataKey is null ? null : KeyMaterial.CopyFrom(credentials.DataKey.Span),
             };
             return ValueTask.CompletedTask;
         }
@@ -207,57 +254,23 @@ internal sealed class FakeAccounts
             string refreshToken,
             CancellationToken cancellationToken = default)
         {
-            current = current is null
-                ? null
-                : current with
+            if (stored is not null)
+            {
+                stored = stored with
                 {
                     AccessToken = accessToken,
                     AccessExpiresUtc = accessExpiresUtc,
                     RefreshToken = refreshToken,
                 };
+            }
+
             return ValueTask.CompletedTask;
         }
 
         public ValueTask ClearAsync(CancellationToken cancellationToken = default)
         {
-            current = null;
+            stored = null;
             return ValueTask.CompletedTask;
         }
-    }
-
-    /// <summary>Used only when a test supplies no store of its own.</summary>
-    private sealed class NullStore : ISyncStore
-    {
-        public ValueTask<int> EnrollExistingContentAsync(CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(0);
-
-        public ValueTask<IReadOnlyList<PendingNote>> ReadPendingNotesAsync(int limit, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<IReadOnlyList<PendingNote>>([]);
-
-        public ValueTask<IReadOnlyList<SyncTombstone>> ReadPendingTombstonesAsync(int limit, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<IReadOnlyList<SyncTombstone>>([]);
-
-        public ValueTask<int> AcknowledgePushAsync(IReadOnlyList<PendingAck> acknowledged, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(0);
-
-        public ValueTask<int> AcknowledgeTombstonesAsync(IReadOnlyList<SyncTombstone> acknowledged, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(0);
-
-        public ValueTask<MergeOutcome> MergeNotesAsync(IReadOnlyList<SyncNote> notes, IReadOnlyList<SyncTombstone> tombstones, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(MergeOutcome.Empty);
-
-        public ValueTask<SyncStateSnapshot> ReadStateAsync(CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(new SyncStateSnapshot(null, 0, 0, false, null));
-
-        public ValueTask AdvanceCursorAsync(long cursor, CancellationToken cancellationToken = default) =>
-            ValueTask.CompletedTask;
-
-        public ValueTask SignInAsync(string userId, int dekGeneration, CancellationToken cancellationToken = default) =>
-            ValueTask.CompletedTask;
-
-        public ValueTask SignOutAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-
-        public ValueTask SetLockedAsync(bool locked, CancellationToken cancellationToken = default) =>
-            ValueTask.CompletedTask;
     }
 }

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Net.Http;
 using Daynote.App.Account;
 using Daynote.Core.Sync;
@@ -54,8 +54,11 @@ public static class SyncRegistration
             sp.GetRequiredService<HttpClient>(),
             sp.GetRequiredService<ISyncTokenProvider>()));
 
+        services.AddSingleton<IIdentityProvider>(_ =>
+            new GoogleIdentityProvider(DaynoteAppOptions.GoogleClientId));
         services.AddSingleton(sp => new AccountService(
             sp.GetRequiredService<IAuthApiClient>(),
+            sp.GetRequiredService<IIdentityProvider>(),
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
             sp.GetRequiredService<ISyncStore>()));
@@ -71,7 +74,7 @@ public static class SyncRegistration
             sp.GetRequiredService<ISyncStore>(),
             () => RunSyncAsync(sp),
             sp.GetRequiredService<IRecoveryKeyExporter>(),
-            RevealFolder,
+            OpenExternal,
             Path.Combine(options.DataRoot, "conflicts")));
 
         return services;
@@ -90,10 +93,12 @@ public static class SyncRegistration
 
         if (resumed.Session is not { } session)
         {
-            // Locked is not signed out. Collapsing them would hide the status chip and with it the
-            // only route to the unlock screen.
+            // A session without its key is not a signed-out one: the tokens still work. Locked means
+            // the passphrase is needed; KeyMissing means the key is simply re-fetched.
             return SyncReport.For(
-                resumed.State == ResumeState.Locked ? SyncOutcome.Locked : SyncOutcome.SignedOut);
+                resumed.State is ResumeState.KeyMissing or ResumeState.Locked
+                    ? SyncOutcome.Locked
+                    : SyncOutcome.SignedOut);
         }
 
         using (session.DataKey)
@@ -105,21 +110,30 @@ public static class SyncRegistration
         }
     }
 
-    private static void RevealFolder(string path)
+    /// <summary>
+    /// Opens a folder or a URL with the shell. One delegate for both because the shell makes no
+    /// distinction, and the two callers — "show me the conflict copies" and "take me to the
+    /// checkout page" — want exactly the same behaviour.
+    /// </summary>
+    private static void OpenExternal(string target)
     {
         try
         {
-            Directory.CreateDirectory(path);
+            if (!target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                Directory.CreateDirectory(target);
+            }
             using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = path,
+                FileName = target,
                 UseShellExecute = true,
             });
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or IOException)
         {
-            // The folder could not be opened. Not worth interrupting the user over; the path is
-            // documented in DATA_AND_RECOVERY.md.
+            // No shell handler, or the folder could not be created. Not worth interrupting the user
+            // over: the conflicts path is documented in DATA_AND_RECOVERY.md, and a checkout link
+            // that will not open is visible in the settings panel to copy by hand.
         }
     }
 }

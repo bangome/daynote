@@ -1,4 +1,4 @@
-using Daynote.App.Localization;
+﻿using Daynote.App.Localization;
 
 namespace Daynote.App.Account;
 
@@ -21,6 +21,12 @@ public enum SyncStatusKind
     Locked,
 
     Error,
+
+    /// <summary>
+    /// Cloud sync is not paid for. Its own state rather than an error: nothing is broken and
+    /// nothing was lost — sync is simply not running (docs/CLOUD_SYNC.md §14).
+    /// </summary>
+    Unpaid,
 }
 
 /// <summary>
@@ -34,7 +40,8 @@ public sealed record SyncStatusView(SyncStatusKind Kind)
     public bool IsVisible => Kind != SyncStatusKind.Hidden;
 
     /// <summary>True for the states the user should act on, which the chip styles differently.</summary>
-    public bool NeedsAttention => Kind is SyncStatusKind.Locked or SyncStatusKind.Error;
+    public bool NeedsAttention =>
+        Kind is SyncStatusKind.Locked or SyncStatusKind.Error or SyncStatusKind.Unpaid;
 
     public string Label => Kind switch
     {
@@ -44,6 +51,7 @@ public sealed record SyncStatusView(SyncStatusKind Kind)
         SyncStatusKind.Offline => AppStrings.SyncChipOffline,
         SyncStatusKind.Locked => AppStrings.SyncChipLocked,
         SyncStatusKind.Error => AppStrings.SyncChipError,
+        SyncStatusKind.Unpaid => AppStrings.SyncChipUnpaid,
         _ => string.Empty,
     };
 }

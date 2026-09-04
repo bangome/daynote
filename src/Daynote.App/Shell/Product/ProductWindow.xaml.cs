@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using CommunityToolkit.Mvvm.Input;
+using Daynote.App.Account;
 using Daynote.App.Input;
 using Daynote.App.Lifecycle;
 
@@ -13,7 +14,7 @@ namespace Daynote.App.Shell.Product;
 /// right panel. The caption buttons minimize/maximize/restore/close; close hides to the tray (the process
 /// and clipboard listener stay alive) exactly as the legacy shell did.
 /// </summary>
-public partial class ProductWindow : Window, IWindowHost
+public partial class ProductWindow : Window, IWindowHost, IAccountHost
 {
     private AppLifecycleCoordinator? _lifecycle;
     private IGlobalHotkeyService? _hotkeys;
@@ -166,6 +167,9 @@ public partial class ProductWindow : Window, IWindowHost
 
         // The handle now exists and outlives hide-to-tray, so register the summon hotkey against it.
         _hotkeys?.Attach(hwnd);
+
+        // WindowStyle=None also means the OS maximizes us over the taskbar (ProductWindow.Maximize.cs).
+        AttachMaximizeFix(hwnd);
     }
 
     private const int DwmWindowAttributeCornerPreference = 33;
@@ -191,6 +195,34 @@ public partial class ProductWindow : Window, IWindowHost
     }
 
     private void OnSettingsCloseRequested(object? sender, EventArgs e) => ViewModel.CloseSettings();
+
+    /// <summary>
+    /// Shows the account window, or brings the open one forward. One instance: it binds the shell's
+    /// single <see cref="AccountViewModel"/>, and a second copy would show the same checkout button
+    /// twice. Opened from two places — the titlebar avatar and the row in settings.
+    /// </summary>
+    public void ShowAccountWindow()
+    {
+        // Null in a build with no sync endpoint configured: the feature is absent, not disabled.
+        if (ViewModel.Account is null)
+        {
+            return;
+        }
+
+        if (_accountWindow is { IsLoaded: true })
+        {
+            _accountWindow.Activate();
+            return;
+        }
+
+        _accountWindow = new AccountWindow(ViewModel.Account) { Owner = this };
+        _accountWindow.Closed += (_, _) => _accountWindow = null;
+        _accountWindow.Show();
+    }
+
+    public void ShowSettingsPanel() => ViewModel.OpenSettings();
+
+    private AccountWindow? _accountWindow;
 
     private void OnStickyNoteRequested(object? sender, EventArgs e) => OpenStickyNote();
 
