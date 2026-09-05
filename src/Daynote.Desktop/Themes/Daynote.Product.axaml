@@ -1,0 +1,64 @@
+<!--
+  The Daynote v3 product palette, transcribed from the WPF Daynote.Product.Light/Dark dictionaries so
+  both apps paint the same surfaces. Keys keep the WPF names; ThemeDictionaries swap them with the
+  application's RequestedThemeVariant.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FFF4F4F5" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#FFE7E7EA" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke2" Color="#FFECECEF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FF1A1A1E" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF77777E" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Accent" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#170067C0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Hover" Color="#0B000000" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FFEDEDF0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat1" Color="#FFAFD9F5" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat2" Color="#FF54A9E8" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat3" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFE5484D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Ok" Color="#FF0F7B5F" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFB25E09" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFC62A2F" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#1FE5484D" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF121316" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FF1B1C20" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FF222327" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#FF2A2B30" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke2" Color="#FF26272C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FFF2F2F3" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF9A9AA2" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Accent" Color="#FF4CC2FF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#1F4CC2FF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Hover" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FF131417" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FF232428" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat1" Color="#FF2A5C7A" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat2" Color="#FF3792CC" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Heat3" Color="#FF4CC2FF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFE5484D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF4CC2FF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Ok" Color="#FF3DD68C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFE8A33D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFFF6369" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#26FF6369" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <CornerRadius x:Key="Daynote.Product.Radius.Panel">12</CornerRadius>
+  <CornerRadius x:Key="Daynote.Product.Radius.Control">8</CornerRadius>
+  <CornerRadius x:Key="Daynote.Product.Radius.Pill">999</CornerRadius>
+</ResourceDictionary>

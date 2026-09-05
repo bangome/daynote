@@ -1,0 +1,54 @@
+name: macos
+
+# The Avalonia (Daynote.Desktop) build. Restores the locked graph, compiles the portable flavour of
+# Infrastructure/Mcp plus the Desktop app, and runs the tests that need no Windows targeting pack.
+# The Windows workflow stays the release gate for the WPF app and the MSIX.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked)
+        run: dotnet restore Daynote.sln --locked-mode
+
+      - name: Build Desktop app and portable libraries (Release, warnings as errors)
+        run: >
+          dotnet build src/Daynote.Desktop/Daynote.Desktop.csproj
+          -c Release --no-restore -warnaserror
+
+      - name: Test (Core + portable Infrastructure)
+        run: >
+          dotnet test tests/Daynote.Core.Tests/Daynote.Core.Tests.csproj
+          tests/Daynote.Infrastructure.Portable.Tests/Daynote.Infrastructure.Portable.Tests.csproj
+          -c Release --minimum-expected-tests 1
+
+      - name: Bundle Daynote.app (osx-arm64, ad-hoc signed development artifact)
+        run: scripts/Build-MacApp.sh -r osx-arm64 -o artifacts/mac
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daynote-desktop-osx-arm64
+          path: artifacts/mac/Daynote.app

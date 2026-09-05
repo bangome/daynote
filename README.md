@@ -23,7 +23,8 @@ own PC.
 - **No application-managed encryption.** Your notes and clipboard data are stored as plaintext files
   readable by your Windows user account. See [docs/PRIVACY.md](docs/PRIVACY.md).
 - No OCR, no AI processing, no screenshots, no keyboard hooks, and no file/HTML clipboard history.
-- No macOS/Linux/mobile/web build and no x86 or Arm64 artifact.
+- No mobile or web build, no x86 artifact. (A macOS build is in progress: see
+  [docs/MACOS_PORT.md](docs/MACOS_PORT.md).)
 
 ## Supported systems
 
@@ -31,6 +32,10 @@ own PC.
 - x64 **Windows 10 21H2 LTSC / Enterprise**.
 
 No other Windows 10 edition, no 32-bit, and no Arm are supported for the first release.
+
+A **macOS** app (Apple silicon and Intel) built on Avalonia is under development in
+`src/Daynote.Desktop`; it shares the note engine and storage with the Windows app. See
+[docs/MACOS_PORT.md](docs/MACOS_PORT.md) for what works and how to build it.
 
 ## Where your data lives
 
@@ -47,4 +52,5 @@ reinstalling the app all preserve it. See [docs/DATA_AND_RECOVERY.md](docs/DATA_
 - [docs/QA.md](docs/QA.md) — the deterministic UI/OS QA harness and the exact commands operators run.
 - [docs/PACKAGING.md](docs/PACKAGING.md) — how the development MSIX is built and why data survives
   packaging operations.
+- [docs/MACOS_PORT.md](docs/MACOS_PORT.md) — the Avalonia/macOS port: layout, platform services, status.
 - [DESIGN.md](DESIGN.md) — the WPF design-system implementation contract.
