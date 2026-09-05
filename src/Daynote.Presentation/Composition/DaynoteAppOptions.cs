@@ -85,17 +85,12 @@ public sealed class DaynoteAppOptions
     /// operator's own notes. It is unset during a normal run and the app falls back to
     /// <c>%LocalAppData%\Daynote</c>.
     /// </summary>
-    public const string DataRootEnvironmentVariable = "DAYNOTE_DATA_ROOT";
+    public const string DataRootEnvironmentVariable =
+        Daynote.Infrastructure.Persistence.DaynoteDataRoot.EnvironmentVariable;
 
     public static DaynoteAppOptions ForCurrentUser()
     {
-        string? overrideRoot = Environment.GetEnvironmentVariable(DataRootEnvironmentVariable);
-        string root = string.IsNullOrWhiteSpace(overrideRoot)
-            ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Daynote")
-            : overrideRoot;
-        return new DaynoteAppOptions(root)
+        return new DaynoteAppOptions(Daynote.Infrastructure.Persistence.DaynoteDataRoot.Resolve())
         {
             SyncEndpoint = ResolveSyncEndpoint(
                 Environment.GetEnvironmentVariable(SyncEndpointEnvironmentVariable)),

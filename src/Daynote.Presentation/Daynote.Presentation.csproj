@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The UI-framework-neutral presentation layer: view models, localisation, date display, and the
+      composition options. Both the WPF app (Daynote.App) and the Avalonia app (Daynote.Desktop)
+      reference it, so a behaviour fixed here is fixed on every OS. Nothing in this project may use
+      System.Windows or Avalonia; framework-specific pieces sit behind the small interfaces declared
+      here (IThemeApplier, IFilePicker, IThumbnailLoader).
+
+      Namespaces keep their historical Daynote.App.* names so the move left every consumer untouched.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Daynote.App</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
+    <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Daynote.App" />
+    <InternalsVisibleTo Include="Daynote.App.Tests" />
+    <InternalsVisibleTo Include="Daynote.Desktop" />
+    <InternalsVisibleTo Include="Daynote.Presentation.Tests" />
+  </ItemGroup>
+</Project>

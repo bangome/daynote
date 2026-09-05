@@ -2,6 +2,8 @@
     x:Class="Daynote.App.Shell.Product.ProductWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
+    xmlns:locp="clr-namespace:Daynote.App.Localization;assembly=Daynote.Presentation"
     xmlns:product="clr-namespace:Daynote.App.Shell.Product"
     xmlns:settings="clr-namespace:Daynote.App.Settings"
     xmlns:lifecycle="clr-namespace:Daynote.App.Lifecycle"
@@ -64,13 +66,13 @@
                 <!-- Full brand logo (icon + wordmark), trimmed of padding so it fills the titlebar height;
                      icon-only when the titlebar compacts. Nudged slightly right of the window edge. -->
                 <Grid Visibility="{Binding IsTitlebarCompact, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
-                    <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}}"
+                    <Image Source="{Binding Language, Source={x:Static locp:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}}"
                            Height="24" VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality"
                            AutomationProperties.Name="{loc:Tr AppTitle}"
                            Visibility="{Binding IsDark, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
                     <!-- Dark theme: light-ink wordmark variant so the brand stays readable -->
-                    <Image Source="{Binding Language, Source={x:Static loc:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}, ConverterParameter=Dark}"
+                    <Image Source="{Binding Language, Source={x:Static locp:LocalizationService.Instance}, Converter={StaticResource Daynote.Convert.LanguageLogo}, ConverterParameter=Dark}"
                            Height="24" VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality"
                            AutomationProperties.Name="{loc:Tr AppTitle}"
@@ -250,7 +252,7 @@
                                 <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type product:CalendarDayCellViewModel}">
+                                <DataTemplate DataType="{x:Type pvm:CalendarDayCellViewModel}">
                                     <Button Height="38" Margin="1" Command="{Binding SelectCommand}"
                                             Style="{DynamicResource Daynote.Product.Style.GhostButton}"
                                             AutomationProperties.Name="{Binding DayText}">
@@ -393,7 +395,7 @@
                             </Grid.ColumnDefinitions>
                             <Button x:Name="TutTabTodo" Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTodo}"
                                     ToolTip="{Binding Todo.TabLabel}" AutomationProperties.Name="{loc:Tr TabTodoName}"
-                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Todo}">
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Width="13" Height="13" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.TabTodo}"
                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -403,21 +405,21 @@
                             </Button>
                             <Button x:Name="TutTabFavorites" Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsFavorites}"
                                     ToolTip="{loc:Tr TabFavoritesName}" AutomationProperties.Name="{loc:Tr TabFavoritesName}"
-                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Favorites}">
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">
                                 <Path Width="13" Height="13" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Star}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="1.1" StrokeLineJoin="Round" Fill="{x:Null}" />
                             </Button>
                             <Button x:Name="TutTabTags" Grid.Column="2" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsTags}"
                                     ToolTip="{Binding TagPanel.TabLabel}" AutomationProperties.Name="{loc:Tr TabTagsName}"
-                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Tags}">
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}">
                                 <Path Width="13" Height="13" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.TabTag}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="1.3" StrokeLineJoin="Round" Fill="{x:Null}" />
                             </Button>
                             <Button x:Name="TutTabFiles" Grid.Column="3" Style="{DynamicResource Daynote.Product.Style.TabHeader}" Tag="{Binding TabIsFiles}"
                                     ToolTip="{loc:Tr TabFiles}" AutomationProperties.Name="{loc:Tr TabFilesName}"
-                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static product:RightTab.Files}">
+                                    Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Files}">
                                 <Path Width="13" Height="13" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.TabClip}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="1.3" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="{x:Null}" />
@@ -431,7 +433,7 @@
                                   Visibility="{Binding TabIsTodo, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
                         <StackPanel>
                             <StackPanel.Resources>
-                                <DataTemplate x:Key="Daynote.Product.Template.TodoItem" DataType="{x:Type product:TodoItemViewModel}">
+                                <DataTemplate x:Key="Daynote.Product.Template.TodoItem" DataType="{x:Type pvm:TodoItemViewModel}">
                                         <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
                                                 BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="11,9" Margin="0,0,0,5">
                                             <Grid>
@@ -527,7 +529,7 @@
                         <StackPanel>
                             <ItemsControl ItemsSource="{Binding TagPanel.Tags}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type product:TagItemViewModel}">
+                                    <DataTemplate DataType="{x:Type pvm:TagItemViewModel}">
                                         <Border Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
                                                 BorderThickness="1" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="0" Margin="0,0,0,5">
                                             <StackPanel>
@@ -567,7 +569,7 @@
                                                 <ItemsControl ItemsSource="{Binding Occurrences}" Margin="0,2,0,8"
                                                               Visibility="{Binding IsExpanded, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
                                                     <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="{x:Type product:TagOccurrenceViewModel}">
+                                                        <DataTemplate DataType="{x:Type pvm:TagOccurrenceViewModel}">
                                                             <Border Background="{DynamicResource Daynote.Product.Brush.Hover}" Padding="12,10" Margin="8,0,8,6"
                                                                     CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}">
                                                                 <StackPanel>
@@ -614,7 +616,7 @@
                             </Button>
                             <ItemsControl ItemsSource="{Binding Files.Items}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type product:FileItemViewModel}">
+                                    <DataTemplate DataType="{x:Type pvm:FileItemViewModel}">
                                         <!-- Drag a card into the editor body to drop a [[file:…]] link; a body link click
                                              highlights the card via IsHighlighted (accent border). -->
                                         <Border Background="{DynamicResource Daynote.Product.Brush.Card}"

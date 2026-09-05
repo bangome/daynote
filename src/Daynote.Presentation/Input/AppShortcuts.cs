@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using Daynote.App.Localization;
 
 namespace Daynote.App.Input;
@@ -16,9 +15,9 @@ public sealed record AppShortcutAction(string Id, string LabelKey, Hotkey Defaul
 }
 
 /// <summary>
-/// The configurable in-app keyboard shortcuts (window <c>KeyBinding</c>s). Each action's id is stable
+/// The configurable in-app keyboard shortcuts (window key bindings). Each action's id is stable
 /// and used both as the persistence key suffix and to map to the shell command in ProductWindow. The
-/// global summon hotkey and the Alt+` quick-note chord are separate (global <c>RegisterHotKey</c>) and
+/// global summon hotkey and the Alt+` quick-note chord are separate (OS-registered global chords) and
 /// not part of this list.
 /// </summary>
 public static class AppShortcuts
@@ -33,13 +32,13 @@ public static class AppShortcuts
 
     public static IReadOnlyList<AppShortcutAction> Actions { get; } =
     [
-        new(NewNote, nameof(AppStrings.ShortcutNewNote), new Hotkey(ModifierKeys.Control, Key.N)),
-        new(GoToday, nameof(AppStrings.ShortcutGoToday), new Hotkey(ModifierKeys.Control, Key.T)),
-        new(Settings, nameof(AppStrings.ShortcutSettings), new Hotkey(ModifierKeys.Control, Key.OemComma)),
-        new(ToggleTheme, nameof(AppStrings.ShortcutToggleTheme), new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.L)),
-        new(ToggleLeft, nameof(AppStrings.ShortcutToggleLeft), new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.Left)),
-        new(ToggleRight, nameof(AppStrings.ShortcutToggleRight), new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.Right)),
-        new(OpenSticky, nameof(AppStrings.ShortcutOpenSticky), new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.S)),
+        new(NewNote, nameof(AppStrings.ShortcutNewNote), new Hotkey(HotkeyModifiers.Control, HotkeyKey.N)),
+        new(GoToday, nameof(AppStrings.ShortcutGoToday), new Hotkey(HotkeyModifiers.Control, HotkeyKey.T)),
+        new(Settings, nameof(AppStrings.ShortcutSettings), new Hotkey(HotkeyModifiers.Control, HotkeyKey.OemComma)),
+        new(ToggleTheme, nameof(AppStrings.ShortcutToggleTheme), new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.L)),
+        new(ToggleLeft, nameof(AppStrings.ShortcutToggleLeft), new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.Left)),
+        new(ToggleRight, nameof(AppStrings.ShortcutToggleRight), new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.Right)),
+        new(OpenSticky, nameof(AppStrings.ShortcutOpenSticky), new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.S)),
     ];
 
     public static Hotkey DefaultFor(string id) => Actions.First(action => action.Id == id).Default;

@@ -2,12 +2,13 @@
     x:Class="Daynote.App.Shell.Product.SearchDropdownView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
     xmlns:product="clr-namespace:Daynote.App.Shell.Product"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance product:SearchDropdownViewModel}">
+    d:DataContext="{d:DesignInstance pvm:SearchDropdownViewModel}">
     <Border VerticalAlignment="Top" HorizontalAlignment="Center" Width="480" Margin="0,4,0,0"
         MaxHeight="420" Style="{DynamicResource Daynote.Product.Style.Card}"
         Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}">
@@ -15,7 +16,7 @@
             <StackPanel>
                 <ItemsControl ItemsSource="{Binding Results}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type product:SearchResultRowViewModel}">
+                        <DataTemplate DataType="{x:Type pvm:SearchResultRowViewModel}">
                             <Button HorizontalContentAlignment="Stretch" Command="{Binding ActivateCommand}"
                                 Style="{DynamicResource Daynote.Product.Style.SearchResultButton}" Padding="10,8">
                                 <Grid>

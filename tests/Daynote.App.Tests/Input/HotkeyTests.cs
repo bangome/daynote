@@ -10,9 +10,9 @@ public sealed class HotkeyTests
     [TestMethod]
     public void Display_orders_modifiers_and_names_the_key()
     {
-        Assert.AreEqual("Ctrl+Alt+D", new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.D).ToDisplayString());
-        Assert.AreEqual("Ctrl+Shift+5", new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.D5).ToDisplayString());
-        Assert.AreEqual("Win+Space", new Hotkey(ModifierKeys.Windows, Key.Space).ToDisplayString());
+        Assert.AreEqual("Ctrl+Alt+D", new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.D).ToDisplayString());
+        Assert.AreEqual("Ctrl+Shift+5", new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.D5).ToDisplayString());
+        Assert.AreEqual("Win+Space", new Hotkey(HotkeyModifiers.Windows, HotkeyKey.Space).ToDisplayString());
     }
 
     [TestMethod]
@@ -20,9 +20,9 @@ public sealed class HotkeyTests
     {
         foreach (Hotkey original in new[]
         {
-            new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.D),
-            new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.D5),
-            new Hotkey(ModifierKeys.Control, Key.F5),
+            new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.D),
+            new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.D5),
+            new Hotkey(HotkeyModifiers.Control, HotkeyKey.F5),
         })
         {
             Assert.IsTrue(Hotkey.TryParse(original.ToDisplayString(), out Hotkey parsed));
@@ -33,14 +33,14 @@ public sealed class HotkeyTests
     [TestMethod]
     public void Display_and_parse_use_friendly_names_for_arrows_and_punctuation()
     {
-        Assert.AreEqual("Ctrl+Alt+←", new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.Left).ToDisplayString());
-        Assert.AreEqual("Ctrl+,", new Hotkey(ModifierKeys.Control, Key.OemComma).ToDisplayString());
+        Assert.AreEqual("Ctrl+Alt+←", new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.Left).ToDisplayString());
+        Assert.AreEqual("Ctrl+,", new Hotkey(HotkeyModifiers.Control, HotkeyKey.OemComma).ToDisplayString());
 
         foreach (Hotkey original in new[]
         {
-            new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.Right),
-            new Hotkey(ModifierKeys.Control, Key.OemComma),
-            new Hotkey(ModifierKeys.Alt, Key.Oem3),
+            new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.Right),
+            new Hotkey(HotkeyModifiers.Control, HotkeyKey.OemComma),
+            new Hotkey(HotkeyModifiers.Alt, HotkeyKey.Oem3),
         })
         {
             Assert.IsTrue(Hotkey.TryParse(original.ToDisplayString(), out Hotkey parsed));
@@ -52,7 +52,7 @@ public sealed class HotkeyTests
     public void Parse_is_case_insensitive_and_trims()
     {
         Assert.IsTrue(Hotkey.TryParse(" ctrl + ALT + d ", out Hotkey parsed));
-        Assert.AreEqual(new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.D), parsed);
+        Assert.AreEqual(new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.D), parsed);
     }
 
     [TestMethod]
@@ -68,18 +68,18 @@ public sealed class HotkeyTests
     [TestMethod]
     public void IsValid_requires_a_modifier_and_a_non_modifier_key()
     {
-        Assert.IsTrue(new Hotkey(ModifierKeys.Control, Key.D).IsValid);
-        Assert.IsFalse(new Hotkey(ModifierKeys.None, Key.D).IsValid, "Bare key.");
-        Assert.IsFalse(new Hotkey(ModifierKeys.Control, Key.None).IsValid, "No key.");
-        Assert.IsFalse(new Hotkey(ModifierKeys.Control, Key.LeftShift).IsValid, "Modifier as the key.");
+        Assert.IsTrue(new Hotkey(HotkeyModifiers.Control, HotkeyKey.D).IsValid);
+        Assert.IsFalse(new Hotkey(HotkeyModifiers.None, HotkeyKey.D).IsValid, "Bare key.");
+        Assert.IsFalse(new Hotkey(HotkeyModifiers.Control, HotkeyKey.None).IsValid, "No key.");
+        Assert.IsFalse(new Hotkey(HotkeyModifiers.Control, HotkeyKey.LeftShift).IsValid, "Modifier as the key.");
     }
 
     [TestMethod]
     public void ToWin32_maps_modifiers_with_no_repeat_and_the_virtual_key()
     {
-        (uint fsModifiers, uint virtualKey) = new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.D).ToWin32();
+        (uint fsModifiers, uint virtualKey) = HotkeyInterop.ToWin32(new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.D));
 
-        Assert.AreEqual(Hotkey.ModNoRepeat | 0x0002u | 0x0001u, fsModifiers, "MOD_NOREPEAT | MOD_CONTROL | MOD_ALT.");
+        Assert.AreEqual(HotkeyInterop.ModNoRepeat | 0x0002u | 0x0001u, fsModifiers, "MOD_NOREPEAT | MOD_CONTROL | MOD_ALT.");
         Assert.AreEqual((uint)KeyInterop.VirtualKeyFromKey(Key.D), virtualKey);
     }
 }

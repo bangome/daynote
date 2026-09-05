@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using Daynote.App.Input;
 using Daynote.App.Tests.Lifecycle;
 using Daynote.Core.Settings;
@@ -23,7 +22,7 @@ public sealed class ConfigurableShortcutsTests
         var store = new InMemorySettingsStore();
         var shortcuts = new ConfigurableShortcuts(store);
 
-        ShortcutSetResult result = await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.M));
+        ShortcutSetResult result = await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.M));
         Assert.AreEqual(ShortcutSetResult.Ok, result);
 
         // A fresh instance over the same store loads the override.
@@ -38,7 +37,7 @@ public sealed class ConfigurableShortcutsTests
         var shortcuts = new ConfigurableShortcuts(new InMemorySettingsStore());
 
         // Ctrl+T is go-today's default.
-        ShortcutSetResult result = await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(ModifierKeys.Control, Key.T));
+        ShortcutSetResult result = await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(HotkeyModifiers.Control, HotkeyKey.T));
 
         Assert.AreEqual(ShortcutSetResult.Conflict, result);
         Assert.AreEqual("Ctrl+N", shortcuts.Get(AppShortcuts.NewNote).ToDisplayString(), "The binding is unchanged on conflict.");
@@ -48,14 +47,14 @@ public sealed class ConfigurableShortcutsTests
     public async Task Set_rejects_an_invalid_modifier_less_chord()
     {
         var shortcuts = new ConfigurableShortcuts(new InMemorySettingsStore());
-        Assert.AreEqual(ShortcutSetResult.Invalid, await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(ModifierKeys.None, Key.M)));
+        Assert.AreEqual(ShortcutSetResult.Invalid, await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(HotkeyModifiers.None, HotkeyKey.M)));
     }
 
     [TestMethod]
     public async Task Reset_restores_the_default()
     {
         var shortcuts = new ConfigurableShortcuts(new InMemorySettingsStore());
-        await shortcuts.SetAsync(AppShortcuts.GoToday, new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.G));
+        await shortcuts.SetAsync(AppShortcuts.GoToday, new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.G));
         Assert.AreEqual("Ctrl+Alt+G", shortcuts.Get(AppShortcuts.GoToday).ToDisplayString());
 
         await shortcuts.ResetAsync(AppShortcuts.GoToday);
@@ -67,7 +66,7 @@ public sealed class ConfigurableShortcutsTests
     {
         var shortcuts = new ConfigurableShortcuts(new InMemorySettingsStore());
         // Move go-today off Ctrl+T, then new-note can take it.
-        await shortcuts.SetAsync(AppShortcuts.GoToday, new Hotkey(ModifierKeys.Control | ModifierKeys.Alt, Key.G));
-        Assert.AreEqual(ShortcutSetResult.Ok, await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(ModifierKeys.Control, Key.T)));
+        await shortcuts.SetAsync(AppShortcuts.GoToday, new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Alt, HotkeyKey.G));
+        Assert.AreEqual(ShortcutSetResult.Ok, await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(HotkeyModifiers.Control, HotkeyKey.T)));
     }
 }

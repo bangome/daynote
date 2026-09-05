@@ -22,7 +22,8 @@ internal sealed class FakeFilePicker : IFilePicker
 {
     public List<string> Paths { get; } = [];
 
-    public IReadOnlyList<string> PickFiles() => Paths;
+    public Task<IReadOnlyList<string>> PickFilesAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<string>>(Paths);
 }
 
 /// <summary>Deterministic clock; the instant and offset are settable for date-scoped fixtures.</summary>

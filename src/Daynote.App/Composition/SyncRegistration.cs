@@ -141,7 +141,12 @@ public static class SyncRegistration
 /// <summary>Puts the one-time recovery key on the clipboard or into a file the user chooses.</summary>
 internal sealed class WpfRecoveryKeyExporter : IRecoveryKeyExporter
 {
-    public bool TryCopyToClipboard(string recoveryKey)
+    public Task<bool> TryCopyToClipboardAsync(string recoveryKey)
+    {
+        return Task.FromResult(TryCopyToClipboard(recoveryKey));
+    }
+
+    private static bool TryCopyToClipboard(string recoveryKey)
     {
         try
         {
@@ -155,7 +160,12 @@ internal sealed class WpfRecoveryKeyExporter : IRecoveryKeyExporter
         }
     }
 
-    public bool TrySaveToFile(string recoveryKey)
+    public Task<bool> TrySaveToFileAsync(string recoveryKey)
+    {
+        return Task.FromResult(TrySaveToFile(recoveryKey));
+    }
+
+    private static bool TrySaveToFile(string recoveryKey)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog
         {

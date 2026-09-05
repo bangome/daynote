@@ -229,13 +229,13 @@ public sealed class AccountViewModelTests
     {
         internal string? Copied { get; private set; }
 
-        public bool TryCopyToClipboard(string recoveryKey)
+        public Task<bool> TryCopyToClipboardAsync(string recoveryKey)
         {
             Copied = recoveryKey;
-            return true;
+            return Task.FromResult(true);
         }
 
-        public bool TrySaveToFile(string recoveryKey) => true;
+        public Task<bool> TrySaveToFileAsync(string recoveryKey) => Task.FromResult(true);
     }
 
     [TestMethod]

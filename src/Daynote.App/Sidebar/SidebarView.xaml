@@ -2,6 +2,7 @@
     x:Class="Daynote.App.Sidebar.SidebarView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:nvm="clr-namespace:Daynote.App.Notes;assembly=Daynote.Presentation"
     xmlns:sidebar="clr-namespace:Daynote.App.Sidebar"
     xmlns:notes="clr-namespace:Daynote.App.Notes"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
@@ -52,7 +53,7 @@
                 <Style TargetType="ListBoxItem" BasedOn="{StaticResource Daynote.Style.SidebarNoteRow}" />
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
-                <DataTemplate DataType="{x:Type notes:NoteTabViewModel}">
+                <DataTemplate DataType="{x:Type nvm:NoteTabViewModel}">
                     <DockPanel LastChildFill="True">
                         <!-- Reorder affordances reveal on row hover or keyboard focus (DESIGN Revision 2026-07-21) -->
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">

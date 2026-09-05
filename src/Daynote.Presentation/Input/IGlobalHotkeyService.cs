@@ -16,8 +16,8 @@ public enum HotkeySetResult
 /// <summary>
 /// Owns the single system-wide "summon" hotkey. Registered against the resident window handle so it
 /// fires even while the window is hidden to the tray; the press is surfaced as <see cref="Pressed"/>
-/// for the lifecycle to restore the window. The real implementation is Win32 <c>RegisterHotKey</c>;
-/// tests use a recording double.
+/// for the lifecycle to restore the window. The Windows implementation is Win32 <c>RegisterHotKey</c>, the
+/// macOS one Carbon <c>RegisterEventHotKey</c>; tests use a recording double.
 /// </summary>
 public interface IGlobalHotkeyService : IDisposable
 {
@@ -30,7 +30,7 @@ public interface IGlobalHotkeyService : IDisposable
     /// <summary>The chord currently registered (or queued for registration), if any.</summary>
     Hotkey? Current { get; }
 
-    /// <summary>Binds the service to the resident window handle and applies any queued hotkey.</summary>
+    /// <summary>Binds the service to the resident window handle (Windows) and applies any queued hotkey. Other platforms ignore the handle.</summary>
     void Attach(nint hwnd);
 
     /// <summary>Registers <paramref name="hotkey"/>, replacing the previous one; keeps the old on conflict.</summary>

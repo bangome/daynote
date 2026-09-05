@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.Core.Domain;
@@ -16,20 +14,26 @@ namespace Daynote.App.Shell.Product;
 /// </summary>
 public sealed partial class FilesPanelViewModel : ObservableObject
 {
+    private const int ThumbnailDecodeWidth = 320;
+
     private readonly AddDayFile _addFile;
     private readonly ListDayFiles _listFiles;
     private readonly DeleteDayFile _deleteFile;
     private readonly IFileAssetStore _assetStore;
     private readonly IFilePicker _picker;
+    private readonly IThumbnailLoader? _thumbnails;
     private LocalDate _date;
 
+    /// <param name="thumbnails">Null shows the image badge instead of a decoded preview (tests, headless).</param>
     public FilesPanelViewModel(
         AddDayFile addFile,
         ListDayFiles listFiles,
         DeleteDayFile deleteFile,
         IFileAssetStore assetStore,
-        IFilePicker picker)
+        IFilePicker picker,
+        IThumbnailLoader? thumbnails = null)
     {
+        _thumbnails = thumbnails;
         _addFile = addFile ?? throw new ArgumentNullException(nameof(addFile));
         _listFiles = listFiles ?? throw new ArgumentNullException(nameof(listFiles));
         _deleteFile = deleteFile ?? throw new ArgumentNullException(nameof(deleteFile));
@@ -54,7 +58,7 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         Items.Clear();
         foreach (DayFile file in files)
         {
-            ImageSource? thumbnail = await TryLoadThumbnailAsync(file, cancellationToken).ConfigureAwait(true);
+            object? thumbnail = await TryLoadThumbnailAsync(file, cancellationToken).ConfigureAwait(true);
             Items.Add(new FileItemViewModel(file, thumbnail, DeleteItemAsync));
         }
 
@@ -64,7 +68,7 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     [RelayCommand]
     private async Task AddFilesAsync()
     {
-        IReadOnlyList<string> paths = _picker.PickFiles();
+        IReadOnlyList<string> paths = await _picker.PickFilesAsync().ConfigureAwait(true);
         bool added = false;
         foreach (string path in paths)
         {
@@ -97,7 +101,7 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         {
             DayFile file = await _addFile.ExecuteAsync(_date, UniquifyName(displayName), content, cancellationToken).ConfigureAwait(true);
             DayFile available = file with { IsAvailable = true };
-            ImageSource? thumbnail = await TryLoadThumbnailAsync(available, cancellationToken).ConfigureAwait(true);
+            object? thumbnail = await TryLoadThumbnailAsync(available, cancellationToken).ConfigureAwait(true);
             Items.Insert(0, new FileItemViewModel(available, thumbnail, DeleteItemAsync));
             IsEmpty = false;
             return available;
@@ -153,9 +157,9 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         }
     }
 
-    private async Task<ImageSource?> TryLoadThumbnailAsync(DayFile file, CancellationToken cancellationToken)
+    private async Task<object?> TryLoadThumbnailAsync(DayFile file, CancellationToken cancellationToken)
     {
-        if (!file.IsImage || !file.IsAvailable)
+        if (_thumbnails is null || !file.IsImage || !file.IsAvailable)
         {
             return null;
         }
@@ -163,20 +167,9 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         try
         {
             byte[]? bytes = await _assetStore.ReadAsync(file.RelativePath, cancellationToken).ConfigureAwait(true);
-            if (bytes is null)
-            {
-                return null;
-            }
-
-            using var memory = new MemoryStream(bytes);
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 320;
-            image.StreamSource = memory;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            return bytes is null
+                ? null
+                : await _thumbnails.LoadAsync(bytes, ThumbnailDecodeWidth, cancellationToken).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is IOException or NotSupportedException or ArgumentException)
         {

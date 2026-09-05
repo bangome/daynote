@@ -130,20 +130,20 @@ public sealed partial class AccountViewModel
     }
 
     [RelayCommand]
-    private void CopyRecoveryKey()
+    private async Task CopyRecoveryKeyAsync()
     {
-        if (RecoveryKeyDisplay is { } key && exporter.TryCopyToClipboard(key))
+        if (RecoveryKeyDisplay is { } key && await exporter.TryCopyToClipboardAsync(key).ConfigureAwait(true))
         {
             RecoveryKeyCopied = true;
         }
     }
 
     [RelayCommand]
-    private void SaveRecoveryKey()
+    private async Task SaveRecoveryKeyAsync()
     {
         if (RecoveryKeyDisplay is { } key)
         {
-            exporter.TrySaveToFile(key);
+            await exporter.TrySaveToFileAsync(key).ConfigureAwait(true);
         }
     }
 

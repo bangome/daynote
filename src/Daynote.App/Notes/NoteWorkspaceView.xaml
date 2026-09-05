@@ -2,9 +2,10 @@
     x:Class="Daynote.App.Notes.NoteWorkspaceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:nvm="clr-namespace:Daynote.App.Notes;assembly=Daynote.Presentation"
     xmlns:notes="clr-namespace:Daynote.App.Notes"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
-    d:DataContext="{d:DesignInstance notes:NoteWorkspaceViewModel}"
+    d:DataContext="{d:DesignInstance nvm:NoteWorkspaceViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     mc:Ignorable="d"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -45,7 +46,7 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type notes:NoteTabViewModel}">
+                        <DataTemplate DataType="{x:Type nvm:NoteTabViewModel}">
                             <Border x:Name="TabRoot" Margin="0,0,2,0" Background="{DynamicResource Daynote.Brush.Transparent}" CornerRadius="{DynamicResource Daynote.Radius.Control}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>

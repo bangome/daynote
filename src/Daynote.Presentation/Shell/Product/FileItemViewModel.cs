@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.Core.Files;
@@ -14,7 +13,7 @@ public sealed partial class FileItemViewModel : ObservableObject
 {
     private readonly Func<FileItemViewModel, Task> _onDelete;
 
-    public FileItemViewModel(DayFile file, ImageSource? thumbnail, Func<FileItemViewModel, Task> onDelete)
+    public FileItemViewModel(DayFile file, object? thumbnail, Func<FileItemViewModel, Task> onDelete)
     {
         Id = file.Id;
         Name = file.DisplayName;
@@ -33,7 +32,7 @@ public sealed partial class FileItemViewModel : ObservableObject
 
     public bool IsImage { get; }
 
-    public ImageSource? Thumbnail { get; }
+    public object? Thumbnail { get; }
 
     public bool HasThumbnail => Thumbnail is not null;
 

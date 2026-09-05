@@ -120,7 +120,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IFileAssetStore>(),
             sp.GetRequiredService<Shell.Product.IFilePicker>(),
             sp.GetRequiredService<ISettingsStore>(),
-            sp.GetRequiredService<Shell.Product.IThemeApplier>()));
+            sp.GetRequiredService<Shell.Product.IThemeApplier>(),
+            new Shell.Product.WpfThumbnailLoader()));
         services.AddSingleton(sp => new Shell.Product.ProductWindow(
             sp.GetRequiredService<Shell.Product.ProductShellViewModel>()));
 

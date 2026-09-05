@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
     <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <ProjectReference Include="..\Daynote.Presentation\Daynote.Presentation.csproj" />
     <!--
       The MCP server shares this app's output folder inside the MSIX (see packaging/Daynote.Package):
       two apphosts, one copy of the runtime. Referencing it here is what makes that safe - restore
