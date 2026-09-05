@@ -67,6 +67,7 @@ public sealed class MsixStartupTaskService : IStartupTaskService
     }
 }
 
+#if WINDOWS
 /// <summary>
 /// Real gateway over <c>Windows.ApplicationModel.StartupTask</c>. When the process has no packaged
 /// identity (dev/unpackaged run) every call reports <see cref="StartupTaskState.Unavailable"/> rather
@@ -140,3 +141,4 @@ public sealed class WindowsStartupTaskGateway : IStartupTaskGateway
         _ => StartupTaskState.Unavailable,
     };
 }
+#endif

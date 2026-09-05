@@ -14,12 +14,9 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 // The stdout stream carries the MCP JSON-RPC messages, so every log record must go to stderr.
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
-// Resolve the same per-user data root the WPF app uses (mirrors DaynoteAppOptions.ForCurrentUser).
-string? overrideRoot = Environment.GetEnvironmentVariable("DAYNOTE_DATA_ROOT");
-string root = string.IsNullOrWhiteSpace(overrideRoot)
-    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Daynote")
-    : overrideRoot;
-string dbPath = Path.Combine(Path.GetFullPath(root), "daynote.db");
+// Resolve the same per-user data root the desktop apps use (DaynoteAppOptions.ForCurrentUser).
+string root = DaynoteDataRoot.Resolve();
+string dbPath = Path.Combine(root, "daynote.db");
 
 var database = new SqliteDatabase(new SqliteDatabaseOptions(dbPath));
 database.Initialize();
