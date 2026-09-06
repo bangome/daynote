@@ -49,6 +49,12 @@ jobs:
           --results-directory artifacts/test-results
           --minimum-expected-tests 1
 
+      # dotnet format loads the solution in the Debug configuration. Since the WPF XAML now
+      # references types in Daynote.Presentation by assembly, its markup compiler needs that
+      # assembly's Debug output to exist or the *.g.cs files are missing (CS0103 in *.xaml.cs).
+      - name: Build (Debug, for the format workspace)
+        run: dotnet build Daynote.sln -c Debug --no-restore
+
       # Format verification runs AFTER tests, never concurrently with them.
       - name: Format verification
         run: dotnet format Daynote.sln --verify-no-changes --no-restore
