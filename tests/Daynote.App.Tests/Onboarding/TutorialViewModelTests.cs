@@ -140,7 +140,7 @@ public sealed class TutorialViewModelTests
     {
         var store = new InMemorySettingsStore();
         var shortcuts = new ConfigurableShortcuts(store);
-        await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(ModifierKeys.Control | ModifierKeys.Shift, Key.M));
+        await shortcuts.SetAsync(AppShortcuts.NewNote, new Hotkey(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyKey.M));
         var vm = new TutorialViewModel(store, shortcuts, new FakeStartupTaskService(Daynote.Core.Startup.StartupTaskState.Unavailable));
         await vm.LoadAsync();
 

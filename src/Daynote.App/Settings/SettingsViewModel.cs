@@ -258,7 +258,7 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
     /// <summary>Routes a chord captured by the view to whichever row is capturing.</summary>
     public async Task HandleCapturedChordAsync(ModifierKeys modifiers, Key key)
     {
-        var hotkey = new Hotkey(modifiers, key);
+        Hotkey hotkey = HotkeyInterop.FromWpf(modifiers, key);
         if (IsCapturingHotkey)
         {
             await ApplySummonHotkeyAsync(hotkey).ConfigureAwait(true);

@@ -2,19 +2,20 @@
     x:Class="Daynote.App.Shell.Product.FavoritesPanelView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
     xmlns:product="clr-namespace:Daynote.App.Shell.Product"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance product:FavoritesPanelViewModel}">
+    d:DataContext="{d:DesignInstance pvm:FavoritesPanelViewModel}">
     <!-- 즐겨찾기 tab body (Daynote v3): every starred note across all dates, newest first; click opens
          the note on its own date. Hosted inside the right rail's tab area by ProductWindow. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
         <StackPanel>
             <ItemsControl ItemsSource="{Binding Items}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type product:FavoriteItemViewModel}">
+                    <DataTemplate DataType="{x:Type pvm:FavoriteItemViewModel}">
                         <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1"
                                 CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}" Padding="12,10" Margin="0,0,0,5" Cursor="Hand">
                             <Border.Style>

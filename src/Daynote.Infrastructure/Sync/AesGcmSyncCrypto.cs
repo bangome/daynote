@@ -1,9 +1,9 @@
-﻿using System.Buffers.Text;
+using System.Buffers.Text;
 using System.Security.Cryptography;
-using Konscious.Security.Cryptography;
 using System.Text;
 using Daynote.Core.Domain;
 using Daynote.Core.Sync;
+using Konscious.Security.Cryptography;
 
 namespace Daynote.Infrastructure.Sync;
 

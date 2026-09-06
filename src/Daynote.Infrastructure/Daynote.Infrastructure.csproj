@@ -1,7 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
+    <!--
+      Two flavours of one assembly. The Windows-specific TFM is what the WPF app, the MSIX and the
+      existing tests consume; it carries the WinRT projections (StartupTask, Package.Current). The plain
+      net10.0 flavour is what the Avalonia app builds against on macOS/Linux (and, later, Windows). The
+      few WinRT call sites are fenced with #if WINDOWS; everything else compiles for both.
+    -->
+    <TargetFrameworks>net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <PlatformTarget Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">x64</PlatformTarget>
+    <!--
+      Also restored for the Mac RIDs: publishing Daynote.Desktop for osx-arm64/osx-x64 records those
+      targets in this project's lock file, which locked-mode restore rejects unless declared here. The
+      WPF projects must NOT list them (no WindowsDesktop runtime pack exists for macOS).
+    -->
+    <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />

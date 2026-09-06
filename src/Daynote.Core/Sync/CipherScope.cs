@@ -1,4 +1,4 @@
-﻿namespace Daynote.Core.Sync;
+namespace Daynote.Core.Sync;
 
 /// <summary>Which wrapping key an envelope was sealed under, so the two cannot be interchanged.</summary>
 public enum DataKeyPurpose

@@ -1,4 +1,4 @@
-﻿using Daynote.Core.Sync;
+using Daynote.Core.Sync;
 
 namespace Daynote.Infrastructure.Tests.Sync;
 

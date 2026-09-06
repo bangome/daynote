@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Daynote.Desktop</RootNamespace>
+    <AssemblyName>Daynote.Desktop</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Publishes for the Macs (Apple silicon and Intel) and, later, Windows from the same source. -->
+    <RuntimeIdentifiers>osx-arm64;osx-x64;win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
+    <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <ProjectReference Include="..\Daynote.Presentation\Daynote.Presentation.csproj" />
+    <!-- Same reasoning as Daynote.App: the MCP server ships next to the app, so both resolve one graph. -->
+    <ProjectReference Include="..\Daynote.Mcp\Daynote.Mcp.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.png" Link="Assets\daynote-favicon-v1.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
+  </ItemGroup>
+</Project>

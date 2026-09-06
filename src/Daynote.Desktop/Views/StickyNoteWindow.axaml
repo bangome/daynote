@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Daynote.Desktop.ViewModels"
+        xmlns:views="using:Daynote.Desktop.Views"
+        x:Class="Daynote.Desktop.Views.StickyNoteWindow"
+        x:DataType="vm:DesktopShellViewModel"
+        Title="{Binding Notes.SelectedTab.Title, FallbackValue=Daynote}"
+        Width="320" Height="260" MinWidth="220" MinHeight="160"
+        Topmost="True"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Background="#FFFDF0A0"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="34">
+  <Window.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="#FF3A3520" />
+    </Style>
+    <Style Selector="TextBox.sticky">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="#FF3A3520" />
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="AcceptsReturn" Value="True" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="TextBox.sticky:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox.sticky:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.stickybtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="#FF3A3520" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Button.stickybtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#22000000" />
+    </Style>
+  </Window.Styles>
+  <!-- The left margin clears the macOS traffic lights drawn over the extended client area. -->
+  <Grid RowDefinitions="34,*" Margin="70,0,12,12">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+      <TextBlock Grid.Column="0" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" FontWeight="SemiBold" FontSize="12.5"
+                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+      <Button Grid.Column="1" x:Name="PinButton" Classes="stickybtn" Content="📌" Click="OnTogglePin" />
+      <Button Grid.Column="2" Classes="stickybtn" Content="✕" Click="OnClose" />
+    </Grid>
+    <TextBox Grid.Row="1" x:Name="Body" Classes="sticky" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top" />
+  </Grid>
+</Window>

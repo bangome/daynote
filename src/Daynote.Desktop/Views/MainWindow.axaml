@@ -1,0 +1,568 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Daynote.Desktop.ViewModels"
+        xmlns:notes="using:Daynote.App.Notes"
+        xmlns:pvm="using:Daynote.App.Shell.Product"
+        xmlns:views="using:Daynote.Desktop.Views"
+        xmlns:settings="using:Daynote.App.Settings"
+        xmlns:onboarding="using:Daynote.App.Onboarding"
+        x:Class="Daynote.Desktop.Views.MainWindow"
+        x:DataType="vm:DesktopShellViewModel"
+        Title="Daynote"
+        Width="1240" Height="780" MinWidth="900" MinHeight="560"
+        Background="{DynamicResource Daynote.Product.Brush.Bg1}"
+        Icon="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="52">
+
+  <Grid RowDefinitions="52,*">
+
+    <!-- Title bar: brand past the traffic lights, unified search in the middle, actions on the right. -->
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="84,0,16,0">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Image Source="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png" Width="22" Height="22" />
+        <TextBlock Text="Daynote" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+      </StackPanel>
+
+      <Grid Grid.Column="1" MaxWidth="520" Margin="24,0" VerticalAlignment="Center" ColumnDefinitions="*,Auto">
+        <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline" PlaceholderText="{Binding Strings.SearchHint}"
+                 Text="{Binding Search.Query}" />
+        <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="11" Padding="8,4" Margin="4,0,0,0"
+                Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}" />
+      </Grid>
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+        <Button Classes="quiet" Command="{Binding OpenAccountCommand}" IsVisible="{Binding HasAccount}" Padding="6,3"
+                ToolTip.Tip="{Binding Account.AvatarTooltip, FallbackValue=''}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Daynote.Product.Brush.Accent}">
+              <TextBlock Text="{Binding Account.AvatarInitial, FallbackValue='?'}" FontSize="11" FontWeight="Bold"
+                         Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="{Binding Account.Status.Label, FallbackValue=''}" FontSize="11.5" Classes="muted" VerticalAlignment="Center"
+                       IsVisible="{Binding Account.Status.IsVisible, FallbackValue=False}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="quiet" Content="{Binding Strings.Today}" Command="{Binding GoToTodayCommand}" />
+        <Button Classes="quiet" Content="{Binding Strings.TimelineToggle}" Command="{Binding ToggleTimelineCommand}"
+                Classes.selected="{Binding IsTimelineMode}" />
+        <Button Classes="quiet" Content="{Binding ThemeGlyph}" Command="{Binding ToggleThemeCommand}" FontSize="15" Padding="10,4"
+                ToolTip.Tip="{Binding Strings.ThemeToggle}" />
+        <Button Classes="quiet" Content="⚙" Command="{Binding OpenSettingsCommand}" FontSize="15" Padding="10,4"
+                ToolTip.Tip="{Binding Strings.Settings}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Body: calendar + notes | editor or timeline | right rail. -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="16,0,16,16">
+
+      <Grid Grid.Column="0" Width="292" RowDefinitions="Auto,*" Margin="0,0,12,0" IsVisible="{Binding !LeftCollapsed}">
+        <Border Grid.Row="0" Classes="panel" Padding="14" Margin="0,0,0,12">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Button Grid.Column="0" Classes="quiet" Content="‹" Padding="10,2" FontSize="16" Command="{Binding Calendar.PreviousMonthCommand}" />
+              <TextBlock Grid.Column="1" Text="{Binding Calendar.MonthLabel}" FontWeight="SemiBold" FontSize="14"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Classes="quiet" Content="›" Padding="10,2" FontSize="16" Command="{Binding Calendar.NextMonthCommand}" />
+            </Grid>
+            <UniformGrid Columns="7">
+              <TextBlock Text="{Binding Strings.WeekdaySun}" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
+              <TextBlock Classes="muted" Text="{Binding Strings.WeekdayMon}" FontSize="11" HorizontalAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings.WeekdayTue}" FontSize="11" HorizontalAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings.WeekdayWed}" FontSize="11" HorizontalAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings.WeekdayThu}" FontSize="11" HorizontalAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings.WeekdayFri}" FontSize="11" HorizontalAlignment="Center" />
+              <TextBlock Text="{Binding Strings.WeekdaySat}" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
+            </UniformGrid>
+            <ItemsControl ItemsSource="{Binding Calendar.Cells}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
+                  <Button Classes="day" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
+                          Classes.saturday="{Binding IsSaturday}" Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
+                          Command="{Binding SelectCommand}" Margin="0,2">
+                    <Grid>
+                      <TextBlock Text="{Binding DayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <Ellipse Width="4" Height="4" VerticalAlignment="Bottom" Margin="0,0,0,3"
+                               Fill="{DynamicResource Daynote.Product.Brush.Accent}" IsVisible="{Binding HasNotes}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Classes="panel" Padding="12">
+          <Grid RowDefinitions="Auto,*">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding DayLabel}" FontWeight="SemiBold" FontSize="13.5" />
+                <TextBlock Classes="muted" Text="{Binding NoteCountText}" FontSize="11.5" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="accent" Content="{Binding Strings.AddNote}" Command="{Binding NewNoteCommand}" />
+            </Grid>
+            <ScrollViewer Grid.Row="1">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding Notes.Tabs}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="notes:NoteTabViewModel">
+                      <Button Classes="noterow" Classes.selected="{Binding IsSelected}"
+                              Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).Notes.SelectNoteCommand}"
+                              CommandParameter="{Binding}">
+                        <StackPanel Spacing="3">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="★" FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Extras}" IsVisible="{Binding IsFavorite}" />
+                            <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                     IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="empty" Text="{Binding Strings.DayNotesEmpty}" IsVisible="{Binding IsDayEmpty}" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- Editor card -->
+      <Border Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
+              IsVisible="{Binding IsEditorMode}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
+            <Button Grid.Column="0" Classes="quiet" FontSize="15" Padding="6,2" Margin="0,0,8,0"
+                    Command="{Binding ToggleFavoriteCommand}" ToolTip.Tip="{Binding Strings.Favorite}" IsVisible="{Binding HasOpenNote}"
+                    Content="{Binding Notes.SelectedTab.IsFavorite, Converter={x:Static views:Glyphs.Star}, FallbackValue=☆}"
+                    Foreground="{DynamicResource Daynote.Product.Brush.Extras}" />
+            <TextBlock Grid.Column="1" Classes="h1" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="2" Classes="muted" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,10,0"
+                       Text="{Binding Notes.SaveStatusDisplay}" IsVisible="{Binding Notes.HasSaveStatus}" />
+            <Button Grid.Column="3" Classes="quiet" Content="↻" FontSize="12" Command="{Binding Notes.RetryCommand}" IsVisible="{Binding Notes.HasSaveError}" />
+            <Button Grid.Column="4" Classes="quiet" Content="📌" FontSize="12" Command="{Binding OpenStickyCommand}" IsVisible="{Binding HasOpenNote}"
+                    ToolTip.Tip="{Binding Strings.OpenStickyNote}" />
+            <Button Grid.Column="5" Classes="quiet" Content="✕" FontSize="12" Command="{Binding DeleteSelectedNoteCommand}" IsVisible="{Binding HasOpenNote}" />
+          </Grid>
+
+          <!-- Tags: chips plus an inline entry that commits on Enter. -->
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" IsVisible="{Binding HasOpenNote}">
+            <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Border Classes="chip">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                      <TextBlock Text="{Binding StringFormat='#{0}'}" VerticalAlignment="Center" />
+                      <Button Classes="chipx" Content="✕"
+                              Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).RemoveTagCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBox x:Name="TagBox" Classes="inline" Width="150" Margin="0,0,0,6" PlaceholderText="{Binding Strings.TagAddPlaceholder}"
+                     Text="{Binding TagInput}" KeyDown="OnTagBoxKeyDown" />
+          </StackPanel>
+
+          <Grid Grid.Row="2">
+            <TextBox x:Name="Editor" Classes="editor" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top"
+                     PlaceholderText="{Binding Strings.EditorEmptyHint}" />
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- Timeline: every note, newest date first. -->
+      <Border Grid.Column="1" Classes="panel" Padding="20,16" IsVisible="{Binding IsTimelineMode}">
+        <Grid>
+          <ScrollViewer IsVisible="{Binding !Timeline.IsEmpty}">
+            <ItemsControl ItemsSource="{Binding Timeline.Rows}">
+              <ItemsControl.DataTemplates>
+                <DataTemplate x:DataType="pvm:TimelineDateHeaderRow">
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,14,4,8">
+                    <TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="Bold" />
+                    <TextBlock Classes="muted" Text="{Binding CountText}" FontSize="11" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+                <DataTemplate x:DataType="pvm:TimelineNoteRow">
+                  <Button Classes="card" Command="{Binding OpenCommand}">
+                    <StackPanel Spacing="6">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="★" FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Extras}" IsVisible="{Binding IsFavorite}" />
+                        <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding DisplayBody}" FontSize="12.5" TextWrapping="Wrap" Classes="muted" />
+                      <Button Classes="quiet" Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}" FontSize="11.5" Padding="8,2"
+                              HorizontalAlignment="Left" IsVisible="{Binding IsTruncated}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
+            </ItemsControl>
+          </ScrollViewer>
+          <TextBlock Classes="empty" Text="{Binding Strings.TimelineEmpty}" IsVisible="{Binding Timeline.IsEmpty}" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <!-- Right rail -->
+      <Border Grid.Column="2" Classes="panel" Width="302" Margin="12,0,0,0" IsVisible="{Binding !RightCollapsed}">
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0" Classes="seg" Margin="10,10,10,8">
+            <UniformGrid Columns="4">
+              <Button Classes="tab" Classes.active="{Binding TabIsTodo}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}"
+                      ToolTip.Tip="{Binding Strings.TabTodoName}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Text="☑" />
+                  <TextBlock Text="{Binding Todo.OpenCount}" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="tab" Classes.active="{Binding TabIsFavorites}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}"
+                      Content="★" ToolTip.Tip="{Binding Strings.TabFavoritesName}" />
+              <Button Classes="tab" Classes.active="{Binding TabIsTags}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}"
+                      Content="#" ToolTip.Tip="{Binding Strings.TabTagsName}" />
+              <Button Classes="tab" Classes.active="{Binding TabIsFiles}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Files}"
+                      Content="📎" ToolTip.Tip="{Binding Strings.TabFilesName}" />
+            </UniformGrid>
+          </Border>
+
+          <!-- Todo -->
+          <ScrollViewer Grid.Row="1" Padding="10,4,10,10" IsVisible="{Binding TabIsTodo}">
+            <StackPanel>
+              <StackPanel.Resources>
+                <DataTemplate x:Key="TodoItem" x:DataType="pvm:TodoItemViewModel">
+                  <Button Classes="card" Command="{Binding JumpCommand}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <Button Grid.Column="0" Classes="check" Classes.checked="{Binding Checked}" Command="{Binding ToggleCommand}" Margin="0,1,10,0"
+                              Content="{Binding Checked, Converter={x:Static views:Glyphs.Check}}" />
+                      <StackPanel Grid.Column="1" Spacing="3">
+                        <TextBlock Text="{Binding Text}" FontSize="12.5" TextWrapping="Wrap" Classes.done="{Binding Checked}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Classes="muted" Text="{Binding NoteLabel}" FontSize="10.5" />
+                          <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" Text="{Binding DueLabel}" FontSize="10.5" IsVisible="{Binding HasDue}" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </StackPanel.Resources>
+              <TextBlock Text="{Binding Strings.Today}" FontSize="11" FontWeight="SemiBold" Margin="4,4,4,6" IsVisible="{Binding Todo.HasToday}" />
+              <ItemsControl ItemsSource="{Binding Todo.TodayItems}" ItemTemplate="{StaticResource TodoItem}" IsVisible="{Binding Todo.HasToday}" />
+              <Border Height="1" Margin="2,2,2,10" Background="{DynamicResource Daynote.Product.Brush.Stroke}" IsVisible="{Binding Todo.HasToday}" />
+              <ItemsControl ItemsSource="{Binding Todo.Items}" ItemTemplate="{StaticResource TodoItem}" />
+              <TextBlock Classes="empty" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding Todo.IsEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- Favorites -->
+          <ScrollViewer Grid.Row="1" Padding="10,4,10,10" IsVisible="{Binding TabIsFavorites}">
+            <StackPanel>
+              <ItemsControl ItemsSource="{Binding Favorites.Items}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="pvm:FavoriteItemViewModel">
+                    <Button Classes="card" Command="{Binding OpenCommand}">
+                      <StackPanel Spacing="3">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <TextBlock Grid.Column="0" Text="★" FontSize="11" Margin="0,0,6,0" Foreground="{DynamicResource Daynote.Product.Brush.Extras}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="10.5" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="empty" Text="{Binding Strings.FavoritesPanelEmpty}" IsVisible="{Binding Favorites.IsEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- Tags -->
+          <ScrollViewer Grid.Row="1" Padding="10,4,10,10" IsVisible="{Binding TabIsTags}">
+            <StackPanel>
+              <ItemsControl ItemsSource="{Binding TagPanel.Tags}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="pvm:TagItemViewModel">
+                    <Border Classes="panel" Margin="0,0,0,8" Background="{DynamicResource Daynote.Product.Brush.Card}">
+                      <StackPanel>
+                        <Button Classes="noterow" Command="{Binding ToggleExpandCommand}" Padding="14,12">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding Tag, StringFormat='#{0}'}" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
+                            <TextBlock Grid.Column="1" Classes="muted" Text="{Binding CountText}" FontSize="11" />
+                          </Grid>
+                        </Button>
+                        <ItemsControl ItemsSource="{Binding Occurrences}" Margin="10,0,10,8" IsVisible="{Binding IsExpanded}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pvm:TagOccurrenceViewModel">
+                              <Button Classes="noterow" Command="{Binding JumpCommand}">
+                                <StackPanel Spacing="2">
+                                  <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding NoteTitle}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding DateLabel}" FontSize="10.5" Margin="8,0,0,0" />
+                                  </Grid>
+                                  <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="empty" Text="{Binding Strings.TagPanelEmpty}" IsVisible="{Binding TagPanel.IsEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- Files -->
+          <Grid Grid.Row="1" RowDefinitions="Auto,*" IsVisible="{Binding TabIsFiles}" Margin="10,4,10,10">
+            <Button Grid.Row="0" Classes="accent" Content="{Binding Strings.AddFile}" Command="{Binding Files.AddFilesCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,10" />
+            <ScrollViewer Grid.Row="1">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding Files.Items}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="pvm:FileItemViewModel">
+                      <Border Classes="panel" Classes.highlighted="{Binding IsHighlighted}" Margin="0,0,0,8" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="10">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Margin="0,0,10,0"
+                                  Background="{DynamicResource Daynote.Product.Brush.Seg}">
+                            <Panel>
+                              <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
+                              <TextBlock Text="🖼" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowImageBadge}" />
+                              <TextBlock Text="{Binding Ext}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowDocBadge}" />
+                            </Panel>
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="muted" Text="{Binding SizeLabel}" FontSize="10.5" />
+                          </StackPanel>
+                          <Button Grid.Column="2" Classes="quiet" Content="✕" FontSize="11" Padding="6,2" Command="{Binding DeleteCommand}" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="empty" Text="{Binding Strings.FileTabEmpty}" IsVisible="{Binding Files.IsEmpty}" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- Search results: floats under the title bar's search box, above everything else. -->
+      <Border Grid.Column="1" Classes="panel" MaxWidth="560" MaxHeight="440" VerticalAlignment="Top" HorizontalAlignment="Center"
+              Margin="0,2,0,0" ZIndex="10" Padding="8" Background="{DynamicResource Daynote.Product.Brush.Card}"
+              IsVisible="{Binding Search.IsOpen}">
+        <ScrollViewer>
+          <StackPanel>
+            <ItemsControl ItemsSource="{Binding Search.Results}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
+                  <Button Classes="noterow" Command="{Binding ActivateCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Border Grid.Column="0" Classes="chip" Margin="0,0,10,0" Padding="8,2" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding Kind}" FontSize="10.5" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="10.5" Margin="10,0,0,0" VerticalAlignment="Top" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="empty" Text="{Binding Strings.SearchNoResultsRow}" IsVisible="{Binding Search.NoResults}" Margin="12,16" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+      <!-- Settings: a modal card over the whole body. -->
+      <Border Grid.ColumnSpan="3" ZIndex="20" Background="#66000000" IsVisible="{Binding IsSettingsOpen}">
+        <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="560" MaxHeight="640"
+                VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" DataContext="{Binding SettingsViewModel}"
+                x:DataType="vm:DesktopSettingsViewModel">
+          <ScrollViewer>
+            <StackPanel Spacing="18">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Title}" />
+                <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="12"
+                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).CloseSettingsCommand}" />
+              </Grid>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding LanguageLabel}" FontWeight="SemiBold" FontSize="13" />
+                <TextBlock Classes="muted" Text="{Binding LanguageDesc}" FontSize="11.5" TextWrapping="Wrap" />
+                <Border Classes="seg" HorizontalAlignment="Left" Width="220">
+                  <UniformGrid Columns="2">
+                    <Button Classes="tab" Classes.active="{Binding IsKorean}" Content="{Binding KoreanLabel}" Command="{Binding SelectKoreanCommand}" />
+                    <Button Classes="tab" Classes.active="{Binding IsEnglish}" Content="{Binding EnglishLabel}" Command="{Binding SelectEnglishCommand}" />
+                  </UniformGrid>
+                </Border>
+              </StackPanel>
+
+              <StackPanel Spacing="6" IsVisible="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).HasAccount}">
+                <TextBlock Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[CloudSyncTitle]}" FontWeight="SemiBold" FontSize="13" />
+                <Button Classes="quiet" HorizontalAlignment="Left" Padding="8,4" Foreground="{DynamicResource Daynote.Product.Brush.Accent}"
+                        Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[AccountManage]}"
+                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).OpenAccountCommand}" />
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding StartupLabel}" FontWeight="SemiBold" FontSize="13" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <ToggleSwitch IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
+                                Command="{Binding ToggleStartupCommand}" OnContent="" OffContent="" />
+                  <TextBlock Classes="muted" Text="{Binding StartupStateText}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding StorageLabel}" FontWeight="SemiBold" FontSize="13" />
+                <Button Classes="quiet" Command="{Binding OpenDataFolderCommand}" HorizontalAlignment="Left" Padding="0,2">
+                  <TextBlock Text="{Binding DataRoot}" FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Accent}" TextWrapping="Wrap" />
+                </Button>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding McpLabel}" FontWeight="SemiBold" FontSize="13" />
+                <TextBlock Classes="muted" Text="{Binding McpDesc}" FontSize="11.5" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding McpAvailable}">
+                  <Button Classes="accent" Content="{Binding McpRegister}" Command="{Binding RegisterMcpCommand}" />
+                  <TextBlock Classes="muted" Text="{Binding McpStatusText}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Classes="muted" Text="{Binding McpUnavailable}" FontSize="12" IsVisible="{Binding !McpAvailable}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{Binding McpCodeHint}" FontSize="11.5" TextWrapping="Wrap" IsVisible="{Binding McpAvailable}" />
+                <SelectableTextBlock Text="{Binding McpCodeCommand}" FontSize="11.5" FontFamily="Menlo, Consolas, monospace" IsVisible="{Binding McpAvailable}" />
+              </StackPanel>
+
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding ShortcutsLabel}" FontWeight="SemiBold" FontSize="13" />
+                <TextBlock Classes="muted" Text="{Binding SummonHotkeyDesc}" FontSize="11.5" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2,0,0">
+                  <TextBlock Grid.Column="0" Text="{Binding SummonHotkeyLabel}" FontSize="12.5" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Classes="chip" Margin="0,0,8,0" Padding="10,3"><TextBlock Text="{Binding SummonHotkeyDisplay}" /></Border>
+                  <Button Grid.Column="2" Classes="quiet" Content="{Binding HotkeyChange}" Command="{Binding StartHotkeyCaptureCommand}" FontSize="12" Padding="8,3" />
+                  <Button Grid.Column="3" Classes="quiet" Content="{Binding HotkeyReset}" Command="{Binding ResetSummonHotkeyCommand}" FontSize="12" Padding="8,3" />
+                </Grid>
+                <TextBlock Classes="muted" Text="{Binding HotkeyStatusText}" FontSize="11.5" IsVisible="{Binding HotkeyStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding QuickStickyLabel}" FontSize="12.5" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Classes="chip" Padding="10,3"><TextBlock Text="{Binding QuickStickyDisplay}" /></Border>
+                </Grid>
+                <TextBlock Text="{Binding InAppShortcutsLabel}" FontSize="12" FontWeight="SemiBold" Margin="0,6,0,0" />
+                <ItemsControl ItemsSource="{Binding InAppShortcuts}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="settings:ShortcutRowViewModel">
+                      <StackPanel Spacing="2" Margin="0,0,0,4">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                          <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" VerticalAlignment="Center" />
+                          <Border Grid.Column="1" Classes="chip" Margin="0,0,8,0" Padding="10,3"><TextBlock Text="{Binding Display}" /></Border>
+                          <Button Grid.Column="2" Classes="quiet" Command="{Binding StartCaptureCommand}" FontSize="12" Padding="8,3"
+                                  Content="{Binding $parent[ItemsControl].((vm:DesktopSettingsViewModel)DataContext).HotkeyChange}" />
+                          <Button Grid.Column="3" Classes="quiet" Command="{Binding ResetCommand}" FontSize="12" Padding="8,3"
+                                  Content="{Binding $parent[ItemsControl].((vm:DesktopSettingsViewModel)DataContext).HotkeyReset}" />
+                        </Grid>
+                        <TextBlock Classes="muted" Text="{Binding StatusText}" FontSize="11.5" IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding BackupLabel}" FontWeight="SemiBold" FontSize="13" />
+                <TextBlock Classes="muted" Text="{Binding BackupDesc}" FontSize="11.5" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="accent" Content="{Binding BackupButton}" Command="{Binding BackupCommand}" />
+                  <Button Classes="quiet" Content="{Binding RestoreButton}" Command="{Binding RestoreCommand}" />
+                  <TextBlock Classes="muted" Text="{Binding BackupStatusText}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding TutorialLabel}" FontWeight="SemiBold" FontSize="13" />
+                <Button Classes="quiet" Content="{Binding TutorialButton}" HorizontalAlignment="Left" Padding="10,4"
+                        Foreground="{DynamicResource Daynote.Product.Brush.Accent}"
+                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).OpenTutorialCommand}" />
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding PrivacyLabel}" FontWeight="SemiBold" FontSize="13" />
+                <TextBlock Classes="muted" Text="{Binding PrivacyText}" FontSize="11.5" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </Border>
+      <!-- Account: the cloud account card over the body (only when this build has a sync endpoint). -->
+      <Border Grid.ColumnSpan="3" ZIndex="25" Background="#66000000" IsVisible="{Binding IsAccountOpen}">
+        <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="560" MaxHeight="680"
+                VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+          <Grid RowDefinitions="Auto,*">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Strings[AccountWindowTitle]}" />
+              <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="12" Command="{Binding CloseAccountCommand}" />
+            </Grid>
+            <views:AccountPanel Grid.Row="1" DataContext="{Binding Account}" />
+          </Grid>
+        </Border>
+      </Border>
+
+      <!-- Onboarding tutorial: a stepping card over the body, shown once on first run. -->
+      <Border Grid.ColumnSpan="3" ZIndex="30" Background="#66000000"
+              IsVisible="{Binding Tutorial.IsOpen, FallbackValue=False}">
+        <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="520"
+                VerticalAlignment="Center" HorizontalAlignment="Center" Padding="26,22" DataContext="{Binding Tutorial}"
+                x:DataType="onboarding:TutorialViewModel">
+          <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding CurrentStep.Title}" TextWrapping="Wrap" />
+              <TextBlock Grid.Column="1" Classes="muted" Text="{Binding ProgressText}" FontSize="11.5" VerticalAlignment="Center" Margin="12,0,0,0" />
+            </Grid>
+            <TextBlock Text="{Binding CurrentStep.Body}" FontSize="13.5" TextWrapping="Wrap" LineHeight="21" />
+            <StackPanel Spacing="6" IsVisible="{Binding CurrentStep.IsShortcuts}">
+              <ItemsControl ItemsSource="{Binding Shortcuts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="onboarding:ShortcutHint">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                      <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" VerticalAlignment="Center" />
+                      <Border Grid.Column="1" Classes="chip" Padding="10,3" Margin="0"><TextBlock Text="{Binding Gesture}" /></Border>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                <ToggleSwitch IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
+                              Command="{Binding ToggleStartupCommand}" OnContent="" OffContent="" />
+                <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center"
+                           Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.SettingsStartupLabel}" />
+              </StackPanel>
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,6,0,0">
+              <Button Grid.Column="0" Classes="quiet" Command="{Binding SkipCommand}" IsVisible="{Binding !IsLast}"
+                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialSkip}" />
+              <Button Grid.Column="2" Classes="quiet" Command="{Binding BackCommand}" IsVisible="{Binding !IsFirst}" Margin="0,0,6,0"
+                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialBack}" />
+              <Button Grid.Column="3" Classes="accent" Command="{Binding NextCommand}" IsVisible="{Binding !IsLast}"
+                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialNext}" />
+              <Button Grid.Column="3" Classes="accent" Command="{Binding FinishCommand}" IsVisible="{Binding IsLast}"
+                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialFinish}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

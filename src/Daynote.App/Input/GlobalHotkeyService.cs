@@ -19,7 +19,7 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
     private const int QuickNoteId = 0xB0B1; // The fixed Alt+` quick-note slot.
 
     /// <summary>Alt+` (Oem3): fixed, not user-configurable — mirrored for display by AppShortcuts.</summary>
-    private static readonly Hotkey QuickNoteChord = new(ModifierKeys.Alt, Key.Oem3);
+    private static readonly Hotkey QuickNoteChord = new(HotkeyModifiers.Alt, HotkeyKey.Oem3);
 
     private HwndSource? _source;
     private nint _hwnd;
@@ -49,7 +49,7 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
 
         // The fixed quick-note chord registers once per handle; a refusal (another app owns Alt+`)
         // just leaves quick-note inactive — the configurable summon key is unaffected.
-        (uint quickModifiers, uint quickKey) = QuickNoteChord.ToWin32();
+        (uint quickModifiers, uint quickKey) = HotkeyInterop.ToWin32(QuickNoteChord);
         _quickRegistered = RegisterHotKey(hwnd, QuickNoteId, quickModifiers, quickKey);
 
         // Apply whatever was requested before the handle existed.
@@ -77,14 +77,14 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
         }
 
         Unregister();
-        (uint fsModifiers, uint virtualKey) = hotkey.ToWin32();
+        (uint fsModifiers, uint virtualKey) = HotkeyInterop.ToWin32(hotkey);
         if (!RegisterHotKey(_hwnd, HotkeyId, fsModifiers, virtualKey))
         {
             // The OS refused it (another app owns the chord). Re-claim the previous one so the user is
             // never left with no working summon key after a failed change.
             if (Current is { } previous)
             {
-                (uint pfs, uint pvk) = previous.ToWin32();
+                (uint pfs, uint pvk) = HotkeyInterop.ToWin32(previous);
                 _registered = RegisterHotKey(_hwnd, HotkeyId, pfs, pvk);
             }
 

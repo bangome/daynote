@@ -28,9 +28,14 @@ public sealed class ClaudeDesktopMcpRegistration : IMcpRegistrationService
         ServerCommand = string.IsNullOrWhiteSpace(serverCommand) ? null : serverCommand;
     }
 
-    /// <summary>The default location Claude Desktop reads: <c>%AppData%\Claude\claude_desktop_config.json</c>.</summary>
+    /// <summary>
+    /// The default location Claude Desktop reads: <c>%AppData%\Claude\claude_desktop_config.json</c> on
+    /// Windows, <c>~/Library/Application Support/Claude/claude_desktop_config.json</c> on macOS.
+    /// </summary>
     public static string DefaultConfigPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        OperatingSystem.IsMacOS()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support")
+            : Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "Claude",
         "claude_desktop_config.json");
 

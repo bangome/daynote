@@ -1,0 +1,200 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:account="using:Daynote.App.Account"
+             xmlns:vm="using:Daynote.Desktop.ViewModels"
+             x:Class="Daynote.Desktop.Views.AccountPanel"
+             x:Name="Root"
+             x:DataType="account:AccountViewModel">
+  <!--
+    The cloud account: sign-in when signed out; otherwise the account card, the optional note lock
+    (passphrase + one-time recovery key) and the subscription. Passphrases come from PasswordChar
+    boxes read in code-behind, never from a bindable property, and the boxes are cleared after use.
+  -->
+  <ScrollViewer>
+    <StackPanel Spacing="18">
+
+      <!-- Signed out -->
+      <StackPanel Spacing="12" IsVisible="{Binding IsSignedOut}">
+        <TextBlock Classes="h1" Text="{Binding #Root.Strings[AccountSignInTitle]}" />
+        <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountSignInLead]}" FontSize="12.5" TextWrapping="Wrap" />
+        <StackPanel Spacing="8" Margin="0,4">
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding #Root.Strings[AccountPerkSyncTitle]}" FontWeight="SemiBold" FontSize="12.5" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDesc]}" FontSize="11.5" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding #Root.Strings[AccountPerkLockTitle]}" FontWeight="SemiBold" FontSize="12.5" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkLockDesc]}" FontSize="11.5" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding #Root.Strings[AccountPerkExportTitle]}" FontWeight="SemiBold" FontSize="12.5" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkExportDesc]}" FontSize="11.5" TextWrapping="Wrap" />
+          </StackPanel>
+        </StackPanel>
+        <Button Classes="accent" Content="{Binding #Root.Strings[AccountSignInWithGoogle]}" Command="{Binding SignInCommand}"
+                IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Left" />
+        <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountSignInBrowserHint]}" FontSize="11.5" TextWrapping="Wrap" IsVisible="{Binding IsBusy}" />
+        <TextBlock Text="{Binding ErrorMessage}" FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" TextWrapping="Wrap"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Classes="quiet" Content="{Binding #Root.Strings[AccountTerms]}" Command="{Binding OpenTermsCommand}" FontSize="11.5" Padding="4,2" />
+          <Button Classes="quiet" Content="{Binding #Root.Strings[AccountPrivacy]}" Command="{Binding OpenPrivacyCommand}" FontSize="11.5" Padding="4,2" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Signed in -->
+      <StackPanel Spacing="18" IsVisible="{Binding IsSignedIn}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{DynamicResource Daynote.Product.Brush.Accent}" Margin="0,0,12,0">
+            <TextBlock Text="{Binding AvatarInitial}" Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13.5" />
+              <Border Classes="chip" Padding="8,1" Margin="0"><TextBlock Text="{Binding PlanBadge}" FontSize="10.5" /></Border>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="muted" Text="{Binding Status.Label}" FontSize="11.5" />
+              <TextBlock Classes="muted" Text="{Binding LastSyncText}" FontSize="11.5" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+            <Button Classes="quiet" Content="{Binding #Root.Strings[AccountSyncNow]}" Command="{Binding SyncCommand}" IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="quiet" Content="{Binding #Root.Strings[AccountSignOut]}" Command="{Binding SignOutCommand}" IsEnabled="{Binding !IsBusy}" />
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="{Binding ErrorMessage}" FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" TextWrapping="Wrap"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <!-- Entitlement banner -->
+        <Border Classes="panel" Padding="14,10" IsVisible="{Binding HasBanner}" Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding BannerTitle}" FontWeight="SemiBold" FontSize="12.5" />
+            <TextBlock Classes="muted" Text="{Binding BannerBody}" FontSize="11.5" TextWrapping="Wrap" />
+            <Button Classes="accent" Content="{Binding BannerTitle}" Command="{Binding ResolveBannerCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+
+        <!-- Key missing on this device -->
+        <StackPanel Spacing="6" IsVisible="{Binding IsKeyMissing}">
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountKeyMissingBlurb]}" FontSize="12" TextWrapping="Wrap" />
+          <Button Classes="accent" Content="{Binding #Root.Strings[AccountRestoreKey]}" Command="{Binding RestoreKeyCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <!-- Locked: unlock with passphrase or recovery key -->
+        <StackPanel Spacing="8" IsVisible="{Binding IsLocked}">
+          <TextBlock Text="{Binding #Root.Strings[AccountUnlockTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountUnlockBlurb]}" FontSize="11.5" TextWrapping="Wrap" />
+          <StackPanel Spacing="6" IsVisible="{Binding !IsUsingRecoveryKey}">
+            <TextBlock Text="{Binding #Root.Strings[AccountPassphrase]}" FontSize="12" />
+            <TextBox x:Name="UnlockPassphraseBox" Classes="inline" PasswordChar="•" Width="320" HorizontalAlignment="Left" />
+          </StackPanel>
+          <StackPanel Spacing="6" IsVisible="{Binding IsUsingRecoveryKey}">
+            <TextBlock Text="{Binding #Root.Strings[AccountRecoveryKeyLabel]}" FontSize="12" />
+            <TextBox Classes="inline" Text="{Binding RecoveryKeyEntry}" Width="320" HorizontalAlignment="Left" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent" Content="{Binding #Root.Strings[AccountUnlock]}" Click="OnUnlock" IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="quiet" Command="{Binding ToggleRecoveryKeyEntryCommand}"
+                    Content="{Binding IsUsingRecoveryKey, Converter={x:Static vm:AccountGlyphs.UnlockMethodLabel}}" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Lock settings (only when unlocked and the key is present) -->
+        <StackPanel Spacing="8" IsVisible="{Binding !IsLocked}">
+          <TextBlock Text="{Binding #Root.Strings[AccountLockTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountLockBlurb]}" FontSize="11.5" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock FontSize="12.5" VerticalAlignment="Center"
+                       Text="{Binding IsLockEnabled, Converter={x:Static vm:AccountGlyphs.LockStateLabel}}" />
+            <Button Classes="quiet" Content="{Binding #Root.Strings[AccountLockEnable]}" Command="{Binding ToggleEnableLockCommand}"
+                    IsVisible="{Binding !IsLockEnabled}" IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="quiet" Content="{Binding #Root.Strings[AccountLockDisable]}" Command="{Binding DisableLockCommand}"
+                    IsVisible="{Binding IsLockEnabled}" IsEnabled="{Binding !IsBusy}" />
+          </StackPanel>
+          <StackPanel Spacing="6" IsVisible="{Binding IsEnablingLock}">
+            <TextBlock Text="{Binding #Root.Strings[AccountPassphrase]}" FontSize="12" />
+            <TextBox x:Name="NewPassphraseBox" Classes="inline" PasswordChar="•" Width="320" HorizontalAlignment="Left" />
+            <TextBlock Classes="muted" Text="{Binding PassphraseHint}" FontSize="11.5" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="{Binding #Root.Strings[AccountLockConfirm]}" Click="OnEnableLock" IsEnabled="{Binding !IsBusy}" />
+              <Button Classes="quiet" Content="{Binding #Root.Strings[AccountLockCancel]}" Command="{Binding ToggleEnableLockCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- One-time recovery key -->
+        <Border Classes="panel" Padding="16,14" IsVisible="{Binding IsShowingRecoveryKey}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="{Binding #Root.Strings[RecoveryKeyTitle]}" FontWeight="SemiBold" FontSize="13" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[RecoveryKeyBlurb]}" FontSize="11.5" TextWrapping="Wrap" />
+            <SelectableTextBlock Text="{Binding RecoveryKeyDisplay}" FontFamily="Menlo, Consolas, monospace" FontSize="13" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="quiet" Command="{Binding CopyRecoveryKeyCommand}"
+                      Content="{Binding RecoveryKeyCopied, Converter={x:Static vm:AccountGlyphs.CopyLabel}}" />
+              <Button Classes="quiet" Content="{Binding #Root.Strings[RecoveryKeySaveToFile]}" Command="{Binding SaveRecoveryKeyCommand}" />
+            </StackPanel>
+            <CheckBox IsChecked="{Binding RecoveryKeyAcknowledged}" Content="{Binding #Root.Strings[RecoveryKeyConfirm]}" FontSize="12" />
+            <Button Classes="accent" Content="{Binding #Root.Strings[RecoveryKeyDone]}" Command="{Binding DismissRecoveryKeyCommand}"
+                    IsEnabled="{Binding RecoveryKeyAcknowledged}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+
+        <!-- Conflict copies -->
+        <StackPanel Spacing="6" IsVisible="{Binding HasReplacedNotes}">
+          <TextBlock Classes="muted" Text="{Binding ReplacedNotesMessage}" FontSize="12" TextWrapping="Wrap" />
+          <Button Classes="quiet" Content="{Binding #Root.Strings[AccountOpenConflicts]}" Command="{Binding OpenConflictsFolderCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <!-- Subscription -->
+        <StackPanel Spacing="8" IsVisible="{Binding ShowSubscription}">
+          <TextBlock Text="{Binding #Root.Strings[BillingDetailTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Text="{Binding SubscriptionPlanText}" FontSize="12.5" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingRowState]}" FontSize="12" />
+            <TextBlock Text="{Binding SubscriptionStateText}" FontSize="12" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasSubscriptionDate}">
+            <TextBlock Classes="muted" Text="{Binding SubscriptionDateLabel}" FontSize="12" />
+            <TextBlock Text="{Binding SubscriptionDateText}" FontSize="12" />
+          </StackPanel>
+          <Button Classes="quiet" Content="{Binding #Root.Strings[BillingManage]}" Command="{Binding ManageSubscriptionCommand}"
+                  IsVisible="{Binding CanManageSubscription}" HorizontalAlignment="Left" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingPortalNote]}" FontSize="11.5" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Upgrade -->
+        <StackPanel Spacing="8" IsVisible="{Binding ShowUpgrade}">
+          <TextBlock Text="{Binding #Root.Strings[BillingUpgradeTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding EntitlementSummary}" FontSize="12" TextWrapping="Wrap" />
+          <ItemsControl ItemsSource="{Binding ProFeatures}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding StringFormat='✓  {0}'}" FontSize="12" Margin="0,1" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Border Classes="seg" HorizontalAlignment="Left" Width="260">
+            <UniformGrid Columns="2">
+              <Button Classes="tab" Classes.active="{Binding IsMonthlySelected}" Content="{Binding #Root.Strings[BillingPlanMonthly]}"
+                      Command="{Binding SelectMonthlyCommand}" IsEnabled="{Binding CanCheckoutMonthly}" />
+              <Button Classes="tab" Classes.active="{Binding IsAnnualSelected}" Content="{Binding #Root.Strings[BillingPlanAnnual]}"
+                      Command="{Binding SelectAnnualCommand}" IsEnabled="{Binding CanCheckoutAnnual}" />
+            </UniformGrid>
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Text="{Binding PriceMain}" FontSize="20" FontWeight="Bold" />
+            <TextBlock Classes="muted" Text="{Binding PriceUnit}" FontSize="12" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+            <TextBlock Classes="muted" Text="{Binding PriceSub}" FontSize="11.5" VerticalAlignment="Bottom" Margin="8,0,0,3" />
+          </StackPanel>
+          <Button Classes="accent" Content="{Binding CheckoutLabel}" Command="{Binding CheckoutSelectedCommand}" IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Left" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingProviderNote]}" FontSize="11.5" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <TextBlock Classes="muted" Text="{Binding AppVersionText}" FontSize="11" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

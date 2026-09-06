@@ -24,7 +24,8 @@ public static class McpServerCommand
     /// <summary>The alias declared by the <c>windows.appExecutionAlias</c> extension in Package.appxmanifest.</summary>
     public const string PackagedAlias = "daynote-mcp.exe";
 
-    private const string ExecutableName = "Daynote.Mcp.exe";
+    /// <summary>The apphost next to the app: <c>Daynote.Mcp.exe</c> on Windows, <c>Daynote.Mcp</c> elsewhere.</summary>
+    private static readonly string ExecutableName = OperatingSystem.IsWindows() ? "Daynote.Mcp.exe" : "Daynote.Mcp";
 
     /// <summary>
     /// The command for this run, or null when no server is reachable. Evaluated once: neither the
@@ -56,6 +57,7 @@ public static class McpServerCommand
     /// </summary>
     private static bool IsPackaged()
     {
+#if WINDOWS
         try
         {
             return Windows.ApplicationModel.Package.Current is not null;
@@ -65,5 +67,9 @@ public static class McpServerCommand
         {
             return false;
         }
+#else
+        // Only the MSIX build has a package identity; the portable build never does.
+        return false;
+#endif
     }
 }

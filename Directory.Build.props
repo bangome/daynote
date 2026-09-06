@@ -18,5 +18,11 @@
       RuntimeIdentifier, so a plain build is unchanged.
     -->
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <!--
+      Daynote.Infrastructure and Daynote.Mcp also build a net10.0-windows flavour. On a Mac or Linux
+      box that flavour still has to restore and compile (the Windows reference packs come from NuGet),
+      which the SDK refuses unless this is set. Windows builds are unaffected.
+    -->
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
   </PropertyGroup>
 </Project>

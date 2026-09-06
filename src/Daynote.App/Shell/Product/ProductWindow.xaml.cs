@@ -114,7 +114,7 @@ public partial class ProductWindow : Window, IWindowHost, IAccountHost
             }
 
             Hotkey hotkey = _shortcuts.Get(action.Id);
-            InputBindings.Add(new System.Windows.Input.KeyBinding(command, new System.Windows.Input.KeyGesture(hotkey.Key, hotkey.Modifiers)));
+            InputBindings.Add(new System.Windows.Input.KeyBinding(command, Input.HotkeyInterop.ToGesture(hotkey)));
         }
     }
 

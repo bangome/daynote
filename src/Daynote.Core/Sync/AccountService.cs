@@ -1,4 +1,4 @@
-﻿namespace Daynote.Core.Sync;
+namespace Daynote.Core.Sync;
 
 /// <summary>
 /// Sign-in and sign-out for cloud sync.

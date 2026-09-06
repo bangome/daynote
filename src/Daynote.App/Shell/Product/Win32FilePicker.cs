@@ -3,7 +3,7 @@ namespace Daynote.App.Shell.Product;
 /// <summary>Production <see cref="IFilePicker"/> over the WPF open-file dialog (multi-select).</summary>
 public sealed class Win32FilePicker : IFilePicker
 {
-    public IReadOnlyList<string> PickFiles()
+    public Task<IReadOnlyList<string>> PickFilesAsync(CancellationToken cancellationToken = default)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
@@ -12,6 +12,7 @@ public sealed class Win32FilePicker : IFilePicker
             Title = Localization.AppStrings.AddFile,
         };
 
-        return dialog.ShowDialog() == true ? dialog.FileNames : [];
+        IReadOnlyList<string> chosen = dialog.ShowDialog() == true ? dialog.FileNames : [];
+        return Task.FromResult(chosen);
     }
 }

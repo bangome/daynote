@@ -1,0 +1,14 @@
+<Project Sdk="MSTest.Sdk/4.3.2">
+  <PropertyGroup>
+    <!--
+      Runs against the plain net10.0 flavour of Daynote.Infrastructure: the lock-file/socket single
+      instance, the protector-backed session store, the LaunchAgent gateway, the data-root resolver.
+      These are what the Avalonia app on macOS relies on, so they are exercised on macOS by the
+      developer and on Windows/Linux by CI, without a Windows targeting pack.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,4 @@
-﻿using System.Buffers.Text;
+using System.Buffers.Text;
 using Daynote.Core.Sync;
 
 namespace Daynote.App.Tests.Account;

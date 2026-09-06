@@ -47,7 +47,8 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         IFileAssetStore fileAssetStore,
         IFilePicker filePicker,
         ISettingsStore settings,
-        IThemeApplier themeApplier)
+        IThemeApplier themeApplier,
+        IThumbnailLoader? thumbnails = null)
     {
         Notes = notes ?? throw new ArgumentNullException(nameof(notes));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -60,7 +61,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         Todo = new TodoPanelViewModel(repository, clock, ToggleTodoAsync, JumpToTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
-        Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker);
+        Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
         Timeline = new TimelineViewModel(repository, OpenFromTimelineAsync);
 

@@ -1,4 +1,4 @@
-﻿using Daynote.Core.Domain;
+using Daynote.Core.Domain;
 using Daynote.Core.Domain.Notes;
 using Daynote.Core.Notes;
 using Daynote.Core.Sync;

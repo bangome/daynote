@@ -272,7 +272,8 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.9",
           "Microsoft.Extensions.Logging": "10.0.9",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.9",
-          "Microsoft.Extensions.Options": "10.0.9"
+          "Microsoft.Extensions.Options": "10.0.9",
+          "System.Diagnostics.EventLog": "10.0.9"
         }
       },
       "Microsoft.Extensions.Logging.EventSource": {
@@ -344,6 +345,11 @@
           "SQLitePCLRaw.core": "2.1.11"
         }
       },
+      "System.Diagnostics.EventLog": {
+        "type": "Transitive",
+        "resolved": "10.0.9",
+        "contentHash": "s2PcxHK4IYQ6gmD3VSBkym9tWGkFisKjcjWBdl7a+n4Yy66ae4beJ1ZdjDp060SSll4W3Rt4H2LW87dWckv+QQ=="
+      },
       "daynote.core": {
         "type": "Project"
       },
@@ -352,7 +358,8 @@
         "dependencies": {
           "Daynote.Core": "[1.0.0, )",
           "Konscious.Security.Cryptography.Argon2": "[1.3.1, )",
-          "Microsoft.Data.Sqlite": "[10.0.9, )"
+          "Microsoft.Data.Sqlite": "[10.0.9, )",
+          "System.Security.Cryptography.ProtectedData": "[10.0.9, )"
         }
       },
       "daynote.mcp": {
@@ -362,6 +369,14 @@
           "Daynote.Infrastructure": "[1.0.0, )",
           "Microsoft.Extensions.Hosting": "[10.0.9, )",
           "ModelContextProtocol": "[2.0.0, )"
+        }
+      },
+      "daynote.presentation": {
+        "type": "Project",
+        "dependencies": {
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "Daynote.Core": "[1.0.0, )",
+          "Daynote.Infrastructure": "[1.0.0, )"
         }
       },
       "Konscious.Security.Cryptography.Argon2": {
@@ -400,9 +415,20 @@
         "requested": "[3.53.3, )",
         "resolved": "3.53.3",
         "contentHash": "ZXiSbBkrlw2Of/dBqny/qtQol7dlThrUD8zH/jkQicCFm2yn2BbhKsQW0+YHAzhANWz4ZJCz7gvo88BwluVhkA=="
+      },
+      "System.Security.Cryptography.ProtectedData": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.9, )",
+        "resolved": "10.0.9",
+        "contentHash": "vXp+vBQbTkMrDzUiPCxo1KvzfaAvZWuSRS2P7e5orhtV7ZuePKAB3Cqc9dH2YHUavRJyA2uWd2yrL6hl2VoJ5g=="
       }
     },
     "net10.0-windows10.0.19041/win-x64": {
+      "System.Diagnostics.EventLog": {
+        "type": "Transitive",
+        "resolved": "10.0.9",
+        "contentHash": "s2PcxHK4IYQ6gmD3VSBkym9tWGkFisKjcjWBdl7a+n4Yy66ae4beJ1ZdjDp060SSll4W3Rt4H2LW87dWckv+QQ=="
+      },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "CentralTransitive",
         "requested": "[3.53.3, )",
