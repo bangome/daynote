@@ -1,4 +1,4 @@
-﻿namespace Daynote.Core.Sync;
+namespace Daynote.Core.Sync;
 
 /// <summary>
 /// Whether this account may sync, and until when (docs/CLOUD_SYNC.md §14).

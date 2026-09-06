@@ -1,4 +1,4 @@
-﻿namespace Daynote.App.Localization;
+namespace Daynote.App.Localization;
 
 /// <summary>
 /// The Korean string catalog. Korean is the product's original language, so this file holds the

@@ -1,4 +1,4 @@
-﻿namespace Daynote.App.Localization;
+namespace Daynote.App.Localization;
 
 /// <summary>
 /// Strongly typed access to user-visible product copy and UI Automation names. Members resolve

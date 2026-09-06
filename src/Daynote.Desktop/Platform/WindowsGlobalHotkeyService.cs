@@ -150,10 +150,26 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
     private static (uint Modifiers, uint VirtualKey) ToWin32(Hotkey hotkey)
     {
         uint fs = ModNoRepeat;
-        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Control)) fs |= ModControl;
-        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Alt)) fs |= ModAlt;
-        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Shift)) fs |= ModShift;
-        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Meta)) fs |= ModWin;
+        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Control))
+        {
+            fs |= ModControl;
+        }
+
+        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Alt))
+        {
+            fs |= ModAlt;
+        }
+
+        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Shift))
+        {
+            fs |= ModShift;
+        }
+
+        if (hotkey.Modifiers.HasFlag(HotkeyModifiers.Meta))
+        {
+            fs |= ModWin;
+        }
+
         return (fs, MapVirtualKey(hotkey.Key));
     }
 
@@ -164,13 +180,32 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
         >= HotkeyKey.D0 and <= HotkeyKey.D9 => (uint)('0' + (key - HotkeyKey.D0)),
         >= HotkeyKey.F1 and <= HotkeyKey.F24 => 0x70u + (uint)(key - HotkeyKey.F1),
         >= HotkeyKey.NumPad0 and <= HotkeyKey.NumPad9 => 0x60u + (uint)(key - HotkeyKey.NumPad0),
-        HotkeyKey.Space => 0x20, HotkeyKey.Left => 0x25, HotkeyKey.Up => 0x26, HotkeyKey.Right => 0x27, HotkeyKey.Down => 0x28,
-        HotkeyKey.Home => 0x24, HotkeyKey.End => 0x23, HotkeyKey.PageUp => 0x21, HotkeyKey.PageDown => 0x22,
-        HotkeyKey.Insert => 0x2D, HotkeyKey.Delete => 0x2E, HotkeyKey.Back => 0x08, HotkeyKey.Tab => 0x09,
-        HotkeyKey.Return => 0x0D, HotkeyKey.Escape => 0x1B,
-        HotkeyKey.OemSemicolon => 0xBA, HotkeyKey.OemPlus => 0xBB, HotkeyKey.OemComma => 0xBC, HotkeyKey.OemMinus => 0xBD,
-        HotkeyKey.OemPeriod => 0xBE, HotkeyKey.OemQuestion => 0xBF, HotkeyKey.Oem3 => 0xC0,
-        HotkeyKey.OemOpenBrackets => 0xDB, HotkeyKey.OemPipe => 0xDC, HotkeyKey.OemCloseBrackets => 0xDD, HotkeyKey.OemQuotes => 0xDE,
+        HotkeyKey.Space => 0x20,
+        HotkeyKey.Left => 0x25,
+        HotkeyKey.Up => 0x26,
+        HotkeyKey.Right => 0x27,
+        HotkeyKey.Down => 0x28,
+        HotkeyKey.Home => 0x24,
+        HotkeyKey.End => 0x23,
+        HotkeyKey.PageUp => 0x21,
+        HotkeyKey.PageDown => 0x22,
+        HotkeyKey.Insert => 0x2D,
+        HotkeyKey.Delete => 0x2E,
+        HotkeyKey.Back => 0x08,
+        HotkeyKey.Tab => 0x09,
+        HotkeyKey.Return => 0x0D,
+        HotkeyKey.Escape => 0x1B,
+        HotkeyKey.OemSemicolon => 0xBA,
+        HotkeyKey.OemPlus => 0xBB,
+        HotkeyKey.OemComma => 0xBC,
+        HotkeyKey.OemMinus => 0xBD,
+        HotkeyKey.OemPeriod => 0xBE,
+        HotkeyKey.OemQuestion => 0xBF,
+        HotkeyKey.Oem3 => 0xC0,
+        HotkeyKey.OemOpenBrackets => 0xDB,
+        HotkeyKey.OemPipe => 0xDC,
+        HotkeyKey.OemCloseBrackets => 0xDD,
+        HotkeyKey.OemQuotes => 0xDE,
         _ => 0,
     };
 

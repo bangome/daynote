@@ -1,4 +1,4 @@
-﻿namespace Daynote.Core.Sync;
+namespace Daynote.Core.Sync;
 
 /// <summary>
 /// The authorization grant collected from the identity provider's browser flow.

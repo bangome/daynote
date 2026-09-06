@@ -1,4 +1,4 @@
-﻿namespace Daynote.Core.Sync;
+namespace Daynote.Core.Sync;
 
 /// <summary>A note as it travels: an opaque envelope plus the clock the server orders it by.</summary>
 public sealed record EncryptedNote(string Id, string Payload, DateTimeOffset UpdatedUtc);

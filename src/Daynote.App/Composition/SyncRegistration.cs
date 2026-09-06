@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
 using Daynote.App.Account;
 using Daynote.Core.Sync;

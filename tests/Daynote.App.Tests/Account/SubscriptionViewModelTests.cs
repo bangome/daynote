@@ -1,4 +1,4 @@
-﻿using Daynote.App.Account;
+using Daynote.App.Account;
 using Daynote.App.Localization;
 using Daynote.Core.Sync;
 

@@ -1,4 +1,4 @@
-﻿namespace Daynote.App.Localization;
+namespace Daynote.App.Localization;
 
 /// <summary>
 /// The English string catalog. Mirrors <see cref="KoreanStrings"/> key-for-key — a parity test

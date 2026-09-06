@@ -1,4 +1,4 @@
-﻿using Daynote.App.Localization;
+using Daynote.App.Localization;
 
 namespace Daynote.App.Account;
 
