@@ -38,11 +38,13 @@ jobs:
           dotnet build src/Daynote.Desktop/Daynote.Desktop.csproj
           -c Release --no-restore -warnaserror
 
-      - name: Test (Core + portable Infrastructure)
-        run: >
-          dotnet test tests/Daynote.Core.Tests/Daynote.Core.Tests.csproj
-          tests/Daynote.Infrastructure.Portable.Tests/Daynote.Infrastructure.Portable.Tests.csproj
-          -c Release --minimum-expected-tests 1
+      # One project per invocation: the Microsoft.Testing.Platform runner treats a second path as an
+      # argument to the first test app.
+      - name: Test (Core)
+        run: dotnet test tests/Daynote.Core.Tests/Daynote.Core.Tests.csproj -c Release --minimum-expected-tests 1
+
+      - name: Test (portable Infrastructure)
+        run: dotnet test tests/Daynote.Infrastructure.Portable.Tests/Daynote.Infrastructure.Portable.Tests.csproj -c Release --minimum-expected-tests 1
 
       - name: Bundle Daynote.app (osx-arm64, ad-hoc signed development artifact)
         run: scripts/Build-MacApp.sh -r osx-arm64 -o artifacts/mac

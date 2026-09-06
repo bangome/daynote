@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!--
+      Also restored for the Mac RIDs: publishing Daynote.Desktop for osx-arm64/osx-x64 records those
+      targets in this project's lock file, which locked-mode restore rejects unless declared here. The
+      WPF projects must NOT list them (no WindowsDesktop runtime pack exists for macOS).
+    -->
+    <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 </Project>
