@@ -237,38 +237,70 @@ needs the row to exist.
 | Account | **Done.** `AccountMenu.axaml` ports the titlebar avatar, its sync dot and the menu (identity, sync row, Manage account / Settings). The worded sync label came off with it, as in v3. The account body stays one panel rather than WPF's separate 520px window |
 | Settings | **Done, and it needed almost nothing.** The modal already bound every row the WPF view has — through view-model label properties instead of markup lookups, which is why a string-by-string diff made it look empty. The only real gap was the About card |
 | Sticky notes | **Done, and it had two defects.** The window hard-coded `#FFFDF0A0` / `#FF3A3520` instead of the Sticky brushes, so the palette could not reach it; and it carried the macOS traffic-light inset as a literal 70px margin, leaving a hole on every Windows sticky |
-| High contrast | **Not an Avalonia gap. The product has no working high-contrast mode on either shell** — see below |
+| High contrast | **Was not an Avalonia gap at all** — the product had no working high-contrast mode on either shell. Now built for both, following the OS theme; see below |
 
-### High contrast is a product gap, not a port gap
+### High contrast: it never worked, and now it does — from the OS theme
 
 `WpfProductThemeApplier` said High Contrast still wins, because the HC aggregate is merged after the
-product brushes and would override them by key. **Measured 2026-09-07: it overrides nothing.**
+product brushes and would override them by key. **Measured 2026-09-07: it overrode nothing.**
 
 ```
 Daynote.Colors.HighContrast.xaml   28 keys, all Daynote.Brush.*          (pre-v3 foundation layer)
-Daynote.Product.Light.xaml         43 keys, all Daynote.Product.Brush.*  (what v3 actually paints)
+Daynote.Product.Light.xaml         39 keys, all Daynote.Product.Brush.*  (what v3 actually paints)
 overlap                            0
 ```
 
 Every v3 surface — every file under `Shell/Product`, `Settings` and `Account` — reads product keys
-only; not one reads a foundation brush. So `SystemParameters.HighContrast` is read at startup, the HC
-dictionary is merged, and nothing the user can see changes. The claim in the code has been corrected.
+only; not one reads a foundation brush. So `SystemParameters.HighContrast` was read at startup, the
+dictionary was merged, and nothing the user could see changed. It was accessibility support that
+compiled.
 
-That makes this the one item in §4 that is not a port. Giving the app a high-contrast mode means a
-high-contrast *product* palette, and that is a product decision rather than a translation:
+**Decided: follow the OS theme.** Someone who has chosen a high-contrast theme has chosen those
+colours, and a fixed palette of our own would override the point of the feature.
 
-- **Follow the OS theme** — alias the system colours, as the dead foundation dictionary does, so the
-  app honours whichever high-contrast theme the user picked. Faithful, and on Avalonia it needs
-  Win32 `GetSysColor`, because Avalonia surfaces only a contrast *preference*, not the colour set.
-- **Ship one fixed high-contrast palette** — simpler and testable, works the same on macOS, but
-  ignores the user's choice, which is the point of the feature for many of the people who use it.
+Built once for both shells, as three pieces:
 
-Either way it lands as a third variant in both palettes and a third row in
-`DesktopPaletteParityTests`, and it should be built once for both shells rather than twice. Worth
-noting the pre-existing behaviour is not a regression risk here: there is nothing working to break.
+| | |
+|---|---|
+| `Daynote.Presentation/Design/HighContrastPalette.cs` | The shared table: each product brush → a role (`Window`, `WindowText`, `WindowFrame`, `ControlFace`, `ControlText`, `GrayText`, `Highlight`, `HighlightText`, `Hotlight`), plus the literals. Roles rather than colours, because that is the only part the two shells can agree on without one referencing the other's framework |
+| `WpfHighContrastPalette` | Resolves a role through `SystemColors` |
+| `WindowsHighContrastPalette` | Resolves a role through Win32 `GetSysColor`. Avalonia surfaces a contrast *preference*, not the colours behind it, so this is the price of following the theme |
 
-So the remaining design work is one accessibility mode to decide and build. The three screens are
-done.
+Both appliers merge the result **last**, and re-merge on every apply. That ordering is the whole
+mechanism and it is easy to get backwards: the light/dark palette is removed and re-inserted on every
+theme change, so a high-contrast dictionary merged once at startup ends up ahead of it the first time
+the user flips the theme, and the mode comes off with nothing to say so. There is a test for exactly
+that on each side.
+
+**The mapping is lossy, deliberately.** A high-contrast theme has no vocabulary for "green means
+saved, amber means look at this, red means wrong", and no alpha for a tint:
+
+- The status colours collapse. `Ok` becomes ordinary text; `Warn`, `Danger` and `Overdue` become
+  `Hotlight`. The words already said which is which.
+- The `*Soft` tints fall back to the page. The accent still reads through the border and the text of
+  whatever it was tinting.
+- The calendar heat ramp keeps two visible steps instead of three.
+- Weekend tinting becomes plain text. The column header says which day it is.
+- The four Google brand colours stay literal. Recolouring a trademark produces something that is no
+  longer the Google logo, which is both wrong and against the brand terms.
+
+What is **not** covered: macOS. "Increase contrast" adjusts the system appearance rather than
+exposing a colour set, so it needs its own answer instead of a bad translation of this one, and
+`WindowsHighContrastPalette` is `[SupportedOSPlatform("windows")]` to keep that honest.
+
+Tests, on both sides plus one that needs neither framework:
+
+| Test | Guards |
+|---|---|
+| `HighContrastPaletteTests` (portable) | The table covers the product palette exactly, both directions — the test that was missing when the mode quietly did nothing. A brush the table forgets keeps its normal-theme colour in a high-contrast session, which is precisely what nobody testing in the normal theme will ever see |
+| `HighContrastPaletteTests` (WPF, 6 cases) | System colours win, the theme toggle does not take the mode off, every mapped brush resolves, brand colours survive |
+| `HighContrastThemeTests` (Avalonia, 4 cases) | The same, headless, in both variants |
+
+The old `Daynote.Colors.HighContrast.xaml` is left where it is. It is still merged at startup and
+still overrides the foundation brushes; nothing reads them, so it is dead weight rather than a
+hazard, and removing it belongs with retiring the pre-v3 foundation layer.
+
+So phase 4 is done.
 
 ## 5. Tests — the harness exists now (2026-09-07)
 
@@ -371,9 +403,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
    startup copy that assumes `StartupTask` semantics are the leftovers.
 3. ~~**Test harness.**~~ **Done** (§5): headless Avalonia, resource resolution in both variants,
    shell composition, and catalog keys. The showcase pipeline is still unported.
-4. ~~**Design system.**~~ **Done except high contrast** (§4): palette, primitives, heat dots, and the
-   account, settings and sticky-note surfaces. High contrast turned out not to be a port at all —
-   neither shell has a working high-contrast mode — so it is now its own open question in §7.
+4. ~~**Design system.**~~ **Done** (§4): palette, primitives, heat dots, the account, settings and
+   sticky-note surfaces, and a high-contrast mode that follows the OS theme — which turned out to be
+   new work rather than a port, because neither shell had one that did anything.
 5. ~~**Distribution.**~~ **Done** (§5b): publish/sign/zip script, Velopack installer and updater,
    verified by installing and uninstalling. Per §3 it is now the macOS channel and a parked Windows
    fallback — the wapproj and the Store submission scripts stay.
@@ -393,9 +425,8 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
   `Daynote.App`, and the Avalonia publish has a different file layout. This is now phase 6 work.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
-- **How should high contrast work, and does it block the cutover?** (§4) Nothing works today on
-  either shell, so this is new product work, not parity: follow the OS high-contrast theme, or ship
-  one fixed palette. It should be built once for both shells.
+- **High contrast on macOS.** The Windows half follows the OS theme (§4). macOS "Increase contrast"
+  adjusts the system appearance rather than exposing a colour set, so it needs its own approach.
 - **Does the cutover wait for full parity, or ship in stages?** Staying on the Store removes the
   ugly half of this: the cutover is an update to the same package, not a second install, so nobody
   ends up running two shells at once.

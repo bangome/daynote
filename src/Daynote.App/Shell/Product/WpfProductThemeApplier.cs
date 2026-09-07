@@ -23,11 +23,25 @@ public sealed class WpfProductThemeApplier : IThemeApplier
     private const string DarkUri = "/Daynote.App;component/Themes/Daynote.Product.Dark.xaml";
 
     private readonly System.Windows.Application _application;
+    private readonly bool _highContrast;
     private ResourceDictionary? _stylesDictionary;
     private ResourceDictionary? _themeDictionary;
+    private ResourceDictionary? _highContrastDictionary;
 
-    public WpfProductThemeApplier(System.Windows.Application application) =>
+    public WpfProductThemeApplier(System.Windows.Application application)
+        : this(application, System.Windows.SystemParameters.HighContrast)
+    {
+    }
+
+    /// <param name="highContrast">
+    /// Whether the system high-contrast theme is on. Injectable so a test can exercise the merge
+    /// order without the machine being in high contrast.
+    /// </param>
+    public WpfProductThemeApplier(System.Windows.Application application, bool highContrast)
+    {
         _application = application ?? throw new ArgumentNullException(nameof(application));
+        _highContrast = highContrast;
+    }
 
     public void Apply(bool dark)
     {
@@ -46,6 +60,22 @@ public sealed class WpfProductThemeApplier : IThemeApplier
         int stylesIndex = merged.IndexOf(_stylesDictionary);
         merged.Insert(Math.Max(0, stylesIndex), next);
         _themeDictionary = next;
+
+        if (!_highContrast)
+        {
+            return;
+        }
+
+        // Last, so it overrides the light or dark palette by key. Rebuilt on every apply and moved
+        // to the end, because inserting the theme dictionary above would otherwise leave it ahead of
+        // this one and the theme toggle would silently take high contrast back off.
+        if (_highContrastDictionary is not null)
+        {
+            merged.Remove(_highContrastDictionary);
+        }
+
+        _highContrastDictionary = WpfHighContrastPalette.Build();
+        merged.Add(_highContrastDictionary);
     }
 
     private static ResourceDictionary Add(Collection<ResourceDictionary> merged, string uri)

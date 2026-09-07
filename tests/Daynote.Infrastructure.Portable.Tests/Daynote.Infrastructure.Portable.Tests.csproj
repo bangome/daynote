@@ -10,5 +10,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <!-- Daynote.Presentation targets net10.0 with no UI framework, so it is safe here: this project
+         is the one both CI legs run, and the high-contrast palette table lives there. -->
+    <ProjectReference Include="..\..\src\Daynote.Presentation\Daynote.Presentation.csproj" />
   </ItemGroup>
 </Project>
