@@ -30,8 +30,8 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFB25E09" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFC62A2F" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#1FE5484D" />
-      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
-           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+      <!-- Carried over so the two apps keep one palette, whether or not this shell paints them yet.
+           DesktopPaletteParityTests fails if either side gains a brush alone. -->
       <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FFF4F4F5" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.SwitchKnob" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" />
@@ -73,8 +73,8 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFE8A33D" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFFF6369" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#26FF6369" />
-      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
-           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+      <!-- Carried over so the two apps keep one palette, whether or not this shell paints them yet.
+           DesktopPaletteParityTests fails if either side gains a brush alone. -->
       <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FF121316" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.SwitchKnob" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" />

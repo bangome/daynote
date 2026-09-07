@@ -109,6 +109,9 @@ public sealed partial class DesktopSettingsViewModel : ObservableObject, ILangua
     public string Close => AppStrings.CloseSettings;
     public string TutorialLabel => AppStrings.SettingsTutorialLabel;
     public string TutorialButton => AppStrings.SettingsTutorialButton;
+    public string AboutLabel => AppStrings.SettingsAboutLabel;
+    public string AuthorName => AppStrings.AuthorName;
+    public string AuthorEmail => AppStrings.AuthorEmail;
 
     public async Task RefreshAsync(CancellationToken cancellationToken = default) =>
         StartupState = await _startup.GetStateAsync(cancellationToken).ConfigureAwait(true);

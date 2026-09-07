@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Daynote.App.Localization;
@@ -14,6 +15,13 @@ public partial class StickyNoteWindow : Window
     {
         InitializeComponent();
         UpdatePinTip();
+
+        // macOS draws its traffic lights over the extended client area, so the strip has to start
+        // clear of them. Windows draws nothing there and the same inset is just a hole.
+        if (OperatingSystem.IsMacOS())
+        {
+            Layout.Margin = new Thickness(70, 0, 12, 12);
+        }
     }
 
     private void OnTogglePin(object? sender, RoutedEventArgs e)

@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:account="using:Daynote.App.Account"
+             xmlns:vm="using:Daynote.Desktop.ViewModels"
+             x:Class="Daynote.Desktop.Views.AccountMenu"
+             x:Name="Root"
+             x:DataType="account:AccountViewModel">
+  <!--
+    The titlebar account button and the menu under it, ported from the WPF AccountMenu so both
+    shells read the same in the v3 design.
+
+    The account replaces the settings gear because it is the thing with a live state to report, and
+    that state is the dot on the avatar. The separately worded sync label the Avalonia titlebar used
+    to carry is gone with it: two indicators for one fact is one too many, and the words are still on
+    the tooltip and on the status row inside the menu. Settings did not disappear — it is a button in
+    this menu.
+
+    One deliberate difference from WPF: the gear fallback for a build with no sync endpoint stays in
+    MainWindow rather than inside this control. WPF can hold both states in one control because its
+    fallback binds through a null-checking converter; here the control is only created when there is
+    an account to show, so the fallback has nowhere to live inside it.
+  -->
+  <Button x:Name="Toggle" Classes="quiet" Padding="5,3"
+          ToolTip.Tip="{Binding AvatarTooltip}"
+          AutomationProperties.Name="{Binding #Root.Strings[AccountMenuAutomation]}"
+          AutomationProperties.HelpText="{Binding Status.Label}">
+    <Grid Width="26" Height="26">
+      <!-- Signed in: the accent disc with the address's first letter, and the sync dot. -->
+      <Panel IsVisible="{Binding IsSignedIn}">
+        <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource Daynote.Product.Brush.Accent}">
+          <TextBlock Text="{Binding AvatarInitial}" FontSize="12" FontWeight="Bold"
+                     Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <Ellipse Classes="syncdot" Classes.settled="{Binding Status.IsSettled}"
+                 Classes.working="{Binding Status.IsWorking}" Classes.attention="{Binding Status.NeedsAttention}" />
+      </Panel>
+      <!-- Signed out: no state to report, so no dot. -->
+      <Path IsVisible="{Binding IsSignedOut}" Width="17" Height="17" Stretch="Uniform"
+            Data="M8,7.4 a2.6,2.6 0 1 0 0.01,0 M2.9,14.3 a5.2,4.2 0 0 1 10.2,0"
+            Stroke="{DynamicResource Daynote.Product.Brush.Text2}" StrokeThickness="1.4"
+            StrokeLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Grid>
+
+    <Button.Flyout>
+      <Flyout Placement="BottomEdgeAlignedRight" HorizontalOffset="8">
+        <Border Width="300" Padding="14" CornerRadius="12"
+                Background="{DynamicResource Daynote.Product.Brush.Card}"
+                BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+          <StackPanel Spacing="11">
+
+            <!-- Signed in: who, which plan, and what sync is doing. -->
+            <StackPanel Spacing="11" IsVisible="{Binding IsSignedIn}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19"
+                        Background="{DynamicResource Daynote.Product.Brush.Accent}">
+                  <TextBlock Text="{Binding AvatarInitial}" FontSize="14" FontWeight="Bold"
+                             Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center" FontWeight="Bold"
+                           FontSize="12.5" TextTrimming="CharacterEllipsis" Text="{Binding DisplayName}" />
+                <Border Grid.Column="2" Classes="chip" Margin="8,0,0,0" Padding="9,2">
+                  <TextBlock Text="{Binding PlanBadge}" FontSize="10.5" />
+                </Border>
+              </Grid>
+
+              <Border Padding="12,10" CornerRadius="10"
+                      Background="{DynamicResource Daynote.Product.Brush.Panel}"
+                      BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Ellipse Grid.Column="0" Classes="syncdot flat" Classes.settled="{Binding Status.IsSettled}"
+                           Classes.working="{Binding Status.IsWorking}" Classes.attention="{Binding Status.NeedsAttention}" />
+                  <StackPanel Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{Binding Status.Label}" FontWeight="SemiBold" FontSize="12" />
+                    <TextBlock Classes="muted" Text="{Binding LastSyncText}" FontSize="10.5" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Classes="quiet" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11.5"
+                          Padding="8,3" Content="{Binding #Root.Strings[AccountSyncNow]}"
+                          AutomationProperties.Name="{Binding #Root.Strings[AccountSyncNow]}"
+                          Command="{Binding SyncCommand}" IsEnabled="{Binding !IsBusy}" />
+                </Grid>
+              </Border>
+            </StackPanel>
+
+            <!-- Signed out: one sentence and the way in. -->
+            <StackPanel Spacing="2" IsVisible="{Binding IsSignedOut}">
+              <TextBlock Text="{Binding #Root.Strings[AccountSignInTitle]}" FontWeight="Bold" FontSize="12.5" />
+              <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountSignInLead]}" FontSize="11.5" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- Both states: into the account, or into settings. -->
+            <Grid ColumnDefinitions="*,7,Auto">
+              <Button Grid.Column="0" Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      Content="{Binding #Root.Strings[AccountManage]}"
+                      AutomationProperties.Name="{Binding #Root.Strings[AccountManage]}"
+                      Click="OnOpenAccount" />
+              <Button Grid.Column="2" Classes="quiet" Content="{Binding #Root.Strings[Settings]}"
+                      AutomationProperties.Name="{Binding #Root.Strings[Settings]}"
+                      Click="OnOpenSettings" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Flyout>
+    </Button.Flyout>
+  </Button>
+</UserControl>

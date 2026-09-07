@@ -137,6 +137,38 @@
     <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
   </Style>
 
+  <!-- The sync dot on the account avatar: grey when there is nothing to say, green when settled,
+       accent while working, amber when the user has to act. It is ringed in the window background so
+       it reads as a badge on the disc rather than a hole in it; the flat variant inside the menu sits
+       on a panel beside its own label and needs no ring. Same buckets as the WPF SyncDot styles. -->
+  <Style Selector="Ellipse.syncdot">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+    <Setter Property="Margin" Value="0,0,-1,-1" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Bg1}" />
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="Ellipse.syncdot.flat">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="StrokeThickness" Value="0" />
+  </Style>
+  <Style Selector="Ellipse.syncdot.settled">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Ok}" />
+  </Style>
+  <Style Selector="Ellipse.syncdot.working">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
+  <Style Selector="Ellipse.syncdot.attention">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Warn}" />
+  </Style>
+
   <!-- Note list row. -->
   <Style Selector="Button.noterow">
     <Setter Property="Background" Value="Transparent" />

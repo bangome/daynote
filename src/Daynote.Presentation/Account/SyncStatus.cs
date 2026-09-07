@@ -49,6 +49,17 @@ public sealed record SyncStatusView(SyncStatusKind Kind)
     public bool NeedsAttention =>
         Kind is SyncStatusKind.Locked or SyncStatusKind.Error or SyncStatusKind.Unpaid;
 
+    /// <summary>
+    /// The dot colour as one bool per bucket, because Avalonia style classes take a bool and have no
+    /// equivalent of WPF's value-matching <c>DataTrigger</c>. Attention wins, matching the order the
+    /// WPF triggers are declared in — the kinds happen to be disjoint, but the precedence is the
+    /// intent, not an accident of the enum.
+    /// </summary>
+    public bool IsSettled => !NeedsAttention && Kind is SyncStatusKind.Synced;
+
+    /// <inheritdoc cref="IsSettled" />
+    public bool IsWorking => !NeedsAttention && Kind is SyncStatusKind.Syncing or SyncStatusKind.Pending;
+
     public string Label => Kind switch
     {
         SyncStatusKind.Synced => AppStrings.SyncChipSynced,

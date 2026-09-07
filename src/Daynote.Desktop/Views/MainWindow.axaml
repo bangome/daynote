@@ -37,24 +37,17 @@
       </Grid>
 
       <StackPanel x:Name="ActionsArea" Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-        <Button Classes="quiet" Command="{Binding OpenAccountCommand}" IsVisible="{Binding HasAccount}" Padding="6,3"
-                ToolTip.Tip="{Binding Account.AvatarTooltip, FallbackValue=''}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Daynote.Product.Brush.Accent}">
-              <TextBlock Text="{Binding Account.AvatarInitial, FallbackValue='?'}" FontSize="11" FontWeight="Bold"
-                         Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <TextBlock Text="{Binding Account.Status.Label, FallbackValue=''}" FontSize="11.5" Classes="muted" VerticalAlignment="Center"
-                       IsVisible="{Binding Account.Status.IsVisible, FallbackValue=False}" />
-          </StackPanel>
-        </Button>
         <Button Classes="quiet" Content="{Binding Strings.Today}" Command="{Binding GoToTodayCommand}" />
         <Button Classes="quiet" Content="{Binding Strings.TimelineToggle}" Command="{Binding ToggleTimelineCommand}"
                 Classes.selected="{Binding IsTimelineMode}" />
         <Button Classes="quiet" Content="{Binding ThemeGlyph}" Command="{Binding ToggleThemeCommand}" FontSize="15" Padding="10,4"
                 ToolTip.Tip="{Binding Strings.ThemeToggle}" />
+        <!-- The account button, and the gear only when this build has no sync endpoint to hang an
+             account on. In v3 the account replaces the gear rather than sitting beside it: settings
+             is a button inside the account menu. -->
+        <views:AccountMenu DataContext="{Binding Account}" IsVisible="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).HasAccount}" />
         <Button Classes="quiet" Content="⚙" Command="{Binding OpenSettingsCommand}" FontSize="15" Padding="10,4"
-                ToolTip.Tip="{Binding Strings.Settings}" />
+                IsVisible="{Binding !HasAccount}" ToolTip.Tip="{Binding Strings.Settings}" />
       </StackPanel>
 
       <!-- Windows caption buttons, drawn by the app so they match the shell instead of the theme.
@@ -531,6 +524,13 @@
               <StackPanel Spacing="6">
                 <TextBlock Text="{Binding PrivacyLabel}" FontWeight="SemiBold" FontSize="13" />
                 <TextBlock Classes="muted" Text="{Binding PrivacyText}" FontSize="11.5" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <!-- About: the last row WPF settings had that this panel did not. -->
+              <StackPanel Spacing="2" AutomationProperties.Name="{Binding AboutLabel}">
+                <TextBlock Text="{Binding AboutLabel}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" />
+                <TextBlock Classes="muted" Text="{Binding AuthorName}" FontSize="11.5" />
+                <TextBlock Classes="muted" Text="{Binding AuthorEmail}" FontSize="11.5" />
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
