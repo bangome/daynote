@@ -37,17 +37,18 @@ The data is **plaintext and not encrypted by Daynote**. It is not copied or uplo
 
 ## What survives update, uninstall, and reinstall
 
-The Store build uses **standard packaged storage**: the app writes under `%LocalAppData%\Daynote` and
-Windows redirects that into the package's per-app store. As a result:
+The app writes under `%LocalAppData%\Daynote`.
 
 - **Update** to a newer version keeps all notes, images, settings, and pause state.
-- **Uninstall removes the app's data.** Back up first (below) if you want to keep it.
-- **Reinstall** starts fresh; restore a backup to bring your data back.
+- **Uninstall** — back up first. See the note below.
+- **Reinstall** starts fresh unless the data is still there; restore a backup to bring it back.
 
-Because uninstalling clears the data, treat the in-app **Backup** as your safety net before
-uninstalling, resetting, or moving to another PC. (Older development *sideload* builds kept the data
-across uninstall by declaring the `unvirtualizedResources` capability; the Store build drops that —
-see [PACKAGING.md](PACKAGING.md).)
+Treat the in-app **Backup** as your safety net before uninstalling, resetting, or moving to another
+PC. That advice has not changed, but the reason behind it has been corrected: this page used to say
+the Store package redirected its storage into the package's private store, so an uninstall
+necessarily took the notes with it. Measured on 2026-09-07, the installed Store build wrote to the
+real `%LocalAppData%\Daynote` and its `LocalCache` held no Daynote folder — there is no redirection.
+Whether an uninstall removes that folder anyway has **not** been tested, so back up regardless.
 
 ## Backing up your data
 

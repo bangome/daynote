@@ -54,7 +54,7 @@ Windows, and one still needs a decision:
 | Global hotkey | `GlobalHotkeyService` + `HotkeyInterop` | `WindowsGlobalHotkeyService` (message-only window) | Written against the docs, never run on Windows |
 | Single instance | Named mutex + user-ACL named pipe | `SingleInstanceCoordinator.ForCurrentUserPortable` (lock file + Unix socket) | **Undecided.** `Program.cs` calls the portable path on every OS; the Windows implementation exists in Infrastructure and the Avalonia app does not use it |
 | Tray / resident | WinForms `NotifyIcon` | Avalonia `TrayIcon` | Needs Windows behaviour checked: balloon, context menu, double-click restore, hide-to-tray on close |
-| Data root | `%LocalAppData%\Daynote`, redirected by MSIX | `%LocalAppData%\Daynote`, real path | Same code, **different folder in practice** — see §3.1 |
+| Data root | `%LocalAppData%\Daynote` | `%LocalAppData%\Daynote` | Genuinely the same folder — measured, see §3.1 |
 
 The single-instance one matters beyond tidiness: the existing app's mutex is `Local\Daynote-<SID>`,
 so a WPF build and an Avalonia build **will not see each other** during a transition period, and two
@@ -76,42 +76,41 @@ What that settles, and what it costs:
 | Code signing | An unsigned `.exe` raises SmartScreen on every download. An OV or EV certificate is now required, where the Store previously re-signed at ingestion |
 | Listing, ratings, install base | Not carried over |
 
-### 3.1 The data hazard — do this before anything else
+### 3.1 The data path — checked, and there is no migration to write
 
-This is the one irreversible item in the whole migration.
+The obvious worry with leaving MSIX is that Store users' notes are locked inside the package's
+private store. **Measured on 2026-09-07: they are not.** The packaged build writes to the same real
+folder an unpackaged build reads, so switching installers does not strand anyone's data and no
+import step is needed.
 
-`Package.appxmanifest` leaves MSIX file-system virtualization **enabled** (a deliberate change from
-the older sideload build, recorded in its header comment). So the two builds do not read the same
-folder:
+How it was checked, since three files in this repo claim otherwise:
 
 ```
-Store build (MSIX)   %LocalAppData%\Packages\<PackageFamilyName>\LocalCache\Local\Daynote
-Unpackaged build     %LocalAppData%\Daynote            ← DaynoteDataRoot.Default()
+Package:  BreadJinhwaJeong.-Daynote_jz227wzmk3a2g   (Store build 1.5.0.0, installed)
+Ran:      C:\Program Files\WindowsApps\...\Daynote.App\Daynote.App.exe   (only Daynote process)
+Started:  09:52:21
+
+%LocalAppData%\Packages\<PFN>\LocalCache\...     no Daynote folder at all
+%LocalAppData%\Daynote\daynote.db-wal             modified 09:52:28   ← the packaged app wrote here
 ```
 
-An unpackaged build installed over a Store install therefore opens an **empty database**. To the
-user that reads as "the update deleted my notes". Worse, `docs/DATA_AND_RECOVERY.md` records that
-uninstalling the Store package *clears its data* — so a user who reacts by removing the old app
-destroys the only copy. Nothing in `src/` currently references the packaged path; there is no
-migration code today.
+`DAYNOTE_DATA_ROOT` was unset at both user and machine scope, so nothing was overriding the default.
 
-Required, and required first:
+**Three places in the repo state the opposite and are now known to be wrong.** They predate this
+measurement and should be corrected on their own, outside this plan:
 
-1. **One-time import.** On first run, if `%LocalAppData%\Daynote` holds no database, look for the
-   packaged path and **copy** (never move) it across. A failed copy must leave the original intact.
-   The `PackageFamilyName` is `Name` plus a hash of `Publisher` — from the manifest, `Name` is
-   `BreadJinhwaJeong.-Daynote` and `Publisher` is `CN=7FDB7ABF-3343-4BA9-9F0C-C601ABED42EE`. The
-   hash cannot be written by hand; read the real value with `Get-AppxPackage` on a machine that has
-   the Store build installed, and pin it in a test.
-2. **Enforce the order.** Install the new build → confirm the import → *then* remove the Store app.
-   This has to be said inside the app, not only in release notes, because the destructive order is
-   the intuitive one.
-3. **Back up first.** The in-app Backup already exists and is the fallback when the import finds
-   nothing. The cutover release should prompt for one on first run.
+| File | Claim | Reality |
+|---|---|---|
+| `packaging/.../Package.appxmanifest` header | "File-system virtualization is LEFT ENABLED, so the app's writes to `%LocalAppData%\Daynote` are transparently redirected ... into this package's per-app store" | No redirection observed |
+| `docs/MCP.md` §"It gives the server the package identity" | An MCP server started outside the package "would open an empty second database" | It would open the same database. The *other* reason for the alias — `%ProgramFiles%\WindowsApps` ACLs make the real executable unreachable — still holds |
+| `docs/DATA_AND_RECOVERY.md` | "uninstalling clears the data" | **Untested.** If the data is outside the package, an uninstall probably leaves it, but confirming that means uninstalling the Store build. Do not assume either way until someone checks |
 
-Also worth deciding here: whether the unpackaged build keeps writing to `%LocalAppData%\Daynote` (it
-does today, and the import lands there) or moves somewhere else. Keeping it means a user who once ran
-a dev or sideload build already has data in the right place.
+What survives from the original worry:
+
+- The **uninstall** question above. Until it is answered, the cutover release should still prompt for
+  a Backup on first run — cheap, and it covers the case where the claim turns out to be right.
+- Whichever installer is chosen must keep writing to `%LocalAppData%\Daynote`. Changing the location
+  is what would actually strand data, and there is now no reason to.
 
 ## 4. Design system — the largest single piece of work
 
@@ -160,11 +159,9 @@ less automated UI coverage than it has today.
 
 ## 6. Suggested order
 
-Each phase leaves the tree shippable, and WPF stays the Windows product until phase 6.
+Each phase leaves the tree shippable, and WPF stays the Windows product until phase 6. There is
+no data-migration phase: §3.1 establishes that both builds read the same folder.
 
-0. **Data migration (§3.1).** The import path, the ordering guard, and a test that pins the
-   packaged path. First because it is the only step whose failure destroys user data; everything
-   else can be redone.
 1. **Chrome.** Platform-conditional title bar, caption buttons, work-area maximize, rounded corners.
    Cheapest fix with the most visible payoff, and it makes everything after it demoable on Windows.
 2. **Platform services.** Run the hotkey, login item, tray and single instance on Windows; pick the
@@ -185,6 +182,8 @@ Each phase leaves the tree shippable, and WPF stays the Windows product until ph
   largest thing MSIX was doing for free, and it gates the cutover.
 - **Signing certificate.** OV or EV, and who holds it. EV clears SmartScreen immediately; OV builds
   reputation over time.
+- **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
+  needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
 - **Does the cutover wait for full parity, or ship in stages?** A staged Windows release means two
   shells in the wild at once, which the single-instance mismatch (§2) currently breaks.
 - **What happens to the showcase evidence pipeline?** Rebuild it on Avalonia, or retire it and keep

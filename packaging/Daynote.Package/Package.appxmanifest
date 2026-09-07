@@ -7,13 +7,17 @@
   runFullTrust restricted capability, the standard Desktop Bridge path the Store
   allows for Win32 apps).
 
-  STORAGE: standard packaged storage. File-system virtualization is LEFT ENABLED,
-  so the app's writes to %LocalAppData%\Daynote are transparently redirected by the
-  OS into this package's per-app store. No app code change is needed. NOTE this is
-  a deliberate change from the earlier sideload build (which disabled virtualization
-  + declared unvirtualizedResources to keep the real path across uninstall): Store
-  policy avoids that restricted capability, and uninstalling now removes the data —
-  the in-app Backup/Restore covers migration and recovery (see docs/DATA_AND_RECOVERY.md).
+  STORAGE: standard packaged storage, with no unvirtualizedResources capability
+  (the earlier sideload build declared it; Store policy avoids it).
+
+  MEASURED 2026-09-07: this package does NOT get its %LocalAppData% writes
+  redirected. Running the installed Store build with DAYNOTE_DATA_ROOT unset, the
+  database it touched was the real %LocalAppData%\Daynote\daynote.db, and the
+  package's LocalCache held no Daynote folder at all. An earlier version of this
+  comment asserted the opposite (redirection into LocalCache\Local\Daynote) and was
+  wrong; docs/MCP.md repeated it. Whether an uninstall removes that outside-the-
+  package folder has NOT been tested; keep treating the in-app Backup as the
+  safety net before uninstalling (see docs/DATA_AND_RECOVERY.md).
 
   The windows.startupTask is DISABLED by default; the app never auto-enables it — the
   user opts in from Settings (Store-compliant).
@@ -91,11 +95,14 @@
         </desktop:Extension>
 
         <!--
-          MCP SERVER (docs/MCP.md). The stdio server ships in this package so it runs WITH the package
-          identity: file-system virtualization applies to it exactly as it does to the app, and it
-          therefore opens the very same daynote.db. A server built and launched from outside the
-          package would instead see the unredirected %LocalAppData%\Daynote and create an empty second
-          database. It sits in the app's own folder, so both share one copy of the .NET runtime; the
+          MCP SERVER (docs/MCP.md). The stdio server ships in this package because the alias is the
+          only way a client can launch it: the real executable sits under %ProgramFiles%\WindowsApps,
+          whose ACLs a client process cannot traverse. (An earlier version of this comment gave a
+          second reason, that package identity was needed to reach the same database through
+          file-system virtualization. Measured 2026-09-07, this package's %LocalAppData% writes are
+          not redirected, so any server opens the same daynote.db regardless. See the STORAGE note
+          at the top of this file.) It sits in the app's own folder, so both share one copy of the
+          .NET runtime; the
           .wapproj target _DaynoteCoLocateMcpServer does that merge and Build-Package.ps1 verifies it.
 
           It is declared as an alias on THIS application rather than as an application of its own. An

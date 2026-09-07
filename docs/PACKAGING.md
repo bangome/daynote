@@ -15,9 +15,9 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 - The **MCP stdio server** (`Daynote.Mcp`), reachable through the app execution alias
   `daynote-mcp.exe`, declared as an extension on the app's own `<Application>`. It is
   deliberately **not** a second application: one hidden with `AppListEntry="none"` is a
-  headless app, which the Store refuses without a `HeadlessAppBypass` entitlement. It ships in the same package on purpose: only then does the
-  server inherit the package identity, and with it the redirected data path below, so
-  it opens the very same database as the app. It also shares the app's folder
+  headless app, which the Store refuses without a `HeadlessAppBypass` entitlement. It ships in the same package on purpose: the alias
+  is the only way a client process can launch it at all, since `%ProgramFiles%\WindowsApps`
+  ACLs block the real path. It also shares the app's folder
   (`Daynote.App\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
   of the .NET runtime in the package instead of two - 86 MB instead of 131 MB. The
   `_DaynoteCoLocateMcpServer` target does the merge and `Build-Package.ps1` verifies it.
@@ -27,22 +27,27 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 No x86/Arm64 artifact and no auto-update feed are produced here. For **Store**
 submission see [STORE.md](STORE.md) (`scripts/Build-Package.ps1 -Store`).
 
-## Where user data lives (packaged storage)
+## Where user data lives
 
 Daynote's code writes under `%LocalAppData%\Daynote` (database, image/file assets,
-settings). File-system virtualization is **left enabled**, so for a packaged install
-the OS transparently redirects those writes into the package's per-app store. This is
-the Store-standard model and needs no app code change.
+settings), and **that is where a packaged install writes too**.
 
-Consequence: **uninstalling removes the app's data.** Use the in-app **Backup/Restore**
-(Settings → 백업 및 복원) before uninstalling or moving machines — see
-[DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md). (Update/reinstall keep the data.)
+Measured on 2026-09-07: with the Store build (1.5.0.0) running and `DAYNOTE_DATA_ROOT`
+unset, the database it touched was the real `%LocalAppData%\Daynote\daynote.db`, and
+the package's `LocalCache` contained no Daynote folder. This package does not get its
+`%LocalAppData%` writes redirected, despite carrying no `unvirtualizedResources`
+capability. Earlier revisions of this file, `Package.appxmanifest`, `MCP.md`,
+`PRIVACY.md` and `DATA_AND_RECOVERY.md` all stated the opposite; they were wrong.
 
-> History: earlier development sideload builds disabled virtualization and declared
-> the `unvirtualizedResources` restricted capability to keep the real, un-redirected
-> `%LocalAppData%\Daynote` path across uninstall. That capability requires special
-> Microsoft approval for the Store, so it was removed in favor of the standard model
-> above.
+**Still back up before uninstalling.** Whether an uninstall reaches outside the package
+to remove that folder has not been tested, and the in-app **Backup/Restore**
+(Settings → 백업 및 복원) costs nothing — see
+[DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md). (Update and reinstall keep the data.)
+
+> History: earlier development sideload builds declared the `unvirtualizedResources`
+> restricted capability, on the understanding that without it the path would be
+> redirected. That capability requires special Microsoft approval for the Store, so it
+> was dropped — and, as measured above, nothing about the data path changed.
 
 ## Building the package
 

@@ -54,13 +54,12 @@ claude mcp add daynote -- "daynote-mcp.exe"
 `daynote-mcp.exe` is the package's **app execution alias** (declared in `Package.appxmanifest`), which
 Windows puts on the user's PATH. Launching through it is what makes the integration work at all:
 
-- **It gives the server the package identity.** The Store package leaves MSIX file-system
-  virtualization enabled, so the app's writes to `%LocalAppData%\Daynote` are redirected into
-  `%LocalAppData%\Packages\<PackageFamilyName>\LocalCache\Local\Daynote`. A server started from
-  *outside* the package gets no redirection, so it would open an empty second database and show none
-  of the user's notes.
 - **It is reachable.** The real executable lives under `%ProgramFiles%\WindowsApps`, whose ACLs a
-  client process cannot traverse. The alias can be launched by anyone.
+  client process cannot traverse. The alias can be launched by anyone. This is the whole reason —
+  an earlier version of this file gave a second one, that the alias was needed to put the server
+  inside the package's redirected storage. Measured on 2026-09-07, this package's writes are **not**
+  redirected: the installed Store build wrote to the real `%LocalAppData%\Daynote`, and its
+  `LocalCache` held no Daynote folder. A server launched from anywhere opens the same database.
 
 The alias is declared as an extension on the **app's own `<Application>`**, naming a different
 executable, rather than as a second application. A second one would need `AppListEntry="none"` to stay
@@ -133,9 +132,8 @@ policy), point the client at `dotnet` with the DLL:
 
 ## Notes
 
-- **Data location** — defaults to `%LocalAppData%\Daynote`, which for the packaged server the OS
-  redirects into the package's `LocalCache\Local\Daynote` — the same file the app uses. Set the
-  `DAYNOTE_DATA_ROOT` environment
+- **Data location** — `%LocalAppData%\Daynote`, for the packaged server and an unpackaged one alike
+  (see above: this package's storage is not redirected). Set the `DAYNOTE_DATA_ROOT` environment
   variable (in the client's server config `env`) to point at a different root, e.g. a disposable test
   database.
 - **Running alongside the app** — safe. SQLite (WAL mode) allows the MCP server to read while the app

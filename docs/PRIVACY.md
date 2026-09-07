@@ -114,10 +114,11 @@ enable device encryption / BitLocker; Daynote will not do it for you and does no
 
 ## Where the data is and how to remove it
 
-- Location: `%LocalAppData%\Daynote` (database, `assets\`, and settings). For a Microsoft Store
-  install the OS redirects these writes into the app's per-user package storage, so **uninstalling
-  the Store build removes your data** — back up first if you want to keep it.
-- Outside of uninstall, Daynote never deletes this folder for you. You remove your data by
-  uninstalling the app (Store build) or by deleting the folder yourself (sideload build).
+- Location: `%LocalAppData%\Daynote` (database, `assets\`, and settings), for the Microsoft Store
+  build and other builds alike.
+- **Back up before uninstalling.** Whether uninstalling the Store build also removes that folder has
+  not been established, so treat your notes as at risk and export a backup first.
+- Daynote never deletes this folder for you. To remove your data, delete the folder yourself after
+  uninstalling — that is the only way to be certain it is gone.
 
 See [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md) for backup, recovery, and removal details.
