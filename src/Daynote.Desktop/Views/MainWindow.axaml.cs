@@ -32,6 +32,7 @@ public partial class MainWindow : Window
             RebuildShortcutBindings();
         };
         AddHandler(KeyDownEvent, OnPreviewKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+
     }
 
     /// <summary>Binds the configurable in-app shortcuts and rebuilds them whenever one is reassigned.</summary>
@@ -127,6 +128,30 @@ public partial class MainWindow : Window
         sticky.Activate();
         sticky.FocusBody();
     }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        ApplyPlatformChrome();
+        UpdateMaximizeGlyph();
+    }
+
+    protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty)
+        {
+            UpdateMaximizeGlyph();
+        }
+    }
+
+    private void OnMinimize(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void OnMaximizeRestore(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnCloseWindow(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
 
     protected override void OnClosed(EventArgs e)
     {

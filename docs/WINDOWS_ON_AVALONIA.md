@@ -16,32 +16,47 @@ already shared, and `Daynote.Presentation` holds every view model both apps bind
 is the Windows half of the *shell*: chrome, platform services, packaging, the design system, and the
 test harness that currently guards all of it.
 
-## 1. Window chrome — the blocker you can see
+## 1. Window chrome — DONE 2026-09-07
 
-`Views/MainWindow.axaml` is built for macOS and says so:
+`Views/MainWindow.axaml` was built for macOS and said so: `Margin="84,0,16,0"`, the inset for the
+traffic lights. On Windows the caption buttons are on the **right**, which is where this app keeps
+its own actions, so the two collided — and the theme's drawn title bar printed a second "Daynote"
+over the app's brand.
 
-```xml
-ExtendClientAreaToDecorationsHint="True"
-ExtendClientAreaTitleBarHeightHint="52"
-...
-<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="84,0,16,0">
+`MainWindow.Chrome.cs` now shapes the strip per platform:
+
+- **macOS** keeps the 84px inset and draws no buttons; the traffic lights are the system's.
+- **Windows** drops to a 16px inset, sets `WindowDecorations = BorderOnly` (which removes the theme's
+  title bar while keeping the frame, shadow and resize grips), and draws its own minimize / maximize /
+  close at the right, styled with the shell rather than the theme.
+
+Drawing them costs nothing in behaviour. Avalonia 12 maps each element's
+`WindowDecorationProperties.ElementRole` onto the Win32 hit-test codes, so Windows still drives them.
+Verified by sending `WM_NCHITTEST` at each control on the running build:
+
+```
+close button      -> HTCLOSE
+maximize button   -> HTMAXBUTTON     (this is what opens Snap Layouts on hover)
+minimize button   -> HTMINBUTTON
+empty strip       -> HTCAPTION       (drag to move, double-click to maximize)
+search / gear / theme / brand -> HTCLIENT   (clicks reach the controls)
 ```
 
-The `84` is the inset for macOS traffic lights. On Windows there are no traffic lights on the left —
-there are caption buttons on the **right**, which is where the app draws its own actions. The
-running build shows the result: the OS title bar and the app header stack, and the timeline/settings/
-close controls overlap in the top-right corner.
+Two things worth remembering, because both were silent failures:
 
-Needed:
+1. Interactive controls inside the strip need the `User` role, or the title-bar hit test swallows
+   their clicks.
+2. `TitleBarRow` needs `Background="Transparent"`. A Grid with no brush does not take part in hit
+   testing, so the strip reported `HTCLIENT` and the window could not be dragged — the buttons
+   worked, the drag did not.
 
-- A platform-conditional title bar: 84px left inset and no caption buttons on macOS; zero left inset
-  and minimize/maximize/close on Windows. WPF does this with `WindowChrome`; Avalonia's equivalent is
-  `ExtendClientAreaChromeHints` plus hit-test regions.
-- Snap and Aero Snap behaviour, including the maximize fix already solved once in WPF
-  (`ProductWindow.Maximize.cs`): a borderless window maximizes over the taskbar unless
-  `WM_GETMINMAXINFO` is answered with the monitor's work area. Avalonia will need the same handling
-  or a demonstration that it already does it.
-- Windows 11 rounded corners (`DwmSetWindowAttribute`), which the WPF shell asks for explicitly.
+**The taskbar overhang does not exist here.** The WPF shell needed `WM_GETMINMAXINFO` handling
+(`ProductWindow.Maximize.cs`) because it maximized over the taskbar; measured on the same machine,
+the Avalonia build's maximized *client* area is exactly the work area (1920×1032 on a 1080 screen
+with a 48px taskbar). Nothing to port.
+
+Still open in this area: Windows 11 rounded corners have not been checked, and neither has behaviour
+across a DPI change or a monitor with different scaling.
 
 ## 2. Platform services that compile but have never run on Windows
 
@@ -162,8 +177,8 @@ less automated UI coverage than it has today.
 Each phase leaves the tree shippable, and WPF stays the Windows product until phase 6. There is
 no data-migration phase: §3.1 establishes that both builds read the same folder.
 
-1. **Chrome.** Platform-conditional title bar, caption buttons, work-area maximize, rounded corners.
-   Cheapest fix with the most visible payoff, and it makes everything after it demoable on Windows.
+1. ~~**Chrome.**~~ **Done** (§1): platform-conditional title bar, app-drawn caption buttons with
+   native hit-test roles, drag and Snap Layouts verified. Rounded corners and DPI changes remain.
 2. **Platform services.** Run the hotkey, login item, tray and single instance on Windows; pick the
    single-instance implementation; revisit the startup copy that assumes `StartupTask` semantics;
    write tests in `Daynote.Infrastructure.Portable.Tests` or a new Windows-flavoured sibling.

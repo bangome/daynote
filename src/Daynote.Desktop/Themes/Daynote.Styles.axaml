@@ -34,6 +34,28 @@
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
   </Style>
 
+  <!-- Windows caption buttons. Square, full-height, no radius: they are the window's own controls,
+       not the app's, and Windows users read them by that shape. Close reddens on hover, as everywhere
+       else on the platform. -->
+  <Style Selector="Button.caption">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Width" Value="46" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Danger}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+  </Style>
+
   <!-- Primary accent button. -->
   <Style Selector="Button.accent">
     <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />

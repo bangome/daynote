@@ -17,21 +17,26 @@
 
   <Grid RowDefinitions="52,*">
 
-    <!-- Title bar: brand past the traffic lights, unified search in the middle, actions on the right. -->
-    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="84,0,16,0">
-      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+    <!-- Title bar. The left inset, the caption buttons and the hit-test roles are all applied from
+         MainWindow.Chrome.cs: macOS keeps its traffic lights at the left and draws no buttons here,
+         Windows draws its own at the right. -->
+    <!-- Background="Transparent" is load-bearing: a Grid with no brush does not take part in hit
+         testing, so the strip would report HTCLIENT and the window could not be dragged by it. -->
+    <Grid x:Name="TitleBarRow" Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="84,0,16,0"
+          Background="Transparent">
+      <StackPanel x:Name="BrandArea" Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <Image Source="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png" Width="22" Height="22" />
         <TextBlock Text="Daynote" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
       </StackPanel>
 
-      <Grid Grid.Column="1" MaxWidth="520" Margin="24,0" VerticalAlignment="Center" ColumnDefinitions="*,Auto">
+      <Grid x:Name="SearchArea" Grid.Column="1" MaxWidth="520" Margin="24,0" VerticalAlignment="Center" ColumnDefinitions="*,Auto">
         <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline" PlaceholderText="{Binding Strings.SearchHint}"
                  Text="{Binding Search.Query}" />
         <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="11" Padding="8,4" Margin="4,0,0,0"
                 Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}" />
       </Grid>
 
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+      <StackPanel x:Name="ActionsArea" Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
         <Button Classes="quiet" Command="{Binding OpenAccountCommand}" IsVisible="{Binding HasAccount}" Padding="6,3"
                 ToolTip.Tip="{Binding Account.AvatarTooltip, FallbackValue=''}">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -50,6 +55,27 @@
                 ToolTip.Tip="{Binding Strings.ThemeToggle}" />
         <Button Classes="quiet" Content="⚙" Command="{Binding OpenSettingsCommand}" FontSize="15" Padding="10,4"
                 ToolTip.Tip="{Binding Strings.Settings}" />
+      </StackPanel>
+
+      <!-- Windows caption buttons, drawn by the app so they match the shell instead of the theme.
+           Behaviour is still the system's: MainWindow.Chrome.cs gives each one the element role that
+           Avalonia maps onto HTMINBUTTON / HTMAXBUTTON / HTCLOSE, so Snap Layouts still open on hover
+           over maximize. Collapsed on macOS, where the traffic lights are the system's own. -->
+      <StackPanel x:Name="CaptionButtons" Grid.Column="3" Orientation="Horizontal"
+                  Margin="12,0,0,0" VerticalAlignment="Stretch" IsVisible="False">
+        <Button x:Name="MinimizeButton" Classes="caption" Click="OnMinimize"
+                ToolTip.Tip="{Binding Strings[WindowMinimize]}">
+          <Path Data="M0,5 L10,5" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" />
+        </Button>
+        <Button x:Name="MaximizeButton" Classes="caption" Click="OnMaximizeRestore"
+                ToolTip.Tip="{Binding Strings[WindowMaximize]}">
+          <Path x:Name="MaximizeGlyph" Data="M0.5,0.5 H9.5 V9.5 H0.5 Z"
+                Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" />
+        </Button>
+        <Button x:Name="CloseButton" Classes="caption close" Click="OnCloseWindow"
+                ToolTip.Tip="{Binding Strings[WindowClose]}">
+          <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" />
+        </Button>
       </StackPanel>
     </Grid>
 
