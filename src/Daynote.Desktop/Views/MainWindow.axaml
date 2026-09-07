@@ -285,19 +285,29 @@
         <Grid RowDefinitions="Auto,*">
           <Border Grid.Row="0" Classes="seg" Margin="10,10,10,8">
             <UniformGrid Columns="4">
+              <!-- The shared line marks, not the ☑ ★ # 📎 this strip used to mix: a checkbox glyph, a
+                   dingbat star, an ASCII hash and a colour emoji came from four different fonts, at
+                   four weights, and the paperclip rendered in its own colour whatever the tab state.
+                   The open-todo count keeps its digits beside the checkbox. -->
               <Button Classes="tab" Classes.active="{Binding TabIsTodo}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}"
-                      ToolTip.Tip="{Binding Strings.TabTodoName}">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                  <TextBlock Text="☑" />
+                      ToolTip.Tip="{Binding Strings.TabTodoName}" AutomationProperties.Name="{Binding Strings.TabTodoName}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Path Data="{StaticResource Daynote.Geo.TabTodo}" VerticalAlignment="Center" />
                   <TextBlock Text="{Binding Todo.OpenCount}" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <Button Classes="tab" Classes.active="{Binding TabIsFavorites}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}"
-                      Content="★" ToolTip.Tip="{Binding Strings.TabFavoritesName}" />
+                      ToolTip.Tip="{Binding Strings.TabFavoritesName}" AutomationProperties.Name="{Binding Strings.TabFavoritesName}">
+                <Path Data="{StaticResource Daynote.Geo.Star}" />
+              </Button>
               <Button Classes="tab" Classes.active="{Binding TabIsTags}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}"
-                      Content="#" ToolTip.Tip="{Binding Strings.TabTagsName}" />
+                      ToolTip.Tip="{Binding Strings.TabTagsName}" AutomationProperties.Name="{Binding Strings.TabTagsName}">
+                <Path Data="{StaticResource Daynote.Geo.TabTag}" />
+              </Button>
               <Button Classes="tab" Classes.active="{Binding TabIsFiles}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Files}"
-                      Content="📎" ToolTip.Tip="{Binding Strings.TabFilesName}" />
+                      ToolTip.Tip="{Binding Strings.TabFilesName}" AutomationProperties.Name="{Binding Strings.TabFilesName}">
+                <Path Data="{StaticResource Daynote.Geo.TabClip}" />
+              </Button>
             </UniformGrid>
           </Border>
 
