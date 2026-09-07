@@ -131,6 +131,20 @@ public sealed partial class NoteWorkspaceViewModel
 
         tab.Title = trimmed;
         tab.HasCustomTitle = true;
+        return await MaterializeAsync(tab, cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Writes the tab to the database and reloads the day, turning a projection into a real note.
+    /// </summary>
+    /// <remarks>
+    /// A day starts with one projected tab — a note the user can type into that does not exist yet.
+    /// Anything that has to attach itself to a real row (a custom title, a tag) has to bring the note
+    /// into being first, which is what this does: mark the pending text dirty, flush it, and rebuild
+    /// the tabs from the day that now has the note in it.
+    /// </remarks>
+    private async Task<bool> MaterializeAsync(NoteTabViewModel tab, CancellationToken cancellationToken)
+    {
         _autosave.MarkDirty(BuildRequest(tab));
         FlushResult flush = await FlushAsync(FlushReason.NoteChange, cancellationToken).ConfigureAwait(true);
         if (!flush.CanProceed)

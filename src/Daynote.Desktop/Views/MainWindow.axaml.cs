@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AttachHighlight();
         DataContextChanged += (_, _) =>
         {
             if (_shell is not null)

@@ -32,9 +32,17 @@ public sealed partial class NoteWorkspaceViewModel
         return true;
     }
 
+    /// <summary>
+    /// Adds a tag, creating the note first if it is still only a projection.
+    /// </summary>
+    /// <remarks>
+    /// This used to refuse outright for a projected tab, which is the state a note is in for as long
+    /// as it is being written: the tag was dropped without a word. Tagging is a deliberate act, so it
+    /// is reason enough to bring the note into being — the same call a rename makes.
+    /// </remarks>
     public async Task<bool> AddTagAsync(NoteTabViewModel? tab, string tag, CancellationToken cancellationToken = default)
     {
-        if (tab is null || tab.IsProjection)
+        if (tab is null)
         {
             return false;
         }
@@ -43,6 +51,22 @@ public sealed partial class NoteWorkspaceViewModel
         if (trimmed.Length == 0 || tab.Tags.Contains(trimmed))
         {
             return false;
+        }
+
+        if (tab.IsProjection)
+        {
+            if (!await MaterializeAsync(tab, cancellationToken).ConfigureAwait(true))
+            {
+                return false;
+            }
+
+            // RebuildTabs replaces the instances, so the one in hand is stale; find the note it became.
+            if (Tabs.FirstOrDefault(candidate => candidate.Id == tab.Id) is not { IsProjection: false } materialized)
+            {
+                return false;
+            }
+
+            tab = materialized;
         }
 
         var next = new List<string>(tab.Tags) { trimmed };

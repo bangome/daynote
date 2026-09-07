@@ -184,7 +184,8 @@
             failed, and that is not a moment to make someone decode a glyph.
           -->
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
-            <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
+            <TextBlock Grid.Column="0" Classes="h1" FontWeight="Bold"
+                       Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
 
             <TextBlock Grid.Column="1" Classes="muted" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -217,8 +218,12 @@
             Tags: the chips and the entry in one wrapping row, so "add a tag" reads as the end of the
             list instead of a separate pill input parked beside it. That was the design all along; the
             entry here was a fixed-width bordered box that wrapped as a block of its own.
+
+            Not gated on HasOpenNote any more. A note being written is still a projection, so the row
+            was hidden for exactly as long as someone was writing the note they wanted to tag; adding
+            a tag now creates the note, so the row can stand from the start.
           -->
-          <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" IsVisible="{Binding HasOpenNote}">
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -241,9 +246,23 @@
                      Text="{Binding TagInput}" KeyDown="OnTagBoxKeyDown" />
           </WrapPanel>
 
+          <!--
+            The body: a highlight layer with the editor over it, the editor's own text drawn in
+            nothing so the caret sits over the coloured glyphs. Avalonia's TextBox has no inline
+            formatting, so marking up what the app understood — checkboxes, due dates, #tags, links —
+            means a second layer that draws the same string with the same metrics.
+
+            The illusion only holds while both layers break lines in the same places, which is why the
+            typography is set once on the `editor` class and shared by both, and why
+            EditorHighlightTests measures them against each other rather than trusting that.
+          -->
           <Grid Grid.Row="2">
+            <ScrollViewer x:Name="HighlightScroll" IsHitTestVisible="False"
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+              <TextBlock x:Name="Highlight" Classes="editorhighlight" />
+            </ScrollViewer>
             <TextBox x:Name="Editor" Classes="editor" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top"
-                     PlaceholderText="{Binding Strings.EditorEmptyHint}" />
+                     Foreground="Transparent" PlaceholderText="{Binding Strings.EditorEmptyHint}" />
           </Grid>
         </Grid>
       </Border>
