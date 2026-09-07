@@ -95,6 +95,43 @@ public sealed class EditorHighlightTests
         });
     }
 
+    [TestMethod]
+    public void No_mark_changes_how_wide_a_glyph_is()
+    {
+        // The caret is laid out from the editor's own text, which is all one weight and size. Any
+        // property here that changes an advance width makes the highlight wider than the editor from
+        // that mark onwards, and the caret slides along the line — reported from real use, and the
+        // reason the marks are colour only.
+        AvaloniaProperty[] metric =
+        [
+            TextElement.FontWeightProperty,
+            TextElement.FontSizeProperty,
+            TextElement.FontFamilyProperty,
+            TextElement.FontStyleProperty,
+            TextElement.FontStretchProperty,
+            Inline.BaselineAlignmentProperty,
+        ];
+
+        WithEditor((shell, editor, highlight) =>
+        {
+            SetBody(shell, editor, highlight, "-[] 장부 정리 (9/8 15:00) #회계 https://example.com 보통");
+
+            string[] offenders =
+            [
+                .. (highlight.Inlines ?? [])
+                    .OfType<Run>()
+                    .SelectMany(run => metric
+                        .Where(run.IsSet)
+                        .Select(property => $"{run.Text} sets {property.Name}")),
+            ];
+
+            CollectionAssert.AreEqual(
+                Array.Empty<string>(),
+                offenders,
+                $"These change glyph widths: {string.Join(", ", offenders)}");
+        });
+    }
+
     /// <summary>
     /// The runs the highlighter marked, or the ones it left alone. Asked as "did we set a brush on
     /// it", not "is its brush null": Avalonia hands back the inherited value for a property nobody

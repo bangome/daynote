@@ -133,7 +133,11 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
                 Highlight.Inlines.Add(new Run(text[last..match.Index]));
             }
 
-            var run = new Run(match.Value) { Foreground = accent, FontWeight = FontWeights.SemiBold };
+            // Colour only: no property that changes a glyph's advance. The TextBox under this layer
+            // lays the caret out from its own text at the normal weight, so a SemiBold run here is
+            // wider than the same characters there and the caret drifts along the line from the
+            // first mark onwards.
+            var run = new Run(match.Value) { Foreground = accent };
             if (match.Value.StartsWith('#'))
             {
                 // Inline tags read as chips: keep the accent text but add a soft chip background.

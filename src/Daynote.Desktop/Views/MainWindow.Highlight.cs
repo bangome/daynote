@@ -82,8 +82,11 @@ public partial class MainWindow
             return run;
         }
 
+        // Colour, and nothing that changes a glyph's width. The editor lays the caret out from its
+        // own text at the normal weight; a SemiBold run here is wider than the same characters there,
+        // so every caret position after the first mark on a line was off by the difference. Only
+        // non-metric properties may be set on these runs — EditorHighlightTests pins that.
         run.Foreground = Brush("Daynote.Product.Brush.Accent", Brushes.RoyalBlue);
-        run.FontWeight = FontWeight.SemiBold;
 
         switch (span.Kind)
         {
