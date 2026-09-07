@@ -600,7 +600,8 @@
           "Daynote.Infrastructure": "[1.0.0, )",
           "Daynote.Mcp": "[1.0.0, )",
           "Daynote.Presentation": "[1.0.0, )",
-          "Microsoft.Extensions.Hosting": "[10.0.9, )"
+          "Microsoft.Extensions.Hosting": "[10.0.9, )",
+          "Velopack": "[1.2.0, )"
         }
       },
       "daynote.infrastructure": {
@@ -750,6 +751,12 @@
         "requested": "[10.0.9, )",
         "resolved": "10.0.9",
         "contentHash": "vXp+vBQbTkMrDzUiPCxo1KvzfaAvZWuSRS2P7e5orhtV7ZuePKAB3Cqc9dH2YHUavRJyA2uWd2yrL6hl2VoJ5g=="
+      },
+      "Velopack": {
+        "type": "CentralTransitive",
+        "requested": "[1.2.0, )",
+        "resolved": "1.2.0",
+        "contentHash": "Rz67gJL619fSBS6omaSINUxyDuwhIxkm5mmubf7uLd5Qgi6LLKaKCha+QFP6n+Bw/UjA0vutnH4JQfYzn6ANtw=="
       }
     },
     "net10.0/win-x64": {

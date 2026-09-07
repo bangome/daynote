@@ -227,6 +227,60 @@ Still not ported: the WPF **showcase evidence pipeline** (`ShowcaseCapture`, the
 the interaction contract table) and `Daynote.UiQa.Tests`. Those are a body of work in their own
 right, and §7 still asks whether they should be rebuilt on Avalonia or retired.
 
+## 5b. Distribution — DONE 2026-09-07 (except the certificate)
+
+`scripts/Build-WindowsApp.ps1` is the Windows counterpart of `Build-MacApp.sh`: publish
+self-contained (the runtime is inside, nothing to install first), sign, zip, and — with
+`-Installer` — pack a Velopack release.
+
+**Velopack** was chosen over an installer plus a hand-rolled update check, because it is the one
+option that replaces both things the Store was doing. Per-user install, no administrator prompt,
+silent background updates: the experience Store users already have.
+
+Self-contained but **not** single-file, for the same reason as the Mac bundle. `Daynote.Mcp` ships
+beside the app and a client launches it by path; single-file would bury it in a temp directory that
+changes every run.
+
+### The app id is `Daynote.Desktop`, and that matters
+
+Velopack installs into `%LocalAppData%\<packId>`. The database lives in `%LocalAppData%\Daynote`.
+A pack id of `Daynote` would have unpacked the application on top of the user's notes.
+
+Verified by installing for real and measuring either side:
+
+```
+install dir   %LocalAppData%\Daynote.Desktop   (current, packages, Daynote.Desktop.exe, Update.exe)
+data root     %LocalAppData%\Daynote           daynote.db unchanged at 798,720 bytes
+uninstall     install dir gone, desktop shortcut gone, daynote.db still there
+```
+
+That last line also answers half of a §7 question: **this** installer's uninstall leaves the notes
+alone. What an MSIX uninstall does is still untested and still the reason to back up first.
+
+### Updating
+
+`WindowsUpdateService` checks the feed at startup, downloads in the background, and stages — the new
+version applies on the next launch rather than restarting under the user. This is a note app people
+leave open for days; interrupting one to install something they did not ask for is worse than
+waiting. Every failure is swallowed: no feed, no network, a proxy, an unparseable release — none of
+those are worth a dialog, and the consequence is staying on the version already running.
+
+It does nothing unless the app is running from a Velopack install, so a developer build or an
+unzipped copy never tries to rewrite itself. `VelopackApp.Build().Run()` is the first statement in
+`Main`, before the single-instance claim, or an install hook would look like a second launch and
+silently do nothing — `vpk pack` verifies that call is present and fails the build without it.
+
+### Signing: the script is ready, the certificate is not
+
+Signing is driven by the environment so no secret reaches a file or a build log:
+`DAYNOTE_SIGN_THUMBPRINT` for a certificate in the user's store, or `DAYNOTE_SIGN_PFX` with
+`DAYNOTE_SIGN_PFX_PASSWORD`. Both executables are signed, and Velopack signs the setup bundle with
+the same parameters. With neither set the build warns and produces an unsigned output, which is fine
+for testing and not for release. **Buying the certificate is still the open item** (§7): EV clears
+SmartScreen immediately, OV builds reputation over time.
+
+`vpk` is a global tool, installed once with `dotnet tool install -g vpk`.
+
 ## 6. Suggested order
 
 Each phase leaves the tree shippable, and WPF stays the Windows product until phase 6. There is
@@ -241,17 +295,18 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
    shell composition, and catalog keys. The showcase pipeline is still unported.
 4. **Design system.** Port the palettes and the v3 primitives, then the screens in the order they are
    used: shell → settings → account. Heat dots come free once the palette exists.
-5. **Distribution.** Installer, code-signing certificate, and an update mechanism — all three are new
-   work that MSIX used to cover. Retire the wapproj and the Store submission scripts.
+5. ~~**Distribution.**~~ **Done** (§5b), except the certificate: publish/sign/zip script, Velopack
+   installer and updater, verified by installing and uninstalling. Retiring the wapproj and the
+   Store submission scripts is left until the cutover actually happens.
 6. **Cut over.** Ship the Avalonia build to Windows, keep `Daynote.App` in the tree for one release
    as a fallback, then delete it and fold `Daynote.Desktop` back into a single app project.
 
 ## 7. Still open
 
-- **Update mechanism.** Velopack, Squirrel, or a homegrown "check and download" — this is the
-  largest thing MSIX was doing for free, and it gates the cutover.
-- **Signing certificate.** OV or EV, and who holds it. EV clears SmartScreen immediately; OV builds
-  reputation over time.
+- **Signing certificate.** OV or EV, and who holds it — the last thing between the current build
+  and a releasable one. EV clears SmartScreen immediately; OV builds reputation over time.
+- **Where the update feed lives.** `Program.UpdateFeedUrl` is empty, so the updater is inert. It
+  wants a static URL serving what `vpk pack` writes into `artifacts/win-releases`.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
 - **Does the cutover wait for full parity, or ship in stages?** Two unpackaged shells in the wild

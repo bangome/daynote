@@ -121,6 +121,11 @@ public partial class App : Application
                 await account.InitializeAsync().ConfigureAwait(true);
             }
 
+            // Look for a newer build in the background. Deliberately not awaited and never surfaced:
+            // it downloads, stages, and the next start runs it. Nothing about writing a note should
+            // wait on, or be interrupted by, an update (Platform/WindowsUpdateService.cs).
+            _ = _provider.GetRequiredService<Platform.IUpdateService>().CheckAndStageAsync();
+
             // First-run tutorial: shown once, then only from Settings.
             if (shell.Tutorial is { } tutorial)
             {

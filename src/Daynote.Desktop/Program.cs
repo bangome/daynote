@@ -12,9 +12,21 @@ internal static class Program
 
     // Nothing Avalonia-dependent may run before the AppBuilder starts; the single-instance handshake is
     // plain sockets and a lock file, so it is safe here and keeps a second launch from ever painting.
+    /// <summary>Where the updater looks for releases. Empty in a build with no feed configured.</summary>
+    internal const string UpdateFeedUrl = "";
+
     [STAThread]
     public static int Main(string[] args)
     {
+        // FIRST, before anything else runs. Velopack's hooks are command-line flags the installer and
+        // the updater pass to this executable: --veloapp-install and friends do their work and exit,
+        // and doing so after the single-instance claim would make an install look like a second
+        // launch and quietly do nothing.
+        if (OperatingSystem.IsWindows())
+        {
+            Velopack.VelopackApp.Build().Run();
+        }
+
         SingleInstance = SingleInstanceCoordinator.ForCurrentUserOnThisPlatform(InstanceBaseName);
         if (SingleInstance.Start() == SingleInstanceRole.Secondary)
         {

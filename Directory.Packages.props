@@ -23,5 +23,9 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <!-- Headless rendering for the Avalonia UI tests; never referenced by the app itself. -->
     <PackageVersion Include="Avalonia.Headless" Version="12.1.2" />
+    <!-- Velopack: the Windows installer and the auto-updater the Store used to provide
+         (docs/WINDOWS_ON_AVALONIA.md §5). Windows-only in practice; the Mac bundle is signed and
+         notarized instead. -->
+    <PackageVersion Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 </Project>

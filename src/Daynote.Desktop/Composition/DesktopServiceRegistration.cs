@@ -79,6 +79,7 @@ public static class DesktopServiceRegistration
 
         services.AddSingleton<IStartupTaskService>(_ => new MsixStartupTaskService(CreateStartupGateway()));
         services.AddSingleton<IGlobalHotkeyService>(_ => CreateHotkeyService());
+        services.AddSingleton<IUpdateService>(_ => CreateUpdateService());
         services.AddSingleton(sp => new ConfigurableShortcuts(sp.GetRequiredService<ISettingsStore>()));
         services.AddSingleton<Core.Backup.IBackupService>(
             new Infrastructure.Backup.BackupService(options.DataRoot, options.DatabasePath));
@@ -171,6 +172,15 @@ public static class DesktopServiceRegistration
         {
         }
     }
+
+    /// <summary>
+    /// The updater. Windows only: the Mac bundle is signed and notarized and updates by download,
+    /// and a build with no feed configured gets the do-nothing one either way.
+    /// </summary>
+    private static IUpdateService CreateUpdateService() =>
+        OperatingSystem.IsWindows() && Program.UpdateFeedUrl.Length > 0
+            ? new WindowsUpdateService(Program.UpdateFeedUrl)
+            : new NoUpdateService();
 
     private static IGlobalHotkeyService CreateHotkeyService()
     {
