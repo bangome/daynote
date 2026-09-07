@@ -26,6 +26,13 @@
   -->
   <StreamGeometry x:Key="Daynote.Geo.Person">M8,2.6 a2.9,2.9 0 1 1 0,5.8 a2.9,2.9 0 1 1 0,-5.8 Z M2.6,13.9 a5.4,4.1 0 0 1 10.8,0</StreamGeometry>
 
+  <!-- Editor-card actions. Star is a closed outline so it can be filled when the note is a
+       favourite; the rest are stroked line drawings like everything else here. -->
+  <StreamGeometry x:Key="Daynote.Geo.Star">M6,0.8 L7.5,4.2 L11.2,4.6 L8.4,7 L9.2,10.7 L6,8.8 L2.8,10.7 L3.6,7 L0.8,4.6 L4.5,4.2 Z</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Geo.StickyNote">M2,1.5 H14 V10.5 L10.5,14 H2 Z M14,10.5 H10.5 V14 M5,5 H11 M5,8 H9</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Geo.Trash">M2,3.5 h10 M5.5,3.5 V2 h3 v1.5 M3.5,3.5 l0.7,8.5 h5.6 l0.7,-8.5 M5.8,6 v4 M8.2,6 v4</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Geo.Plus">M5,0.5 L5,9.5 M0.5,5 L9.5,5</StreamGeometry>
+
   <!-- Chevron for the account strip: shallower than a 45-degree caret so it reads as "opens upward"
        rather than as an arrow. -->
   <StreamGeometry x:Key="Daynote.Geo.ChevronUp">M3.5,9.5 L8,5.5 L12.5,9.5</StreamGeometry>

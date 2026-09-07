@@ -109,6 +109,15 @@
     <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
   </Style>
+  <!--
+    The day number follows the cell's Foreground instead of inheriting it. The global TextBlock rule
+    above sets Foreground on every TextBlock, which outranks inheritance - so the selected, Sunday and
+    Saturday colours were all being set on the button and never reaching the digits. Measured on the
+    selected cell: the ink was #1A2877 on a #0067C0 fill, not the on-accent white it was meant to be.
+  -->
+  <Style Selector="Button.day TextBlock">
+    <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+  </Style>
 
   <!-- Calendar day heat dot (v3.1), matching the WPF Daynote.Product.Style.Calendar.HeatDot:
        GitHub-contribution style, light sky / sky / blue for 1, 2 and 3+ notes, with extras alone
@@ -205,6 +214,72 @@
     <Setter Property="Stretch" Value="Uniform" />
     <Setter Property="Width" Value="17" />
     <Setter Property="Height" Value="17" />
+  </Style>
+
+  <!-- Editor-card action: a 30px ghost square, smaller and quieter than the title-bar `icon` because
+       it sits beside the note title rather than in the chrome. -->
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="Button.ghost /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.ghost Path">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+    <Setter Property="StrokeThickness" Value="1.3" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Fill" Value="{x:Null}" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+  </Style>
+  <!-- The favourite star: an outline until it is one, then filled in the extras amber. -->
+  <Style Selector="Button.ghost.favorite">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Extras}" />
+  </Style>
+  <Style Selector="Button.ghost.favorite Path">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Extras}" />
+  </Style>
+
+  <!--
+    The tag entry, which flows straight after the last chip rather than sitting in a pill of its own.
+    Borderless and muted so the row reads as "these are the tags, and here is where you add one";
+    Avalonia draws PlaceholderText itself, so it needs none of the watermark scaffolding the WPF
+    version carries.
+  -->
+  <Style Selector="TextBox.tagentry">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="2,0" />
+    <Setter Property="MinHeight" Value="22" />
+    <Setter Property="Width" Value="96" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <Style Selector="TextBox.tagentry /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.tagentry:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.tagentry:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
 
   <!-- The account strip at the foot of the left column: a full-width row, not a chip, so it reads as

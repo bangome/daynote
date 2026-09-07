@@ -173,23 +173,52 @@
       <Border Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
               IsVisible="{Binding IsEditorMode}">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
-          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
-            <Button Grid.Column="0" Classes="quiet" FontSize="15" Padding="6,2" Margin="0,0,8,0"
-                    Command="{Binding ToggleFavoriteCommand}" ToolTip.Tip="{Binding Strings.Favorite}" IsVisible="{Binding HasOpenNote}"
-                    Content="{Binding Notes.SelectedTab.IsFavorite, Converter={x:Static views:Glyphs.Star}, FallbackValue=☆}"
-                    Foreground="{DynamicResource Daynote.Product.Brush.Extras}" />
-            <TextBlock Grid.Column="1" Classes="h1" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-            <TextBlock Grid.Column="2" Classes="muted" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,10,0"
+          <!--
+            Title first, actions gathered at the right. The favourite used to sit to the LEFT of the
+            title, which pushed the heading off the card's edge and put a toggle where a label belongs;
+            it is an action, so it goes with the actions.
+
+            The marks are the shared line icons rather than the emoji and arrows this row used to mix
+            (✕ 📌 ↻ and a ☆/★ pair): those come from different fonts, so they never matched each other
+            in weight or baseline. Retry stays a worded button — it appears only when a save has
+            failed, and that is not a moment to make someone decode a glyph.
+          -->
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
+            <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+
+            <TextBlock Grid.Column="1" Classes="muted" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"
                        Text="{Binding Notes.SaveStatusDisplay}" IsVisible="{Binding Notes.HasSaveStatus}" />
-            <Button Grid.Column="3" Classes="quiet" Content="↻" FontSize="12" Command="{Binding Notes.RetryCommand}" IsVisible="{Binding Notes.HasSaveError}" />
-            <Button Grid.Column="4" Classes="quiet" Content="📌" FontSize="12" Command="{Binding OpenStickyCommand}" IsVisible="{Binding HasOpenNote}"
-                    ToolTip.Tip="{Binding Strings.OpenStickyNote}" />
-            <Button Grid.Column="5" Classes="quiet" Content="✕" FontSize="12" Command="{Binding DeleteSelectedNoteCommand}" IsVisible="{Binding HasOpenNote}" />
+            <Button Grid.Column="2" Classes="quiet" FontSize="11.5" Padding="9,4" Margin="0,0,4,0"
+                    Content="{Binding Strings[RetrySave]}" Command="{Binding Notes.RetryCommand}"
+                    IsVisible="{Binding Notes.HasSaveError}" />
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center"
+                        IsVisible="{Binding HasOpenNote}">
+              <Button Classes="ghost" Classes.favorite="{Binding Notes.SelectedTab.IsFavorite, FallbackValue=False}"
+                      Command="{Binding ToggleFavoriteCommand}"
+                      ToolTip.Tip="{Binding Strings.Favorite}" AutomationProperties.Name="{Binding Strings.Favorite}">
+                <Path Data="{StaticResource Daynote.Geo.Star}" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding OpenStickyCommand}"
+                      ToolTip.Tip="{Binding Strings.OpenStickyNote}"
+                      AutomationProperties.Name="{Binding Strings.OpenStickyNote}">
+                <Path Data="{StaticResource Daynote.Geo.StickyNote}" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding DeleteSelectedNoteCommand}"
+                      ToolTip.Tip="{Binding Strings[DeleteNoteTip]}"
+                      AutomationProperties.Name="{Binding Strings[DeleteNoteTip]}">
+                <Path Data="{StaticResource Daynote.Geo.Trash}" />
+              </Button>
+            </StackPanel>
           </Grid>
 
-          <!-- Tags: chips plus an inline entry that commits on Enter. -->
-          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" IsVisible="{Binding HasOpenNote}">
+          <!--
+            Tags: the chips and the entry in one wrapping row, so "add a tag" reads as the end of the
+            list instead of a separate pill input parked beside it. That was the design all along; the
+            entry here was a fixed-width bordered box that wrapped as a block of its own.
+          -->
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" IsVisible="{Binding HasOpenNote}">
             <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -207,9 +236,10 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBox x:Name="TagBox" Classes="inline" Width="150" Margin="0,0,0,6" PlaceholderText="{Binding Strings.TagAddPlaceholder}"
+            <TextBox x:Name="TagBox" Classes="tagentry" Margin="0,0,0,6" VerticalAlignment="Center"
+                     PlaceholderText="{Binding Strings.TagAddPlaceholder}"
                      Text="{Binding TagInput}" KeyDown="OnTagBoxKeyDown" />
-          </StackPanel>
+          </WrapPanel>
 
           <Grid Grid.Row="2">
             <TextBox x:Name="Editor" Classes="editor" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top"
