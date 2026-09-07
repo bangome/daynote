@@ -31,5 +31,8 @@
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.png" Link="Assets\daynote-favicon-v1.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
+    <!-- The English wordmark, so an English build does not show a Korean logo (BrandLogos). -->
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-trimmed.png" Link="Assets\daynote-logo-en-trimmed.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-dark-trimmed.png" Link="Assets\daynote-logo-en-dark-trimmed.png" />
   </ItemGroup>
 </Project>

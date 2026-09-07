@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:account="using:Daynote.App.Account"
+             xmlns:vm="using:Daynote.Desktop.ViewModels"
+             x:Class="Daynote.Desktop.Views.AccountBar"
+             x:Name="Root"
+             x:DataType="vm:DesktopShellViewModel">
+  <!--
+    The account strip at the foot of the left column, and the menu it opens: account, theme, settings.
+
+    It replaces the row of title-bar buttons. The title bar is now the brand and the window controls;
+    the things that are about *this user* rather than about the notes on screen live down here, out of
+    the way of the work.
+
+    Bound to the shell, not to the account, unlike the title-bar control it grew out of. That is what
+    lets it render at all in a build with no sync endpoint: `Account` is null there, and the strip
+    still has to offer theme and settings.
+
+    Everything that reaches into the account sits inside a ContentControl bound to it, so those
+    bindings are evaluated against an account or not at all. A FallbackValue would have supplied a
+    value and still logged a binding error on every launch of an endpoint-less build; the headless
+    test for that case is what caught it.
+  -->
+  <Button x:Name="Toggle" Classes="accountbar"
+          AutomationProperties.Name="{Binding Strings[AccountMenuAutomation]}">
+    <Grid ColumnDefinitions="Auto,*,Auto">
+      <Panel Grid.Column="0" Width="28" Height="28">
+        <!-- Signed in: the accent disc with the address's first letter, and the sync dot. -->
+        <ContentControl Content="{Binding Account}" IsVisible="{Binding AccountBarShowsAvatar}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="account:AccountViewModel">
+              <Panel ToolTip.Tip="{Binding AvatarTooltip}">
+                <Border Width="28" Height="28" CornerRadius="14"
+                        Background="{DynamicResource Daynote.Product.Brush.Accent}">
+                  <TextBlock Text="{Binding AvatarInitial}" FontSize="12.5" FontWeight="Bold"
+                             Foreground="{DynamicResource Daynote.Product.Brush.OnAccent}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Ellipse Classes="syncdot" Classes.settled="{Binding Status.IsSettled}"
+                         Classes.working="{Binding Status.IsWorking}"
+                         Classes.attention="{Binding Status.NeedsAttention}" />
+              </Panel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+        <!-- Signed out, or no account at all: a person outline. No state to report, so no dot. -->
+        <Path IsVisible="{Binding !AccountBarShowsAvatar}" Width="19" Height="19"
+              Data="{StaticResource Daynote.Geo.Person}"
+              HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Panel>
+
+      <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="1">
+        <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                   Text="{Binding AccountBarTitle}" />
+        <TextBlock Classes="muted" FontSize="10.5" TextTrimming="CharacterEllipsis"
+                   Text="{Binding AccountBarSubtitle}"
+                   IsVisible="{Binding AccountBarSubtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+
+      <Path Grid.Column="2" Width="13" Height="13" Margin="6,0,0,0" VerticalAlignment="Center"
+            Data="{StaticResource Daynote.Geo.ChevronUp}" />
+    </Grid>
+
+    <Button.Flyout>
+      <Flyout Placement="TopEdgeAlignedLeft" HorizontalOffset="-6">
+        <Border Width="268" Padding="8" CornerRadius="12"
+                Background="{DynamicResource Daynote.Product.Brush.Card}"
+                BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+          <StackPanel Spacing="2">
+            <!-- Who, and what sync is doing. Only when there is an account to report on. -->
+            <ContentControl Content="{Binding Account}" IsVisible="{Binding AccountBarShowsAvatar}">
+              <ContentControl.ContentTemplate>
+                <DataTemplate x:DataType="account:AccountViewModel">
+                  <StackPanel Spacing="8" Margin="4,4,4,8">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="12.5"
+                                 TextTrimming="CharacterEllipsis" Text="{Binding DisplayName}" />
+                      <Border Grid.Column="1" Classes="chip" Margin="8,0,0,0" Padding="9,2">
+                        <TextBlock Text="{Binding PlanBadge}" FontSize="10.5" />
+                      </Border>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Ellipse Grid.Column="0" Classes="syncdot flat"
+                               Classes.settled="{Binding Status.IsSettled}"
+                               Classes.working="{Binding Status.IsWorking}"
+                               Classes.attention="{Binding Status.NeedsAttention}" />
+                      <StackPanel Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Status.Label}" FontSize="11.5" FontWeight="SemiBold" />
+                        <TextBlock Classes="muted" Text="{Binding LastSyncText}" FontSize="10.5" />
+                      </StackPanel>
+                      <Button Grid.Column="2" Classes="quiet" FontSize="11" Padding="8,3" Margin="6,0,0,0"
+                              VerticalAlignment="Center"
+                              Content="{Binding #Root.Strings[AccountSyncNow]}"
+                              AutomationProperties.Name="{Binding #Root.Strings[AccountSyncNow]}"
+                              Command="{Binding SyncCommand}" IsEnabled="{Binding !IsBusy}" />
+                    </Grid>
+                    <Rectangle Height="1" Fill="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ContentControl.ContentTemplate>
+            </ContentControl>
+
+            <!-- Account. Signed out it says sign in, and it is absent when the build has no endpoint
+                 to sign in to — the other two rows still work. -->
+            <Button Classes="menurow" Click="OnOpenAccount" IsVisible="{Binding HasAccount}"
+                    AutomationProperties.Name="{Binding AccountBarMenuLabel}">
+              <Grid ColumnDefinitions="Auto,*">
+                <Path Grid.Column="0" Data="{StaticResource Daynote.Geo.Person}" />
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding AccountBarMenuLabel}" />
+              </Grid>
+            </Button>
+
+            <Button Classes="menurow" Click="OnToggleTheme" AutomationProperties.Name="{Binding Strings.ThemeToggle}">
+              <Grid ColumnDefinitions="Auto,*">
+                <!-- The mark shows what the click gives you, not the state you are in: a moon in the
+                     light theme, a sun in the dark one. -->
+                <Path Grid.Column="0" Data="{StaticResource Daynote.Geo.Moon}" IsVisible="{Binding !IsDark}" />
+                <Path Grid.Column="0" Data="{StaticResource Daynote.Geo.Sun}" IsVisible="{Binding IsDark}" />
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding Strings.ThemeToggle}" />
+              </Grid>
+            </Button>
+
+            <Button Classes="menurow" Click="OnOpenSettings" AutomationProperties.Name="{Binding Strings.Settings}">
+              <Grid ColumnDefinitions="Auto,*">
+                <Path Grid.Column="0" Data="{StaticResource Daynote.Geo.Settings}" />
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding Strings.Settings}" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Border>
+      </Flyout>
+    </Button.Flyout>
+  </Button>
+</UserControl>

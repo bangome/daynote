@@ -134,7 +134,26 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     public bool HasAccount => Account is not null;
 
-    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? value) => OnPropertyChanged(nameof(HasAccount));
+    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasAccount));
+        RefreshAccountBar();
+
+        // The strip mirrors the account's own state, so it has to follow the account's notifications
+        // as well as its arrival. Without this the headline stays on "Sign in" after a sign-in.
+        if (value is not null)
+        {
+            value.PropertyChanged += (_, _) => RefreshAccountBar();
+        }
+    }
+
+    private void RefreshAccountBar()
+    {
+        OnPropertyChanged(nameof(AccountBarTitle));
+        OnPropertyChanged(nameof(AccountBarShowsAvatar));
+        OnPropertyChanged(nameof(AccountBarSubtitle));
+        OnPropertyChanged(nameof(AccountBarMenuLabel));
+    }
 
     [ObservableProperty]
     private bool _isAccountOpen;
@@ -171,6 +190,39 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     public string ThemeGlyph => IsDark ? "☀" : "☾";
 
+    /// <summary>
+    /// The account strip's headline: who is signed in, or the way to sign in, or — in a build with
+    /// no sync endpoint — what is actually true about where the notes live.
+    /// </summary>
+    public string AccountBarTitle => Account switch
+    {
+        { IsSignedIn: true } account => account.DisplayName,
+        not null => AppStrings.AccountBarSignIn,
+        null => AppStrings.AccountBarLocal,
+    };
+
+    /// <summary>The sync state under the headline, or empty when there is nothing to report.</summary>
+    public string AccountBarSubtitle =>
+        Account is { IsSignedIn: true, Status.IsVisible: true } account ? account.Status.Label : string.Empty;
+
+    /// <summary>
+    /// Whether the strip has an identity to draw. It gates the parts that reach into the account, so
+    /// those bindings are never evaluated against a null one — a <c>FallbackValue</c> supplies a value
+    /// but still logs a binding error, and in a build with no sync endpoint that is every launch.
+    /// </summary>
+    public bool AccountBarShowsAvatar => Account is { IsSignedIn: true };
+
+    /// <summary>The account row in the strip's menu: manage it, or sign in.</summary>
+    public string AccountBarMenuLabel =>
+        Account is { IsSignedIn: true } ? AppStrings.AccountManage : AppStrings.AccountBarSignIn;
+
+    /// <summary>
+    /// The titlebar wordmark, which depends on both the theme (the ink has to contrast with the
+    /// ground) and the language (the lockup carries the product name).
+    /// </summary>
+    public Avalonia.Media.Imaging.Bitmap BrandLogo =>
+        Views.BrandLogos.For(Daynote.App.Localization.LocalizationService.Instance.Language, IsDark);
+
     /// <summary>Catalog strings the window binds to; refreshed wholesale on a language switch.</summary>
     public AppStringsProxy Strings => AppStringsProxy.Instance;
 
@@ -188,6 +240,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     {
         _themeApplier.Apply(value);
         OnPropertyChanged(nameof(ThemeGlyph));
+        OnPropertyChanged(nameof(BrandLogo));
         if (!_loading)
         {
             _ = _settings.SetAsync(ThemeKey, value ? "dark" : "light");
@@ -452,7 +505,12 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         OnPropertyChanged(nameof(HasOpenNote));
     }
 
-    void ILanguageAware.OnLanguageChanged() => RefreshHeader();
+    void ILanguageAware.OnLanguageChanged()
+    {
+        RefreshHeader();
+        RefreshAccountBar();
+        OnPropertyChanged(nameof(BrandLogo));
+    }
 
     public async ValueTask DisposeAsync()
     {

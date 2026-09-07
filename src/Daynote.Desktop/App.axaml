@@ -7,6 +7,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Daynote.Desktop/Themes/Daynote.Product.axaml" />
+        <ResourceInclude Source="avares://Daynote.Desktop/Themes/Daynote.Icons.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

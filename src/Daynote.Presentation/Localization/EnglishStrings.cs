@@ -411,6 +411,8 @@ internal static class EnglishStrings
         ["SyncChipUnpaid"] = "Files: subscription needed",
         ["AccountSignOut"] = "Sign out",
         ["AccountSyncNow"] = "Sync now",
+        ["AccountBarSignIn"] = "Sign in",
+        ["AccountBarLocal"] = "Saved on this PC",
         ["AccountBusy"] = "Working…",
         // {0} = the signed-in email address.
         ["AccountSignedInAsFormat"] = "Signed in as {0}",

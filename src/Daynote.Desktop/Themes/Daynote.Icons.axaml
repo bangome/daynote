@@ -1,0 +1,24 @@
+<!--
+  Line icons, transcribed from the WPF Daynote.Product.Styles.xaml geometries so both shells draw the
+  same marks. Each is authored on a 16x16 box (the calendar on 20x20) and stroked, not filled, which
+  is why every consumer sets Stroke and leaves Fill null.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StreamGeometry x:Key="Daynote.Geo.Search">M7,2.5 A4.5,4.5 0 1 0 7.01,2.5 M10.5,10.5 L14,14</StreamGeometry>
+
+  <!-- Today: a calendar leaf. Drawn on 20x20, so it is scaled by its Viewbox like the others. -->
+  <StreamGeometry x:Key="Daynote.Geo.Today">M2,3 h16 v15 h-16 Z M2,7.5 L18,7.5 M6.5,1.5 L6.5,4.5 M13.5,1.5 L13.5,4.5</StreamGeometry>
+
+  <!-- Timeline: stacked list rows, each a bullet dot plus a line, reading as a vertical feed. -->
+  <StreamGeometry x:Key="Daynote.Geo.Timeline">M2,2.5 h1 M5.5,2.5 H14 M2,8 h1 M5.5,8 H14 M2,13.5 h1 M5.5,13.5 H14</StreamGeometry>
+
+  <StreamGeometry x:Key="Daynote.Geo.Settings">M1.5,3.5 H14.5 M1.5,8 H14.5 M1.5,12.5 H14.5 M3,3.5 a2,2 0 1 0 4,0 a2,2 0 1 0 -4,0 M9,8 a2,2 0 1 0 4,0 a2,2 0 1 0 -4,0 M4,12.5 a2,2 0 1 0 4,0 a2,2 0 1 0 -4,0</StreamGeometry>
+
+  <StreamGeometry x:Key="Daynote.Geo.Moon">M13.5,9.5 A5.8,5.8 0 1 1 6.5,2.5 A4.6,4.6 0 0 0 13.5,9.5 Z</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Geo.Sun">M8,4.6 A3.4,3.4 0 1 0 8.01,4.6 M8,0.8 L8,2.6 M8,13.4 L8,15.2 M0.8,8 L2.6,8 M13.4,8 L15.2,8 M2.9,2.9 L4.2,4.2 M11.8,11.8 L13.1,13.1 M2.9,13.1 L4.2,11.8 M11.8,4.2 L13.1,2.9</StreamGeometry>
+
+  <StreamGeometry x:Key="Daynote.Geo.Person">M8,7.4 a2.6,2.6 0 1 0 0.01,0 M2.9,14.3 a5.2,4.2 0 0 1 10.2,0</StreamGeometry>
+
+  <StreamGeometry x:Key="Daynote.Geo.ChevronUp">M3,10 L8,5 L13,10</StreamGeometry>
+</ResourceDictionary>

@@ -169,6 +169,95 @@
     <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Warn}" />
   </Style>
 
+  <!-- Square icon button for the toolbar: the mark carries the meaning, the label moves to the
+       tooltip. `selected` is for a toggle that is currently on (timeline), and reads as a filled
+       accent-soft chip rather than a border, so it cannot be confused with focus. -->
+  <Style Selector="Button.icon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.icon.selected">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.AccentSoft}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.icon.selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.AccentSoft}" />
+  </Style>
+  <!-- The mark inherits the button's Foreground, so hover and selected reach it without a second
+       rule per state. Stroked, never filled: every geometry in Daynote.Icons.axaml is a line drawing. -->
+  <Style Selector="Button.icon Path">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+    <Setter Property="StrokeThickness" Value="1.4" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Fill" Value="{x:Null}" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Width" Value="17" />
+    <Setter Property="Height" Value="17" />
+  </Style>
+
+  <!-- The account strip at the foot of the left column: a full-width row, not a chip, so it reads as
+       part of the sidebar rather than a floating control. -->
+  <Style Selector="Button.accountbar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <!-- The resting state has to be set on the ContentPresenter, not just on the button: the Fluent
+       template paints its own ButtonBackground there, which outranks a Background on the button and
+       left the strip sitting in a grey slab. Measured, not assumed — #E9E9EA against a #F4F4F5 page. -->
+  <Style Selector="Button.accountbar /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.accountbar:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.accountbar Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="StrokeThickness" Value="1.4" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="Fill" Value="{x:Null}" />
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+
+  <!-- A row inside the account menu: icon, label, full width, quiet until hovered. -->
+  <Style Selector="Button.menurow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <Style Selector="Button.menurow:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.menurow Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="StrokeThickness" Value="1.4" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="Fill" Value="{x:Null}" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+  </Style>
+
   <!-- Note list row. -->
   <Style Selector="Button.noterow">
     <Setter Property="Background" Value="Transparent" />

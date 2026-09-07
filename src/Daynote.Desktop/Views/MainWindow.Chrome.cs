@@ -64,7 +64,9 @@ public partial class MainWindow
         WindowDecorationProperties.SetElementRole(CloseButton, WindowDecorationsElementRole.CloseButton);
 
         // Without this the title-bar hit test eats every click in the strip.
-        foreach (Control control in new Control[] { BrandArea, SearchArea, ActionsArea })
+        // Only the brand is left in the strip. Search and the view switches moved onto the body's
+        // toolbar, which is ordinary client area and needs no role at all.
+        foreach (Control control in new Control[] { BrandArea })
         {
             WindowDecorationProperties.SetElementRole(control, WindowDecorationsElementRole.User);
         }

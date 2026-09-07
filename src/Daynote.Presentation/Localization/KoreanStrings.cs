@@ -402,6 +402,8 @@ internal static class KoreanStrings
         ["SyncChipUnpaid"] = "파일 동기화: 구독 필요",
         ["AccountSignOut"] = "로그아웃",
         ["AccountSyncNow"] = "지금 동기화",
+        ["AccountBarSignIn"] = "로그인",
+        ["AccountBarLocal"] = "이 PC에만 저장",
         ["AccountBusy"] = "처리 중…",
         // {0} = the signed-in email address.
         ["AccountSignedInAsFormat"] = "{0} 계정으로 로그인됨",

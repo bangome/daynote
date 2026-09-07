@@ -396,6 +396,15 @@ public static class AppStrings
     public static string SyncChipUnpaid => LocalizationService.Instance[nameof(SyncChipUnpaid)];
     public static string AccountSignOut => LocalizationService.Instance[nameof(AccountSignOut)];
     public static string AccountSyncNow => LocalizationService.Instance[nameof(AccountSyncNow)];
+
+    /// <summary>The account strip when signed out, and its menu row.</summary>
+    public static string AccountBarSignIn => LocalizationService.Instance[nameof(AccountBarSignIn)];
+
+    /// <summary>
+    /// The account strip in a build with no sync endpoint. It says what is true rather than
+    /// offering a sign-in there is nothing to sign in to.
+    /// </summary>
+    public static string AccountBarLocal => LocalizationService.Instance[nameof(AccountBarLocal)];
     public static string AccountBusy => LocalizationService.Instance[nameof(AccountBusy)];
     /// <summary>{0} = the signed-in email address.</summary>
     public static string AccountSignedInAsFormat => LocalizationService.Instance[nameof(AccountSignedInAsFormat)];
