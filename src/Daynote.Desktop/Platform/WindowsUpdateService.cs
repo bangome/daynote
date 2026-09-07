@@ -22,10 +22,15 @@ public sealed class NoUpdateService : IUpdateService
 }
 
 /// <summary>
-/// The Windows auto-updater, replacing what the Microsoft Store used to do
-/// (docs/WINDOWS_ON_AVALONIA.md §5).
+/// The Windows auto-updater for an unpackaged install — what the Microsoft Store does for the
+/// packaged one (docs/WINDOWS_ON_AVALONIA.md §5b).
 /// </summary>
 /// <remarks>
+/// <para>
+/// Not on the shipping path today: §3 settled on the Store for Windows, so this is the updater for a
+/// channel that is built and parked. It is inert until <c>Program.UpdateFeedUrl</c> is filled in, and
+/// inert in a packaged build regardless, because <c>manager.IsInstalled</c> is false there.
+/// </para>
 /// Downloads in the background and applies on the next start, rather than restarting under the user.
 /// This is a note-taking app that people leave open for days; interrupting it to install something
 /// they did not ask for is worse than waiting for the next launch.

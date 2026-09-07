@@ -3,9 +3,14 @@
   Builds the unpackaged Windows app from src/Daynote.Desktop.
 
 .DESCRIPTION
-  The Windows counterpart of Build-MacApp.sh, and the first half of the unpackaged distribution
-  decided in docs/WINDOWS_ON_AVALONIA.md §3: a self-contained folder with the .NET runtime inside,
+  The Windows counterpart of Build-MacApp.sh: a self-contained folder with the .NET runtime inside,
   so there is nothing for the user to install first, plus a zip of it.
+
+  NOT the shipping channel. docs/WINDOWS_ON_AVALONIA.md §3 settled on the Microsoft Store for
+  Windows, because the Store re-signs at ingestion and there is no code-signing certificate to buy.
+  This script exists so that decision stays reversible: it is kept working and unshipped, and it is
+  the mechanism macOS uses. Turning the unpackaged channel on means buying a certificate and filling
+  in Program.UpdateFeedUrl - not writing code.
 
   Self-contained and NOT single-file, for the same reason as the Mac bundle: Daynote.Mcp ships beside
   the app and a client has to be able to launch it by path. Single-file would bury it in a temp
@@ -18,8 +23,8 @@
     DAYNOTE_SIGN_PFX          path to a .pfx, with DAYNOTE_SIGN_PFX_PASSWORD
 
   With neither set the output is unsigned, which runs here and shows SmartScreen elsewhere — the
-  same trade-off as an ad-hoc signed Mac bundle. An unsigned build is fine for testing and is not
-  fine for release; see §7 of the plan, where the certificate is still an open question.
+  same trade-off as an ad-hoc signed Mac bundle. That is acceptable precisely because this is not the
+  shipping channel; a real unpackaged release would need the certificate first.
 
 .EXAMPLE
   scripts/Build-WindowsApp.ps1

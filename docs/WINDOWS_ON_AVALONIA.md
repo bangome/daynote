@@ -120,26 +120,48 @@ A summon that reveals a window without focusing it is the kind of thing that rea
 screenshot and is useless in practice — which is the argument for exercising each of these rather
 than trusting that they compile.
 
-## 3. Packaging — decided: unpackaged installer
+## 3. Packaging — decided: Store on Windows, unpackaged on macOS
 
-**Decision (2026-09-07): Windows ships as an unpackaged installer, not MSIX.** MSIX and the Store
-listing are retired with the WPF shell.
+**Decision (2026-09-07, revised): Windows keeps shipping as MSIX through the Microsoft Store. The
+unpackaged installer built in §5b serves macOS, and stays parked as a ready Windows fallback.**
 
-What that settles, and what it costs:
+This reverses the earlier decision in this same section, and the reason is code signing. An
+unpackaged Windows release needs an OV or EV certificate bought, renewed and held by someone;
+without one every download raises SmartScreen. The Store re-signs at ingestion, so that cost
+disappears — along with the auto-updater, the install base and the listing, all of which the
+unpackaged route would have had to rebuild or abandon.
 
-| | Effect |
+**What this changes about the consolidation: nothing structural.** The Avalonia `Daynote.Desktop` is
+the app either way; MSIX is a wrapper around whatever executable it points at. The cutover (phase 6)
+repoints `packaging/Daynote.Package` from `Daynote.App` to `Daynote.Desktop` instead of retiring it.
+
+| | Effect of staying on the Store |
 |---|---|
-| Login item | `WindowsRunKeyStartupTaskGateway` is the right implementation, not dead code. It cannot tell that a user disabled the entry in Task Manager, so `SettingsStartupDisabledByUserText` ("turned off in Windows startup app settings") no longer applies on Windows and the copy needs revisiting |
-| MCP registration | **Simpler.** The MSIX alias exists only because the real executable sits under `%ProgramFiles%\WindowsApps`, whose ACLs a client process cannot traverse. An unpackaged build registers its own path |
-| Store policy | `docs/STORE.md` §10.8 (third-party commerce, trial disclosure, Partner Center declarations) stops applying. Paddle checkout is unconstrained |
-| Auto-update | **Gone, and has to be rebuilt.** The Store did this. Without a replacement (Velopack, Squirrel, or a homegrown check) users are on manual reinstall |
-| Code signing | An unsigned `.exe` raises SmartScreen on every download. An OV or EV certificate is now required, where the Store previously re-signed at ingestion |
-| Listing, ratings, install base | Not carried over |
+| Login item | `MsixStartupTaskService` stays the Windows implementation. `WindowsRunKeyStartupTaskGateway` is not dead code — it is the fallback path, and it is tested (§2) |
+| MCP registration | The app-execution alias is still required: the real executable sits under `%ProgramFiles%\WindowsApps`, whose ACLs a client process cannot traverse. `McpServerCommand` already picks the alias when `Package.Current` resolves |
+| Store policy | `docs/STORE.md` §10.8 keeps applying — third-party commerce, trial disclosure, Partner Center declarations. Paddle checkout stays inside those rules |
+| Auto-update | The Store keeps doing it. `WindowsUpdateService` returns immediately in a packaged build (`manager.IsInstalled` is false), so it costs nothing but its assembly |
+| Code signing | **The reason for the decision.** No certificate to buy for the shipping channel |
+| Listing, ratings, install base | Carried over intact |
+
+### Why not run both channels
+
+They can coexist technically — `McpServerCommand.IsPackaged()` already proves a single binary can
+detect which one it is in, and both `IStartupTaskGateway` and `IUpdateService` implementations exist.
+The blocker is not the build. It is that **a packaged app's named kernel objects live in its own
+namespace**, so the single-instance mutex is invisible from outside the package (§2). A user with
+both channels installed can run both at once against the same `%LocalAppData%\Daynote` database, and
+neither process notices the other. One channel, no hazard.
+
+So the unpackaged Windows artefacts stay buildable and unshipped: `scripts/Build-WindowsApp.ps1`
+still works, `Program.UpdateFeedUrl` stays empty, and nothing publishes a feed. Turning the channel
+on later means buying a certificate and filling in that URL — not writing code.
 
 ### 3.1 The data path — checked, and there is no migration to write
 
-The obvious worry with leaving MSIX is that Store users' notes are locked inside the package's
-private store. **Measured on 2026-09-07: they are not.** The packaged build writes to the same real
+Kept because it is what makes the fallback in §3 a real option, and because it corrects three files
+that say otherwise. The worry with ever leaving MSIX is that Store users' notes are locked inside the
+package's private store. **Measured on 2026-09-07: they are not.** The packaged build writes to the same real
 folder an unpackaged build reads, so switching installers does not strand anyone's data and no
 import step is needed.
 
@@ -169,8 +191,9 @@ What survives from the original worry:
 
 - The **uninstall** question above. Until it is answered, the cutover release should still prompt for
   a Backup on first run — cheap, and it covers the case where the claim turns out to be right.
-- Whichever installer is chosen must keep writing to `%LocalAppData%\Daynote`. Changing the location
-  is what would actually strand data, and there is now no reason to.
+- Both channels must keep writing to `%LocalAppData%\Daynote`. Changing the location is what would
+  actually strand data, and there is now no reason to. Staying on the Store also means the
+  cutover moves no data at all: same package family, same folder, an ordinary update.
 
 ## 4. Design system — the largest single piece of work
 
@@ -227,14 +250,19 @@ Still not ported: the WPF **showcase evidence pipeline** (`ShowcaseCapture`, the
 the interaction contract table) and `Daynote.UiQa.Tests`. Those are a body of work in their own
 right, and §7 still asks whether they should be rebuilt on Avalonia or retired.
 
-## 5b. Distribution — DONE 2026-09-07 (except the certificate)
+## 5b. Distribution — built, and now the macOS channel plus a Windows fallback
 
 `scripts/Build-WindowsApp.ps1` is the Windows counterpart of `Build-MacApp.sh`: publish
 self-contained (the runtime is inside, nothing to install first), sign, zip, and — with
 `-Installer` — pack a Velopack release.
 
+**Read this section knowing the outcome of §3: Windows ships through the Store, so none of what
+follows is on the shipping path today.** It was built, installed and uninstalled for real, and it is
+kept working so the fallback is a decision rather than a project. The unpackaged route is how macOS
+ships.
+
 **Velopack** was chosen over an installer plus a hand-rolled update check, because it is the one
-option that replaces both things the Store was doing. Per-user install, no administrator prompt,
+option that replaces both things the Store does. Per-user install, no administrator prompt,
 silent background updates: the experience Store users already have.
 
 Self-contained but **not** single-file, for the same reason as the Mac bundle. `Daynote.Mcp` ships
@@ -295,24 +323,29 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
    shell composition, and catalog keys. The showcase pipeline is still unported.
 4. **Design system.** Port the palettes and the v3 primitives, then the screens in the order they are
    used: shell → settings → account. Heat dots come free once the palette exists.
-5. ~~**Distribution.**~~ **Done** (§5b), except the certificate: publish/sign/zip script, Velopack
-   installer and updater, verified by installing and uninstalling. Retiring the wapproj and the
-   Store submission scripts is left until the cutover actually happens.
-6. **Cut over.** Ship the Avalonia build to Windows, keep `Daynote.App` in the tree for one release
-   as a fallback, then delete it and fold `Daynote.Desktop` back into a single app project.
+5. ~~**Distribution.**~~ **Done** (§5b): publish/sign/zip script, Velopack installer and updater,
+   verified by installing and uninstalling. Per §3 it is now the macOS channel and a parked Windows
+   fallback — the wapproj and the Store submission scripts stay.
+6. **Cut over.** Repoint `packaging/Daynote.Package` at `Daynote.Desktop`, submit that MSIX, keep
+   `Daynote.App` in the tree for one release as a fallback, then delete it and fold
+   `Daynote.Desktop` back into a single app project.
 
 ## 7. Still open
 
-- **Signing certificate.** OV or EV, and who holds it — the last thing between the current build
-  and a releasable one. EV clears SmartScreen immediately; OV builds reputation over time.
-- **Where the update feed lives.** `Program.UpdateFeedUrl` is empty, so the updater is inert. It
-  wants a static URL serving what `vpk pack` writes into `artifacts/win-releases`.
+- ~~**Signing certificate.**~~ **Settled by §3**: the Store re-signs at ingestion, so no certificate
+  is needed for the shipping channel. It becomes an open question again only if the unpackaged
+  Windows fallback is ever turned on.
+- ~~**Where the update feed lives.**~~ Deferred with the fallback. `Program.UpdateFeedUrl` stays
+  empty and the updater stays inert; a packaged build would not use it anyway.
+- **Does `packaging/Daynote.Package` build against `Daynote.Desktop`?** Untried. The wapproj's
+  `EntryPointProjectUniqueName` and its hand-written layout rules for `Daynote.Mcp` both name
+  `Daynote.App`, and the Avalonia publish has a different file layout. This is now phase 6 work.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
-- **Does the cutover wait for full parity, or ship in stages?** Two unpackaged shells in the wild
-  now exclude each other (§2), but neither excludes an installed Store build — so the cutover has
-  to tell people to remove it.
+- **Does the cutover wait for full parity, or ship in stages?** Staying on the Store removes the
+  ugly half of this: the cutover is an update to the same package, not a second install, so nobody
+  ends up running two shells at once.
 - **What happens to the showcase evidence pipeline?** Rebuild it on Avalonia, or retire it and keep
   only binding/composition tests. It is a large body of work either way.
-- **Does the Store listing get withdrawn, or left up pointing at the last MSIX?** Leaving it stale
-  means users keep installing a build that will not receive updates.
+- **macOS distribution.** The unpackaged route covers Windows mechanics; notarisation, the Apple
+  Developer ID and the DMG are their own open questions.
