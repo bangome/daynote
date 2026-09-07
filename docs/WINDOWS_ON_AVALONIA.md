@@ -197,25 +197,35 @@ Concretely missing from the Avalonia shell today:
   styling; the always-on-top, per-note colour and live two-way edit need checking.
 - Settings: the WPF panel is the v3 modal (`SettingsView.xaml`, 313 lines, plus a 267-line dictionary).
 
-## 5. Tests and the showcase harness
+## 5. Tests — the harness exists now (2026-09-07)
 
-This is the part most likely to be underestimated. `tests/Daynote.App.Tests` is 60 files and 362
-tests, and a large share of them are **WPF-specific by construction**:
+`tests/Daynote.Desktop.Tests` runs Avalonia headless: composed and laid out in memory, no window
+server, so it runs on Windows CI and macOS CI alike. Five tests, and each one earned its place by
+catching something the moment it was written.
 
-- Composition tests that build `ProductWindow` and assert zero data-binding errors.
-- `DesignResourceTests` (light/dark key parity, raw ARGB confined to palette files, every
-  `Daynote.*` resource reference resolves).
-- The showcase capture pipeline (`ShowcaseCapture`, `PrimitiveFixtureFactory.*`,
-  `ShowcaseInteraction*`) — render-to-bitmap evidence with a build-freshness check.
-- Render tests using `RenderTargetBitmap` (`CalendarDayCircleTests`, `CompactEditorRenderingTests`,
-  `PrimitiveStressRenderingTests`).
-- `tests/Daynote.UiQa.Tests` on top of that.
+| Test | Covers | What it caught |
+|---|---|---|
+| `ResourceResolutionTests` (×2, one per variant) | Every `{DynamicResource}` / `{StaticResource}` key in the app's `.axaml` resolves | A renamed brush is reported with the files that use it |
+| `MainWindowCompositionTests` (×2, one per variant) | The shell measures and arranges with no binding errors | — |
+| `LocalizationKeyTests` | Every `Strings[Key]` in markup exists in both catalogs | A made-up key that compiled **and** raised no binding error |
 
-None of it transfers automatically. Avalonia has its own headless test platform
-(`Avalonia.Headless`), which can host controls and render, so the *kind* of testing is available —
-but every fixture, the resource-parity rules and the showcase evidence format have to be rebuilt
-against it. Until that exists, moving Windows to Avalonia means shipping Windows with materially
-less automated UI coverage than it has today.
+Three things learned while building it, all of which shape what is worth testing here:
+
+1. **Compiled bindings already catch most of it.** `AvaloniaUseCompiledBindingsByDefault` plus
+   `x:DataType` means `{Binding Calendar.MonthLabelTYPO}` fails the *build* (AVLN2000). The runtime
+   composition test is therefore not the front line it is in WPF — it covers what stays dynamic:
+   `$parent[Window]` walks, untyped contexts, template-driven lookups.
+2. **The indexer is the hole.** Copy reached through `Strings[SomeKey]` is a string the compiler
+   cannot check, and the catalog returns something for a key it does not have — so a typo renders
+   quietly. That is what `LocalizationKeyTests` exists for, and it was verified by planting one.
+3. **Bindings must be armed after the DataContext.** A control built during `InitializeComponent`
+   evaluates its ancestor bindings while the window still has no DataContext, and logs an error that
+   every real run also produces and then resolves. The harness attaches its log sink after assigning
+   the DataContext, and says so.
+
+Still not ported: the WPF **showcase evidence pipeline** (`ShowcaseCapture`, the fixture factories,
+the interaction contract table) and `Daynote.UiQa.Tests`. Those are a body of work in their own
+right, and §7 still asks whether they should be rebuilt on Avalonia or retired.
 
 ## 6. Suggested order
 
@@ -227,8 +237,8 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
 2. ~~**Platform services.**~~ **Done** (§2): single instance settled on the mutex, login item moved
    and tested against the real registry, hotkey summon fixed. The tray icon's own menu and the
    startup copy that assumes `StartupTask` semantics are the leftovers.
-3. **Test harness.** Stand up `Avalonia.Headless`: composition/binding-error tests first, then the
-   resource-parity rules. Do this *before* the design port so the port has a net under it.
+3. ~~**Test harness.**~~ **Done** (§5): headless Avalonia, resource resolution in both variants,
+   shell composition, and catalog keys. The showcase pipeline is still unported.
 4. **Design system.** Port the palettes and the v3 primitives, then the screens in the order they are
    used: shell → settings → account. Heat dots come free once the palette exists.
 5. **Distribution.** Installer, code-signing certificate, and an update mechanism — all three are new

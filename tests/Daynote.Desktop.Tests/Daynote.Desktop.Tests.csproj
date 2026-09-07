@@ -1,0 +1,14 @@
+<Project Sdk="MSTest.Sdk/4.3.2">
+  <PropertyGroup>
+    <!--
+      The Avalonia UI tests. Headless: Avalonia renders into memory with no window server, so these
+      run on Windows, macOS and Linux CI alike — which matters because the shell they cover is the
+      one meant to replace the WPF app on Windows while staying the macOS app.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daynote.Desktop\Daynote.Desktop.csproj" />
+    <PackageReference Include="Avalonia.Headless" />
+  </ItemGroup>
+</Project>

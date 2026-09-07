@@ -21,5 +21,7 @@
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.2" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.2" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+    <!-- Headless rendering for the Avalonia UI tests; never referenced by the app itself. -->
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.2" />
   </ItemGroup>
 </Project>
