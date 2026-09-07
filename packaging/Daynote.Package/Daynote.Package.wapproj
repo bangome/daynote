@@ -2,7 +2,7 @@
 <!--
   Windows Application Packaging Project (plan Todo 11).
 
-  Produces the x64 development MSIX for Daynote.App. It is intentionally NOT part
+  Produces the x64 development MSIX for Daynote.Desktop (the Avalonia shell). It is intentionally NOT part
   of Daynote.sln: the .wapproj consumes the DesktopBridge MSBuild targets that ship
   with the Visual Studio "Windows application packaging" component (or the MSIX
   Packaging Tools), which the plain `dotnet` SDK does not carry. Building it under
@@ -23,7 +23,7 @@
     <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <EntryPointProjectUniqueName>..\..\src\Daynote.App\Daynote.App.csproj</EntryPointProjectUniqueName>
+    <EntryPointProjectUniqueName>..\..\src\Daynote.Desktop\Daynote.Desktop.csproj</EntryPointProjectUniqueName>
   </PropertyGroup>
 
   <!-- x64 only: no x86 / Arm64 artifact is produced (Todo 11 Must NOT). -->
@@ -61,7 +61,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Daynote.App\Daynote.App.csproj">
+    <ProjectReference Include="..\..\src\Daynote.Desktop\Daynote.Desktop.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>
     <!--
@@ -69,12 +69,17 @@
       package identity and therefore reads the same virtualized daynote.db as the app - see the
       MCP SERVER comment in Package.appxmanifest. The packaging targets lay each referenced project's
       output into a folder named after the project, which is why the manifest points at
-      "Daynote.Mcp\Daynote.Mcp.exe". Daynote.App stays the EntryPointProjectUniqueName.
+      "Daynote.Mcp\Daynote.Mcp.exe". Daynote.Desktop stays the EntryPointProjectUniqueName.
     -->
     <ProjectReference Include="..\..\src\Daynote.Mcp\Daynote.Mcp.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
-      <!-- Daynote.Mcp multi-targets (the Avalonia app uses its net10.0 flavour); the package needs the Windows one. -->
-      <SetTargetFramework>TargetFramework=net10.0-windows10.0.19041.0</SetTargetFramework>
+      <!--
+        net10.0, not the Windows flavour. Daynote.Mcp multi-targets, and the entry point now does
+        not: Daynote.Desktop is net10.0 so it resolves Daynote.Mcp's net10.0 build. Asking for the
+        Windows one here would lay two different builds of Daynote.Mcp.dll into one folder, which is
+        precisely what the single dependency graph below is supposed to rule out.
+      -->
+      <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
 
@@ -85,12 +90,12 @@
 
     By default the packaging targets lay each referenced project's publish output into a folder named
     after the project. For Daynote.Mcp that folder is ~113 MB, of which ~109 MB is byte-identical to
-    what is already in Daynote.App\ - both are self-contained publishes of the same runtime. So we keep
+    what is already in Daynote.Desktop\ - both are self-contained publishes of the same runtime. So we keep
     only the three files that are genuinely the server's (its apphost and the two host config files)
     and move them next to the app, where the runtime and every shared assembly already sit.
 
-    Daynote.Mcp.dll itself and the MCP-only packages arrive in Daynote.App\ through the ProjectReference
-    Daynote.App has on Daynote.Mcp; that reference is also what guarantees a single dependency graph, so
+    Daynote.Mcp.dll itself and the MCP-only packages arrive in Daynote.Desktop\ through the ProjectReference
+    Daynote.Desktop has on Daynote.Mcp; that reference is also what guarantees a single dependency graph, so
     this merge cannot produce a folder with two different builds of one assembly name. Build-Package.ps1
     re-checks the merged folder against Daynote.Mcp.deps.json after packaging.
 
@@ -100,7 +105,7 @@
   <Target Name="_DaynoteCoLocateMcpServer" AfterTargets="_ConvertItems">
     <PropertyGroup>
       <_DaynoteMcpLayoutPrefix>Daynote.Mcp$([System.IO.Path]::DirectorySeparatorChar)</_DaynoteMcpLayoutPrefix>
-      <_DaynoteAppLayoutDir>Daynote.App$([System.IO.Path]::DirectorySeparatorChar)</_DaynoteAppLayoutDir>
+      <_DaynoteAppLayoutDir>Daynote.Desktop$([System.IO.Path]::DirectorySeparatorChar)</_DaynoteAppLayoutDir>
     </PropertyGroup>
 
     <ItemGroup>

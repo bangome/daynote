@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Restores locked, builds Release (warnings-as-errors), publishes Daynote.App
+    Restores locked, builds Release (warnings-as-errors), publishes Daynote.Desktop
     self-contained x64, and produces the UNSIGNED x64 development MSIX artifact.
 
 .DESCRIPTION
@@ -9,7 +9,7 @@
     never installs. It:
       1. dotnet restore Daynote.sln --locked-mode
       2. dotnet build Daynote.sln -c Release -warnaserror
-      3. dotnet publish src/Daynote.App self-contained win-x64
+      3. dotnet publish src/Daynote.Desktop self-contained win-x64
       4. MSBuild the packaging/.wapproj to produce the .msix under -OutputDirectory
 
     Step 4 needs the DesktopBridge MSBuild targets from the Visual Studio "Windows
@@ -78,7 +78,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $solution = Join-Path $repoRoot 'Daynote.sln'
-$appProject = Join-Path $repoRoot 'src\Daynote.App\Daynote.App.csproj'
+$appProject = Join-Path $repoRoot 'src\Daynote.Desktop\Daynote.Desktop.csproj'
 $wapProject = Join-Path $repoRoot 'packaging\Daynote.Package\Daynote.Package.wapproj'
 $manifest = Join-Path $repoRoot 'packaging\Daynote.Package\Package.appxmanifest'
 $rid = "win-$Architecture"
@@ -136,7 +136,7 @@ function Assert-McpServerCoLocated {
     .SYNOPSIS
         Verifies the packaged MCP server can actually start.
     .DESCRIPTION
-        The server shares Daynote.App's folder so the package carries one copy of the .NET runtime
+        The server shares Daynote.Desktop's folder so the package carries one copy of the .NET runtime
         instead of two (see the _DaynoteCoLocateMcpServer target). That merge is only safe while every
         assembly Daynote.Mcp.deps.json names is present in that folder, so this re-derives the list
         from the produced package and fails the build if anything is missing. A missing assembly would
@@ -171,13 +171,13 @@ function Assert-McpServerCoLocated {
                     $strays.Count, ($strays | Select-Object -First 1))
             }
 
-            $required = @('Daynote.App/Daynote.Mcp.exe', 'Daynote.App/Daynote.Mcp.runtimeconfig.json',
-                'Daynote.App/Daynote.Mcp.deps.json')
+            $required = @('Daynote.Desktop/Daynote.Mcp.exe', 'Daynote.Desktop/Daynote.Mcp.runtimeconfig.json',
+                'Daynote.Desktop/Daynote.Mcp.deps.json')
             foreach ($name in $required) {
                 if (-not $entries.ContainsKey($name)) { throw "Package is missing $name." }
             }
 
-            $reader = New-Object System.IO.StreamReader($entries['Daynote.App/Daynote.Mcp.deps.json'].Open())
+            $reader = New-Object System.IO.StreamReader($entries['Daynote.Desktop/Daynote.Mcp.deps.json'].Open())
             try { $deps = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
 
             # Every runtime asset the server's host will look for, by file name.
@@ -196,14 +196,14 @@ function Assert-McpServerCoLocated {
 
             $missing = @()
             foreach ($leaf in $needed) {
-                if (-not $entries.ContainsKey("Daynote.App/$leaf")) { $missing += $leaf }
+                if (-not $entries.ContainsKey("Daynote.Desktop/$leaf")) { $missing += $leaf }
             }
             if ($missing.Count -gt 0) {
                 throw ("The co-located MCP server would fail to start: {0} assembly/assemblies named by " +
-                    "Daynote.Mcp.deps.json are absent from Daynote.App/ -> {1}") -f $missing.Count, ($missing -join ', ')
+                    "Daynote.Mcp.deps.json are absent from Daynote.Desktop/ -> {1}") -f $missing.Count, ($missing -join ', ')
             }
 
-            Write-Log ("MCP server verified: co-located in Daynote.App/ with all {0} referenced assemblies present." -f $needed.Count)
+            Write-Log ("MCP server verified: co-located in Daynote.Desktop/ with all {0} referenced assemblies present." -f $needed.Count)
         }
         finally { $package.Dispose() }
     }

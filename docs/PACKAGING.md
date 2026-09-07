@@ -6,7 +6,7 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 
 ## What ships
 
-- An **x64-only** development MSIX for `Daynote.App` (self-contained publish).
+- An **x64-only** development MSIX for `Daynote.Desktop` (self-contained publish).
 - Package identity `Daynote.Dev`, publisher `CN=Daynote.Dev`, version `1.0.0.0`.
 - A full-trust desktop app (`runFullTrust`).
 - A **Windows startup task** (`TaskId=DaynoteStartupTask`), **disabled by default and
@@ -18,7 +18,7 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
   headless app, which the Store refuses without a `HeadlessAppBypass` entitlement. It ships in the same package on purpose: the alias
   is the only way a client process can launch it at all, since `%ProgramFiles%\WindowsApps`
   ACLs block the real path. It also shares the app's folder
-  (`Daynote.App\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
+  (`Daynote.Desktop\Daynote.Mcp.exe`) rather than getting its own, which keeps one copy
   of the .NET runtime in the package instead of two - 86 MB instead of 131 MB. The
   `_DaynoteCoLocateMcpServer` target does the merge and `Build-Package.ps1` verifies it.
   Settings -> AI integration registers the alias with Claude Desktop / Claude Code.
@@ -61,7 +61,7 @@ pwsh -File scripts/Build-Package.ps1 -Configuration Release -Architecture x64 `
 
 ### Lock files and the win-x64 RID
 
-Packaging publishes `Daynote.App` and everything it references for `win-x64`, so restore records a
+Packaging publishes `Daynote.Desktop` and everything it references for `win-x64`, so restore records a
 win-x64 target in those projects' `packages.lock.json`. `Directory.Build.props` therefore declares
 `<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>` repo-wide: without it those lock files named a RID
 their project did not, and the next locked-mode restore failed with NU1004 - so a packaging run left

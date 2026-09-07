@@ -137,7 +137,7 @@ repoints `packaging/Daynote.Package` from `Daynote.App` to `Daynote.Desktop` ins
 
 | | Effect of staying on the Store |
 |---|---|
-| Login item | `MsixStartupTaskService` stays the Windows implementation. `WindowsRunKeyStartupTaskGateway` is not dead code — it is the fallback path, and it is tested (§2) |
+| Login item | Corrected by §6: the packaged Avalonia build uses `WindowsRunKeyStartupTaskGateway`, not the manifest's `StartupTask`. `MsixStartupTaskService` is still the service, but the WinRT `StartupTask` API it would need sits behind `#if WINDOWS` and `Daynote.Desktop` targets plain `net10.0`. HKCU `Run` is honoured inside a package, so the behaviour is right; the manifest declaration is now unused |
 | MCP registration | The app-execution alias is still required: the real executable sits under `%ProgramFiles%\WindowsApps`, whose ACLs a client process cannot traverse. `McpServerCommand` already picks the alias when `Package.Current` resolves |
 | Store policy | `docs/STORE.md` §10.8 keeps applying — third-party commerce, trial disclosure, Partner Center declarations. Paddle checkout stays inside those rules |
 | Auto-update | The Store keeps doing it. `WindowsUpdateService` returns immediately in a packaged build (`manager.IsInstalled` is false), so it costs nothing but its assembly |
@@ -409,9 +409,66 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
 5. ~~**Distribution.**~~ **Done** (§5b): publish/sign/zip script, Velopack installer and updater,
    verified by installing and uninstalling. Per §3 it is now the macOS channel and a parked Windows
    fallback — the wapproj and the Store submission scripts stay.
-6. **Cut over.** Repoint `packaging/Daynote.Package` at `Daynote.Desktop`, submit that MSIX, keep
-   `Daynote.App` in the tree for one release as a fallback, then delete it and fold
-   `Daynote.Desktop` back into a single app project.
+6. **Cut over.** The packaging is repointed and builds (§6). What is left is the release itself:
+   submit the MSIX, keep `Daynote.App` in the tree for one release as a fallback, then delete it and
+   fold `Daynote.Desktop` back into a single app project.
+
+## 6. Cutover — the packaging is repointed and builds (2026-09-07)
+
+`packaging/Daynote.Package` now packages `Daynote.Desktop`. Repointing it was four files and one
+real bug.
+
+```
+baseline (Daynote.App)      541 entries   Daynote.App/Daynote.App.exe        + Daynote.Mcp.exe
+after   (Daynote.Desktop)   292 entries   Daynote.Desktop/Daynote.Desktop.exe + Daynote.Mcp.exe
+```
+
+Both executables sit where `AppxManifest.xml` says they do, the Avalonia assemblies are in, and no
+`Daynote.App/` folder survives. `scripts/Build-Package.ps1` runs the whole way through — locked
+restore, `-warnaserror` build, self-contained publish, package — and its post-package check confirms
+all **215** assemblies `Daynote.Mcp.deps.json` names are present in the merged folder.
+
+### The bug: package identity was compiled out
+
+`McpServerCommand.IsPackaged()` asked WinRT `Package.Current` inside `#if WINDOWS`, with the
+`#else` branch commented "only the MSIX build has a package identity; the portable build never
+does."
+
+That was true exactly as long as the packaged entry point was `Daynote.App`, which targets
+`net10.0-windows10.0.19041.0`. `Daynote.Desktop` targets plain `net10.0`, so it links this
+assembly's non-Windows build — **the one where the fence removed the only code that could notice.**
+A packaged Avalonia build would have told every MCP client to launch its real path under
+`%ProgramFiles%\WindowsApps`, whose ACLs a client process cannot traverse, and nothing would have
+failed: no exception, no log, just a feature that does not work in the shipped build and works
+perfectly in every dev run.
+
+Fixed by asking Win32 `GetCurrentPackageFullName` instead, which needs no Windows target framework
+and no projection. It also removes the reason to multi-target the Avalonia app, which was the other
+way out and a much larger change.
+
+The same fence still hides the WinRT `StartupTask` API in `MsixStartupTaskService`, so the packaged
+Avalonia build takes the HKCU `Run` gateway instead. That works inside a package and is tested
+(§2); what it costs is the thing §2 already recorded — the Run key cannot tell that the user
+switched the entry off in Task Manager. The manifest's `startupTask` declaration is now unused; see
+§7.
+
+### What the guardrails caught, and what they did not
+
+`PackageManifestPolicy` pinned `Daynote.App\Daynote.Mcp.exe`, so the MCP path change failed two
+tests immediately — which is the guardrail working. It had **no** check on the app's own
+`Executable`, though, and that is the one attribute that must move when the packaged shell changes:
+a stale value produces a package that builds, installs, and fails to launch. There is a check now,
+derived from a single `ExpectedAppFolder` constant so the two paths cannot drift apart again.
+
+`McpServerCommand`'s identity fence was caught by reading the code, not by a test, because there was
+no test that could run it — `IsPackaged` was private and the only assertion was on the pure
+`Resolve` core. It is now public and `PackageIdentityTests` exercises the P/Invoke, which is the part
+that fails silently if the entry point name or the marshalling is wrong.
+
+### Not done here
+
+Installing and launching the package. Same identity as the installed Store build, so the two cannot
+coexist on one machine and testing it means removing the real one first.
 
 ## 7. Still open
 
@@ -420,9 +477,13 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
   Windows fallback is ever turned on.
 - ~~**Where the update feed lives.**~~ Deferred with the fallback. `Program.UpdateFeedUrl` stays
   empty and the updater stays inert; a packaged build would not use it anyway.
-- **Does `packaging/Daynote.Package` build against `Daynote.Desktop`?** Untried. The wapproj's
-  `EntryPointProjectUniqueName` and its hand-written layout rules for `Daynote.Mcp` both name
-  `Daynote.App`, and the Avalonia publish has a different file layout. This is now phase 6 work.
+- **Does the packaged Avalonia build actually run?** The package builds and contains what the
+  manifest declares (§6), but nothing here has installed and launched it. That needs a machine
+  where the installed Store build can be removed first — same package family, so the two cannot
+  coexist.
+- **The manifest still declares a `windows.startupTask` nothing enables** (§6). Left in place
+  deliberately: it is disabled by default and harmless, and it is the hook for giving the Avalonia
+  shell the WinRT path later. Removing it is the alternative.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
 - **High contrast on macOS.** The Windows half follows the OS theme (§4). macOS "Increase contrast"

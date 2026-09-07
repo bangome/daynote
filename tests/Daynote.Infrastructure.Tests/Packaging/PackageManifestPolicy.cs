@@ -19,7 +19,7 @@ internal static class PackageManifestPolicy
     private static readonly XNamespace Desktop6 = "http://schemas.microsoft.com/appx/manifest/desktop/windows10/6";
     private static readonly XNamespace Uap3 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/3";
 
-    /// <summary>The StartupTask id must match Daynote.App's ServiceRegistration.StartupTaskId.</summary>
+    /// <summary>The StartupTask id must match the shell's registered StartupTaskId.</summary>
     public const string ExpectedStartupTaskId = "DaynoteStartupTask";
 
     /// <summary>Minimum OS build, matching the TFM net10.0-windows10.0.19041.0.</summary>
@@ -28,8 +28,19 @@ internal static class PackageManifestPolicy
     /// <summary>The alias MCP clients are configured with; must match McpServerCommand.PackagedAlias.</summary>
     public const string ExpectedMcpAlias = "daynote-mcp.exe";
 
-    /// <summary>The MCP server sits in the app's folder so both share one copy of the .NET runtime.</summary>
-    public const string ExpectedMcpExecutable = @"Daynote.App\Daynote.Mcp.exe";
+    /// <summary>
+    /// The MCP server sits in the app's folder so both share one copy of the .NET runtime. The folder
+    /// is named after the packaging project's entry point, which is <c>Daynote.Desktop</c> since the
+    /// cutover (docs/WINDOWS_ON_AVALONIA.md §6) — it was <c>Daynote.App</c> while the WPF shell was
+    /// the packaged one, and this pair of constants is what caught the rename.
+    /// </summary>
+    public const string ExpectedAppFolder = "Daynote.Desktop";
+
+    /// <inheritdoc cref="ExpectedAppFolder" />
+    public const string ExpectedMcpExecutable = ExpectedAppFolder + @"\Daynote.Mcp.exe";
+
+    /// <inheritdoc cref="ExpectedAppFolder" />
+    public const string ExpectedAppExecutable = ExpectedAppFolder + @"\" + ExpectedAppFolder + ".exe";
 
     /// <summary>The single visible application; the MCP server is an alias on it, not an app of its own.</summary>
     public const string ExpectedApplicationId = "Daynote";
@@ -187,6 +198,22 @@ internal static class PackageManifestPolicy
             .Element(Foundation + "Applications")?
             .Elements(Foundation + "Application")
             .ToList() ?? [];
+
+        // The app's own executable. Unchecked until the cutover, and it is the one thing that has to
+        // move when the packaged shell changes: the packaging targets lay each referenced project's
+        // output into a folder named after the project, so an entry point rename leaves the manifest
+        // pointing at a path the package no longer contains. That produces a package that builds,
+        // installs, and fails to launch.
+        foreach (XElement application in applications)
+        {
+            string? executable = (string?)application.Attribute("Executable");
+            if (executable != ExpectedAppExecutable)
+            {
+                violations.Add(
+                    $"Application/@Executable must be '{ExpectedAppExecutable}', not '{executable}'.");
+            }
+        }
+
         EvaluateMcpServer(package, applications, violations);
 
         return violations;

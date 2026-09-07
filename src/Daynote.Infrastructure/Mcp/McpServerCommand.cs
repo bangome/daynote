@@ -51,25 +51,49 @@ public static class McpServerCommand
     }
 
     /// <summary>
-    /// True when the process runs with a packaged identity. <c>Package.Current</c> throws for an
-    /// unpackaged process, which is the documented way to ask and mirrors
-    /// <see cref="Startup.WindowsStartupTaskGateway"/>'s handling of the same situation.
+    /// True when the process runs with a packaged identity. Public so a test can prove the P/Invoke
+    /// binds and answers, which is the part that can fail silently.
     /// </summary>
-    private static bool IsPackaged()
+    /// <remarks>
+    /// Asked through Win32 <c>GetCurrentPackageFullName</c> rather than WinRT
+    /// <c>Package.Current</c>. This used to be fenced with <c>#if WINDOWS</c> and answered false
+    /// everywhere else, on the reasoning that only the MSIX build has an identity and the portable
+    /// build never does. That stopped being true when the package's entry point became
+    /// <c>Daynote.Desktop</c>: the Avalonia shell targets plain <c>net10.0</c>, so it links this
+    /// assembly's non-Windows build, where the fence compiled out the only code that could notice —
+    /// and a packaged app would have handed MCP clients a path under <c>WindowsApps</c> that they
+    /// cannot traverse, with nothing failing to say so.
+    /// <para>
+    /// <c>GetCurrentPackageFullName</c> needs no Windows target framework and no WinRT projection.
+    /// Unpackaged it returns <c>APPMODEL_ERROR_NO_PACKAGE</c>; the entry point is present on every
+    /// Windows this app supports, and any other platform is unpackaged by definition.
+    /// </para>
+    /// </remarks>
+    public static bool IsPackaged()
     {
-#if WINDOWS
-        try
-        {
-            return Windows.ApplicationModel.Package.Current is not null;
-        }
-        catch (Exception exception) when (exception is InvalidOperationException
-            or System.Runtime.InteropServices.COMException or NotSupportedException or TypeLoadException)
+        if (!OperatingSystem.IsWindows())
         {
             return false;
         }
-#else
-        // Only the MSIX build has a package identity; the portable build never does.
-        return false;
-#endif
+
+        try
+        {
+            int length = 0;
+            return GetCurrentPackageFullName(ref length, null) != AppModelErrorNoPackage;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
     }
+
+    /// <summary>What the API returns for a process with no package identity.</summary>
+    private const int AppModelErrorNoPackage = 15700;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, char[]? packageFullName);
 }

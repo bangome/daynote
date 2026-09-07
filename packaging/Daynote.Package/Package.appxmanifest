@@ -64,7 +64,7 @@
   <Applications>
     <Application
       Id="Daynote"
-      Executable="Daynote.App\Daynote.App.exe"
+      Executable="Daynote.Desktop\Daynote.Desktop.exe"
       EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="Daynote"
@@ -86,7 +86,7 @@
       <Extensions>
         <desktop:Extension
           Category="windows.startupTask"
-          Executable="Daynote.App\Daynote.App.exe"
+          Executable="Daynote.Desktop\Daynote.Desktop.exe"
           EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
             TaskId="DaynoteStartupTask"
@@ -118,7 +118,7 @@
         -->
         <uap3:Extension
           Category="windows.appExecutionAlias"
-          Executable="Daynote.App\Daynote.Mcp.exe"
+          Executable="Daynote.Desktop\Daynote.Mcp.exe"
           EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias>
             <desktop:ExecutionAlias Alias="daynote-mcp.exe" />
