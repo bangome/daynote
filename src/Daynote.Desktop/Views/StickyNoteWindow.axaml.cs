@@ -66,7 +66,9 @@ public partial class StickyNoteWindow : Window
 
     private void UpdatePinTip()
     {
-        PinButton.Opacity = Topmost ? 1 : 0.45;
+        // A filled pin when the note is on top, an outline when it is not. This used to fade the
+        // whole button to 45% instead, which reads as "disabled" rather than "off".
+        PinButton.Classes.Set("pinned", Topmost);
         ToolTip.SetTip(PinButton, Topmost ? AppStrings.UnpinStickyNote : AppStrings.PinStickyNote);
     }
 

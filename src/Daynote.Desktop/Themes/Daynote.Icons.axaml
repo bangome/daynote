@@ -42,6 +42,10 @@
   <StreamGeometry x:Key="Daynote.Geo.Trash">M2,3.5 h10 M5.5,3.5 V2 h3 v1.5 M3.5,3.5 l0.7,8.5 h5.6 l0.7,-8.5 M5.8,6 v4 M8.2,6 v4</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Geo.Plus">M5,0.5 L5,9.5 M0.5,5 L9.5,5</StreamGeometry>
 
+  <!-- Sticky note: a drawing pin seen head-on, and the close cross. -->
+  <StreamGeometry x:Key="Daynote.Geo.Pin">M5,1 L11,1 L10,5 L12,7 L4,7 L6,5 Z M8,7 L8,13</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Geo.Close">M0,0 L10,10 M10,0 L0,10</StreamGeometry>
+
   <!-- Chevron for the account strip: shallower than a 45-degree caret so it reads as "opens upward"
        rather than as an arrow. -->
   <StreamGeometry x:Key="Daynote.Geo.ChevronUp">M3.5,9.5 L8,5.5 L12.5,9.5</StreamGeometry>

@@ -69,6 +69,29 @@ public sealed class StickyNoteChromeTests
         });
     }
 
+    [TestMethod]
+    public void The_pin_shows_its_state_as_a_class_not_as_fading()
+    {
+        WithStickyNote(sticky =>
+        {
+            var pin = (Button)Find(sticky, "PinButton");
+
+            Assert.IsTrue(sticky.Topmost, "A new note opens pinned.");
+            Assert.IsTrue(pin.Classes.Contains("pinned"), "The pin should be filled while the note is on top.");
+
+            RaiseClick(pin);
+            Assert.IsFalse(sticky.Topmost);
+            Assert.IsFalse(pin.Classes.Contains("pinned"), "Unpinned, the mark goes back to an outline.");
+
+            RaiseClick(pin);
+            Assert.IsTrue(sticky.Topmost);
+            Assert.IsTrue(pin.Classes.Contains("pinned"));
+        });
+    }
+
+    private static void RaiseClick(Button button) =>
+        button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+
     private static Control Find(Window window, string name) =>
         window.GetLogicalDescendants().OfType<Control>().Single(c => c.Name == name);
 
