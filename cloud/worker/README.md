@@ -140,4 +140,7 @@ loads Paddle.js and opens the server-created transaction from `?_ptxn=`.
 Bodies live in `../site/content/<slug>.<lang>.html`; the shell is `../site/page.html`. Before
 asking Paddle to approve the domain, fill in the constants at the top of `../site/build.mjs`:
 `OPERATOR`, `SUPPORT_EMAIL` (`PRICE_LINE` is set: ₩2,900/mo · ₩24,000/yr, $2.49 / $19.99; the Paddle catalog must match),
+Note the policy since 2026-09-07: text sync is free, Pro covers image and file sync only
+(Phase 7). The Paddle product is still named "Daynote Cloud Sync"; rename its description in the
+dashboard to say images and files (an edit, not a recreate).
 `PADDLE_CLIENT_TOKEN`, and `PADDLE_ENVIRONMENT`. Then `npm run build:site` and deploy.

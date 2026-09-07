@@ -30,8 +30,11 @@ export interface Entitlement {
   /** When this state runs out, if it does. */
   readonly until: string | null;
 
-  /** True when sync is allowed right now. */
-  readonly canSync: boolean;
+  /**
+   * True when the paid tier is in force right now. Text sync never consults this: notes, to-dos,
+   * tags and favorites sync for every signed-in account. It gates image and file sync.
+   */
+  readonly canSyncFiles: boolean;
 
   /** True once a subscription has ever existed, so the UI can say "renew" rather than "subscribe". */
   readonly hasSubscribed: boolean;
@@ -80,7 +83,7 @@ export async function resolve(env: Env, userId: string, now: Date): Promise<Enti
 
     // Anything else — expired, paused, refunded, or a status this version does not know — fails
     // closed. The row is kept as written, so a later webhook can correct it.
-    return { state: 'expired', until: row.current_period_end_utc, canSync: false, hasSubscribed: true };
+    return { state: 'expired', until: row.current_period_end_utc, canSyncFiles: false, hasSubscribed: true };
   }
 
   const trial = await env.DB.prepare('SELECT trial_ends_utc FROM users WHERE id = ?1')
@@ -91,7 +94,7 @@ export async function resolve(env: Env, userId: string, now: Date): Promise<Enti
     return entitled('trial', trial!.trial_ends_utc, false);
   }
 
-  return { state: 'expired', until: trial?.trial_ends_utc ?? null, canSync: false, hasSubscribed: false };
+  return { state: 'expired', until: trial?.trial_ends_utc ?? null, canSyncFiles: false, hasSubscribed: false };
 }
 
 function entitled(
@@ -99,7 +102,7 @@ function entitled(
   until: string | null,
   hasSubscribed: boolean,
 ): Entitlement {
-  return { state, until, canSync: true, hasSubscribed };
+  return { state, until, canSyncFiles: true, hasSubscribed };
 }
 
 /** The trial window granted to a brand-new account. */
@@ -112,7 +115,8 @@ export function toWire(entitlement: Entitlement): Record<string, unknown> {
   return {
     state: entitlement.state,
     until: entitlement.until,
-    can_sync: entitlement.canSync,
+    // Text sync is free, so there is no `can_sync`; only the paid tier is reported.
+    can_sync_files: entitlement.canSyncFiles,
     has_subscribed: entitlement.hasSubscribed,
   };
 }

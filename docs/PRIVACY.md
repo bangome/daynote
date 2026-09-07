@@ -67,10 +67,12 @@ that passphrase once on each new PC, and that a forgotten passphrase needs the r
 when you turn the lock on — with the service's copy gone, there is nothing else that can open the
 cloud copy.
 
-Cloud sync is a paid subscription. **Daynote never sees your card details**: checkout happens on a
-page hosted by Paddle, our payment provider and merchant of record, and what reaches our service is
-a subscription status and a renewal date. If a subscription ends, syncing stops and **nothing is
-deleted** — the notes on your PC are untouched and the copy already uploaded is kept.
+Syncing your notes, to-dos, tags and favorites is free once you sign in. Syncing the images and
+files you attach is a paid subscription. **Daynote never sees your card details**: checkout happens
+on a page hosted by Paddle, our payment provider and merchant of record, and what reaches our
+service is a subscription status and a renewal date. If a subscription ends, your notes keep syncing,
+file syncing stops, and **nothing is deleted** — everything on your PC is untouched and the copies
+already uploaded are kept.
 
 Either way the service holds your Google account id and email address, and the times each note
 changed. This document will be replaced with the full specifics in the same release that turns cloud

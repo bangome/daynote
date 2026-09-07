@@ -171,12 +171,17 @@ public sealed partial class AccountViewModel
         }
     }
 
-    /// <summary>What Pro buys, in the order the pricing page lists it.</summary>
+    /// <summary>
+    /// What Pro buys, in the order the pricing page lists it.
+    /// </summary>
+    /// <remarks>
+    /// Two bullets, because two is what the tier is. It used to claim four; "no limit on connected
+    /// devices" is what the free plan now advertises on the site, and the note lock is not gated by
+    /// the entitlement anywhere — a paid list may only contain things the free tier does not get.
+    /// </remarks>
     public IReadOnlyList<string> ProFeatures =>
     [
         AppStrings.BillingFeatureSync,
-        AppStrings.BillingFeatureDevices,
-        AppStrings.BillingFeatureLock,
         AppStrings.BillingFeatureQuota,
     ];
 

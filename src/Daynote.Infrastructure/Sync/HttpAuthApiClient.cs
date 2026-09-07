@@ -395,7 +395,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             until = parsed.IsSuccess ? parsed.Value : null;
         }
 
-        return new Entitlement(state, until, body.CanSync, body.HasSubscribed);
+        return new Entitlement(state, until, body.CanSyncFiles, body.HasSubscribed);
     }
 
     /// <summary>The key-custody fields, shared by the session and key-material responses.</summary>
@@ -433,7 +433,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 
         string? Until { get; }
 
-        bool CanSync { get; }
+        bool CanSyncFiles { get; }
 
         bool HasSubscribed { get; }
     }
@@ -441,13 +441,13 @@ public sealed class HttpAuthApiClient : IAuthApiClient
     private sealed record EntitlementBody(
         string? State,
         string? Until,
-        bool CanSync,
+        bool CanSyncFiles,
         bool HasSubscribed) : IEntitlementBody;
 
     private sealed record BillingBody(
         string? State,
         string? Until,
-        bool CanSync,
+        bool CanSyncFiles,
         bool HasSubscribed,
         bool CanCheckout,
         bool CanManage,

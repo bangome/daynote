@@ -23,9 +23,15 @@ public enum SyncStatusKind
     Error,
 
     /// <summary>
-    /// Cloud sync is not paid for. Its own state rather than an error: nothing is broken and
-    /// nothing was lost — sync is simply not running (docs/CLOUD_SYNC.md §14).
+    /// The paid tier has lapsed, so images and files are not syncing. Its own state rather than an
+    /// error: nothing is broken and nothing was lost, and notes keep syncing either way
+    /// (docs/CLOUD_SYNC.md §14).
     /// </summary>
+    /// <remarks>
+    /// Unreachable today. It is set from a 402 on a sync call, and no endpoint returns one now that
+    /// text sync is free — the file endpoints that will are Phase 7. Kept rather than deleted
+    /// because the chip, its copy and its colour are already correct for the day they arrive.
+    /// </remarks>
     Unpaid,
 }
 

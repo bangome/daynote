@@ -460,8 +460,6 @@ public static class AppStrings
     public static string BillingPriceSubAnnual => LocalizationService.Instance[nameof(BillingPriceSubAnnual)];
     public static string BillingAnnualSaving => LocalizationService.Instance[nameof(BillingAnnualSaving)];
     public static string BillingFeatureSync => LocalizationService.Instance[nameof(BillingFeatureSync)];
-    public static string BillingFeatureDevices => LocalizationService.Instance[nameof(BillingFeatureDevices)];
-    public static string BillingFeatureLock => LocalizationService.Instance[nameof(BillingFeatureLock)];
     public static string BillingFeatureQuota => LocalizationService.Instance[nameof(BillingFeatureQuota)];
     /// <summary>{0} = price.</summary>
     public static string BillingCheckoutFormat => LocalizationService.Instance[nameof(BillingCheckoutFormat)];

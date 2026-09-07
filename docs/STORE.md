@@ -28,8 +28,10 @@ can only be done in your Partner Center account; the rest are already wired in t
    worth describing in the listing but must not be used to claim the default is
    end-to-end-encrypted. See [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for the checklist.
 
-   Cloud sync is also **a paid subscription** billed through Paddle, which policy 10.8.1 and
-   10.8.6 permit for a non-game PC app. That permission comes with obligations, all of which
+   Note sync is free for a signed-in account; **syncing images and files is a paid
+   subscription** billed through Paddle, which policy 10.8.1 and 10.8.6 permit for a non-game
+   PC app. Describe the split in the listing — a listing that says "sync is paid" now
+   understates what the free app does. That permission comes with obligations, all of which
    are submission-blocking:
 
    - **Tick the third-party purchase API box** in Partner Center (10.8.2). It is a checkbox on

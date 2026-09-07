@@ -187,7 +187,7 @@ public sealed class AccountPresentationTests
         accounts.Entitlement = new Entitlement(
             state,
             until,
-            CanSync: state is EntitlementState.Active or EntitlementState.Trial or EntitlementState.Grace,
+            CanSyncFiles: state is EntitlementState.Active or EntitlementState.Trial or EntitlementState.Grace,
             HasSubscribed: state is not EntitlementState.Trial);
         return SignedIn();
     }

@@ -240,7 +240,7 @@ public sealed class SubscriptionViewModelTests
 
             Assert.AreNotEqual(korean, chip.Label);
             Assert.IsFalse(string.IsNullOrWhiteSpace(korean));
-            Assert.AreEqual("Subscription needed", chip.Label);
+            Assert.AreEqual("Files: subscription needed", chip.Label);
         }
         finally
         {

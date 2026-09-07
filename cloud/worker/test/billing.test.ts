@@ -123,7 +123,7 @@ describe('trial', () => {
     const me = await get('/v1/auth/me', { token: account.accessToken });
 
     expect(me.body.entitlement.state).toBe('trial');
-    expect(me.body.entitlement.can_sync).toBe(true);
+    expect(me.body.entitlement.can_sync_files).toBe(true);
     expect(me.body.entitlement.has_subscribed).toBe(false);
     // A date, because the app has to warn before the trial takes syncing away (policy 10.8.4).
     expect(Date.parse(me.body.entitlement.until)).toBeGreaterThan(Date.now());
@@ -141,7 +141,7 @@ describe('trial', () => {
 });
 
 describe('the gate', () => {
-  it('answers 402 once the trial is over, and keeps every note it already had', async () => {
+  it('keeps text sync open once the trial is over: notes are free, only files are paid', async () => {
     const account = await signIn();
     await pushOne(account.accessToken);
     await expireEntitlement(account.userId);
@@ -149,29 +149,24 @@ describe('the gate', () => {
     const push = await pushOne(account.accessToken, '00000000-0000-4000-8000-000000000002');
     const pull = await get('/v1/sync/pull?since=0', { token: account.accessToken });
 
-    // 402, not 403: the caller is who they say they are; what is missing is payment.
-    expect(push.status).toBe(402);
-    expect(push.body.error).toBe('subscription_required');
-    expect(pull.status).toBe(402);
+    expect(push.status).toBe(200);
+    expect(pull.status).toBe(200);
+    expect(pull.body.changes).toHaveLength(2);
 
-    // The whole promise of the lapse policy: nothing was deleted.
-    const kept = await env.DB.prepare('SELECT COUNT(*) AS n FROM notes WHERE user_id = ?1')
-      .bind(account.userId)
-      .first<{ n: number }>();
-    expect(kept?.n).toBe(1);
+    // The paid flag is what the file endpoints will consult; it is off, and the app can say so.
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.can_sync_files).toBe(false);
   });
 
-  it('resumes the moment a subscription exists, from the same cursor', async () => {
+  it('turns the paid flag back on the moment a subscription exists', async () => {
     const account = await signIn();
-    await pushOne(account.accessToken);
     await expireEntitlement(account.userId);
-    expect((await get('/v1/sync/pull?since=0', { token: account.accessToken })).status).toBe(402);
+    expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.can_sync_files).toBe(false);
 
     await grantSubscription(account.userId);
 
-    const pull = await get('/v1/sync/pull?since=0', { token: account.accessToken });
-    expect(pull.status).toBe(200);
-    expect(pull.body.changes).toHaveLength(1);
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.can_sync_files).toBe(true);
   });
 
   it('does not gate signing in, so a lapsed user can still see their account', async () => {
@@ -182,7 +177,7 @@ describe('the gate', () => {
 
     expect(me.status).toBe(200);
     expect(me.body.entitlement.state).toBe('expired');
-    expect(me.body.entitlement.can_sync).toBe(false);
+    expect(me.body.entitlement.can_sync_files).toBe(false);
   });
 });
 
@@ -249,7 +244,7 @@ describe('webhook', () => {
 
     // None of them granted anything.
     const me = await get('/v1/auth/me', { token: account.accessToken });
-    expect(me.body.entitlement.can_sync).toBe(false);
+    expect(me.body.entitlement.can_sync_files).toBe(false);
   });
 
   it('keeps a cancelled subscription working until the period it paid for ends', async () => {
@@ -297,7 +292,7 @@ describe('webhook', () => {
     const me = await get('/v1/auth/me', { token: account.accessToken });
     // A declined card is not a cancellation on the day it happens.
     expect(me.body.entitlement.state).toBe('grace');
-    expect(me.body.entitlement.can_sync).toBe(true);
+    expect(me.body.entitlement.can_sync_files).toBe(true);
   });
 
   it('never moves a paid-for period end backwards, however events are ordered', async () => {

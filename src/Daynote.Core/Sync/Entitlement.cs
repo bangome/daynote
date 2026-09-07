@@ -1,12 +1,13 @@
 namespace Daynote.Core.Sync;
 
 /// <summary>
-/// Whether this account may sync, and until when (docs/CLOUD_SYNC.md §14).
+/// Whether this account is on the paid tier, and until when (docs/CLOUD_SYNC.md §14).
 /// </summary>
 /// <remarks>
-/// Cloud sync is the paid feature; the app is not. Nothing in this type gates local note-taking, and
-/// nothing should ever be made to: a lapsed subscription stops sync and keeps both copies — the
-/// notes on this PC, which never needed an account, and the ones already uploaded.
+/// Text sync (notes, to-dos, tags, favorites) is free for every signed-in account. The paid tier is
+/// image and file sync. Nothing in this type gates local note-taking or text sync, and nothing
+/// should ever be made to: a lapsed subscription stops file sync and keeps every copy — the notes
+/// and files on this PC, which never needed an account, and everything already uploaded.
 /// </remarks>
 public enum EntitlementState
 {
@@ -18,10 +19,10 @@ public enum EntitlementState
 
     Active,
 
-    /// <summary>A payment is being retried. Sync keeps working so a dead card is not a cliff.</summary>
+    /// <summary>A payment is being retried. File sync keeps working so a dead card is not a cliff.</summary>
     Grace,
 
-    /// <summary>Sync is off until there is a subscription. Nothing has been deleted.</summary>
+    /// <summary>File sync is off until there is a subscription. Text still syncs; nothing has been deleted.</summary>
     Expired,
 }
 
@@ -33,7 +34,7 @@ public enum EntitlementState
 public sealed record Entitlement(
     EntitlementState State,
     DateTimeOffset? Until,
-    bool CanSync,
+    bool CanSyncFiles,
     bool HasSubscribed)
 {
     public static Entitlement Unknown { get; } = new(EntitlementState.Unknown, null, false, false);

@@ -136,26 +136,31 @@ async function readExisting(
 
 
 /**
- * Refuses the request when the account is not entitled to sync.
+ * Refuses the request when the account is not on the paid tier.
  *
- * A lapse stops sync and nothing else: every row this Worker already holds stays exactly where it
- * is (docs/CLOUD_SYNC.md §14). Resubscribing resumes from the same cursor, and in the meantime the
- * user's own PC is unaffected — the local database is the source of truth and needs no account.
+ * Text sync (notes, to-dos, tags, favorites) is free for every signed-in account and never calls
+ * this. It exists for the image and file sync endpoints (Phase 7, docs/CLOUD_SYNC.md §14): a lapse
+ * stops those and nothing else. Every row and object this Worker already holds stays exactly where
+ * it is; resubscribing resumes from the same cursor, and the user's own PC is unaffected either way.
+ *
+ * NOTHING CALLS THIS YET, and that is not an oversight: the endpoints it guards do not exist. It is
+ * exported so the gate is written once, in the same file as the sync routes, rather than invented
+ * again when Phase 7 lands. Until then no request can be refused for want of a subscription.
  */
-async function requireEntitlement(env: Env, userId: string, now: Date): Promise<void> {
+export async function requireFileEntitlement(env: Env, userId: string, now: Date): Promise<void> {
   const entitlement = await resolveEntitlement(env, userId, now);
-  if (!entitlement.canSync) {
+  if (!entitlement.canSyncFiles) {
     throw new ApiError(
       'subscription_required',
-      'Cloud sync needs an active subscription. Your notes on this PC are unaffected, and the copy '
-        + 'already synced is kept.',
+      'Syncing images and files needs an active subscription. Your notes keep syncing, nothing on '
+        + 'this PC is affected, and the files already synced are kept.',
     );
   }
 }
 
 export async function push(request: Request, env: Env, now: Date): Promise<Response> {
   const user = await authenticate(request, env, now);
-  await requireEntitlement(env, user.id, now);
+  // No entitlement check: text sync is free.
   const body = await readJsonObject(request, SYNC_BODY_LIMIT);
   const notes = parseNotes(body);
   const tombstones = parseTombstones(body);
@@ -262,7 +267,7 @@ interface ChangeRow {
 
 export async function pull(request: Request, env: Env, now: Date): Promise<Response> {
   const user = await authenticate(request, env, now);
-  await requireEntitlement(env, user.id, now);
+  // No entitlement check: text sync is free.
   const url = new URL(request.url);
 
   const since = Number(url.searchParams.get('since') ?? '0');

@@ -820,18 +820,19 @@ At Cloudflare's current published tiers — verify against the live pricing page
 
 ## 14. Subscriptions — BUILT 2026-09-02
 
-Cloud sync is a paid feature. **The app is not**, and nothing in the billing layer touches local
-note-taking: a user who never subscribes, or who stops, keeps every note on their own PC and every
-feature that does not involve another device. That is not generosity, it is what "local-first"
-already committed to.
+**Text sync is free; image and file sync is the paid tier** (decided 2026-09-07; before that the
+whole of sync was paid). Notes, to-dos, tags and favorites sync for every signed-in account with no
+time limit. The subscription ("Pro") gates the Phase 7 attachment endpoints only. **The app is not
+paid either**, and nothing in the billing layer touches local note-taking or text sync: a user who
+never subscribes, or who stops, keeps every note and file on their own PC and keeps syncing text.
 
 | Question | Decision |
 | --- | --- |
 | Provider | **Paddle**, as merchant of record — it collects and remits VAT/sales tax in every jurisdiction it sells into, which a solo publisher otherwise does personally |
-| Free tier | **A 14-day trial**, granted once at sign-up, never re-granted |
-| When it lapses | **Sync stops. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
+| Free tier | **Text sync, forever.** Plus a **14-day Pro trial** (image and file sync), granted once at sign-up, never re-granted |
+| When it lapses | **File sync stops. Text keeps syncing. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
 | Card data | Never reaches Daynote or the Worker. The checkout is a hosted page in the system browser |
-| Enforcement | `/v1/sync/push` and `/pull` answer **402 `subscription_required`**; every other endpoint stays open |
+| Enforcement | The Phase 7 attachment endpoints answer **402 `subscription_required`** via `requireFileEntitlement`; `/v1/sync/push` and `/pull` (text) and every other endpoint stay open. `/v1/auth/me` and `/v1/billing/status` report `can_sync_files` |
 
 ### 14.1 Why 402 and not 403
 
