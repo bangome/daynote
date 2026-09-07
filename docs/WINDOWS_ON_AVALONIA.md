@@ -234,13 +234,41 @@ needs the row to exist.
 
 | Surface | State |
 |---|---|
-| Account | Present but flattened: `AccountPanel.axaml` is one 200-line column covering sign-in, status, lock, recovery key and subscription. WPF splits this into a 520px window, a titlebar avatar with a popup menu, and a compact settings row. The Avalonia titlebar has the avatar and its initial, but clicking it opens the panel directly — there is no menu |
-| Settings | Present as a modal card inside `MainWindow.axaml`. WPF has a dedicated 313-line view plus a 267-line dictionary. Feature coverage needs a side-by-side pass, not a port |
-| Sticky notes | 58 lines against the WPF version's styling. Always-on-top, per-note colour and live two-way edit are unverified |
-| High contrast | **Absent, and the gap is not where §4 used to claim.** WPF has no high-contrast *product* palette either — it swaps the older foundation layer (`Daynote.Colors.HighContrast.xaml`) for one that aliases `SystemColors`, chosen once at startup from `SystemParameters.HighContrast`. Avalonia has no equivalent and would need its own approach |
+| Account | **Done.** `AccountMenu.axaml` ports the titlebar avatar, its sync dot and the menu (identity, sync row, Manage account / Settings). The worded sync label came off with it, as in v3. The account body stays one panel rather than WPF's separate 520px window |
+| Settings | **Done, and it needed almost nothing.** The modal already bound every row the WPF view has — through view-model label properties instead of markup lookups, which is why a string-by-string diff made it look empty. The only real gap was the About card |
+| Sticky notes | **Done, and it had two defects.** The window hard-coded `#FFFDF0A0` / `#FF3A3520` instead of the Sticky brushes, so the palette could not reach it; and it carried the macOS traffic-light inset as a literal 70px margin, leaving a hole on every Windows sticky |
+| High contrast | **Not an Avalonia gap. The product has no working high-contrast mode on either shell** — see below |
 
-So the remaining design work is three screens to bring to parity and one accessibility mode to
-design, not a design system to build.
+### High contrast is a product gap, not a port gap
+
+`WpfProductThemeApplier` said High Contrast still wins, because the HC aggregate is merged after the
+product brushes and would override them by key. **Measured 2026-09-07: it overrides nothing.**
+
+```
+Daynote.Colors.HighContrast.xaml   28 keys, all Daynote.Brush.*          (pre-v3 foundation layer)
+Daynote.Product.Light.xaml         43 keys, all Daynote.Product.Brush.*  (what v3 actually paints)
+overlap                            0
+```
+
+Every v3 surface — every file under `Shell/Product`, `Settings` and `Account` — reads product keys
+only; not one reads a foundation brush. So `SystemParameters.HighContrast` is read at startup, the HC
+dictionary is merged, and nothing the user can see changes. The claim in the code has been corrected.
+
+That makes this the one item in §4 that is not a port. Giving the app a high-contrast mode means a
+high-contrast *product* palette, and that is a product decision rather than a translation:
+
+- **Follow the OS theme** — alias the system colours, as the dead foundation dictionary does, so the
+  app honours whichever high-contrast theme the user picked. Faithful, and on Avalonia it needs
+  Win32 `GetSysColor`, because Avalonia surfaces only a contrast *preference*, not the colour set.
+- **Ship one fixed high-contrast palette** — simpler and testable, works the same on macOS, but
+  ignores the user's choice, which is the point of the feature for many of the people who use it.
+
+Either way it lands as a third variant in both palettes and a third row in
+`DesktopPaletteParityTests`, and it should be built once for both shells rather than twice. Worth
+noting the pre-existing behaviour is not a regression risk here: there is nothing working to break.
+
+So the remaining design work is one accessibility mode to decide and build. The three screens are
+done.
 
 ## 5. Tests — the harness exists now (2026-09-07)
 
@@ -343,9 +371,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
    startup copy that assumes `StartupTask` semantics are the leftovers.
 3. ~~**Test harness.**~~ **Done** (§5): headless Avalonia, resource resolution in both variants,
    shell composition, and catalog keys. The showcase pipeline is still unported.
-4. **Design system.** Palette, primitives and heat dots are done (§4). What remains is parity on
-   three screens — account, settings, sticky notes — and a high-contrast mode, which Avalonia has no
-   equivalent of and which needs designing rather than porting.
+4. ~~**Design system.**~~ **Done except high contrast** (§4): palette, primitives, heat dots, and the
+   account, settings and sticky-note surfaces. High contrast turned out not to be a port at all —
+   neither shell has a working high-contrast mode — so it is now its own open question in §7.
 5. ~~**Distribution.**~~ **Done** (§5b): publish/sign/zip script, Velopack installer and updater,
    verified by installing and uninstalling. Per §3 it is now the macOS channel and a parked Windows
    fallback — the wapproj and the Store submission scripts stay.
@@ -365,6 +393,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
   `Daynote.App`, and the Avalonia publish has a different file layout. This is now phase 6 work.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
+- **How should high contrast work, and does it block the cutover?** (§4) Nothing works today on
+  either shell, so this is new product work, not parity: follow the OS high-contrast theme, or ship
+  one fixed palette. It should be built once for both shells.
 - **Does the cutover wait for full parity, or ship in stages?** Staying on the Store removes the
   ugly half of this: the cutover is an update to the same package, not a second install, so nobody
   ends up running two shells at once.
