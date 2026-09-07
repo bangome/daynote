@@ -58,22 +58,67 @@ with a 48px taskbar). Nothing to port.
 Still open in this area: Windows 11 rounded corners have not been checked, and neither has behaviour
 across a DPI change or a monitor with different scaling.
 
-## 2. Platform services that compile but have never run on Windows
+## 2. Platform services — DONE 2026-09-07
 
-`docs/MACOS_PORT.md` is candid that these are unexercised. Each needs to be run and tested on
-Windows, and one still needs a decision:
+All four were written against the docs and never run on Windows. Each was exercised on a real
+machine; one was wrong.
 
-| Concern | WPF (shipping) | Avalonia (Windows) | Status |
-|---|---|---|---|
-| Open at login | MSIX `StartupTask` | `WindowsRunKeyStartupTaskGateway` (HKCU Run key) | Settled by §3 — the Run key is correct for an unpackaged build. Never run on Windows; the "disabled by user" copy no longer applies |
-| Global hotkey | `GlobalHotkeyService` + `HotkeyInterop` | `WindowsGlobalHotkeyService` (message-only window) | Written against the docs, never run on Windows |
-| Single instance | Named mutex + user-ACL named pipe | `SingleInstanceCoordinator.ForCurrentUserPortable` (lock file + Unix socket) | **Undecided.** `Program.cs` calls the portable path on every OS; the Windows implementation exists in Infrastructure and the Avalonia app does not use it |
-| Tray / resident | WinForms `NotifyIcon` | Avalonia `TrayIcon` | Needs Windows behaviour checked: balloon, context menu, double-click restore, hide-to-tray on close |
-| Data root | `%LocalAppData%\Daynote` | `%LocalAppData%\Daynote` | Genuinely the same folder — measured, see §3.1 |
+| Concern | Windows implementation | Verified |
+|---|---|---|
+| Single instance | Named mutex + pipe, via the new `SingleInstanceCoordinator.ForCurrentUserOnThisPlatform` | Yes — all three pairings |
+| Open at login | `WindowsRunKeyStartupTaskGateway`, moved into `Daynote.Infrastructure.Startup` | Yes — four tests against the real `HKCU\...\Run` |
+| Global hotkey | `WindowsGlobalHotkeyService` | Yes — registration and end-to-end summon. **Bug found and fixed** |
+| Tray / hide-on-close | Avalonia `TrayIcon` | Partly — hide-to-tray verified; the icon's own menu is not machine-checkable |
 
-The single-instance one matters beyond tidiness: the existing app's mutex is `Local\Daynote-<SID>`,
-so a WPF build and an Avalonia build **will not see each other** during a transition period, and two
-copies would open the same SQLite file.
+### Single instance: the mutex, not the lock file
+
+`Program.cs` called the portable lock file on every OS. On Windows it now takes the named mutex,
+because that is what the WPF shell holds under the same base name — so while both builds exist, a
+second launch of either activates the one already running instead of putting two processes on one
+SQLite database. Verified by launching real processes in all three pairings
+(Avalonia→Avalonia, WPF→Avalonia, Avalonia→WPF): every second launch exited as secondary.
+
+An in-process test cannot cover this on Windows, because a named mutex is owned by the *thread* and
+is recursive — two claims in one process both succeed. `PlatformSingleInstanceTests` therefore
+asserts which primitive each OS picks, and the cross-process behaviour is the manual matrix above.
+
+**One pairing is not covered, and cannot be**: the Microsoft Store build. A packaged app's named
+kernel objects live in its own namespace, so its mutex is invisible from outside the package —
+measured by holding the installed Store build open and finding no `Local\Daynote-<SID>`, while the
+same code unpackaged creates one. An unpackaged build can therefore run beside an installed Store
+build, on the same data folder (§3.1: they share one), and neither notices. That is a migration
+hazard for the cutover, not a defect here; the cutover release should tell people to remove the
+Store build.
+
+### Open at login: moved, and it works
+
+`WindowsRunKeyStartupTaskGateway` lived in the Avalonia app, where nothing could test it. It now sits
+in `Daynote.Infrastructure.Startup` beside `MsixStartupTaskService`, and
+`WindowsRunKeyStartupTaskGatewayTests` drives the real registry under a throwaway value name: enable
+writes the entry, disable removes it (rather than blanking it), the command keeps its quotes so a
+path with spaces survives, re-enabling from a new location replaces the old path, and disabling
+something never enabled is not an error.
+
+What it still cannot do is notice that the user switched the entry off in Task Manager — the value
+stays, so the gateway keeps answering `Enabled`. The settings copy that says "turned off in Windows
+startup settings" comes from the MSIX `StartupTask` API and does not apply to this build.
+
+### Global hotkey: registered fine, summoned badly
+
+Registration was never the problem. With the app running, `RegisterHotKey` for Ctrl+Alt+D from
+another process fails with 1409 (already registered) and succeeds once the app exits, so the chord
+is really held.
+
+The defect was one step later. Closing the window hides it to the tray, and pressing the chord made
+it visible again — **behind whatever the user was looking at**. Windows refuses to let a background
+process take the foreground, and `Window.Activate()` did not get past that. The process that just
+received a hotkey is one of the cases the rule allows through, so `WindowsForeground.Raise` calls
+`SetForegroundWindow` directly after activating. Measured before and after: `foreground is Daynote`
+went from False to True.
+
+A summon that reveals a window without focusing it is the kind of thing that reads as working in a
+screenshot and is useless in practice — which is the argument for exercising each of these rather
+than trusting that they compile.
 
 ## 3. Packaging — decided: unpackaged installer
 
@@ -179,9 +224,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
 
 1. ~~**Chrome.**~~ **Done** (§1): platform-conditional title bar, app-drawn caption buttons with
    native hit-test roles, drag and Snap Layouts verified. Rounded corners and DPI changes remain.
-2. **Platform services.** Run the hotkey, login item, tray and single instance on Windows; pick the
-   single-instance implementation; revisit the startup copy that assumes `StartupTask` semantics;
-   write tests in `Daynote.Infrastructure.Portable.Tests` or a new Windows-flavoured sibling.
+2. ~~**Platform services.**~~ **Done** (§2): single instance settled on the mutex, login item moved
+   and tested against the real registry, hotkey summon fixed. The tray icon's own menu and the
+   startup copy that assumes `StartupTask` semantics are the leftovers.
 3. **Test harness.** Stand up `Avalonia.Headless`: composition/binding-error tests first, then the
    resource-parity rules. Do this *before* the design port so the port has a net under it.
 4. **Design system.** Port the palettes and the v3 primitives, then the screens in the order they are
@@ -199,8 +244,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
   reputation over time.
 - **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
   needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
-- **Does the cutover wait for full parity, or ship in stages?** A staged Windows release means two
-  shells in the wild at once, which the single-instance mismatch (§2) currently breaks.
+- **Does the cutover wait for full parity, or ship in stages?** Two unpackaged shells in the wild
+  now exclude each other (§2), but neither excludes an installed Store build — so the cutover has
+  to tell people to remove it.
 - **What happens to the showcase evidence pipeline?** Rebuild it on Avalonia, or retire it and keep
   only binding/composition tests. It is a large body of work either way.
 - **Does the Store listing get withdrawn, or left up pointing at the last MSIX?** Leaving it stale

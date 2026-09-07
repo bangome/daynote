@@ -92,6 +92,12 @@ public sealed class ResidentLifecycle : IDisposable
         }
 
         _window.Activate();
+
+        // Activate alone leaves a tray-summoned window behind the app in front (see WindowsForeground).
+        if (OperatingSystem.IsWindows())
+        {
+            Platform.WindowsForeground.Raise(_window);
+        }
     }
 
     public void HideToTray() => _window.Hide();

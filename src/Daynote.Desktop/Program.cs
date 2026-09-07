@@ -15,7 +15,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        SingleInstance = SingleInstanceCoordinator.ForCurrentUserPortable(InstanceBaseName);
+        SingleInstance = SingleInstanceCoordinator.ForCurrentUserOnThisPlatform(InstanceBaseName);
         if (SingleInstance.Start() == SingleInstanceRole.Secondary)
         {
             SingleInstance.ActivatePrimaryAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();

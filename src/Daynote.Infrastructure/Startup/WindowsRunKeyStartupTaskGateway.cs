@@ -1,16 +1,24 @@
 using System.Runtime.Versioning;
 using Daynote.Core.Startup;
-using Daynote.Infrastructure.Startup;
 using Microsoft.Win32;
 
-namespace Daynote.Desktop.Platform;
+namespace Daynote.Infrastructure.Startup;
 
 /// <summary>
-/// The Windows "start at sign-in" gateway for the unpackaged Avalonia build: a value under
-/// <c>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</c>. The MSIX WPF build uses the StartupTask
-/// API instead; this is what an .exe outside a package has. Enabled means the value exists and points
-/// at this executable.
+/// The Windows "start at sign-in" gateway for an unpackaged build: a value under
+/// <c>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</c>. The MSIX build uses the StartupTask
+/// API instead; this is what an .exe outside a package has. Enabled means the value exists.
 /// </summary>
+/// <remarks>
+/// It lives beside <see cref="MsixStartupTaskService"/> rather than in the app, so the two ways
+/// Windows can start a program at sign-in sit together and both can be tested without a UI.
+/// <para>
+/// One thing it cannot do, which the StartupTask API can: notice that the user switched the entry
+/// off in Task Manager. The value stays in the registry, so <see cref="GetStateAsync"/> keeps
+/// answering <c>Enabled</c>. Copy that says "turned off in Windows startup settings" does not apply
+/// to a build using this gateway.
+/// </para>
+/// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed class WindowsRunKeyStartupTaskGateway : IStartupTaskGateway
 {
