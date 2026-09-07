@@ -304,7 +304,7 @@
                                         <DataTemplate>
                                             <Button HorizontalContentAlignment="Stretch" Margin="0,0,0,4"
                                                     Visibility="{Binding IsProjection, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
-                                                    Command="{Binding DataContext.Notes.SelectNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Command="{Binding DataContext.SelectDayNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">

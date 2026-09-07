@@ -314,6 +314,16 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     /// <summary>Switches the selected date after an autosave-safe flush; cancels on save failure.</summary>
     public async Task<bool> SelectDateAsync(LocalDate date, CancellationToken cancellationToken = default)
     {
+        // Any navigation leaves the timeline. It is a view *of* the notes, not a place to be: once
+        // the user has picked a day or a note from either panel, the thing they picked is what they
+        // want to see. Every jump funnels through here, so this one line covers the calendar, the
+        // todo / favourites / tag rows, search, and Today.
+        //
+        // Before the same-date early return on purpose: clicking the day you are already on is still
+        // a request to look at it. Before the flush too, because a flush that fails leaves the editor
+        // showing the note and its retry button, which is exactly what the user needs to see.
+        IsTimelineMode = false;
+
         if (date == SelectedDate)
         {
             Calendar.SyncSelection(date);
@@ -343,6 +353,18 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     }
 
     private Task SelectDateFromCalendarAsync(LocalDate date) => SelectDateAsync(date);
+
+    /// <summary>
+    /// Picking a note from the day list, which is the one navigation that does not change the date
+    /// and so does not pass through <see cref="SelectDateAsync"/>. The list stays on screen in the
+    /// timeline, so clicking a row there has to open it.
+    /// </summary>
+    [RelayCommand]
+    private Task SelectDayNote(NoteTabViewModel? tab)
+    {
+        IsTimelineMode = false;
+        return Notes.SelectNoteAsync(tab);
+    }
 
     [RelayCommand]
     private Task GoToToday() => SelectDateAsync(LocalDates.Today(_clock));

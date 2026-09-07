@@ -15,7 +15,7 @@ public sealed partial class ProductShellViewModel
     /// <summary>Leaves timeline mode and opens the picked note in the editor on its own date.</summary>
     private async Task OpenFromTimelineAsync(Guid id, LocalDate date)
     {
-        IsTimelineMode = false;
+        // SelectDateAsync leaves the timeline for every caller, including this one.
         if (await SelectDateAsync(date).ConfigureAwait(true))
         {
             DomainResult<NoteId> nid = NoteId.Create(id);
