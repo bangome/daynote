@@ -18,7 +18,15 @@
   <StreamGeometry x:Key="Daynote.Geo.Moon">M13.5,9.5 A5.8,5.8 0 1 1 6.5,2.5 A4.6,4.6 0 0 0 13.5,9.5 Z</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Geo.Sun">M8,4.6 A3.4,3.4 0 1 0 8.01,4.6 M8,0.8 L8,2.6 M8,13.4 L8,15.2 M0.8,8 L2.6,8 M13.4,8 L15.2,8 M2.9,2.9 L4.2,4.2 M11.8,11.8 L13.1,13.1 M2.9,13.1 L4.2,11.8 M11.8,4.2 L13.1,2.9</StreamGeometry>
 
-  <StreamGeometry x:Key="Daynote.Geo.Person">M8,7.4 a2.6,2.6 0 1 0 0.01,0 M2.9,14.3 a5.2,4.2 0 0 1 10.2,0</StreamGeometry>
+  <!--
+    Person. The head is two half-arcs closed with Z, not the `a r,r 0 1 0 0.01,0` trick the WPF
+    geometry uses: that trick leaves a seam where the path starts and ends, which at 19px reads as a
+    nick in the circle. The shoulders are an arc that stops at the sides rather than curling under,
+    so the mark stays a head-and-shoulders and not a face in a bowl.
+  -->
+  <StreamGeometry x:Key="Daynote.Geo.Person">M8,2.6 a2.9,2.9 0 1 1 0,5.8 a2.9,2.9 0 1 1 0,-5.8 Z M2.6,13.9 a5.4,4.1 0 0 1 10.8,0</StreamGeometry>
 
-  <StreamGeometry x:Key="Daynote.Geo.ChevronUp">M3,10 L8,5 L13,10</StreamGeometry>
+  <!-- Chevron for the account strip: shallower than a 45-degree caret so it reads as "opens upward"
+       rather than as an arrow. -->
+  <StreamGeometry x:Key="Daynote.Geo.ChevronUp">M3.5,9.5 L8,5.5 L12.5,9.5</StreamGeometry>
 </ResourceDictionary>

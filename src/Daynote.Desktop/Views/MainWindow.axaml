@@ -27,15 +27,38 @@
       <!--
         The brand lockup: the calendar mark and the wordmark as one image, in the active language and
         theme (BrandLogos). This used to be the favicon beside the literal text "Daynote", which was
-        neither the logo nor localized; the WPF titlebar has shown the real lockup all along.
-
-        The title bar carries nothing else now. Everything that used to sit here has moved to where it
-        belongs: search and the view switches onto the toolbar over the content they act on, and the
-        account, theme and settings into the strip at the foot of the sidebar.
+        neither the logo nor localized; the WPF title bar has shown the real lockup all along.
       -->
       <Image x:Name="BrandArea" Grid.Column="0" Source="{Binding BrandLogo}" Height="26"
              VerticalAlignment="Center" HorizontalAlignment="Left"
              AutomationProperties.Name="Daynote" />
+
+      <!--
+        Search and the two view switches, centred in the strip. They sit together because they are one
+        thought - find something, or change what is on screen - and the middle of the title bar is the
+        one place that stays put as the sidebar and the right rail collapse.
+
+        Today and Timeline are marks, with their words on the tooltip and the accessible name: they are
+        used often enough to be worth recognising by shape, and it keeps the group from crowding the
+        search box.
+      -->
+      <Grid x:Name="SearchArea" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto"
+            MaxWidth="620" Margin="24,0" VerticalAlignment="Center">
+        <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline"
+                 PlaceholderText="{Binding Strings.SearchHint}" Text="{Binding Search.Query}" />
+        <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="11" Padding="8,4" Margin="4,0,0,0"
+                Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}" />
+        <Button Grid.Column="2" Classes="icon" Margin="6,0,0,0" Command="{Binding GoToTodayCommand}"
+                ToolTip.Tip="{Binding Strings.Today}" AutomationProperties.Name="{Binding Strings.Today}">
+          <Path Data="{StaticResource Daynote.Geo.Today}" />
+        </Button>
+        <Button Grid.Column="3" Classes="icon" Classes.selected="{Binding IsTimelineMode}"
+                Command="{Binding ToggleTimelineCommand}"
+                ToolTip.Tip="{Binding Strings.TimelineToggle}"
+                AutomationProperties.Name="{Binding Strings.TimelineToggle}">
+          <Path Data="{StaticResource Daynote.Geo.Timeline}" />
+        </Button>
+      </Grid>
 
       <!-- Windows caption buttons, drawn by the app so they match the shell instead of the theme.
            Behaviour is still the system's: MainWindow.Chrome.cs gives each one the element role that
@@ -59,38 +82,10 @@
       </StackPanel>
     </Grid>
 
-    <!-- Body: a toolbar over calendar + notes | editor or timeline | right rail. -->
-    <Grid Grid.Row="1" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*,Auto" Margin="16,0,16,16">
+    <!-- Body: calendar + notes | editor or timeline | right rail. -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="16,0,16,16">
 
-      <!--
-        Toolbar. Search starts at the body's left edge and the two view switches sit at its right, so
-        both line up with the content they act on rather than floating in the window chrome. Today and
-        Timeline are marks with their words in the tooltip: they are used often enough to be worth
-        recognising by shape, and the row stays quiet.
-      -->
-      <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-        <Grid x:Name="SearchArea" Grid.Column="0" MaxWidth="420" HorizontalAlignment="Left"
-              VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-          <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline" Width="360"
-                   PlaceholderText="{Binding Strings.SearchHint}" Text="{Binding Search.Query}" />
-          <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="11" Padding="8,4" Margin="4,0,0,0"
-                  Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}" />
-        </Grid>
-
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <Button Classes="icon" Command="{Binding GoToTodayCommand}"
-                  ToolTip.Tip="{Binding Strings.Today}" AutomationProperties.Name="{Binding Strings.Today}">
-            <Path Data="{StaticResource Daynote.Geo.Today}" />
-          </Button>
-          <Button Classes="icon" Classes.selected="{Binding IsTimelineMode}" Command="{Binding ToggleTimelineCommand}"
-                  ToolTip.Tip="{Binding Strings.TimelineToggle}"
-                  AutomationProperties.Name="{Binding Strings.TimelineToggle}">
-            <Path Data="{StaticResource Daynote.Geo.Timeline}" />
-          </Button>
-        </StackPanel>
-      </Grid>
-
-      <Grid Grid.Row="1" Grid.Column="0" Width="292" RowDefinitions="Auto,*,Auto" Margin="0,0,12,0" IsVisible="{Binding !LeftCollapsed}">
+      <Grid Grid.Column="0" Width="292" RowDefinitions="Auto,*,Auto" Margin="0,0,12,0" IsVisible="{Binding !LeftCollapsed}">
         <Border Grid.Row="0" Classes="panel" Padding="14" Margin="0,0,0,12">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="Auto,*,Auto">
@@ -175,7 +170,7 @@
       </Grid>
 
       <!-- Editor card -->
-      <Border Grid.Row="1" Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
+      <Border Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
               IsVisible="{Binding IsEditorMode}">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
@@ -224,7 +219,7 @@
       </Border>
 
       <!-- Timeline: every note, newest date first. -->
-      <Border Grid.Row="1" Grid.Column="1" Classes="panel" Padding="20,16" IsVisible="{Binding IsTimelineMode}">
+      <Border Grid.Column="1" Classes="panel" Padding="20,16" IsVisible="{Binding IsTimelineMode}">
         <Grid>
           <ScrollViewer IsVisible="{Binding !Timeline.IsEmpty}">
             <ItemsControl ItemsSource="{Binding Timeline.Rows}">
@@ -256,7 +251,7 @@
       </Border>
 
       <!-- Right rail -->
-      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Width="302" Margin="12,0,0,0" IsVisible="{Binding !RightCollapsed}">
+      <Border Grid.Column="2" Classes="panel" Width="302" Margin="12,0,0,0" IsVisible="{Binding !RightCollapsed}">
         <Grid RowDefinitions="Auto,*">
           <Border Grid.Row="0" Classes="seg" Margin="10,10,10,8">
             <UniformGrid Columns="4">
@@ -402,11 +397,8 @@
         </Grid>
       </Border>
 
-      <!-- Search results: hang under the search box, which is now at the body's left edge rather
-           than centred in the title bar, so these follow it there. Spanning the columns lets the
-           list stay readable when the sidebar is collapsed. -->
-      <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="panel" Width="420" MaxHeight="440"
-              VerticalAlignment="Top" HorizontalAlignment="Left"
+      <!-- Search results: float under the title bar's search box, above everything else. -->
+      <Border Grid.Column="1" Classes="panel" MaxWidth="560" MaxHeight="440" VerticalAlignment="Top" HorizontalAlignment="Center"
               Margin="0,2,0,0" ZIndex="10" Padding="8" Background="{DynamicResource Daynote.Product.Brush.Card}"
               IsVisible="{Binding Search.IsOpen}">
         <ScrollViewer>
@@ -435,7 +427,7 @@
         </ScrollViewer>
       </Border>
       <!-- Settings: a modal card over the whole body. -->
-      <Border Grid.Row="0" Grid.RowSpan="2" Grid.ColumnSpan="3" ZIndex="20" Background="#66000000" IsVisible="{Binding IsSettingsOpen}">
+      <Border Grid.ColumnSpan="3" ZIndex="20" Background="#66000000" IsVisible="{Binding IsSettingsOpen}">
         <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="560" MaxHeight="640"
                 VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" DataContext="{Binding SettingsViewModel}"
                 x:DataType="vm:DesktopSettingsViewModel">
@@ -560,7 +552,7 @@
         </Border>
       </Border>
       <!-- Account: the cloud account card over the body (only when this build has a sync endpoint). -->
-      <Border Grid.Row="0" Grid.RowSpan="2" Grid.ColumnSpan="3" ZIndex="25" Background="#66000000" IsVisible="{Binding IsAccountOpen}">
+      <Border Grid.ColumnSpan="3" ZIndex="25" Background="#66000000" IsVisible="{Binding IsAccountOpen}">
         <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="560" MaxHeight="680"
                 VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
           <Grid RowDefinitions="Auto,*">
@@ -574,7 +566,7 @@
       </Border>
 
       <!-- Onboarding tutorial: a stepping card over the body, shown once on first run. -->
-      <Border Grid.Row="0" Grid.RowSpan="2" Grid.ColumnSpan="3" ZIndex="30" Background="#66000000"
+      <Border Grid.ColumnSpan="3" ZIndex="30" Background="#66000000"
               IsVisible="{Binding Tutorial.IsOpen, FallbackValue=False}">
         <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="520"
                 VerticalAlignment="Center" HorizontalAlignment="Center" Padding="26,22" DataContext="{Binding Tutorial}"

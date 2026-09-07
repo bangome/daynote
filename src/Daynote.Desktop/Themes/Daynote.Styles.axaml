@@ -169,9 +169,10 @@
     <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Warn}" />
   </Style>
 
-  <!-- Square icon button for the toolbar: the mark carries the meaning, the label moves to the
-       tooltip. `selected` is for a toggle that is currently on (timeline), and reads as a filled
-       accent-soft chip rather than a border, so it cannot be confused with focus. -->
+  <!-- Square icon button, used by the title bar's Today and Timeline: the mark carries the meaning
+       and the label moves to the tooltip. `selected` is for a toggle that is currently on (timeline),
+       and reads as a filled accent-soft chip rather than a border, so it cannot be confused with
+       keyboard focus. -->
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -211,7 +212,7 @@
   <Style Selector="Button.accountbar">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Padding" Value="9,6" />
     <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
