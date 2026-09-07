@@ -30,6 +30,27 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFB25E09" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFC62A2F" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#1FE5484D" />
+      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
+           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FFF4F4F5" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SwitchKnob" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FFFDF0A0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.StickyStroke" Color="#FFE3D276" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.StickyText" Color="#FF3A3520" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.CloseHover" Color="#FFC42B1C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim" Color="#8C000000" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim.Modal" Color="#52000000" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFE5484D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OkSoft" Color="#1C0F7B5F" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.WarnSoft" Color="#24E8A33D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Blue" Color="#FF4285F4" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Green" Color="#FF34A853" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Yellow" Color="#FFFBBC05" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Red" Color="#FFEA4335" />
+      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
+           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF121316" />
@@ -55,6 +76,27 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Warn" Color="#FFE8A33D" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFFF6369" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#26FF6369" />
+      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
+           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FF121316" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SwitchKnob" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FFFDF0A0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.StickyStroke" Color="#FFE3D276" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.StickyText" Color="#FF3A3520" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.CloseHover" Color="#FFC42B1C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim" Color="#8C000000" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim.Modal" Color="#52000000" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFF2686C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.OkSoft" Color="#243DD68C" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.WarnSoft" Color="#29E8A33D" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Blue" Color="#FF4285F4" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Green" Color="#FF34A853" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Yellow" Color="#FFFBBC05" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Red" Color="#FFEA4335" />
+      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
+           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
+
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
