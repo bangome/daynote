@@ -70,6 +70,19 @@ public sealed partial class CalendarDayCellViewModel : ObservableObject
     /// <summary>True when the day dot should render at all (any note, clipboard item, or file).</summary>
     public bool HasActivity => ActivityLevel > 0;
 
+    /// <summary>
+    /// The heat level again, one boolean per step, because Avalonia styling has no equivalent of
+    /// WPF's value-matching <c>DataTrigger</c>: a style class is bound to a bool or nothing.
+    /// WPF binds <see cref="ActivityLevel"/> directly and ignores these.
+    /// </summary>
+    public bool IsActivity1 => ActivityLevel == 1;
+
+    /// <inheritdoc cref="IsActivity1" />
+    public bool IsActivity2 => ActivityLevel == 2;
+
+    /// <inheritdoc cref="IsActivity1" />
+    public bool IsActivity3 => ActivityLevel == 3;
+
     /// <summary>True when this cell is the selected date; drives the accent-soft fill and accent day number.</summary>
     [ObservableProperty]
     private bool _isSelected;

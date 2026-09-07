@@ -109,10 +109,14 @@
                   <Button Classes="day" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
                           Classes.saturday="{Binding IsSaturday}" Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
                           Command="{Binding SelectCommand}" Margin="0,2">
-                    <Grid>
-                      <TextBlock Text="{Binding DayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                      <Ellipse Width="4" Height="4" VerticalAlignment="Bottom" Margin="0,0,0,3"
-                               Fill="{DynamicResource Daynote.Product.Brush.Accent}" IsVisible="{Binding HasNotes}" />
+                    <!-- The dot gets its own row rather than floating over the number: it is always
+                         present, transparent when the day is empty, so every day number in the grid
+                         sits on one baseline whether or not that day has notes. -->
+                    <Grid RowDefinitions="*,Auto">
+                      <TextBlock Grid.Row="0" Text="{Binding DayText}" HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                      <Ellipse Grid.Row="1" Classes="heat" Classes.l1="{Binding IsActivity1}"
+                               Classes.l2="{Binding IsActivity2}" Classes.l3="{Binding IsActivity3}" />
                     </Grid>
                   </Button>
                 </DataTemplate>

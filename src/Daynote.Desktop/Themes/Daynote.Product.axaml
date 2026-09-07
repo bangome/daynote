@@ -48,9 +48,6 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Green" Color="#FF34A853" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Yellow" Color="#FFFBBC05" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Red" Color="#FFEA4335" />
-      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
-           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
-
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF121316" />
@@ -94,9 +91,6 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Green" Color="#FF34A853" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Yellow" Color="#FFFBBC05" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Google.Red" Color="#FFEA4335" />
-      <!-- Surfaces the Avalonia shell has not reached yet, carried over so the two apps keep
-           one palette. DesktopPaletteParityTests fails if either side gains a brush alone. -->
-
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

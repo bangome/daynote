@@ -195,30 +195,52 @@ What survives from the original worry:
   actually strand data, and there is now no reason to. Staying on the Store also means the
   cutover moves no data at all: same package family, same folder, an ordinary update.
 
-## 4. Design system — the largest single piece of work
+## 4. Design system — re-measured 2026-09-07, and smaller than it looked
+
+This section used to say the v3 palette and the pill/card/typography system did not exist on the
+Avalonia side. **That was written before the palette sync and is no longer true.** Re-counting the
+files rather than trusting the earlier note:
 
 | | WPF | Avalonia |
 |---|---|---|
-| Theme XAML | ~2,300 lines across 18 dictionaries | 330 lines across 2 |
-| Views | 20 `.xaml` | 3 `.axaml` |
+| Theme XAML | ~2,300 lines across 18 dictionaries | ~440 lines across 2 |
+| Views | 20 `.xaml` | 4 `.axaml` |
 
-The v3 renewal, the palettes (light/dark/high-contrast), the button/panel/typography systems, the
-calendar heat dots, the account styles — none of that exists on the Avalonia side, which has its own
-simpler Fluent-based look. Reaching parity means porting the design system, not translating files
-one for one: Avalonia has `Styles`/selectors rather than WPF's implicit-key `Style`/`ControlTemplate`
-model, so the structure differs even where the values carry over.
+The line ratio is not the work ratio. WPF spends most of those lines on `ControlTemplate` rewrites
+that Avalonia's selector styling does not need, and the Avalonia shell already carries the palette
+(both variants, key-for-key, held that way by `DesktopPaletteParityTests`) and the primitives:
+panel, card, chip, pill button, segmented tab, day cell, note row, check circle, editor, inline
+input, empty state.
 
-Concretely missing from the Avalonia shell today:
+### Heat dots — done
 
-- The v3 palette and pill/card/typography system, light **and** dark **and** high contrast.
-- Calendar heat dots. `CalendarDayCellViewModel.ActivityLevel` is already in `Daynote.Presentation`,
-  but `MainWindow.axaml` still binds `NoteCountText` — the old number badge.
-- The account surfaces from `docs/design-renewal/Daynote Account.dc.html`: the titlebar avatar with
-  its sync dot, the account menu, and the 520px account window. Avalonia has a single 200-line
-  `AccountPanel.axaml` covering sign-in, status, lock, recovery key and subscription in one column.
-- Sticky-note windows exist on both, but the Avalonia one is 58 lines against the WPF version's
-  styling; the always-on-top, per-note colour and live two-way edit need checking.
-- Settings: the WPF panel is the v3 modal (`SettingsView.xaml`, 313 lines, plus a 267-line dictionary).
+`CalendarDayCellViewModel.ActivityLevel` now drives the Avalonia calendar the way it drives the WPF
+one: light sky / sky / blue for 1, 2 and 3+ notes, extras alone counting as level 1. Verified by
+seeding a month with 1, 2, 3 and 4 notes on different days and capturing the running window.
+
+Two things the port needed that the WPF version did not:
+
+- **Avalonia style classes take a bool, not a value match.** There is no `DataTrigger Value="2"`, so
+  the level is exposed as `IsActivity1/2/3` beside `ActivityLevel`, and the dot binds three classes.
+- **The selected day fills with the accent, and the heat brushes are shades of that same accent** —
+  so the dot vanished into it. A descendant selector repaints it in the on-accent colour.
+
+The dot sits in its own grid row rather than floating over the number, and is present-but-transparent
+on an empty day, so the whole grid keeps one baseline. That is the same defect that was fixed in WPF
+earlier, arrived at differently: WPF needed `Visibility="Hidden"` inside a `StackPanel`, Avalonia
+needs the row to exist.
+
+### What is actually left
+
+| Surface | State |
+|---|---|
+| Account | Present but flattened: `AccountPanel.axaml` is one 200-line column covering sign-in, status, lock, recovery key and subscription. WPF splits this into a 520px window, a titlebar avatar with a popup menu, and a compact settings row. The Avalonia titlebar has the avatar and its initial, but clicking it opens the panel directly — there is no menu |
+| Settings | Present as a modal card inside `MainWindow.axaml`. WPF has a dedicated 313-line view plus a 267-line dictionary. Feature coverage needs a side-by-side pass, not a port |
+| Sticky notes | 58 lines against the WPF version's styling. Always-on-top, per-note colour and live two-way edit are unverified |
+| High contrast | **Absent, and the gap is not where §4 used to claim.** WPF has no high-contrast *product* palette either — it swaps the older foundation layer (`Daynote.Colors.HighContrast.xaml`) for one that aliases `SystemColors`, chosen once at startup from `SystemParameters.HighContrast`. Avalonia has no equivalent and would need its own approach |
+
+So the remaining design work is three screens to bring to parity and one accessibility mode to
+design, not a design system to build.
 
 ## 5. Tests — the harness exists now (2026-09-07)
 
@@ -321,8 +343,9 @@ no data-migration phase: §3.1 establishes that both builds read the same folder
    startup copy that assumes `StartupTask` semantics are the leftovers.
 3. ~~**Test harness.**~~ **Done** (§5): headless Avalonia, resource resolution in both variants,
    shell composition, and catalog keys. The showcase pipeline is still unported.
-4. **Design system.** Port the palettes and the v3 primitives, then the screens in the order they are
-   used: shell → settings → account. Heat dots come free once the palette exists.
+4. **Design system.** Palette, primitives and heat dots are done (§4). What remains is parity on
+   three screens — account, settings, sticky notes — and a high-contrast mode, which Avalonia has no
+   equivalent of and which needs designing rather than porting.
 5. ~~**Distribution.**~~ **Done** (§5b): publish/sign/zip script, Velopack installer and updater,
    verified by installing and uninstalling. Per §3 it is now the macOS channel and a parked Windows
    fallback — the wapproj and the Store submission scripts stay.

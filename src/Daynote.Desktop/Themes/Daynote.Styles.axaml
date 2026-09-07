@@ -110,6 +110,33 @@
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
   </Style>
 
+  <!-- Calendar day heat dot (v3.1), matching the WPF Daynote.Product.Style.Calendar.HeatDot:
+       GitHub-contribution style, light sky / sky / blue for 1, 2 and 3+ notes, with extras alone
+       counting as level 1. The dot always occupies its space — it sits in a Grid cell over the day
+       number rather than under it, so an empty day cannot pull the number off the shared baseline.
+       Three classes rather than one binding on the level: Avalonia style classes take a bool. -->
+  <Style Selector="Ellipse.heat">
+    <Setter Property="Width" Value="5" />
+    <Setter Property="Height" Value="5" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="Fill" Value="Transparent" />
+  </Style>
+  <Style Selector="Ellipse.heat.l1">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Heat1}" />
+  </Style>
+  <Style Selector="Ellipse.heat.l2">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Heat2}" />
+  </Style>
+  <Style Selector="Ellipse.heat.l3">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Heat3}" />
+  </Style>
+  <!-- On the selected day the cell is filled with the accent, and the heat brushes are shades of
+       that same accent — so the dot would disappear into it. Paint it in the on-accent colour. -->
+  <Style Selector="Button.day.selected Ellipse.heat.l1, Button.day.selected Ellipse.heat.l2, Button.day.selected Ellipse.heat.l3">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+  </Style>
+
   <!-- Note list row. -->
   <Style Selector="Button.noterow">
     <Setter Property="Background" Value="Transparent" />
