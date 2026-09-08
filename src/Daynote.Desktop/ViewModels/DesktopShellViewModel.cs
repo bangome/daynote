@@ -443,15 +443,26 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     {
         string tag = TagInput;
         TagInput = string.Empty;
-        if (Notes.SelectedTab is { } tab && !string.IsNullOrWhiteSpace(tag))
+        if (Notes.SelectedTab is { } tab && !string.IsNullOrWhiteSpace(tag)
+            && await Notes.AddTagAsync(tab, tag).ConfigureAwait(true))
         {
-            await Notes.AddTagAsync(tab, tag).ConfigureAwait(true);
+            // Refreshing here, not on the save that ReplaceTagsAsync flushes first: that flush
+            // raises Saved, the panel refresh hung off it runs before the tags are written, and the
+            // list comes back showing the state from a moment ago. Which is why a new tag only
+            // appeared after something else happened to refresh the panel.
+            await TagPanel.RefreshAsync().ConfigureAwait(true);
         }
     }
 
     [RelayCommand]
-    private Task RemoveTag(string? tag) =>
-        string.IsNullOrEmpty(tag) || Notes.SelectedTab is not { } tab ? Task.CompletedTask : Notes.RemoveTagAsync(tab, tag);
+    private async Task RemoveTag(string? tag)
+    {
+        if (!string.IsNullOrEmpty(tag) && Notes.SelectedTab is { } tab
+            && await Notes.RemoveTagAsync(tab, tag).ConfigureAwait(true))
+        {
+            await TagPanel.RefreshAsync().ConfigureAwait(true);
+        }
+    }
 
     /// <summary>Enters the timeline (after an autosave-safe flush) or leaves it back to the editor.</summary>
     [RelayCommand]

@@ -30,6 +30,7 @@
         neither the logo nor localized; the WPF title bar has shown the real lockup all along.
       -->
       <Image x:Name="BrandArea" Grid.Column="0" Source="{Binding BrandLogo}" Height="26"
+             RenderOptions.BitmapInterpolationMode="HighQuality"
              VerticalAlignment="Center" HorizontalAlignment="Left"
              AutomationProperties.Name="Daynote" />
 

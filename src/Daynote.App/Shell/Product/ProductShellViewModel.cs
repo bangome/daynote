@@ -313,14 +313,26 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     {
         string tag = TagInput;
         TagInput = string.Empty;
-        if (Notes.SelectedTab is { } tab)
+        if (Notes.SelectedTab is { } tab && await Notes.AddTagAsync(tab, tag).ConfigureAwait(true))
         {
-            await Notes.AddTagAsync(tab, tag).ConfigureAwait(true);
+            // Refreshing here, not on the save that ReplaceTagsAsync flushes first: that flush
+            // raises Saved, the panel refresh hung off it runs before the tags are written, and the
+            // list comes back showing the state from a moment ago. Which is why a new tag only
+            // appeared after something else happened to refresh the panel.
+            await TagPanel.RefreshAsync().ConfigureAwait(true);
         }
     }
 
-    public Task RemoveTagAsync(string tag) =>
-        Notes.SelectedTab is { } tab ? Notes.RemoveTagAsync(tab, tag) : Task.FromResult(false);
+    public async Task<bool> RemoveTagAsync(string tag)
+    {
+        if (Notes.SelectedTab is not { } tab || !await Notes.RemoveTagAsync(tab, tag).ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        await TagPanel.RefreshAsync().ConfigureAwait(true);
+        return true;
+    }
 
     [RelayCommand]
     private Task RemoveTag(string? tag) =>

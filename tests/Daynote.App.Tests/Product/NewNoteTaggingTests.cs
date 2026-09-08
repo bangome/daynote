@@ -77,6 +77,45 @@ public sealed class NewNoteTaggingTests
     }
 
     [TestMethod]
+    public async Task The_tag_panel_shows_a_new_tag_straight_away()
+    {
+        // The panel refresh used to hang off the Saved status, and ReplaceTagsAsync flushes *before*
+        // it writes the tags — so the refresh read the state from a moment earlier and the new tag
+        // only appeared once something else refreshed the panel.
+        await using WorkspaceTestContext context = WorkspaceTestContext.Create();
+        await context.StoreNoteAsync(Today, "회의", "본문");
+        await using WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
+        await harness.Shell.InitializeAsync();
+
+        Assert.IsTrue(harness.Shell.TagPanel.IsEmpty, "Nothing is tagged yet.");
+
+        harness.Shell.TagInput = "주간";
+        await harness.Shell.CommitTagCommand.ExecuteAsync(null);
+
+        Assert.IsFalse(harness.Shell.TagPanel.IsEmpty, "The 태그 tab did not pick up the new tag.");
+        Assert.AreEqual("#주간", harness.Shell.TagPanel.Tags.Single().Tag);
+    }
+
+    [TestMethod]
+    public async Task Removing_a_tag_takes_it_out_of_the_panel_straight_away()
+    {
+        await using WorkspaceTestContext context = WorkspaceTestContext.Create();
+        await context.StoreNoteAsync(Today, "회의", "본문");
+        await using WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
+        await harness.Shell.InitializeAsync();
+
+        harness.Shell.TagInput = "주간";
+        await harness.Shell.CommitTagCommand.ExecuteAsync(null);
+
+        // Asserted before the removal as well as after: "empty" is also what a panel that never
+        // refreshed at all looks like, so without this the test passes for the wrong reason.
+        Assert.IsFalse(harness.Shell.TagPanel.IsEmpty, "The tag was never listed to begin with.");
+
+        await harness.Shell.RemoveTagCommand.ExecuteAsync("주간");
+        Assert.IsTrue(harness.Shell.TagPanel.IsEmpty, "The 태그 tab still lists the removed tag.");
+    }
+
+    [TestMethod]
     public async Task Tagging_a_saved_note_still_works()
     {
         await using WorkspaceTestContext context = WorkspaceTestContext.Create();
