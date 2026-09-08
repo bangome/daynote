@@ -284,9 +284,29 @@ saved, amber means look at this, red means wrong", and no alpha for a tint:
 - The four Google brand colours stay literal. Recolouring a trademark produces something that is no
   longer the Google logo, which is both wrong and against the brand terms.
 
-What is **not** covered: macOS. "Increase contrast" adjusts the system appearance rather than
-exposing a colour set, so it needs its own answer instead of a bad translation of this one, and
-`WindowsHighContrastPalette` is `[SupportedOSPlatform("windows")]` to keep that honest.
+### macOS — derived, because there is nothing to follow (2026-09-08)
+
+"Increase contrast" on macOS is a preference, not a theme: it darkens borders and drops
+translucency inside the system appearance and publishes no colour set. Avalonia's macOS backend does
+report it — `Avalonia.Native` sets `PlatformColorValues.ContrastPreference`, checked in the 12.1.2
+assembly — so `DetectHighContrast` was already answering true there, and `Apply` was then returning
+without doing anything because the only palette source was `GetSysColor`.
+
+So macOS gets a **derived** palette instead: `DerivedHighContrastPalette` (portable) resolves the
+same nine roles from the same shared table to fixed maximum-contrast values, one set per variant.
+That is a real difference from the Windows behaviour, not a translation of it. On Windows the app
+defers to the user's theme; on macOS there is no theme to defer to, only a request for more contrast
+than v3 gives, so the app answers it itself — light stays light, black on white, borders in the text
+colour, secondary text at ~11:1 instead of v3's 4.6:1. The lossy decisions in the role table (status
+colours collapsing, the heat ramp losing a step, tints falling back to the page) are properties of
+high contrast, not of Win32, so they are shared rather than re-made per platform.
+
+`AvaloniaThemeApplier` now takes a `HighContrastSource` — `SystemColors` on Windows, `Derived`
+elsewhere — and the derived dictionary is rebuilt per variant, with the other variant's copy removed
+before the merge. The source is injectable so the macOS path is tested on the Windows build machine.
+
+Not verified: what it looks like on a Mac with the preference on. The colours are measured, the merge
+is tested, the rendering is not.
 
 Tests, on both sides plus one that needs neither framework:
 
@@ -294,7 +314,8 @@ Tests, on both sides plus one that needs neither framework:
 |---|---|
 | `HighContrastPaletteTests` (portable) | The table covers the product palette exactly, both directions — the test that was missing when the mode quietly did nothing. A brush the table forgets keeps its normal-theme colour in a high-contrast session, which is precisely what nobody testing in the normal theme will ever see |
 | `HighContrastPaletteTests` (WPF, 6 cases) | System colours win, the theme toggle does not take the mode off, every mapped brush resolves, brand colours survive |
-| `HighContrastThemeTests` (Avalonia, 4 cases) | The same, headless, in both variants |
+| `HighContrastThemeTests` (Avalonia, 6 cases) | The same, headless, in both variants — plus the derived path forced on, proving the variant swap replaces the dictionary rather than stacking a second one |
+| `DerivedHighContrastPaletteTests` (portable, 9 cases) | The derived palette covers the table exactly, and is actually high contrast: every text-on-surface pairing the table implies is measured with the WCAG formula and has to clear 7:1 (AAA) in both variants. Mutation-checked: putting the v3 mid-grey back fails it at 4.8:1 |
 
 The old `Daynote.Colors.HighContrast.xaml` is left where it is. It is still merged at startup and
 still overrides the foundation brushes; nothing reads them, so it is dead weight rather than a
@@ -313,6 +334,7 @@ catching something the moment it was written.
 | `ResourceResolutionTests` (×2, one per variant) | Every `{DynamicResource}` / `{StaticResource}` key in the app's `.axaml` resolves | A renamed brush is reported with the files that use it |
 | `MainWindowCompositionTests` (×2, one per variant) | The shell measures and arranges with no binding errors | — |
 | `LocalizationKeyTests` | Every `Strings[Key]` in markup exists in both catalogs | A made-up key that compiled **and** raised no binding error |
+| `RenderedFrameTests` (×3, added 2026-09-08) | The shell (both variants) and the sticky note render to real pixels; an empty day lists no projection row | The phantom "노트 1" row under "노트 0개"; see below |
 
 Three things learned while building it, all of which shape what is worth testing here:
 
@@ -328,9 +350,35 @@ Three things learned while building it, all of which shape what is worth testing
    every real run also produces and then resolves. The harness attaches its log sink after assigning
    the DataContext, and says so.
 
-Still not ported: the WPF **showcase evidence pipeline** (`ShowcaseCapture`, the fixture factories,
-the interaction contract table) and `Daynote.UiQa.Tests`. Those are a body of work in their own
-right, and §7 still asks whether they should be rebuilt on Avalonia or retired.
+### Rendered frames — the showcase's replacement (2026-09-08)
+
+The fixture now draws. `HeadlessAppFixture` runs with `UseHeadlessDrawing = false` and `.UseSkia()`,
+so a shown window produces real pixels and `CaptureRenderedFrame()` returns them; Skia was already
+in the test output transitively through `Avalonia.Desktop`, so no package was added.
+`RenderedFrameTests` shows the shell, runs the same `InitializeAsync` the app runs at start-up
+(pumping the dispatcher until it completes — without it the calendar is a weekday header and no
+days), captures light and dark, and captures the sticky note. The PNGs land in `frames/` next to the
+test binary. The assertions are coarse on purpose — right size, more than a handful of colours, the
+two variants differ, the corner is the page colour, the sticky's top rows carry glyphs and the band
+beneath them is flat — because a pixel-exact oracle is what made the WPF showcase expensive to keep
+true. The frames are the evidence; the tests only guarantee the evidence is real.
+
+Two things the first frame showed that nothing else had:
+
+- **The sticky note has one title strip.** The doubled-bar fix had been "not visually verified" since
+  it was made, because synthetic input never reached the app. The frame shows the app's strip and
+  nothing above it, and the test pins the band under it as flat.
+- **An empty day listed a phantom row.** The sidebar drew the editor's blank projection ("노트 1") as a
+  note row, under a header reading "노트 0개" and above "이 날짜에 노트가 없습니다" — three statements
+  that could not all be true. The WPF shell hides projection rows (`ProductWindow.xaml`,
+  `IsProjection` → collapsed) and the port had dropped that. Fixed with `IsVisible="{Binding
+  !IsProjection}"`, and `An_empty_day_lists_no_note_row` fails without it (checked by removing it).
+
+One test artefact worth recording so nobody chases it: switching `RequestedThemeVariant` directly
+repaints the palette but leaves the light wordmark on the dark ground, because the wordmark follows
+the view model's `IsDark`. The test flips `IsDark`, as the theme button does.
+
+The WPF **showcase evidence pipeline** and `Daynote.UiQa.Tests` are not ported and will not be; see §7.
 
 ## 5b. Distribution — built, and now the macOS channel plus a Windows fallback
 
@@ -449,8 +497,31 @@ way out and a much larger change.
 The same fence still hides the WinRT `StartupTask` API in `MsixStartupTaskService`, so the packaged
 Avalonia build takes the HKCU `Run` gateway instead. That works inside a package and is tested
 (§2); what it costs is the thing §2 already recorded — the Run key cannot tell that the user
-switched the entry off in Task Manager. The manifest's `startupTask` declaration is now unused; see
-§7.
+switched the entry off in Task Manager. The manifest's `startupTask` declaration was therefore
+unused, and on 2026-09-08 it came out — see "Startup: one mechanism" below.
+
+### Startup: one mechanism (2026-09-08)
+
+Two questions had to be answered before the declaration could go.
+
+**Does a Run value written from inside the package reach the real hive?** MSIX virtualizes HKCU
+writes into the package's private hive by default, and if that applied here the Avalonia build's
+"open at login" would be a toggle that writes a key nobody reads. Measured with
+`Invoke-CommandInDesktopPackage`, which runs a command under the package identity: `reg add` of a
+probe value into `HKCU\…\CurrentVersion\Run` from inside, `reg query` from outside — **visible**, and
+the package's `SystemAppData\Helium\User.dat` was not touched. So the Run key works in the shipped
+build. (A first attempt at this probe was blocked by tooling before it ran and read as "virtualized";
+the conclusion above is from the run that actually executed.)
+
+**What does the declaration cost while it stays?** A second switch. Windows lists a declared task
+in Settings → Apps → Startup whether or not the app ever touches it; a user who turns it on there
+gets a login launch the app's own toggle knows nothing about, and the two can sit in opposite
+states indefinitely. The WPF shell could read that state through WinRT; the Avalonia shell cannot.
+
+So the extension is gone, and `PackageManifestPolicy` now **rejects** a `windows.startupTask` instead
+of requiring one — the same inversion `internetClient` went through when cloud sync shipped. The
+`WindowsStartupTaskGateway` (WinRT) stays in `Daynote.Infrastructure` behind `#if WINDOWS` for the WPF
+shell until that is retired.
 
 ### What the guardrails caught, and what they did not
 
@@ -465,10 +536,28 @@ no test that could run it — `IsPackaged` was private and the only assertion wa
 `Resolve` core. It is now public and `PackageIdentityTests` exercises the P/Invoke, which is the part
 that fails silently if the entry point name or the marshalling is wrong.
 
-### Not done here
+### Installed and launched — 2026-09-08
 
-Installing and launching the package. Same identity as the installed Store build, so the two cannot
-coexist on one machine and testing it means removing the real one first.
+The Store build was already off this machine, so the repointed layout was registered in place
+(`Add-AppxPackage -Register …\bin\x64\Release\AppxManifest.xml`, development mode) and started
+through its `shell:appsFolder` entry, which is how the Start menu starts it.
+
+- It runs. A visible 1256×788 top-level window titled "Daynote", class `Avalonia-…`, under the
+  packaged `Daynote.Desktop` process. First launch took roughly 14 seconds to show a window; a probe
+  at 8 seconds found the process and no window yet.
+- It opened the real database. `%LocalAppData%\Daynote\daynote.db` was touched at launch and its WAL
+  checkpointed; the package's `LocalCache` contains only `Microsoft` folders and no `daynote.db`
+  anywhere under the container. Same finding as the manifest's STORAGE note, now for the Avalonia
+  entry point too. Integrity check `ok`, 43 notes, unchanged.
+- The alias resolves and starts the server: `daynote-mcp.exe` on PATH is
+  `%LocalAppData%\Microsoft\WindowsApps\daynote-mcp.exe`, and running it starts the stdio host.
+- The identity fix from above is now observable rather than inferred. The server logs one line to
+  stderr at startup — database path, `IsPackaged()`, and the command `McpServerCommand.Current`
+  resolved to — so the answer can be read from any client's log instead of trusted. Under the alias
+  it reports `packaged True` and the alias as the command; the same binary started from the
+  unpackaged publish folder reports `packaged False` and its sibling path.
+
+Still not done: the same test with a real Store-signed install, and the uninstall question in §7.
 
 ## 7. Still open
 
@@ -477,21 +566,35 @@ coexist on one machine and testing it means removing the real one first.
   Windows fallback is ever turned on.
 - ~~**Where the update feed lives.**~~ Deferred with the fallback. `Program.UpdateFeedUrl` stays
   empty and the updater stays inert; a packaged build would not use it anyway.
-- **Does the packaged Avalonia build actually run?** The package builds and contains what the
-  manifest declares (§6), but nothing here has installed and launched it. That needs a machine
-  where the installed Store build can be removed first — same package family, so the two cannot
-  coexist.
-- **The manifest still declares a `windows.startupTask` nothing enables** (§6). Left in place
-  deliberately: it is disabled by default and harmless, and it is the hook for giving the Avalonia
-  shell the WinRT path later. Removing it is the alternative.
-- **Does uninstalling the Store package delete `%LocalAppData%\Daynote`?** (§3.1). Answering it
-  needs one throwaway machine and one uninstall. It decides how loudly the cutover has to warn.
-- **High contrast on macOS.** The Windows half follows the OS theme (§4). macOS "Increase contrast"
-  adjusts the system appearance rather than exposing a colour set, so it needs its own approach.
+- ~~**Does the packaged Avalonia build actually run?**~~ Yes — registered from the loose layout and
+  launched 2026-09-08, see §6. What remains is the same check on a Store-signed install.
+- ~~**The manifest still declares a `windows.startupTask` nothing enables**~~ Removed 2026-09-08
+  after measuring that the Run key reaches the real hive from inside the package (§6). Keeping it
+  would have left a second startup switch the app cannot see.
+- ~~**Does uninstalling the Store package delete `%LocalAppData%\Daynote`?**~~ **No** — measured
+  2026-09-08 on the dev registration: `Remove-AppxPackage` deleted the package container under
+  `%LocalAppData%\Packages\<PFN>` and left `%LocalAppData%\Daynote` untouched (17 files before and
+  after, `daynote.db` SHA-256 identical). That follows from §3.1: the data was never inside the
+  container, so uninstall has nothing of ours to remove. Caveat: a development-mode registration, not
+  a Store-signed install — but the mechanism (where the data lives) is the same, and it is the
+  mechanism that decides. The cutover does not need a data-loss warning; the in-app Backup stays the
+  recommendation for the ordinary reason.
+- ~~**High contrast on macOS.**~~ Built 2026-09-08 as a derived palette (§4); what is left is
+  looking at it on a Mac with the preference on.
 - **Does the cutover wait for full parity, or ship in stages?** Staying on the Store removes the
   ugly half of this: the cutover is an update to the same package, not a second install, so nobody
   ends up running two shells at once.
-- **What happens to the showcase evidence pipeline?** Rebuild it on Avalonia, or retire it and keep
-  only binding/composition tests. It is a large body of work either way.
+- ~~**What happens to the showcase evidence pipeline?**~~ **Decided 2026-09-08: retire it with
+  `Daynote.App`, and replace the one thing it was for with headless Skia capture.** The showcase
+  (`src/Daynote.App/Showcase`, 23 files / 3,529 lines, plus 25 tests / 1,293 lines) renders isolated
+  WPF fixtures under `--showcase` and writes PNG + JSON evidence. Its catalogue still lists
+  `clipboard-item`, `clipboard-drawer`, `consent-panel` and `tray-menu` — features removed in August —
+  and its fixtures draw the old `MainWindow` shell, not the v3 `ProductWindow`, so it has not been
+  proving the shipped UI for some time even on WPF. Rebuilding it on Avalonia would mean rewriting it
+  and first re-deciding what it should prove. What this port actually needed from it — a rendered
+  frame of the running Avalonia UI inside a test, which is why the sticky window and the flyouts were
+  left "not visually verified" — is obtained far more cheaply by enabling Skia in
+  `HeadlessAppFixture` (`UseHeadlessDrawing = false`) and capturing frames; see §5. The showcase code
+  is left untouched until `Daynote.App` goes, so it is deleted once rather than maintained twice.
 - **macOS distribution.** The unpackaged route covers Windows mechanics; notarisation, the Apple
   Developer ID and the DMG are their own open questions.

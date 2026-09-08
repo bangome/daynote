@@ -17,6 +17,13 @@ namespace Daynote.Desktop.Tests;
 /// these run on Windows CI and macOS CI alike. It is the same reason they can cover the shell that
 /// is meant to replace the WPF app on Windows while staying the macOS app: one suite, both futures.
 /// </para>
+/// <para>
+/// Drawing is real, not stubbed: <c>UseHeadlessDrawing</c> is off and Skia is on, so a shown window
+/// produces actual pixels and <see cref="RenderedFrameTests"/> can capture them. That is what the WPF
+/// showcase pipeline was for and what this port needed from it (docs/WINDOWS_ON_AVALONIA.md §5, §7).
+/// Skia arrives transitively through the app's Avalonia.Desktop reference; the test project adds no
+/// package for it.
+/// </para>
 /// </remarks>
 internal static class HeadlessAppFixture
 {
@@ -42,7 +49,8 @@ internal static class HeadlessAppFixture
 
             AppBuilder
                 .Configure<App>()
-                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = true })
+                .UseSkia()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
                 .SetupWithoutStarting();
 
             _started = true;

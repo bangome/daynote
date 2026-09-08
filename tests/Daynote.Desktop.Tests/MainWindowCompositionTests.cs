@@ -2,8 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Logging;
 using Avalonia.Styling;
-using Daynote.App.Composition;
-using Daynote.Desktop.Composition;
 using Daynote.Desktop.ViewModels;
 using Daynote.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +38,7 @@ public sealed class MainWindowCompositionTests
             Application application = Application.Current!;
             application.RequestedThemeVariant = variantName == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
 
-            ServiceProvider provider = BuildServices(data.Path, application);
+            ServiceProvider provider = TestServices.Build(data.Path, application);
             var shell = provider.GetRequiredService<DesktopShellViewModel>();
 
             // Built before the sink is attached, on purpose. A control created during
@@ -87,7 +85,7 @@ public sealed class MainWindowCompositionTests
 
         HeadlessAppFixture.OnUiThread(() =>
         {
-            ServiceProvider provider = BuildServices(data.Path, Application.Current!);
+            ServiceProvider provider = TestServices.Build(data.Path, Application.Current!);
             var shell = provider.GetRequiredService<DesktopShellViewModel>();
             var window = new MainWindow { DataContext = shell };
             try
@@ -99,18 +97,6 @@ public sealed class MainWindowCompositionTests
                 provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
             }
         });
-    }
-
-    private static ServiceProvider BuildServices(string dataRoot, Application application)
-    {
-        Environment.SetEnvironmentVariable("DAYNOTE_DATA_ROOT", dataRoot);
-        var services = new ServiceCollection();
-        services.AddDaynoteDesktop(
-            DaynoteAppOptions.ForCurrentUser(),
-            application,
-            () => null,
-            () => { });
-        return services.BuildServiceProvider();
     }
 
     /// <summary>Collects everything Avalonia logs about bindings; anything at all is a failure.</summary>
@@ -140,28 +126,6 @@ public sealed class MainWindowCompositionTests
             errors.Add(values.Length == 0
                 ? template
                 : $"{template} [{string.Join(", ", values.Select(v => v?.ToString() ?? "null"))}]");
-        }
-    }
-
-    /// <summary>A throwaway data root, so a test never opens the developer's own database.</summary>
-    private sealed class TempDataRoot : IDisposable
-    {
-        internal string Path { get; } = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(), "daynote-tests", Guid.NewGuid().ToString("N"));
-
-        internal TempDataRoot() => Directory.CreateDirectory(Path);
-
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-            catch (IOException)
-            {
-                // A SQLite handle can outlive the test by a moment; a leftover temp folder is not a
-                // failure worth turning a green run red.
-            }
         }
     }
 }

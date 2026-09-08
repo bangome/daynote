@@ -143,7 +143,13 @@
                 <ItemsControl ItemsSource="{Binding Notes.Tabs}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="notes:NoteTabViewModel">
+                      <!-- A projection is the editor's blank "노트 1" for a day with nothing on it yet.
+                           It is not a note until something is typed, so the row stays hidden — as the
+                           WPF shell has always done. Listing it drew a "노트 1" row under "노트 0개"
+                           and above "이 날짜에 노트가 없습니다", all three at once; the first rendered
+                           frame of this window (RenderedFrameTests) is what showed it. -->
                       <Button Classes="noterow" Classes.selected="{Binding IsSelected}"
+                              IsVisible="{Binding !IsProjection}"
                               Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
                               CommandParameter="{Binding}">
                         <StackPanel Spacing="3">
