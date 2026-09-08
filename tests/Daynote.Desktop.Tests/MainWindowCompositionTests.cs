@@ -76,6 +76,31 @@ public sealed class MainWindowCompositionTests
             $"Binding errors in {variantName}:{Environment.NewLine}{string.Join(Environment.NewLine, errors.Distinct())}");
     }
 
+    [TestMethod]
+    public void The_window_carries_the_multi_resolution_icon()
+    {
+        // Windows asks for the icon at 16 and 32 for the taskbar and Alt-Tab, so the asset is an .ico
+        // with authored frames at those sizes rather than the 926px PNG beside it. Asserted because
+        // "it decoded" is the only thing that tells us Avalonia read the .ico at all — a resource
+        // that fails to load would leave the window iconless rather than throw.
+        using var data = new TempDataRoot();
+
+        HeadlessAppFixture.OnUiThread(() =>
+        {
+            ServiceProvider provider = BuildServices(data.Path, Application.Current!);
+            var shell = provider.GetRequiredService<DesktopShellViewModel>();
+            var window = new MainWindow { DataContext = shell };
+            try
+            {
+                Assert.IsNotNull(window.Icon, "The window has no icon; the .ico did not load.");
+            }
+            finally
+            {
+                provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        });
+    }
+
     private static ServiceProvider BuildServices(string dataRoot, Application application)
     {
         Environment.SetEnvironmentVariable("DAYNOTE_DATA_ROOT", dataRoot);

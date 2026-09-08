@@ -29,6 +29,13 @@
 
   <ItemGroup>
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.png" Link="Assets\daynote-favicon-v1.png" />
+    <!--
+      The window icon, as a multi-resolution .ico rather than the 926px PNG beside it. Windows asks
+      for the icon at 16 and 32 for the title bar, the taskbar and Alt-Tab, and shrinking one large
+      bitmap that far loses the small-size detail an authored frame keeps. The WPF shell has always
+      used this file; only this one did not.
+    -->
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.ico" Link="Assets\daynote-favicon-v1.ico" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
     <!-- The English wordmark, so an English build does not show a Korean logo (BrandLogos). -->

@@ -11,7 +11,7 @@
         Title="Daynote"
         Width="1240" Height="780" MinWidth="900" MinHeight="560"
         Background="{DynamicResource Daynote.Product.Brush.Bg1}"
-        Icon="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png"
+        Icon="avares://Daynote.Desktop/Assets/daynote-favicon-v1.ico"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="52">
 
