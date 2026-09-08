@@ -972,20 +972,30 @@ takes effect.
 - `SyncEndpointTests` asserts the decision itself, and asserts the manifest agrees with it, so the
   flag and the declared capability cannot drift apart.
 
-### Still the operator's to do
+### Operator checklist — done 2026-09-09, with one lesson
 
-These are outside the repository, and a sign-in will fail without them:
+Everything outside the repository that a sign-in needs is now in place, and **a real sign-in
+succeeded end to end** — browser → loopback → Worker → D1 → sync — which nothing in the repository
+can prove.
 
-- **Worker secrets**, if not already set: `wrangler secret put GOOGLE_CLIENT_SECRET` and
-  `wrangler secret put DEK_WRAP_KEY`. Set them from a terminal, never by pasting them anywhere else.
-- **Publish the Google OAuth consent screen** (Google Cloud Console → Audience → Publish). Only
-  `openid email profile` is requested, which needs no verification review, but a client left in
-  Testing signs in test users only and expires their Google refresh tokens after seven days.
-- **The Store listing.** `docs/STORE.md` now says what to declare — the account, the Google id and
-  email address, and note content as personal data the publisher can access. Partner Center has to be
-  updated in the release that carries this.
-- **One real sign-in against the live deployment**, browser → loopback → Worker → D1 → sync. Nothing
-  in the repository can prove that end to end.
+- **Worker secrets** are set (`wrangler secret list` shows `GOOGLE_CLIENT_SECRET`, `DEK_WRAP_KEY`,
+  `JWT_SECRET`). `DEK_WRAP_KEY` is not issued by anyone: it is a random string of 32+ characters the
+  operator generates once and must back up, because losing it makes every stored note unreadable and
+  rotating it has the same effect on existing accounts.
+- **The Google OAuth consent screen is published.** Publishing needed the homepage's domain
+  (`arachat.cc`) verified in Search Console first — a DNS TXT record at the root, which also covers
+  `daynote.arachat.cc` — and then listed under Authorized domains.
+- **D1 migrations are applied through 0006.** This was the lesson. The first real sign-in failed
+  with the generic "sync service error" while the browser tab said "Daynote is signed in": the Worker
+  had been redeployed with code that reads `users.protection` and `subscriptions`, but
+  `0005_optional_lock` and `0006_billing` had not been applied remotely, so the `SELECT` in
+  `auth.ts` failed and surfaced as a 500. `wrangler d1 migrations apply daynote --remote` fixed it.
+  Deploying the Worker does not apply migrations; the two have to be done together, and the
+  client's error banner cannot tell you which one was skipped.
+
+Still the operator's: **the Store listing.** `docs/STORE.md` says what to declare — the account,
+the Google id and email address, and note content as personal data the publisher can access.
+Partner Center has to be updated in the release that carries this.
 
 ### How the endpoint resolves
 
