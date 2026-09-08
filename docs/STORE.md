@@ -109,12 +109,15 @@ Submit → Microsoft certification → published.
 
 ## Notes & gotchas
 
-- **Full trust**: Daynote is a full-trust WPF/Win32 app (Desktop Bridge). The Store
-  allows this; certification may ask you to justify `runFullTrust`.
-- **Storage change**: the Store build uses packaged storage, so **uninstall removes
-  user data**. Existing sideload users should **Backup** (Settings → 백업 및 복원)
-  before switching, then **Restore** after installing the Store build — their old
-  `%LocalAppData%\Daynote` path is not shared with the packaged install.
+- **Full trust**: Daynote is a full-trust Win32 app (Desktop Bridge; the Avalonia shell
+  `Daynote.Desktop` since the cutover). The Store allows this; certification may ask you
+  to justify `runFullTrust`.
+- **Storage**: this bullet used to say packaged storage meant uninstall removes user
+  data. Both halves were wrong, and measured so (2026-09-07 and 2026-09-08): the Store
+  build writes to the real `%LocalAppData%\Daynote`, and uninstalling leaves that folder
+  intact. A sideload user switching to the Store build keeps their notes without a
+  Backup/Restore round trip. Back up anyway — see
+  [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md).
 - **Startup**: "start with Windows" is opt-in (Settings toggle); the app never
   auto-enables it, per Store policy.
 - **x64 only**: no x86/Arm64 package is produced.

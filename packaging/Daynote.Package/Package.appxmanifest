@@ -3,9 +3,10 @@
 <!--
   Daynote MSIX manifest — Microsoft Store configuration.
 
-  This is a full-trust WPF desktop package (Windows.FullTrustApplication + the
+  This is a full-trust desktop package (Windows.FullTrustApplication + the
   runFullTrust restricted capability, the standard Desktop Bridge path the Store
-  allows for Win32 apps).
+  allows for Win32 apps). Its entry point is the Avalonia shell, Daynote.Desktop,
+  since the cutover in docs/WINDOWS_ON_AVALONIA.md §6.
 
   STORAGE: standard packaged storage, with no unvirtualizedResources capability
   (the earlier sideload build declared it; Store policy avoids it).
@@ -15,12 +16,13 @@
   database it touched was the real %LocalAppData%\Daynote\daynote.db, and the
   package's LocalCache held no Daynote folder at all. An earlier version of this
   comment asserted the opposite (redirection into LocalCache\Local\Daynote) and was
-  wrong; docs/MCP.md repeated it. Whether an uninstall removes that outside-the-
-  package folder has NOT been tested; keep treating the in-app Backup as the
-  safety net before uninstalling (see docs/DATA_AND_RECOVERY.md).
+  wrong; docs/MCP.md repeated it. MEASURED 2026-09-08: uninstalling (Remove-AppxPackage
+  on the dev registration) deletes the package container and leaves %LocalAppData%\Daynote
+  intact, database hash unchanged. The in-app Backup remains the recommendation for the
+  ordinary reasons (see docs/DATA_AND_RECOVERY.md), not because uninstall destroys data.
 
-  The windows.startupTask is DISABLED by default; the app never auto-enables it — the
-  user opts in from Settings (Store-compliant).
+  "Open at login" is opt-in from the app's Settings and is an HKCU Run value, not a
+  manifest startup task; see the note inside <Extensions>.
 
   IDENTITY: this is the MICROSOFT STORE identity reserved in Partner Center for this app
   (Product identity page). The Store re-signs the package at ingestion, so the sideload
@@ -84,15 +86,15 @@
         <uap:SplashScreen Image="Images\SplashScreen.png" BackgroundColor="#F7F8FA" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension
-          Category="windows.startupTask"
-          Executable="Daynote.Desktop\Daynote.Desktop.exe"
-          EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask
-            TaskId="DaynoteStartupTask"
-            Enabled="false"
-            DisplayName="Daynote" />
-        </desktop:Extension>
+        <!--
+          NO windows.startupTask. The Avalonia shell has no WinRT projection (plain net10.0), so it
+          could neither read nor drive a manifest startup task; it implements "open at login" with an
+          HKCU Run value instead, which - measured 2026-09-08 by writing one from inside this package
+          identity - lands in the real HKCU hive, not the package's virtualized one, so Windows honours
+          it. Declaring a task as well would put a second, independent switch in Settings > Apps >
+          Startup that the app cannot see: on there and off in the app at the same time. One mechanism.
+          PackageManifestPolicy now fails the build if a startupTask comes back.
+        -->
 
         <!--
           MCP SERVER (docs/MCP.md). The stdio server ships in this package because the alias is the

@@ -23,7 +23,7 @@ meant to replace the WPF shell on Windows once it reaches feature parity.
 |---|---|---|
 | Single instance | Named mutex + current-user ACL named pipe | Exclusive lock file + Unix domain socket under `$TMPDIR/.daynote` (`SingleInstanceCoordinator.ForCurrentUserPortable`) |
 | Session secret (`credentials.dat`) | DPAPI (`DpapiSecretProtector`) | AES-GCM under a key held in the login Keychain (`MacKeychainSecretProtector`) |
-| Open at login | MSIX `StartupTask` | `~/Library/LaunchAgents/cc.arachat.daynote.plist` (`LaunchAgentStartupTaskGateway`) |
+| Open at login | HKCU `Run` value (`WindowsRunKeyStartupTaskGateway`) | `~/Library/LaunchAgents/cc.arachat.daynote.plist` (`LaunchAgentStartupTaskGateway`) |
 | Data root | `%LocalAppData%\Daynote` | `~/Library/Application Support/Daynote` |
 | Claude Desktop config | `%AppData%\Claude\claude_desktop_config.json` | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Resident presence | WinForms `NotifyIcon` | Avalonia `TrayIcon` (status bar) + Dock reopen |

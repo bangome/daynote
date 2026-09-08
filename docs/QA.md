@@ -134,6 +134,8 @@ and dev certificate and confirms the intentional data marker is preserved.
 
 ### 4. Startup policy states
 
-Install the package, then inspect the `DaynoteStartupTask` state (Enabled / Disabled /
-DisabledByUser / policy) via Windows Settings → Startup apps and the app's own settings surface. The
-task defaults **disabled**; the app never auto-enables it.
+Install the package, then check "Open at login" from the app's own settings surface. It defaults
+**off**; the app never auto-enables it. Turning it on writes `HKCU\Software\Microsoft\Windows\
+CurrentVersion\Run\Daynote` (visible in Task Manager → Startup apps); turning it off removes the
+value. There is no manifest startup task any more, so Windows Settings → Apps → Startup lists the
+Run entry only, and only while it is on.

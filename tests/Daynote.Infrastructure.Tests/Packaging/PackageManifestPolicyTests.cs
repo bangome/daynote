@@ -124,19 +124,31 @@ public sealed class PackageManifestPolicyTests
     }
 
     [TestMethod]
-    public void Test_policy_rejects_a_manifest_whose_startup_task_is_enabled_by_default()
+    public void Test_policy_rejects_a_manifest_that_declares_a_startup_task()
     {
-        // Negative: a StartupTask enabled by default violates the opt-in contract.
+        // Negative: putting the old windows.startupTask back. The Avalonia shell cannot drive it and
+        // uses an HKCU Run value, so a declared task is a second startup switch the app cannot see
+        // (docs/WINDOWS_ON_AVALONIA.md §6, "Startup: one mechanism"). Even disabled by default.
         XDocument mutated = LoadManifest();
-        XElement startupTask = mutated.Descendants()
-            .Single(static element => element.Name.LocalName == "StartupTask");
-        startupTask.SetAttributeValue("Enabled", "true");
+        XNamespace desktop = "http://schemas.microsoft.com/appx/manifest/desktop/windows10";
+        XElement extensions = mutated.Descendants()
+            .Single(static element => element.Name.LocalName == "Extensions");
+        extensions.Add(new XElement(
+            desktop + "Extension",
+            new XAttribute("Category", "windows.startupTask"),
+            new XAttribute("Executable", PackageManifestPolicy.ExpectedAppExecutable),
+            new XAttribute("EntryPoint", "Windows.FullTrustApplication"),
+            new XElement(
+                desktop + "StartupTask",
+                new XAttribute("TaskId", "DaynoteStartupTask"),
+                new XAttribute("Enabled", "false"),
+                new XAttribute("DisplayName", "Daynote"))));
 
         IReadOnlyList<string> violations = PackageManifestPolicy.Evaluate(mutated);
 
         Assert.IsTrue(
-            violations.Any(static v => v.Contains("Enabled", StringComparison.Ordinal)),
-            "An enabled-by-default StartupTask must be rejected. Got: " + string.Join(" | ", violations));
+            violations.Any(static v => v.Contains("startupTask", StringComparison.Ordinal)),
+            "A declared windows.startupTask must be rejected. Got: " + string.Join(" | ", violations));
     }
 
     [TestMethod]

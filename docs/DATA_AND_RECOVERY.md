@@ -40,15 +40,18 @@ The data is **plaintext and not encrypted by Daynote**. It is not copied or uplo
 The app writes under `%LocalAppData%\Daynote`.
 
 - **Update** to a newer version keeps all notes, images, settings, and pause state.
-- **Uninstall** — back up first. See the note below.
-- **Reinstall** starts fresh unless the data is still there; restore a backup to bring it back.
+- **Uninstall** leaves `%LocalAppData%\Daynote` in place — measured, see below. Back up anyway.
+- **Reinstall** finds the data still there and picks it up; a restore is only needed if the folder
+  was removed by hand.
 
 Treat the in-app **Backup** as your safety net before uninstalling, resetting, or moving to another
-PC. That advice has not changed, but the reason behind it has been corrected: this page used to say
-the Store package redirected its storage into the package's private store, so an uninstall
+PC. That advice has not changed, but the reason behind it has been corrected twice: this page used
+to say the Store package redirected its storage into the package's private store, so an uninstall
 necessarily took the notes with it. Measured on 2026-09-07, the installed Store build wrote to the
 real `%LocalAppData%\Daynote` and its `LocalCache` held no Daynote folder — there is no redirection.
-Whether an uninstall removes that folder anyway has **not** been tested, so back up regardless.
+Measured on 2026-09-08, uninstalling the package removed the package's own container and left
+`%LocalAppData%\Daynote` untouched, file for file, database hash unchanged. So uninstall does not
+destroy your notes; the backup is for the ordinary reasons — disk failure, a new PC, a mistake.
 
 ## Backing up your data
 

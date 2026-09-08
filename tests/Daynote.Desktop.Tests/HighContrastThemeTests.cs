@@ -26,7 +26,7 @@ public sealed class HighContrastThemeTests
     {
         if (!OperatingSystem.IsWindows())
         {
-            Assert.Inconclusive("The palette is read through GetSysColor; macOS needs its own answer.");
+            Assert.Inconclusive("This is the GetSysColor path; the derived path is tested below.");
         }
 
         HeadlessAppFixture.OnUiThread(() =>
@@ -62,6 +62,48 @@ public sealed class HighContrastThemeTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void The_derived_palette_follows_the_variant_where_there_are_no_system_colours(bool dark)
+    {
+        // The macOS path, forced: "Increase contrast" gives Avalonia a preference and no colours, so
+        // the palette is derived per variant. Runs everywhere because the source is injected.
+        HeadlessAppFixture.OnUiThread(() =>
+        {
+            Application application = Application.Current!;
+            int before = application.Resources.MergedDictionaries.Count;
+            try
+            {
+                var applier = new AvaloniaThemeApplier(application, highContrast: true, HighContrastSource.Derived);
+
+                // Apply the other variant first so the test proves the swap, not just the first merge.
+                applier.Apply(!dark);
+                applier.Apply(dark);
+
+                Assert.AreEqual(
+                    before + 1,
+                    application.Resources.MergedDictionaries.Count,
+                    "Exactly one high-contrast dictionary should be merged; the other variant's must come out.");
+
+                var page = Lookup(application, "Bg1", dark) as ISolidColorBrush;
+                var text = Lookup(application, "Text", dark) as ISolidColorBrush;
+                Assert.IsNotNull(page, "Bg1 did not resolve to a brush.");
+                Assert.IsNotNull(text, "Text did not resolve to a brush.");
+                Assert.AreEqual(dark ? Colors.Black : Colors.White, page.Color, "The page is not the variant's extreme.");
+                Assert.AreEqual(dark ? Colors.White : Colors.Black, text.Color, "Text is not the opposite extreme.");
+            }
+            finally
+            {
+                while (application.Resources.MergedDictionaries.Count > before)
+                {
+                    application.Resources.MergedDictionaries.RemoveAt(
+                        application.Resources.MergedDictionaries.Count - 1);
+                }
+            }
+        });
+    }
+
+    [TestMethod]
     public void Without_high_contrast_nothing_is_merged()
     {
         HeadlessAppFixture.OnUiThread(() =>
@@ -83,7 +125,7 @@ public sealed class HighContrastThemeTests
     {
         if (!OperatingSystem.IsWindows())
         {
-            Assert.Inconclusive("The palette is read through GetSysColor; macOS needs its own answer.");
+            Assert.Inconclusive("This is the GetSysColor path; the derived path is tested below.");
         }
 
         HeadlessAppFixture.OnUiThread(() =>

@@ -9,9 +9,12 @@ only; the full privacy, data-recovery, and QA docs are owned by Todo 12.
 - An **x64-only** development MSIX for `Daynote.Desktop` (self-contained publish).
 - Package identity `Daynote.Dev`, publisher `CN=Daynote.Dev`, version `1.0.0.0`.
 - A full-trust desktop app (`runFullTrust`).
-- A **Windows startup task** (`TaskId=DaynoteStartupTask`), **disabled by default and
-  opt-in**: the app never auto-enables it (Store policy). The user turns it on from
-  Settings, and user/policy-disabled states are never overridden.
+- **No Windows startup task** in the manifest (removed 2026-09-08). "Open at login" is
+  opt-in from the app's Settings and is an HKCU `Run` value written by
+  `WindowsRunKeyStartupTaskGateway`; measured from inside the package identity, that
+  write reaches the real hive, so Windows honours it. A manifest task as well would be a
+  second switch in Settings → Apps → Startup that the Avalonia shell cannot read, and
+  `PackageManifestPolicy` rejects one.
 - The **MCP stdio server** (`Daynote.Mcp`), reachable through the app execution alias
   `daynote-mcp.exe`, declared as an extension on the app's own `<Application>`. It is
   deliberately **not** a second application: one hidden with `AppListEntry="none"` is a
@@ -39,9 +42,10 @@ the package's `LocalCache` contained no Daynote folder. This package does not ge
 capability. Earlier revisions of this file, `Package.appxmanifest`, `MCP.md`,
 `PRIVACY.md` and `DATA_AND_RECOVERY.md` all stated the opposite; they were wrong.
 
-**Still back up before uninstalling.** Whether an uninstall reaches outside the package
-to remove that folder has not been tested, and the in-app **Backup/Restore**
-(Settings → 백업 및 복원) costs nothing — see
+**Uninstall leaves that folder alone** — measured 2026-09-08: `Remove-AppxPackage` deleted
+the package container under `%LocalAppData%\Packages\<PFN>` and `%LocalAppData%\Daynote`
+was untouched, same file count, same database hash. Back up anyway; the in-app
+**Backup/Restore** (Settings → 백업 및 복원) costs nothing — see
 [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md). (Update and reinstall keep the data.)
 
 > History: earlier development sideload builds declared the `unvirtualizedResources`

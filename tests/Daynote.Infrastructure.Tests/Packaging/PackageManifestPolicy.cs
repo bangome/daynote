@@ -19,9 +19,6 @@ internal static class PackageManifestPolicy
     private static readonly XNamespace Desktop6 = "http://schemas.microsoft.com/appx/manifest/desktop/windows10/6";
     private static readonly XNamespace Uap3 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/3";
 
-    /// <summary>The StartupTask id must match the shell's registered StartupTaskId.</summary>
-    public const string ExpectedStartupTaskId = "DaynoteStartupTask";
-
     /// <summary>Minimum OS build, matching the TFM net10.0-windows10.0.19041.0.</summary>
     public const string ExpectedMinVersion = "10.0.19041.0";
 
@@ -168,33 +165,23 @@ internal static class PackageManifestPolicy
                 + "account UI and cannot reach the server.");
         }
 
-        // StartupTask present AND disabled by default with the expected id.
-        var startupTasks = package
+        // No windows.startupTask. This rule used to require one, disabled by default with a fixed id,
+        // when the packaged shell was WPF and drove it through WinRT. The Avalonia shell has no WinRT
+        // projection and implements "open at login" as an HKCU Run value, which reaches the real hive
+        // from inside the package (measured 2026-09-08). A declared task on top of that would be a
+        // second switch in Settings > Apps > Startup that the app cannot see or reconcile.
+        int startupTasks = package
             .Element(Foundation + "Applications")?
             .Elements(Foundation + "Application")
             .Elements(Foundation + "Extensions")
             .Elements(Desktop + "Extension")
-            .Where(static extension => (string?)extension.Attribute("Category") == "windows.startupTask")
-            .Elements(Desktop + "StartupTask")
-            .ToList() ?? new List<XElement>();
-        if (startupTasks.Count == 0)
+            .Count(static extension => (string?)extension.Attribute("Category") == "windows.startupTask") ?? 0;
+        if (startupTasks > 0)
         {
-            violations.Add("Missing windows.startupTask extension.");
-        }
-        else
-        {
-            foreach (XElement startupTask in startupTasks)
-            {
-                if ((string?)startupTask.Attribute("TaskId") != ExpectedStartupTaskId)
-                {
-                    violations.Add($"StartupTask/@TaskId must be '{ExpectedStartupTaskId}'.");
-                }
-
-                if (!string.Equals((string?)startupTask.Attribute("Enabled"), "false", StringComparison.OrdinalIgnoreCase))
-                {
-                    violations.Add("StartupTask/@Enabled must be 'false' (disabled by default; the app never auto-enables).");
-                }
-            }
+            violations.Add(
+                "A windows.startupTask extension is declared, but the packaged shell (Daynote.Desktop) "
+                + "cannot drive it and uses an HKCU Run value instead; two independent startup switches "
+                + "would disagree. Remove the extension.");
         }
 
         List<XElement> applications = package

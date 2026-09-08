@@ -15,8 +15,8 @@ namespace Daynote.Desktop.Platform;
 /// but not the colours behind it, so the values come from Win32 <c>GetSysColor</c> directly. That is
 /// the price of following the OS theme rather than shipping a fixed palette
 /// (docs/WINDOWS_ON_AVALONIA.md §4), and it is why this file is Windows-only: macOS "Increase
-/// contrast" adjusts the system appearance instead of exposing a colour set, so it needs its own
-/// answer rather than a bad translation of this one.
+/// contrast" adjusts the system appearance instead of exposing a colour set, so it gets
+/// <see cref="DerivedHighContrastBrushes"/> instead of a bad translation of this one.
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public static class WindowsHighContrastPalette
