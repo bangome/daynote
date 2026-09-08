@@ -131,10 +131,11 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
-    <!-- No internetClient: this build makes no network calls at all. Cloud sync is built but held
-         back (DaynoteAppOptions.SyncEnabledByDefault), so declaring a network the app never uses
-         would show the user a permission that is not real. Add it back in the same commit that
-         flips that flag — the Store lists declared capabilities, and an undeclared network is a
-         silent one. See docs/CLOUD_SYNC.md. -->
+    <!-- Cloud sync ships now (DaynoteAppOptions.SyncEnabledByDefault), so the network the app uses
+         is declared. Without this a packaged build would show the account UI and be unable to reach
+         anything: MSIX blocks outbound calls a package has not asked for. The Store lists declared
+         capabilities, so this is also what tells the user the app talks to a server.
+         See docs/CLOUD_SYNC.md. -->
+    <Capability Name="internetClient" />
   </Capabilities>
 </Package>

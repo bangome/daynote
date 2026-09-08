@@ -16,13 +16,50 @@ namespace Daynote.App.Tests.Composition;
 public sealed class SyncEndpointTests
 {
     [TestMethod]
-    public void CloudSync_IsNotShippedYet()
+    public void CloudSync_Ships()
     {
         // Not a style rule — this is the release decision, and it is the one line that changes when
-        // the feature ships. If someone flips the flag, the two tests below flip with it and say so.
-        Assert.IsFalse(
+        // it is revisited. It was held back on the grounds that password-reset mail was unverified,
+        // which stopped applying when sign-in became Google's: there is no password and no reset
+        // route. Turned on 2026-09-08.
+        Assert.IsTrue(
             DaynoteAppOptions.SyncEnabledByDefault,
-            "Cloud sync is held back until password-reset mail is verified end to end.");
+            "Cloud sync ships; a build that turns it back off should say why here.");
+    }
+
+    [TestMethod]
+    public void The_package_declares_the_network_cloud_sync_uses()
+    {
+        // The two have to move together. An MSIX blocks outbound calls it has not declared, so a
+        // package with the account UI and no internetClient would show a sign-in that cannot reach
+        // anything — and the Store lists declared capabilities, so an undeclared network is also an
+        // undisclosed one.
+        string manifest = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "packaging", "Daynote.Package", "Package.appxmanifest"));
+
+        Assert.AreEqual(
+            DaynoteAppOptions.SyncEnabledByDefault,
+            manifest.Contains("Name=\"internetClient\"", StringComparison.Ordinal),
+            "Package.appxmanifest and SyncEnabledByDefault disagree about whether this build "
+                + "talks to a server.");
+    }
+
+    private static string RepositoryRoot { get; } = FindRepositoryRoot();
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "DESIGN.md")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException($"No Daynote repository above '{AppContext.BaseDirectory}'.");
     }
 
     [TestMethod]

@@ -15,13 +15,10 @@ can only be done in your Partner Center account; the rest are already wired in t
    unless you are shipping a build with no Worker deployed, in which case host the
    content of PRIVACY.md anywhere public. Key points it must state: Daynote stores only what
    you create (notes, attached day files, settings) locally in plaintext; it has no
-   analytics or telemetry; and it makes no network calls at all.
-   That last claim is currently unconditional. Cloud sync is built but held back
-   (`DaynoteAppOptions.SyncEnabledByDefault` is `false`), so the shipped build has no
-   account, collects no email address, uploads nothing, and declares no `internetClient`
-   capability. Declare no account and no data collection.
-   **When cloud sync ships**, this listing has to change in the same release: an account
-   exists (Google sign-in), the Google account id and email address are collected, and note
+   analytics or telemetry; and it makes no network call until you ask it to.
+   Cloud sync ships as of 2026-09-08 (`DaynoteAppOptions.SyncEnabledByDefault` is `true`) and
+   the package declares `internetClient`, so the listing has to declare: an account exists
+   (Google sign-in), the Google account id and email address are collected, and note
    content is uploaded. Declare note content as personal data the publisher **can** access:
    it is encrypted in transit and at rest, but by default the service holds the key. The
    opt-in lock (CLOUD_SYNC.md §4.1b) removes that access for users who turn it on, which is

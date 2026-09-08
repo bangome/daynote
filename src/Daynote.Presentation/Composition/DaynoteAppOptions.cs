@@ -31,15 +31,21 @@ public sealed class DaynoteAppOptions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// False, and deliberately so: cloud sync is not finished, so no shipped build offers an account.
-    /// Password-reset mail has never been verified end to end, and half a recovery story is worse
-    /// than none — a user who signs up, forgets their password, and cannot receive a reset code has
-    /// lost their cloud copy for good. Hiding it is the honest state until that path works.
+    /// True since 2026-09-08: shipped builds offer an account.
     /// </para>
     /// <para>
-    /// This is the whole switch. Flipping it to true is what ships the feature; everything behind it
-    /// is built, deployed, and covered by tests. <see cref="SyncEndpointEnvironmentVariable"/>
-    /// enables it per-run in the meantime, which is how development and QA reach it.
+    /// It was false, and the reason given was that password-reset mail had never been verified end to
+    /// end — a user who forgot their password and could not receive a reset code would lose their
+    /// cloud copy. That reason did not survive the move to Google sign-in: there is no password to
+    /// forget and no reset mail to send. <c>cloud/worker/src/auth.ts</c> says so directly ("There is
+    /// no register endpoint and no password"), and the Worker exposes no reset route. The recovery
+    /// story that remains belongs to the optional note lock, which issues a recovery key, offers to
+    /// save it to a file, and makes the user acknowledge it before the lock takes effect.
+    /// </para>
+    /// <para>
+    /// This is the whole switch, and everything behind it was already built, deployed and covered by
+    /// tests. <see cref="SyncEndpointEnvironmentVariable"/> still overrides it either way, which is
+    /// how a run can be forced off.
     /// </para>
     /// </remarks>
     /// <remarks>
@@ -47,7 +53,7 @@ public sealed class DaynoteAppOptions
     /// assembly at compile time, so a stale reference could disagree with the app about whether the
     /// feature shipped, and the compiler would fold away the tests that check it.
     /// </remarks>
-    public static readonly bool SyncEnabledByDefault = false;
+    public static readonly bool SyncEnabledByDefault = true;
 
     /// <summary>
     /// The deployed service, used when <see cref="SyncEnabledByDefault"/> is true.

@@ -157,12 +157,15 @@ internal static class PackageManifestPolicy
             .Elements(Foundation + "Capability")
             .Select(static element => (string?)element.Attribute("Name"))
             .ToList() ?? new List<string?>();
-        if (generalCapabilities.Contains("internetClient"))
+        // Cloud sync ships, so the package has to declare the network it uses: MSIX blocks calls a
+        // package never asked for, and the Store lists what is declared. This check used to forbid
+        // the capability, for as long as the app made no calls at all.
+        if (!generalCapabilities.Contains("internetClient"))
         {
             violations.Add(
-                "Capability 'internetClient' is declared, but this build makes no network calls. "
-                + "If cloud sync now ships (DaynoteAppOptions.SyncEnabledByDefault), update this "
-                + "policy and the Store listing together.");
+                "Capability 'internetClient' is missing, but this build ships cloud sync "
+                + "(DaynoteAppOptions.SyncEnabledByDefault). A packaged build without it shows the "
+                + "account UI and cannot reach the server.");
         }
 
         // StartupTask present AND disabled by default with the expected id.

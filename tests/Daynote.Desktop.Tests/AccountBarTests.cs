@@ -69,6 +69,38 @@ public sealed class AccountBarTests
     }
 
     [TestMethod]
+    public void A_default_build_has_an_account_to_sign_in_to()
+    {
+        // The shipped default, with no override at all: cloud sync is on, so the shell composes an
+        // account and the strip offers a sign-in. Every other test here sets the variable, so without
+        // this one nothing would notice the ship decision being reverted.
+        string dataRoot = Path.Combine(Path.GetTempPath(), "daynote-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dataRoot);
+
+        HeadlessAppFixture.OnUiThread(() =>
+        {
+            Environment.SetEnvironmentVariable("DAYNOTE_SYNC_ENDPOINT", null);
+            Environment.SetEnvironmentVariable("DAYNOTE_DATA_ROOT", dataRoot);
+
+            var services = new ServiceCollection();
+            services.AddDaynoteDesktop(
+                DaynoteAppOptions.ForCurrentUser(), Application.Current!, () => null, () => { });
+            ServiceProvider provider = services.BuildServiceProvider();
+            var shell = provider.GetRequiredService<DesktopShellViewModel>();
+            try
+            {
+                Assert.IsTrue(shell.HasAccount, "A default build should offer an account.");
+                Assert.IsNotNull(shell.Account!.SignInCommand);
+                Assert.IsTrue(shell.Account.IsSignedOut, "It starts signed out; signing in is the user's move.");
+            }
+            finally
+            {
+                provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        });
+    }
+
+    [TestMethod]
     public void The_strip_still_opens_with_no_account_at_all()
     {
         // The state most builds run in: no sync endpoint, so the shell's Account is null. The strip
@@ -81,7 +113,10 @@ public sealed class AccountBarTests
             Application application = Application.Current!;
             string dataRoot = Path.Combine(Path.GetTempPath(), "daynote-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dataRoot);
-            Environment.SetEnvironmentVariable("DAYNOTE_SYNC_ENDPOINT", null);
+            // "off", not unset. Cloud sync ships now, so an unset variable falls back to the
+            // deployed endpoint and this build *does* have an account — the endpoint-less state is
+            // only reachable by forcing it, which is what the override is for.
+            Environment.SetEnvironmentVariable("DAYNOTE_SYNC_ENDPOINT", "off");
             Environment.SetEnvironmentVariable("DAYNOTE_DATA_ROOT", dataRoot);
 
             var services = new ServiceCollection();

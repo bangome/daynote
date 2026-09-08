@@ -938,41 +938,54 @@ not a styling one, so it is not taken here.
 4. **Legacy table cleanup.** `clipboard_items` and `image_assets` are dead; drop them in a separate
    migration before `004` so the sync code never has to reason about them.
 
-## 12. Shipping state: held back
+## 12. Shipping state: shipped 2026-09-08
 
-**Cloud sync is not in the shipped app.** `DaynoteAppOptions.SyncEnabledByDefault` is `false`, so a
-released build resolves no endpoint, registers no sync services, constructs no `HttpClient`, shows no
-account section in the settings panel, renders no status chip, and makes no network calls at all. The
-MSIX declares no `internetClient` capability to match.
+`DaynoteAppOptions.SyncEnabledByDefault` is `true`, so a released build resolves
+`https://daynote.arachat.cc`, registers the sync services, and offers an account. The package
+declares `internetClient` to match, and `PackageManifestPolicy` now requires it rather than pinning
+its absence — an MSIX blocks calls it never asked for, so the two have to agree or the shipped build
+shows a sign-in that cannot reach anything.
 
-The reason that held it back for months — unverified password-reset mail, in a system where a lost
-password meant a permanently unreadable cloud copy — **is gone with the password**. Google owns
-account recovery now, and the data key is held by the service, so there is no user-held secret left
-to lose and no transactional-email dependency at all. Resend, the DNS records, and the reset
-endpoints were deleted in the same change.
+Signed out it still does nothing: no account, no upload, no connection. Signing in is the switch the
+user throws.
 
-What remains before it ships is verification, not implementation: the Google flow has to be
-exercised end to end against the live deployment (browser → loopback → Worker → D1 → sync), and the
-documents and Store declaration have to say the true thing about who can read the notes.
+### What held it back, and why that stopped applying
 
-### Turning it on
+The reason recorded for months was unverified password-reset mail, in a system where a lost password
+meant a permanently unreadable cloud copy. **That reason went with the password.** Google owns
+account recovery now, the data key is held by the service, and `cloud/worker/src/auth.ts` says it
+plainly — "There is no register endpoint and no password". The Worker exposes no reset route; Resend,
+the DNS records and the reset endpoints were deleted in the same change.
 
-One line. Set `SyncEnabledByDefault` to `true`, and in the same commit:
+What remains of the recovery story belongs to the optional note lock, which is off by default and
+issues a recovery key, offers to save it to a file, and makes the user acknowledge it before the lock
+takes effect.
 
-- add `<Capability Name="internetClient" />` back to `packaging/Daynote.Package/Package.appxmanifest`
-  and update `PackageManifestPolicy`, which currently pins its absence;
-- set the two Worker secrets, if they are not already set: `wrangler secret put GOOGLE_CLIENT_SECRET`
-  and `wrangler secret put DEK_WRAP_KEY`;
-- publish the Google OAuth consent screen (Google Cloud Console → Audience → **Publish**). Only
-  `openid email profile` is requested, which needs no Google verification review, but a client left
-  in Testing signs in test users only and expires their Google refresh tokens after seven days;
-- update the Store listing (STORE.md) to declare the account, the Google account id and email
-  address collected, and the uploaded note content **that the publisher can read**;
-- update PRIVACY.md, which currently states the app makes no network calls.
+### Verified when it was turned on
 
-`SyncEndpointTests` asserts the flag is false, so flipping it fails a test whose message says what
-else to change. That is deliberate: these things have to move together or the app understates what
-it does.
+- The service is live: `GET /` returns 200, and `GET /v1/auth/me` returns **401** rather than 404 —
+  the auth API is deployed and enforcing.
+- `AccountLifecycleTests` covers the flow it now exposes: signing in, signing in again, signing out,
+  closing the browser mid-flow, token renewal, key restoration without the browser, content written
+  before sign-in being pushed afterwards, note content never leaving in the clear, and the backup zip
+  not containing the credentials file.
+- `SyncEndpointTests` asserts the decision itself, and asserts the manifest agrees with it, so the
+  flag and the declared capability cannot drift apart.
+
+### Still the operator's to do
+
+These are outside the repository, and a sign-in will fail without them:
+
+- **Worker secrets**, if not already set: `wrangler secret put GOOGLE_CLIENT_SECRET` and
+  `wrangler secret put DEK_WRAP_KEY`. Set them from a terminal, never by pasting them anywhere else.
+- **Publish the Google OAuth consent screen** (Google Cloud Console → Audience → Publish). Only
+  `openid email profile` is requested, which needs no verification review, but a client left in
+  Testing signs in test users only and expires their Google refresh tokens after seven days.
+- **The Store listing.** `docs/STORE.md` now says what to declare — the account, the Google id and
+  email address, and note content as personal data the publisher can access. Partner Center has to be
+  updated in the release that carries this.
+- **One real sign-in against the live deployment**, browser → loopback → Worker → D1 → sync. Nothing
+  in the repository can prove that end to end.
 
 ### How the endpoint resolves
 

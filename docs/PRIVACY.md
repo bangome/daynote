@@ -14,12 +14,17 @@ Worker — the page and this document cannot say different things.*
 Daynote has **no analytics and no telemetry**, ever. Nothing about how you use the app is reported
 anywhere.
 
-**This version of Daynote makes no network calls at all.** Cloud sync is not included in it — see
-below.
+**Daynote makes no network call until you ask it to.** With cloud sync switched off — which is how
+it starts — the app opens no connection at all.
 
-There is exactly one way note content can leave this PC, and you have to switch it on: the **AI
-integration (MCP)**, which hands your notes to an AI client that may forward them to that client's own
-service. It is described below. With it off, everything stays on this PC.
+There are exactly two ways note content can leave this PC, and you have to switch each one on:
+
+- **Cloud sync**, which uploads your notes so other PCs can read them. Off until you sign in with
+  Google. Described below, including who can read what is stored.
+- **AI integration (MCP)**, which hands your notes to an AI client that may forward them to that
+  client's own service. Also described below.
+
+With both off, everything stays on this PC.
 
 ## AI integration (MCP, optional, off by default)
 
@@ -48,20 +53,19 @@ touch it on the way out; the entry simply stops resolving.
 
 See [MCP.md](MCP.md) for the tool list and setup details.
 
-## Cloud sync — not in this version
+## Cloud sync — optional, and off until you sign in
 
-Daynote has no accounts and no cloud sync. There is no sign-in, nothing is uploaded, and the app
-opens no network connection. If you have read about cloud sync elsewhere, it is built but not
-released.
+Cloud sync is in the app and switched off until you sign in with Google. Signed out there is no
+account, nothing is uploaded, and the app opens no network connection.
 
-When it does ship it will be optional and off until you sign in with Google, and it will **not** be
-end-to-end encrypted. Your notes are encrypted in transit and encrypted at rest on the service, but
-the service also holds the key that opens them, so whoever runs it can read what is stored. That is
-the direct consequence of signing in with an identity provider instead of a password: Google proves
-who you are, but it gives the app no secret to build an encryption key from.
+Once you sign in, it is **not** end-to-end encrypted. Your notes are encrypted in transit and
+encrypted at rest on the service, but the service also holds the key that opens them, so whoever
+runs it can read what is stored. That is the direct consequence of signing in with an identity
+provider instead of a password: Google proves who you are, but it gives the app no secret to build
+an encryption key from.
 
-You will be able to turn that off. **Locking your notes** is an opt-in switch in the same settings
-panel: it re-encrypts the data key with a passphrase only you know and asks the service to destroy
+You can turn that off. **Locking your notes** is an opt-in switch in the same settings panel: it
+re-encrypts the data key with a passphrase only you know and asks the service to destroy
 its own copy, after which nobody running the service can read your notes. The cost is that you enter
 that passphrase once on each new PC, and that a forgotten passphrase needs the recovery key shown
 when you turn the lock on — with the service's copy gone, there is nothing else that can open the
@@ -75,9 +79,7 @@ file syncing stops, and **nothing is deleted** — everything on your PC is unto
 already uploaded are kept.
 
 Either way the service holds your Google account id and email address, and the times each note
-changed. This document will be replaced with the full specifics in the same release that turns cloud
-sync on. Until then, treat any description of it as a plan rather than a description of the app you
-are running.
+changed.
 
 ## Daynote only stores what you create — no background capture
 
