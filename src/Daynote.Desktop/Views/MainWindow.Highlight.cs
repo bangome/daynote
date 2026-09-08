@@ -12,8 +12,7 @@ namespace Daynote.Desktop.Views;
 /// </summary>
 /// <remarks>
 /// A checkbox becomes a row in the todo panel, a date beside it becomes that row's due date, a
-/// <c>#tag</c> is indexed, a marker or URL is clickable. Marking them is how the note says "I
-/// understood that" as it is typed — the same set the WPF editor has always marked, now split by the
+/// marker or URL is clickable. Marking them is how the note says "I understood that" as it is typed — the same set the WPF editor has always marked, now split by the
 /// shared <see cref="BodyHighlightSyntax"/> so neither shell can quietly disagree about what counts.
 /// <para>
 /// The editor draws its own text in <c>Transparent</c> and this sits directly behind it, so the two
@@ -90,10 +89,6 @@ public partial class MainWindow
 
         switch (span.Kind)
         {
-            case BodyHighlightKind.Tag:
-                // Inline tags read as chips, the same as the ones above the editor.
-                run.Background = Brush("Daynote.Product.Brush.AccentSoft", Brushes.Transparent);
-                break;
             case BodyHighlightKind.Link:
                 run.TextDecorations = TextDecorations.Underline;
                 break;

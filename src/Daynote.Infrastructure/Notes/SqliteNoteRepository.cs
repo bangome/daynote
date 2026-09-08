@@ -265,6 +265,13 @@ public sealed class SqliteNoteRepository : INoteRepository
             SqliteNoteStatements.ReadAllNotes(connection, null, null));
     }
 
+    public ValueTask<IReadOnlyList<NoteTagLink>> GetAllNoteTagsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using SqliteConnection connection = _database.OpenReadConnection();
+        return ValueTask.FromResult(SqliteNoteStatements.ReadAllNoteTags(connection));
+    }
+
     public ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(
         LocalDate from,
         LocalDate to,

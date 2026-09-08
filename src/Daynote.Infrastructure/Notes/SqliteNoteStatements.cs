@@ -98,6 +98,21 @@ internal static class SqliteNoteStatements
         return result;
     }
 
+    /// <summary>Every note_tags row, for the 태그 panel's cross-date list.</summary>
+    internal static IReadOnlyList<NoteTagLink> ReadAllNoteTags(SqliteConnection connection)
+    {
+        using SqliteCommand command = Create(connection, null,
+            "SELECT note_id,tag,sort_order FROM note_tags ORDER BY note_id,sort_order;");
+        using SqliteDataReader reader = command.ExecuteReader();
+        var links = new List<NoteTagLink>();
+        while (reader.Read())
+        {
+            links.Add(new NoteTagLink(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetInt32(2)));
+        }
+
+        return links;
+    }
+
     private static List<string> ReadTagsFor(SqliteConnection connection, SqliteTransaction? transaction, NoteId id)
     {
         using SqliteCommand command = Create(connection, transaction,

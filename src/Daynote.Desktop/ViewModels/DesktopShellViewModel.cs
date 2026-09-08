@@ -88,9 +88,6 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     public TimelineViewModel Timeline { get; }
 
-    /// <summary>Raised to ask the editor view to select a body span (start, length), e.g. a tag hit.</summary>
-    public event Action<int, int>? EditorSelectRequested;
-
     [ObservableProperty]
     private LocalDate _selectedDate;
 

@@ -8,10 +8,13 @@ using Daynote.Core.Notes;
 namespace Daynote.App.Shell.Product;
 
 /// <summary>
-/// The 태그 tab: gathers inline <c>#tag</c> tokens from EVERY note body across ALL dates
-/// (<see cref="INoteRepository.GetAllNotesAsync"/>) via <see cref="TagParsing"/>, listing each distinct tag
-/// with its total occurrence count. This is a separate system from the per-note tag chips. Jumping to an
-/// occurrence is delegated to the shell, which navigates and selects the tag in the editor.
+/// The 태그 tab: every tag the user has put on a note, across all dates, with the notes that carry it.
+/// </summary>
+/// <remarks>
+/// It used to scan note bodies for inline <c>#tag</c> tokens instead, which meant the app had two tag
+/// systems and this panel showed the one the user could not see in the tag row — a note tagged with
+/// the chips under its title appeared nowhere. There is one system now: <c>note_tags</c>, the chips.
+/// Opening a row is delegated to the shell, which navigates to the note.
 /// </summary>
 public sealed partial class TagPanelViewModel : ObservableObject, ILanguageAware
 {
@@ -41,11 +44,12 @@ public sealed partial class TagPanelViewModel : ObservableObject, ILanguageAware
 
     partial void OnTagCountChanged(int value) => OnPropertyChanged(nameof(TabLabel));
 
-    /// <summary>Re-parses inline tags across all notes. Called on load and after any note-body change.</summary>
+    /// <summary>Rebuilds the list. Called on load and whenever a note's tags change.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<NoteSummary> notes = await _repository.GetAllNotesAsync(cancellationToken).ConfigureAwait(true);
-        IReadOnlyList<TagSummary> summaries = TagParsing.Aggregate(TagParsing.Parse(notes));
+        IReadOnlyList<NoteTagLink> links = await _repository.GetAllNoteTagsAsync(cancellationToken).ConfigureAwait(true);
+        IReadOnlyList<TagSummary> summaries = NoteTagIndex.Build(notes, links);
 
         Tags.Clear();
         foreach (TagSummary summary in summaries)

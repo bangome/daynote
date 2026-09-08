@@ -74,9 +74,25 @@ public sealed class EditorHighlightTests
 
             string[] marked = [.. MarkedRuns(highlight, marked: true).Select(r => r.Text ?? string.Empty)];
             CollectionAssert.AreEqual(
-                new[] { "-[]", "(9/7 15:00)", "#회계", "https://example.com" },
+                new[] { "-[]", "(9/7 15:00)", "https://example.com" },
                 marked,
                 $"Marked: {string.Join(" | ", marked)}");
+        });
+    }
+
+    [TestMethod]
+    public void A_hash_in_the_prose_is_left_alone()
+    {
+        // Tags are the chips under the title. The body used to mark #tag tokens as well, which meant
+        // two tag systems and a panel that listed only the one the user could not see in the tag row.
+        WithEditor((shell, editor, highlight) =>
+        {
+            SetBody(shell, editor, highlight, "#회계 정리와 C# 코드 이야기");
+
+            Assert.AreEqual(
+                0,
+                MarkedRuns(highlight, marked: true).Count(),
+                "A '#' in the prose is prose now.");
         });
     }
 
@@ -114,7 +130,7 @@ public sealed class EditorHighlightTests
 
         WithEditor((shell, editor, highlight) =>
         {
-            SetBody(shell, editor, highlight, "-[] 장부 정리 (9/8 15:00) #회계 https://example.com 보통");
+            SetBody(shell, editor, highlight, "-[] 장부 정리 (9/8 15:00) https://example.com 보통");
 
             string[] offenders =
             [

@@ -8,23 +8,34 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Daynote.App.Tests.Product;
 
 /// <summary>
-/// Tests for the 태그 panel: distinct-tag aggregation, counts, sort, per-tag occurrences, and that a row
-/// jump invokes the shell callback with the originating occurrence.
+/// The 태그 panel: the tags the user put on notes, grouped, counted and ordered, and a row that opens
+/// the note it names.
 /// </summary>
+/// <remarks>
+/// It used to read inline <c>#tag</c> tokens out of note bodies, which is a system the app no longer
+/// has — the tags are the chips under the note title, in <c>note_tags</c>. These tests were rewritten
+/// around that rather than deleted: the grouping, counting and ordering are the same job.
+/// </remarks>
 [TestClass]
 public sealed class TagPanelViewModelTests
 {
-    private static NoteSummary Note(string body, string title = "노트 1", string iso = "2026-07-21")
-        => new(Guid.NewGuid(), LocalDate.Parse(iso).Value, title, body, 0, false);
+    private static readonly LocalDate Day = LocalDate.Parse("2026-07-21").Value;
 
-    /// <summary>An in-memory repository that serves a fixed note list from the cross-date query.</summary>
-    private sealed class StubNoteRepository(IReadOnlyList<NoteSummary> notes) : INoteRepository
+    private static NoteSummary Note(Guid id, string title = "노트 1", string body = "본문", string iso = "2026-07-21")
+        => new(id, LocalDate.Parse(iso).Value, title, body, 0, false);
+
+    /// <summary>An in-memory repository serving fixed notes and fixed note_tags rows.</summary>
+    private sealed class StubNoteRepository(IReadOnlyList<NoteSummary> notes, IReadOnlyList<NoteTagLink> links)
+        : INoteRepository
     {
         public ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult(notes);
 
         public ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(LocalDate from, LocalDate to, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(notes);
+
+        public ValueTask<IReadOnlyList<NoteTagLink>> GetAllNoteTagsAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(links);
 
         public ValueTask<NoteSet> GetDayWorkspaceAsync(LocalDate localDate, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<DayWorkspace> GetDayWorkspaceStateAsync(LocalDate localDate, CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -37,13 +48,27 @@ public sealed class TagPanelViewModelTests
         public ValueTask<IReadOnlyList<DateContentSummary>> GetMonthContentSummaryAsync(int year, int month, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
-    private static TagPanelViewModel Create(IReadOnlyList<NoteSummary> notes, Func<TagOccurrence, Task>? onJump = null)
-        => new(new StubNoteRepository(notes), onJump ?? (_ => Task.CompletedTask));
+    private static TagPanelViewModel Create(
+        IReadOnlyList<NoteSummary> notes,
+        IReadOnlyList<NoteTagLink> links,
+        Func<TagOccurrence, Task>? onJump = null)
+        => new(new StubNoteRepository(notes, links), onJump ?? (_ => Task.CompletedTask));
 
     [TestMethod]
-    public async Task RefreshAsync_AggregatesDistinctTagsWithCountsAndSort()
+    public async Task It_groups_tags_and_orders_by_how_many_notes_carry_them()
     {
-        var vm = Create([Note("#work #work #idea"), Note("#work #idea")]);
+        Guid a = Guid.NewGuid();
+        Guid b = Guid.NewGuid();
+        Guid c = Guid.NewGuid();
+
+        TagPanelViewModel vm = Create(
+            [Note(a), Note(b), Note(c)],
+            [
+                new NoteTagLink(a, "work", 0),
+                new NoteTagLink(a, "idea", 1),
+                new NoteTagLink(b, "work", 0),
+                new NoteTagLink(c, "work", 0),
+            ]);
         await vm.RefreshAsync();
 
         Assert.IsFalse(vm.IsEmpty);
@@ -51,13 +76,13 @@ public sealed class TagPanelViewModelTests
         Assert.AreEqual("#work", vm.Tags[0].Tag);
         Assert.AreEqual(3, vm.Tags[0].Count);
         Assert.AreEqual("#idea", vm.Tags[1].Tag);
-        Assert.AreEqual(2, vm.Tags[1].Count);
+        Assert.AreEqual(1, vm.Tags[1].Count);
     }
 
     [TestMethod]
-    public async Task RefreshAsync_NoTags_IsEmpty()
+    public async Task A_note_with_no_tags_puts_nothing_in_the_panel()
     {
-        var vm = Create([Note("plain body, no tags")]);
+        TagPanelViewModel vm = Create([Note(Guid.NewGuid(), body: "태그 없는 본문 #해시는_이제_그냥_글자")], []);
         await vm.RefreshAsync();
 
         Assert.IsTrue(vm.IsEmpty);
@@ -65,53 +90,56 @@ public sealed class TagPanelViewModelTests
     }
 
     [TestMethod]
-    public async Task RefreshAsync_BuildsOccurrencesPerTag()
+    public async Task Each_row_lists_the_notes_that_carry_the_tag()
     {
-        var vm = Create([Note("#a here", title: "First"), Note("#a there", title: "Second")]);
+        Guid a = Guid.NewGuid();
+        Guid b = Guid.NewGuid();
+
+        TagPanelViewModel vm = Create(
+            [Note(a, "회의록", "오전 회의 정리"), Note(b, "장부", "9월 정산")],
+            [new NoteTagLink(a, "work", 0), new NoteTagLink(b, "work", 0)]);
         await vm.RefreshAsync();
 
-        TagItemViewModel item = vm.Tags.Single();
-        Assert.AreEqual(2, item.Occurrences.Count);
-        Assert.AreEqual("First", item.Occurrences[0].NoteTitle);
+        TagItemViewModel row = vm.Tags.Single();
+        CollectionAssert.AreEquivalent(
+            new[] { "회의록", "장부" },
+            row.Occurrences.Select(o => o.NoteTitle).ToArray());
+        CollectionAssert.AreEquivalent(
+            new[] { "오전 회의 정리", "9월 정산" },
+            row.Occurrences.Select(o => o.Preview).ToArray());
     }
 
     [TestMethod]
-    public async Task Jump_InvokesCallbackWithMatchingOccurrence()
+    public async Task Opening_a_row_hands_the_shell_the_note_it_names()
     {
+        Guid id = Guid.NewGuid();
         TagOccurrence? jumped = null;
-        var vm = Create([Note("go #target now", title: "T")], occ =>
-        {
-            jumped = occ;
-            return Task.CompletedTask;
-        });
-        await vm.RefreshAsync();
 
-        vm.Tags.Single().Occurrences.Single().JumpCommand.Execute(null);
+        TagPanelViewModel vm = Create(
+            [Note(id, "회의록")],
+            [new NoteTagLink(id, "work", 0)],
+            occurrence =>
+            {
+                jumped = occurrence;
+                return Task.CompletedTask;
+            });
+        await vm.RefreshAsync();
+        await vm.Tags.Single().Occurrences.Single().JumpCommand.ExecuteAsync(null);
 
         Assert.IsNotNull(jumped);
-        Assert.AreEqual("target", jumped!.Value.Tag);
-        Assert.AreEqual("T", jumped.Value.NoteTitle);
+        Assert.AreEqual(id, jumped.Value.NoteId);
+        Assert.AreEqual(Day, jumped.Value.Date);
+        Assert.AreEqual("work", jumped.Value.Tag);
     }
 
     [TestMethod]
-    public async Task ToggleExpand_FlipsIsExpanded()
+    public async Task A_tag_on_a_note_that_is_gone_is_dropped()
     {
-        var vm = Create([Note("#a")]);
+        // The notes and the links are two queries taken a moment apart; a row that cannot be opened
+        // is worse than a missing one.
+        TagPanelViewModel vm = Create([], [new NoteTagLink(Guid.NewGuid(), "work", 0)]);
         await vm.RefreshAsync();
 
-        TagItemViewModel item = vm.Tags.Single();
-        Assert.IsFalse(item.IsExpanded);
-
-        item.ToggleExpandCommand.Execute(null);
-        Assert.IsTrue(item.IsExpanded);
-    }
-
-    [TestMethod]
-    public async Task TabLabel_ReflectsDistinctTagCount()
-    {
-        var vm = Create([Note("#a #b #c")]);
-        await vm.RefreshAsync();
-
-        StringAssert.Contains(vm.TabLabel, "3");
+        Assert.IsTrue(vm.IsEmpty);
     }
 }

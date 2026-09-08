@@ -7,9 +7,8 @@ using Daynote.App.Notes;
 namespace Daynote.App.Shell.Product;
 
 /// <summary>
-/// One row in the 태그 panel: a distinct inline tag with its total occurrence count. Expanding the row
-/// reveals every location the tag was found (<see cref="Occurrences"/>), each clickable to jump into the
-/// editor at that position.
+/// One row in the 태그 panel: a distinct tag and how many notes carry it. Expanding the row lists those
+/// notes (<see cref="Occurrences"/>), each clickable to open it.
 /// </summary>
 public sealed partial class TagItemViewModel : ObservableObject
 {

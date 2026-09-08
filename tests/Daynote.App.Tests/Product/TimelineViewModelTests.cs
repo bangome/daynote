@@ -28,6 +28,9 @@ public sealed class TimelineViewModelTests
         public ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(LocalDate from, LocalDate to, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(notes); // range overload is unused by these tests
 
+        public ValueTask<IReadOnlyList<NoteTagLink>> GetAllNoteTagsAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyList<NoteTagLink>>([]);
+
         public ValueTask<NoteSet> GetDayWorkspaceAsync(LocalDate localDate, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<DayWorkspace> GetDayWorkspaceStateAsync(LocalDate localDate, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<DayWorkspace> CreateNoteAsync(LocalDate localDate, NoteId projectionId, NoteId newNoteId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

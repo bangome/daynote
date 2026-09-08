@@ -56,6 +56,16 @@ public interface INoteRepository
     ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Every tag on every note, across all dates, ordered by note then the tag's own order.
+    /// </summary>
+    /// <remarks>
+    /// The 태그 panel lists the tags the user put on notes. It reads them here and joins them against
+    /// <see cref="GetAllNotesAsync(CancellationToken)"/> for the titles and dates, so neither query
+    /// has to widen for the other.
+    /// </remarks>
+    ValueTask<IReadOnlyList<NoteTagLink>> GetAllNoteTagsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// As <see cref="GetAllNotesAsync(CancellationToken)"/> but bounded to the inclusive local-date range
     /// [<paramref name="from"/>, <paramref name="to"/>].
     /// </summary>

@@ -192,6 +192,9 @@ internal sealed class FailingNoteRepository(INoteRepository inner) : INoteReposi
     public ValueTask<IReadOnlyList<NoteSummary>> GetAllNotesAsync(LocalDate from, LocalDate to, CancellationToken cancellationToken = default) =>
         inner.GetAllNotesAsync(from, to, cancellationToken);
 
+    public ValueTask<IReadOnlyList<NoteTagLink>> GetAllNoteTagsAsync(CancellationToken cancellationToken = default) =>
+        inner.GetAllNoteTagsAsync(cancellationToken);
+
     public ValueTask<NoteSaveReceipt> SaveNoteAsync(NoteSaveRequest request, CancellationToken cancellationToken = default) =>
         FailSaves
             ? throw new RecoverableNoteException(NoteFailureCode.StorageUnavailable)

@@ -46,10 +46,8 @@ public sealed partial class ProductShellViewModel
             DomainResult<NoteId> id = NoteId.Create(occ.NoteId);
             if (id.IsSuccess)
             {
+                // No editor selection: a tag is on the note, not at a position in its prose.
                 await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true);
-
-                // +1 covers the leading '#' that Tag omits.
-                EditorSelectRequested?.Invoke(occ.CharIndex, occ.Tag.Length + 1);
             }
         }
     }

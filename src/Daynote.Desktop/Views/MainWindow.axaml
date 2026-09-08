@@ -152,6 +152,21 @@
                           </StackPanel>
                           <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="11.5" TextTrimming="CharacterEllipsis"
                                      IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                          <!-- The note's tags, as the WPF row has always shown them. Smaller than the
+                               chips above the editor: here they label the row rather than being the
+                               thing being edited. -->
+                          <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,3,0,0">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="x:String">
+                                <Border Classes="chip" Padding="6,1" Margin="0,0,4,3">
+                                  <TextBlock Text="{Binding StringFormat='#{0}'}" FontSize="10" />
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
                         </StackPanel>
                       </Button>
                     </DataTemplate>

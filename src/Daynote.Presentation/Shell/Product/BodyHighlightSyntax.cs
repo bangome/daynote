@@ -14,9 +14,6 @@ public enum BodyHighlightKind
     /// <summary>A due date, <c>(9/7)</c> or <c>(9/7 15:00)</c>, which the todo panel reads.</summary>
     Due,
 
-    /// <summary>An inline <c>#tag</c>, which the tag panel indexes.</summary>
-    Tag,
-
     /// <summary>A <c>[[file:…]]</c> marker or a URL — something clickable.</summary>
     Link,
 }
@@ -30,8 +27,8 @@ public readonly record struct BodyHighlightSpan(string Text, BodyHighlightKind K
 /// <remarks>
 /// The point of the marking is feedback, not decoration: these are exactly the shapes the app acts
 /// on elsewhere. A checkbox becomes a row in the todo panel, a date next to it becomes that row's
-/// due date, a <c>#tag</c> is indexed by the tag panel, a marker or URL is clickable. Highlighting
-/// them is how the note says "I understood that" while it is being typed.
+/// due date, a marker or URL is clickable. Highlighting them is how the note says "I understood
+/// that" while it is being typed.
 /// <para>
 /// The pattern was written in the WPF editor's code-behind and lived only there. It is here now
 /// because both shells draw the same body and there is no version of this that should differ between
@@ -42,15 +39,16 @@ public readonly record struct BodyHighlightSpan(string Text, BodyHighlightKind K
 public static partial class BodyHighlightSyntax
 {
     /// <summary>
-    /// Checkbox, then due date, then file marker, then URL, then inline tag. The tag arm requires a
-    /// non-word character before the <c>#</c> so a fragment like <c>C#</c> inside a word is left
-    /// alone.
+    /// Checkbox, then due date, then file marker or URL.
     /// </summary>
+    /// <remarks>
+    /// There was a fifth arm for inline <c>#tag</c> tokens. Tags are the chips under the note title
+    /// now — one system, the one the user can see and edit — so a <c>#</c> in the prose is prose.
+    /// </remarks>
     public const string PatternText =
         @"(?<todo>-\s?\[(?: |x|X)?\])"
         + @"|(?<due>\(\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))"
-        + @"|(?<link>\[\[file:[^\]\r\n]+\]\]|" + UrlLinkSyntax.PatternText + ")"
-        + @"|(?<tag>(?<![\p{L}\p{N}_])#[\p{L}\p{N}_]+)";
+        + @"|(?<link>\[\[file:[^\]\r\n]+\]\]|" + UrlLinkSyntax.PatternText + ")";
 
     [GeneratedRegex(PatternText, RegexOptions.CultureInvariant)]
     public static partial Regex Pattern();
@@ -100,11 +98,6 @@ public static partial class BodyHighlightSyntax
         if (match.Groups["due"].Success)
         {
             return BodyHighlightKind.Due;
-        }
-
-        if (match.Groups["tag"].Success)
-        {
-            return BodyHighlightKind.Tag;
         }
 
         return BodyHighlightKind.Link;

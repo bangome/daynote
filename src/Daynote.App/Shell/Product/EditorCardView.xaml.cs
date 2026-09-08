@@ -23,7 +23,7 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
 {
     private static readonly Regex HighlightPattern = new(
         @"(-\s?\[(?: |x|X)?\])|(\(\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))|(\[\[file:[^\]\r\n]+\]\])|("
-            + UrlLinkSyntax.PatternText + @")|((?<![\p{L}\p{N}_])#[\p{L}\p{N}_]+)",
+            + UrlLinkSyntax.PatternText + @")",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public EditorCardView()
@@ -42,9 +42,7 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
 
         // Tag-panel jumps ask the shell to select a body span; follow the DataContext so the editor
         // stays subscribed to the live shell and never leaks a handler.
-        DataContextChanged += OnShellDataContextChanged;
         Loaded += OnEditorLoaded;
-        Unloaded += OnEditorUnloaded;
     }
 
     /// <summary>
@@ -102,7 +100,6 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
         }
     }
 
-    private ProductShellViewModel? _subscribedShell;
 
     /// <summary>Raised when the user opens the post-it; the shell supplies the live buffer, so no snapshot travels with the event.</summary>
     public event EventHandler? StickyNoteRequested;
@@ -138,15 +135,9 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
             // wider than the same characters there and the caret drifts along the line from the
             // first mark onwards.
             var run = new Run(match.Value) { Foreground = accent };
-            if (match.Value.StartsWith('#'))
-            {
-                // Inline tags read as chips: keep the accent text but add a soft chip background.
-                if (TryFindResource("Daynote.Product.Brush.AccentSoft") is System.Windows.Media.Brush chip)
-                {
-                    run.Background = chip;
-                }
-            }
-            else if (match.Value.StartsWith("[[file:", StringComparison.Ordinal)
+            // Inline #tag used to be marked here too. Tags are the chips under the note title now,
+            // so a '#' in the prose is prose.
+            if (match.Value.StartsWith("[[file:", StringComparison.Ordinal)
                 || match.Value.StartsWith("http", StringComparison.Ordinal))
             {
                 run.TextDecorations = TextDecorations.Underline;
@@ -163,42 +154,6 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
 
         // Trailing run keeps the highlight height in step with the editor's final empty line.
         Highlight.Inlines.Add(new Run("​"));
-    }
-
-    private void OnShellDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (_subscribedShell is not null)
-        {
-            _subscribedShell.EditorSelectRequested -= OnEditorSelectRequested;
-        }
-
-        _subscribedShell = e.NewValue as ProductShellViewModel;
-        if (_subscribedShell is not null)
-        {
-            _subscribedShell.EditorSelectRequested += OnEditorSelectRequested;
-        }
-    }
-
-    private void OnEditorUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (_subscribedShell is not null)
-        {
-            _subscribedShell.EditorSelectRequested -= OnEditorSelectRequested;
-            _subscribedShell = null;
-        }
-    }
-
-    /// <summary>Selects and scrolls to a body span; deferred to Background so freshly-loaded text has propagated.</summary>
-    private void OnEditorSelectRequested(int start, int length)
-    {
-        _ = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
-        {
-            int s = Math.Clamp(start, 0, BodyBox.Text.Length);
-            int len = Math.Clamp(length, 0, BodyBox.Text.Length - s);
-            BodyBox.Focus();
-            BodyBox.Select(s, len);
-            BodyBox.ScrollToLine(BodyBox.GetLineIndexFromCharacterIndex(s));
-        });
     }
 
     private void OnBodyScroll(object sender, ScrollChangedEventArgs e)

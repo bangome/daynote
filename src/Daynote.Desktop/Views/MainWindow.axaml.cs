@@ -19,14 +19,12 @@ public partial class MainWindow : Window
         {
             if (_shell is not null)
             {
-                _shell.EditorSelectRequested -= OnEditorSelectRequested;
                 _shell.StickyNoteRequested -= OnStickyNoteRequested;
             }
 
             _shell = DataContext as DesktopShellViewModel;
             if (_shell is not null)
             {
-                _shell.EditorSelectRequested += OnEditorSelectRequested;
                 _shell.StickyNoteRequested += OnStickyNoteRequested;
             }
 
@@ -105,13 +103,6 @@ public partial class MainWindow : Window
         }
 
         _ = settings.HandleCapturedChordAsync((HotkeyModifiers)e.KeyModifiers, (HotkeyKey)e.Key);
-    }
-
-    private void OnEditorSelectRequested(int start, int length)
-    {
-        Editor.Focus();
-        Editor.SelectionStart = start;
-        Editor.SelectionEnd = start + length;
     }
 
     private void OnStickyNoteRequested(object? sender, EventArgs e)

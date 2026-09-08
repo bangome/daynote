@@ -26,3 +26,13 @@ public readonly record struct NoteSummary(
     string Body,
     int SortOrder,
     bool IsFavorite);
+
+/// <summary>
+/// One tag on one note, as stored in <c>note_tags</c>.
+/// </summary>
+/// <remarks>
+/// Deliberately narrow: it carries the link and nothing about the note, so a consumer that wants both
+/// joins these against <see cref="NoteSummary"/> rather than the read model growing a wide shape for
+/// one caller. The 태그 panel is that consumer.
+/// </remarks>
+public readonly record struct NoteTagLink(Guid NoteId, string Tag, int SortOrder);

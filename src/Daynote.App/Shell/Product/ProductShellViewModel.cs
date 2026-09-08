@@ -82,9 +82,6 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
     public FilesPanelViewModel Files { get; }
 
-    /// <summary>Raised to ask the editor view to select and scroll to a body span (start, length).</summary>
-    public event Action<int, int>? EditorSelectRequested;
-
     public SearchDropdownViewModel Search { get; }
 
     public TimelineViewModel Timeline { get; }
