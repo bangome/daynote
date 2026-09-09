@@ -158,6 +158,62 @@ public sealed class RenderedFrameTests
             "The corner is the undimmed page colour, so the scrim is not covering the shell.");
     }
 
+    [TestMethod]
+    public void The_search_dropdown_opens_over_the_shell()
+    {
+        // Reported as "the autocomplete does not expand". The panel is bound to Search.IsOpen and
+        // floats over the body with a ZIndex, so the two ways it can fail are the flag never turning
+        // on and the panel being covered; a frame shows both.
+        FrameSummary frame = default;
+        int rows = 0;
+        bool open = false;
+
+        TestServices.WithInitialisedShell((window, shell) =>
+        {
+            // A real, persisted note: the search reads the database, not the editor buffer.
+            shell.NewNoteCommand.Execute(null);
+            Pump();
+            shell.Notes.EditorText = "회의록 초안과 다음 주 일정";
+            // Pumped rather than blocked: the flush posts its continuation to this dispatcher, so
+            // waiting on it here would deadlock — the same trap as the probe in §5.
+            Task flush = shell.Notes.FlushAsync(Daynote.Core.Notes.FlushReason.NoteChange);
+            for (int i = 0; i < 200 && !flush.IsCompleted; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(10);
+            }
+
+            Assert.IsTrue(flush.IsCompleted, "The note never saved, so there is nothing to search.");
+
+            shell.Search.Query = "회의";
+
+            for (int i = 0; i < 60 && shell.Search.Results.Count == 0; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(25);
+            }
+
+            open = shell.Search.IsOpen;
+            rows = shell.Search.Results.Count;
+            window.UpdateLayout();
+            frame = Capture(window, "search-dropdown");
+        });
+
+        Assert.IsTrue(open, "Typing a query did not open the dropdown.");
+        Assert.IsGreaterThan(0, rows, "The query matched nothing, so the dropdown had nothing to show.");
+        AssertIsAPicture(frame, 1256, 788);
+    }
+
+    /// <summary>Lets the async commands' continuations run on this dispatcher.</summary>
+    private static void Pump()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+    }
+
     private static FrameSummary Capture(Window window, string name)
     {
         // Layout and paint happen on the render timer, which a headless run has to tick by hand.

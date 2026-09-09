@@ -24,6 +24,12 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     private readonly IThumbnailLoader? _thumbnails;
     private LocalDate _date;
 
+    /// <summary>
+    /// The listed files as the repository returned them. The cards carry what the UI draws; saving
+    /// needs the store path, which is not the card's business to know.
+    /// </summary>
+    private IReadOnlyList<DayFile> _files = [];
+
     /// <param name="thumbnails">Null shows the image badge instead of a decoded preview (tests, headless).</param>
     public FilesPanelViewModel(
         AddDayFile addFile,
@@ -55,11 +61,12 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<DayFile> files = await _listFiles.ExecuteAsync(_date, cancellationToken).ConfigureAwait(true);
+        _files = files;
         Items.Clear();
         foreach (DayFile file in files)
         {
             object? thumbnail = await TryLoadThumbnailAsync(file, cancellationToken).ConfigureAwait(true);
-            Items.Add(new FileItemViewModel(file, thumbnail, DeleteItemAsync));
+            Items.Add(new FileItemViewModel(file, thumbnail, DeleteItemAsync, SaveItemAsync));
         }
 
         IsEmpty = Items.Count == 0;
@@ -101,8 +108,9 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         {
             DayFile file = await _addFile.ExecuteAsync(_date, UniquifyName(displayName), content, cancellationToken).ConfigureAwait(true);
             DayFile available = file with { IsAvailable = true };
+            _files = [available, .. _files];
             object? thumbnail = await TryLoadThumbnailAsync(available, cancellationToken).ConfigureAwait(true);
-            Items.Insert(0, new FileItemViewModel(available, thumbnail, DeleteItemAsync));
+            Items.Insert(0, new FileItemViewModel(available, thumbnail, DeleteItemAsync, SaveItemAsync));
             IsEmpty = false;
             return available;
         }
@@ -144,6 +152,63 @@ public sealed partial class FilesPanelViewModel : ObservableObject
             {
                 return candidate;
             }
+        }
+    }
+
+    /// <summary>
+    /// Writes a copy of an attachment wherever the user points. The bytes live in the content-addressed
+    /// store under a hashed name, so "open the folder" would show them nothing they could use; this is
+    /// how an attachment gets back out of the app.
+    /// </summary>
+    /// <remarks>
+    /// Failures are reported on the card rather than thrown. The two that actually happen — the asset
+    /// is gone (a store reconciled away a file whose row survived) and the destination cannot be
+    /// written (a read-only stick, a folder someone else owns) — are both things the user can see and
+    /// act on, and neither is worth losing the panel over.
+    /// </remarks>
+    private async Task SaveItemAsync(FileItemViewModel item)
+    {
+        item.SaveFailed = false;
+
+        DayFile? file = _files.FirstOrDefault(candidate => candidate.Id == item.Id);
+        if (file is null)
+        {
+            item.SaveFailed = true;
+            return;
+        }
+
+        byte[]? bytes;
+        try
+        {
+            bytes = await _assetStore.ReadAsync(file.RelativePath).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            bytes = null;
+        }
+
+        if (bytes is null)
+        {
+            item.SaveFailed = true;
+            return;
+        }
+
+        // Asked after the bytes are in hand: a dialog that closes and then says the file was missing
+        // is worse than one that never opens.
+        string? destination = await _picker.PickSavePathAsync(item.Name).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(destination))
+        {
+            return;
+        }
+
+        try
+        {
+            await File.WriteAllBytesAsync(destination, bytes).ConfigureAwait(true);
+            item.SavedTo = destination;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            item.SaveFailed = true;
         }
     }
 

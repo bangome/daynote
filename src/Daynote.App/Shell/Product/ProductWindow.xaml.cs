@@ -269,37 +269,6 @@ public partial class ProductWindow : Window, IWindowHost, IAccountHost
         }
     }
 
-    // ── 파일-tab card → editor drag: start a drag once the pointer moves past the OS drag threshold,
-    //    so plain clicks (e.g. the card's Delete button) never turn into accidental drags. ──
-
-    private System.Windows.Point _fileCardDragOrigin;
-
-    private void OnFileCardMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
-        _fileCardDragOrigin = e.GetPosition(null);
-
-    private void OnFileCardMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        Vector delta = e.GetPosition(null) - _fileCardDragOrigin;
-        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance
-            && Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
-        {
-            return;
-        }
-
-        if (sender is FrameworkElement { DataContext: FileItemViewModel item } element)
-        {
-            _ = DragDrop.DoDragDrop(
-                element,
-                new System.Windows.DataObject(FileLinkSyntax.DragFormat, item.Name),
-                System.Windows.DragDropEffects.Copy);
-        }
-    }
-
     // ── Explorer → 파일-tab drop: importing here stores the files WITHOUT inserting body links
     //    (dropping on the editor body is the link-inserting path). ──
 

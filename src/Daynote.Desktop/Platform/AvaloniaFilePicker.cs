@@ -1,3 +1,4 @@
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Daynote.App.Shell.Product;
@@ -32,5 +33,26 @@ public sealed class AvaloniaFilePicker : IFilePicker
             .Where(path => !string.IsNullOrEmpty(path))
             .Select(path => path!)
             .ToList();
+    }
+
+    public async Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken = default)
+    {
+        if (_topLevel() is not { StorageProvider: { CanSave: true } provider })
+        {
+            return null;
+        }
+
+        // The suggested name carries the attachment's own extension, so the file type offered is built
+        // from it rather than fixed.
+        string extension = Path.GetExtension(suggestedFileName);
+        IStorageFile? file = await provider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = Daynote.App.Localization.AppStrings.SaveFileTitle,
+            SuggestedFileName = suggestedFileName,
+            DefaultExtension = extension.TrimStart('.'),
+            ShowOverwritePrompt = true,
+        }).ConfigureAwait(true);
+
+        return file?.TryGetLocalPath();
     }
 }

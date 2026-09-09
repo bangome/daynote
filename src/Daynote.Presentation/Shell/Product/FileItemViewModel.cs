@@ -12,8 +12,13 @@ namespace Daynote.App.Shell.Product;
 public sealed partial class FileItemViewModel : ObservableObject
 {
     private readonly Func<FileItemViewModel, Task> _onDelete;
+    private readonly Func<FileItemViewModel, Task> _onSave;
 
-    public FileItemViewModel(DayFile file, object? thumbnail, Func<FileItemViewModel, Task> onDelete)
+    public FileItemViewModel(
+        DayFile file,
+        object? thumbnail,
+        Func<FileItemViewModel, Task> onDelete,
+        Func<FileItemViewModel, Task> onSave)
     {
         Id = file.Id;
         Name = file.DisplayName;
@@ -22,6 +27,7 @@ public sealed partial class FileItemViewModel : ObservableObject
         Thumbnail = thumbnail;
         SizeLabel = string.Create(CultureInfo.CurrentCulture, $"{FormatSize(file.ByteLength)} · {Ext}");
         _onDelete = onDelete;
+        _onSave = onSave;
     }
 
     public Guid Id { get; }
@@ -48,8 +54,23 @@ public sealed partial class FileItemViewModel : ObservableObject
     [ObservableProperty]
     private bool _isHighlighted;
 
+    /// <summary>Where the last copy went, or null. Shown on the card so the save is not silent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WasSaved))]
+    private string? _savedTo;
+
+    public bool WasSaved => !string.IsNullOrEmpty(SavedTo);
+
+    /// <summary>The bytes could not be read, or the destination could not be written.</summary>
+    [ObservableProperty]
+    private bool _saveFailed;
+
     [RelayCommand]
     private Task Delete() => _onDelete(this);
+
+    /// <summary>Double-clicking the card writes a copy wherever the user points.</summary>
+    [RelayCommand]
+    private Task Save() => _onSave(this);
 
     private static string ExtensionOf(string name)
     {

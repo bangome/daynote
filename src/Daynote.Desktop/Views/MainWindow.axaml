@@ -480,7 +480,11 @@
                 <ItemsControl ItemsSource="{Binding Files.Items}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="pvm:FileItemViewModel">
-                      <Border Classes="panel" Classes.highlighted="{Binding IsHighlighted}" Margin="0,0,0,8" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="10">
+                      <!-- Double-tap writes a copy wherever the user points: the stored bytes live under
+                           a hashed name, so this is the only way an attachment gets back out. -->
+                      <Border Classes="panel" Classes.highlighted="{Binding IsHighlighted}" Margin="0,0,0,8" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="10"
+                              DoubleTapped="OnFileCardDoubleTapped"
+                              ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileTip]}">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                           <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Margin="0,0,10,0"
                                   Background="{DynamicResource Daynote.Product.Brush.Seg}">
@@ -492,7 +496,12 @@
                           </Border>
                           <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Classes="muted" Text="{Binding SizeLabel}" FontSize="10.5" />
+                            <TextBlock Classes="muted" Text="{Binding SizeLabel}" FontSize="10.5" IsVisible="{Binding !WasSaved}" />
+                            <TextBlock Text="{Binding SavedTo}" FontSize="10.5" IsVisible="{Binding WasSaved}"
+                                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Daynote.Product.Brush.Ok}" />
+                            <TextBlock FontSize="10.5" IsVisible="{Binding SaveFailed}"
+                                       Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                                       Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileFailed]}" />
                           </StackPanel>
                           <Button Grid.Column="2" Classes="quiet" Content="✕" FontSize="11" Padding="6,2" Command="{Binding DeleteCommand}" />
                         </Grid>

@@ -257,6 +257,12 @@ public static class AppStrings
     public static string UnpinStickyNote => LocalizationService.Instance[nameof(UnpinStickyNote)];
     public static string CloseStickyNote => LocalizationService.Instance[nameof(CloseStickyNote)];
     public static string StickyNoteBody => LocalizationService.Instance[nameof(StickyNoteBody)];
+    public static string SaveFileTitle => LocalizationService.Instance[nameof(SaveFileTitle)];
+    public static string SaveFileFilter => LocalizationService.Instance[nameof(SaveFileFilter)];
+    public static string SaveFileFilterAny => LocalizationService.Instance[nameof(SaveFileFilterAny)];
+    public static string SaveFileTip => LocalizationService.Instance[nameof(SaveFileTip)];
+    public static string SaveFileDoneFormat => LocalizationService.Instance[nameof(SaveFileDoneFormat)];
+    public static string SaveFileFailed => LocalizationService.Instance[nameof(SaveFileFailed)];
     public static string DeleteNoteTip => LocalizationService.Instance[nameof(DeleteNoteTip)];
     public static string NoteMenuRename => LocalizationService.Instance[nameof(NoteMenuRename)];
     public static string NoteMenuDuplicate => LocalizationService.Instance[nameof(NoteMenuDuplicate)];

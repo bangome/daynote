@@ -214,6 +214,19 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// A file card asks to be saved. The command lives on the card's own view model, which is the
+    /// DataContext of the Border the gesture landed on.
+    /// </summary>
+    private void OnFileCardDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: Daynote.App.Shell.Product.FileItemViewModel file })
+        {
+            file.SaveCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void OnTagBoxKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter && DataContext is DesktopShellViewModel shell)

@@ -22,8 +22,20 @@ internal sealed class FakeFilePicker : IFilePicker
 {
     public List<string> Paths { get; } = [];
 
+    /// <summary>What the save dialog answers; null stands for the user cancelling it.</summary>
+    public string? SavePath { get; set; }
+
+    /// <summary>The names the save dialog was seeded with, in order.</summary>
+    public List<string> SuggestedNames { get; } = [];
+
     public Task<IReadOnlyList<string>> PickFilesAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<string>>(Paths);
+
+    public Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken = default)
+    {
+        SuggestedNames.Add(suggestedFileName);
+        return Task.FromResult(SavePath);
+    }
 }
 
 /// <summary>Deterministic clock; the instant and offset are settable for date-scoped fixtures.</summary>

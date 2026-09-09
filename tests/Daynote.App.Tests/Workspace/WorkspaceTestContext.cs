@@ -80,6 +80,22 @@ internal sealed class WorkspaceTestContext : IAsyncDisposable
 
     public static LocalDate Date(string iso) => LocalDate.Parse(iso).Value;
 
+    /// <summary>A path inside this fixture's throwaway root; parent directories are created.</summary>
+    public string ScratchPath(params string[] segments)
+    {
+        string path = Path.Combine([_root, "scratch", .. segments]);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        return path;
+    }
+
+    /// <summary>Writes a file under the fixture root and returns its path — something to import.</summary>
+    public string WriteScratchFile(string name, byte[] content)
+    {
+        string path = ScratchPath(name);
+        File.WriteAllBytes(path, content);
+        return path;
+    }
+
     /// <summary>Persists a note (with a searchable body) directly through the repository seam.</summary>
     public async Task<NoteId> StoreNoteAsync(LocalDate date, string title, string body)
     {
