@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -185,7 +186,11 @@ public sealed class RenderedFrameTests
 
             Assert.IsTrue(flush.IsCompleted, "The note never saved, so there is nothing to search.");
 
-            shell.Search.Query = "회의";
+            // Typed, not assigned: this is the path a user takes, and the earlier version of this test
+            // skipped it (see SearchBoxTests).
+            var box = window.FindControl<TextBox>("SearchBox")!;
+            box.Focus();
+            window.KeyTextInput("회의");
 
             for (int i = 0; i < 60 && shell.Search.Results.Count == 0; i++)
             {

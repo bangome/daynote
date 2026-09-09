@@ -38,6 +38,7 @@ public partial class MainWindow : Window
             }
 
             AttachTutorialStickyDemo(_shell);
+            AttachSearchDropdown(_shell);
 
             RebuildShortcutBindings();
         };
@@ -137,6 +138,13 @@ public partial class MainWindow : Window
         base.OnOpened(e);
         ApplyPlatformChrome();
         UpdateMaximizeGlyph();
+        PlaceSearchDropdown();
+    }
+
+    protected override void OnSizeChanged(Avalonia.Controls.SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        PlaceSearchDropdown();
     }
 
     protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)

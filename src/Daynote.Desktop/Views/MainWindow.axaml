@@ -45,10 +45,13 @@
       -->
       <Grid x:Name="TutSearch" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto"
             MaxWidth="620" Margin="24,0" VerticalAlignment="Center">
-        <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline"
+        <!-- VerticalContentAlignment is load-bearing: Avalonia's TextBox defaults it to Top and the
+             inline style gives a 30px MinHeight, so the text sat high inside the pill. -->
+        <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline" VerticalContentAlignment="Center"
                  PlaceholderText="{Binding Strings.SearchHint}" Text="{Binding Search.Query}" />
         <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="11" Padding="8,4" Margin="4,0,0,0"
                 Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}" />
+
         <Button Grid.Column="2" Classes="icon" Margin="6,0,0,0" Command="{Binding GoToTodayCommand}"
                 ToolTip.Tip="{Binding Strings.Today}" AutomationProperties.Name="{Binding Strings.Today}">
           <Path Data="{StaticResource Daynote.Geo.Today}" />
@@ -516,35 +519,6 @@
         </Grid>
       </Border>
 
-      <!-- Search results: float under the title bar's search box, above everything else. -->
-      <Border Grid.Column="1" Classes="panel" MaxWidth="560" MaxHeight="440" VerticalAlignment="Top" HorizontalAlignment="Center"
-              Margin="0,2,0,0" ZIndex="10" Padding="8" Background="{DynamicResource Daynote.Product.Brush.Card}"
-              IsVisible="{Binding Search.IsOpen}">
-        <ScrollViewer>
-          <StackPanel>
-            <ItemsControl ItemsSource="{Binding Search.Results}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
-                  <Button Classes="noterow" Command="{Binding ActivateCommand}">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <Border Grid.Column="0" Classes="chip" Margin="0,0,10,0" Padding="8,2" VerticalAlignment="Top">
-                        <TextBlock Text="{Binding Kind}" FontSize="10.5" />
-                      </Border>
-                      <StackPanel Grid.Column="1" Spacing="2">
-                        <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="11" TextTrimming="CharacterEllipsis"
-                                   IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="10.5" Margin="10,0,0,0" VerticalAlignment="Top" />
-                    </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Classes="empty" Text="{Binding Strings.SearchNoResultsRow}" IsVisible="{Binding Search.NoResults}" Margin="12,16" />
-          </StackPanel>
-        </ScrollViewer>
-      </Border>
       <!-- Settings: a modal card over the whole body. -->
       <Border Grid.ColumnSpan="3" ZIndex="20" Background="#66000000" IsVisible="{Binding IsSettingsOpen}">
         <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="560" MaxHeight="640"
@@ -695,5 +669,43 @@
     -->
     <views:TutorialOverlay Grid.Row="0" Grid.RowSpan="2" ZIndex="30" DataContext="{Binding Tutorial}"
                            IsVisible="{Binding IsOpen, FallbackValue=False}" />
+    <!--
+      Search results. In the root grid rather than the body's middle column, which is where they used
+      to be: that column sits under the note title, nowhere near the box they belong to, and a body
+      child is clipped by it. The horizontal offset comes from the search box's own position
+      (MainWindow.Search.cs) — the title bar's inset is applied per platform at runtime, so it cannot
+      be a margin in markup. Above the tutorial overlay so a search during onboarding still reads.
+    -->
+    <Border x:Name="SearchDropdown" Grid.Row="0" Grid.RowSpan="2" ZIndex="40"
+            Classes="panel" Width="560" MaxHeight="440" Padding="8"
+            VerticalAlignment="Top" HorizontalAlignment="Left"
+            Background="{DynamicResource Daynote.Product.Brush.Card}"
+            IsVisible="{Binding Search.IsOpen, FallbackValue=False}">
+        <ScrollViewer>
+          <StackPanel>
+            <ItemsControl ItemsSource="{Binding Search.Results}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
+                  <Button Classes="noterow" Command="{Binding ActivateCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Border Grid.Column="0" Classes="chip" Margin="0,0,10,0" Padding="8,2" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding Kind}" FontSize="10.5" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="10.5" Margin="10,0,0,0" VerticalAlignment="Top" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="empty" Text="{Binding Strings.SearchNoResultsRow}" IsVisible="{Binding Search.NoResults}" Margin="12,16" />
+          </StackPanel>
+        </ScrollViewer>
+    </Border>
+
   </Grid>
 </Window>
