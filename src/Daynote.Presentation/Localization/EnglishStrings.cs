@@ -328,6 +328,7 @@ internal static class EnglishStrings
         // Search dropdown result kinds
         ["SearchKindDate"] = "Date",
         ["SearchKindFile"] = "File",
+        ["SearchFailedRow"] = "The search failed. Try typing it again.",
         ["SearchNoResultsRow"] = "No results found",
         ["SearchDateNoteCountFormat"] = "{0} notes",
 

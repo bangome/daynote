@@ -39,6 +39,7 @@ public sealed class AppStringsProxy : ObservableObject
     public string FileTabEmpty => AppStrings.FileTabEmpty;
     public string AddFile => AppStrings.AddFile;
     public string SearchNoResultsRow => AppStrings.SearchNoResultsRow;
+    public string SearchFailedRow => AppStrings.SearchFailedRow;
     public string WeekdaySun => AppStrings.WeekdaySun;
     public string WeekdayMon => AppStrings.WeekdayMon;
     public string WeekdayTue => AppStrings.WeekdayTue;

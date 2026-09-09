@@ -257,6 +257,7 @@ public static class AppStrings
     public static string UnpinStickyNote => LocalizationService.Instance[nameof(UnpinStickyNote)];
     public static string CloseStickyNote => LocalizationService.Instance[nameof(CloseStickyNote)];
     public static string StickyNoteBody => LocalizationService.Instance[nameof(StickyNoteBody)];
+    public static string SearchFailedRow => LocalizationService.Instance[nameof(SearchFailedRow)];
     public static string SaveFileTitle => LocalizationService.Instance[nameof(SaveFileTitle)];
     public static string SaveFileFilter => LocalizationService.Instance[nameof(SaveFileFilter)];
     public static string SaveFileFilterAny => LocalizationService.Instance[nameof(SaveFileFilterAny)];

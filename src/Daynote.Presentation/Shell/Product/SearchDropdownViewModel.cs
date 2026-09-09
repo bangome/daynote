@@ -53,10 +53,15 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
     [ObservableProperty]
     private bool _noResults;
 
+    /// <summary>The query itself failed. Distinct from "no results", which is an answer.</summary>
+    [ObservableProperty]
+    private bool _failed;
+
     partial void OnQueryChanged(string value)
     {
         bool hasQuery = !string.IsNullOrWhiteSpace(value);
         IsOpen = hasQuery;
+        Failed = false;
         if (!hasQuery)
         {
             _cts?.Cancel();
@@ -95,6 +100,16 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Nothing awaits this task, so an escaping exception used to vanish and leave the panel
+            // blank: no rows, and NoResults never reached because it is set at the end of the query.
+            // A blank dropdown is indistinguishable from a broken one, which is how the unordered
+            // LocalDate went unnoticed. Say so instead.
+            Failed = true;
+            Results.Clear();
+            NoResults = false;
         }
     }
 

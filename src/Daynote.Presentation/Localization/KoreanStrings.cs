@@ -318,6 +318,7 @@ internal static class KoreanStrings
         ["SearchKindDate"] = "날짜",
         ["SearchKindFile"] = "파일",
         ["SearchNoResultsRow"] = "검색 결과가 없습니다",
+        ["SearchFailedRow"] = "검색에 실패했습니다. 다시 입력해 보세요.",
         ["SearchDateNoteCountFormat"] = "노트 {0}개",
 
         // Language (settings)

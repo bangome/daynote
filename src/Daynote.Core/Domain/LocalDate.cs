@@ -2,7 +2,16 @@ using System.Globalization;
 
 namespace Daynote.Core.Domain;
 
-public readonly record struct LocalDate : ISpanFormattable
+/// <summary>
+/// A calendar date with no time and no zone.
+/// </summary>
+/// <remarks>
+/// <see cref="IComparable{T}"/> is not decoration. A date without an order cannot be sorted, and
+/// <c>OrderBy</c> on a type that implements neither interface throws at run time rather than at
+/// compile time — which is how a search whose matches spanned two dates came back blank: the
+/// exception surfaced inside a fire-and-forget query and was swallowed (SearchDropdownViewModel).
+/// </remarks>
+public readonly record struct LocalDate : ISpanFormattable, IComparable<LocalDate>, IComparable
 {
     private const string IsoFormat = "yyyy-MM-dd";
     private readonly DateOnly value;
@@ -17,6 +26,23 @@ public readonly record struct LocalDate : ISpanFormattable
     public int Month => value.Month;
 
     public int Day => value.Day;
+
+    public int CompareTo(LocalDate other) => value.CompareTo(other.value);
+
+    public int CompareTo(object? obj) => obj switch
+    {
+        null => 1,
+        LocalDate other => CompareTo(other),
+        _ => throw new ArgumentException($"Cannot compare a {nameof(LocalDate)} with {obj.GetType()}.", nameof(obj)),
+    };
+
+    public static bool operator <(LocalDate left, LocalDate right) => left.CompareTo(right) < 0;
+
+    public static bool operator <=(LocalDate left, LocalDate right) => left.CompareTo(right) <= 0;
+
+    public static bool operator >(LocalDate left, LocalDate right) => left.CompareTo(right) > 0;
+
+    public static bool operator >=(LocalDate left, LocalDate right) => left.CompareTo(right) >= 0;
 
     public static DomainResult<LocalDate> Parse(string? text)
     {

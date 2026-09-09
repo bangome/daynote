@@ -48,6 +48,9 @@
                                 <TextBlock Text="{loc:Tr SearchNoResultsRow}" TextAlignment="Center" Margin="14" FontSize="12"
                                     Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
                                     Visibility="{Binding NoResults, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <TextBlock Text="{loc:Tr SearchFailedRow}" TextAlignment="Center" Margin="14" FontSize="12"
+                                    Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                                    Visibility="{Binding Failed, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
