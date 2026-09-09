@@ -64,7 +64,7 @@ public partial class MainWindow
         WindowDecorationProperties.SetElementRole(CloseButton, WindowDecorationsElementRole.CloseButton);
 
         // Without this the title-bar hit test eats every click in the strip.
-        foreach (Control control in new Control[] { BrandArea, SearchArea })
+        foreach (Control control in new Control[] { BrandArea, TutSearch })
         {
             WindowDecorationProperties.SetElementRole(control, WindowDecorationsElementRole.User);
         }

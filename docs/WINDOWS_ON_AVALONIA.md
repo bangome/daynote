@@ -335,6 +335,7 @@ catching something the moment it was written.
 | `MainWindowCompositionTests` (×2, one per variant) | The shell measures and arranges with no binding errors | — |
 | `LocalizationKeyTests` | Every `Strings[Key]` in markup exists in both catalogs | A made-up key that compiled **and** raised no binding error |
 | `RenderedFrameTests` (×3, added 2026-09-08) | The shell (both variants) and the sticky note render to real pixels; an empty day lists no projection row | The phantom "노트 1" row under "노트 0개"; see below |
+| `TutorialOverlayTests` (×4, added 2026-09-09) | Every step's target name resolves in this shell, a hole is cut and follows the step, a target-less step dims everything, and the radius is read from the target rather than fixed | An overlay that covered only the body clipped the title bar's search hole away to nothing and fell back to dimming everything — silently, because that is also the no-target behaviour |
 | `NoteRowActionsTests` (×4, added 2026-09-09) | The sidebar row's context menu resolves all three commands, Delete on a focused row deletes it, and the heading's rename editor commits on Enter and cancels on Escape | A `MenuItem` inside a `ContextMenu` popup binds through a separate visual tree, so a `$parent[Window]` walk comes back null there and the item renders fine while doing nothing |
 
 Three things learned while building it, all of which shape what is worth testing here:
@@ -378,6 +379,27 @@ Two things the first frame showed that nothing else had:
 One test artefact worth recording so nobody chases it: switching `RequestedThemeVariant` directly
 repaints the palette but leaves the light wordmark on the dark ground, because the wordmark follows
 the view model's `IsDark`. The test flips `IsDark`, as the theme button does.
+
+### The coaching overlay — ported 2026-09-09
+
+The Avalonia shell had no spotlight: one flat `#66000000` scrim with a centred card, so every step
+described a part of the UI without pointing at it, and only two of the deck's target names existed
+here. That was the largest remaining parity gap, and it mattered because **the MSIX ships this
+shell** (§6) — the WPF tutorial polish would otherwise never reach a user.
+
+`Views/TutorialOverlay.axaml` ports `Daynote.App/Onboarding/TutorialView`: a `Path` scrim whose
+`Data` is a `CombinedGeometry` in `Exclude` mode (Avalonia's counterpart to WPF's even-odd
+`GeometryGroup`), an accent ring, and a callout placed below / above / beside the target. The radius
+rule is the same one — the target's own chrome plus the padding — and the six missing anchors
+(`TutCalendar`, `TutEditor`, `TutSearch`, `TutSettings`, `TutTabTodo`, `TutTabFiles`) are named.
+
+Two things this cost, both worth remembering:
+
+- **Declaring `InitializeComponent()` by hand shadows the generated one**, so every `x:Name` field
+  stays null and the first line that touches one throws. The generated method is the only one to call.
+- **The overlay has to span the whole window.** Put in the body grid it looked right on five of the
+  six targets and clipped the search pill's hole — which lives in the title bar — away to nothing,
+  falling back to the no-target appearance rather than failing.
 
 The WPF **showcase evidence pipeline** and `Daynote.UiQa.Tests` are not ported and will not be; see §7.
 

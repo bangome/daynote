@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:onboarding="using:Daynote.App.Onboarding"
+             xmlns:vm="using:Daynote.Desktop.ViewModels"
+             x:Class="Daynote.Desktop.Views.TutorialOverlay"
+             x:DataType="onboarding:TutorialViewModel"
+             Background="Transparent">
+  <!--
+    The coaching overlay, ported from the WPF shell (Daynote.App/Onboarding/TutorialView.xaml): a
+    dimming scrim with a rounded hole around the current step's target so the real UI shows through,
+    an accent ring on the target, and a callout floated beside it. Positions come from code-behind
+    because they depend on where the target happens to be laid out.
+  -->
+  <Canvas x:Name="OverlayCanvas" ClipToBounds="True">
+    <Path x:Name="Scrim" Fill="{DynamicResource Daynote.Product.Brush.Scrim}" />
+
+    <Border x:Name="HighlightRing" IsVisible="False" IsHitTestVisible="False"
+            BorderBrush="{DynamicResource Daynote.Product.Brush.Accent}" BorderThickness="2" />
+
+    <Border x:Name="Callout" Classes="panel" Width="360" Padding="22,20"
+            Background="{DynamicResource Daynote.Product.Brush.Card}">
+      <StackPanel Spacing="0">
+        <TextBlock Text="{Binding ProgressText}" FontSize="11" FontWeight="SemiBold"
+                   Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
+        <TextBlock Text="{Binding CurrentStep.Title}" FontSize="15" FontWeight="Bold" Margin="0,4,0,0"
+                   TextWrapping="Wrap" />
+        <TextBlock Classes="muted" Text="{Binding CurrentStep.Body}" FontSize="12.5" Margin="0,8,0,0"
+                   TextWrapping="Wrap" LineHeight="19" />
+
+        <StackPanel Spacing="4" Margin="0,12,0,0" IsVisible="{Binding CurrentStep.IsShortcuts}">
+          <ItemsControl ItemsSource="{Binding Shortcuts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="onboarding:ShortcutHint">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,3">
+                  <TextBlock Grid.Column="0" Classes="muted" Text="{Binding Label}" FontSize="12"
+                             TextWrapping="Wrap" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Classes="chip" Padding="7,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Gesture}" FontSize="11.5" FontWeight="SemiBold" />
+                  </Border>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,16,0,0" IsVisible="{Binding IsLast}">
+          <ToggleSwitch IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
+                        Command="{Binding ToggleStartupCommand}" OnContent="" OffContent="" />
+          <TextBlock Classes="muted" FontSize="12.5" VerticalAlignment="Center"
+                     Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SettingsStartupRow]}" />
+        </StackPanel>
+
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+          <!-- Skip has nothing to skip on the closing card, where Finish already ends the tour. -->
+          <Button Grid.Column="0" Classes="quiet" IsVisible="{Binding !IsLast}"
+                  Command="{Binding SkipCommand}"
+                  Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TutorialSkip]}" />
+          <Button Grid.Column="2" Classes="quiet" Margin="0,0,8,0" IsEnabled="{Binding !IsFirst}"
+                  Command="{Binding BackCommand}"
+                  Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TutorialBack]}" />
+          <Button Grid.Column="3" Classes="accent" IsVisible="{Binding !IsLast}"
+                  Command="{Binding NextCommand}"
+                  Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TutorialNext]}" />
+          <Button Grid.Column="3" Classes="accent" IsVisible="{Binding IsLast}"
+                  Command="{Binding FinishCommand}"
+                  Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TutorialFinish]}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+  </Canvas>
+</UserControl>

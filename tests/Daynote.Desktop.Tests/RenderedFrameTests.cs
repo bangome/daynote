@@ -5,7 +5,9 @@ using Avalonia.Headless;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Daynote.App.Onboarding;
 using Daynote.Desktop.ViewModels;
 using Daynote.Desktop.Views;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -116,6 +118,44 @@ public sealed class RenderedFrameTests
         Assert.IsTrue(
             frame.Rows.Skip(34).Take(30).All(static colours => colours == 1),
             "Rows 34-63 are not flat note colour: something is painted where a second title bar would be.");
+    }
+
+    [TestMethod]
+    public void The_tutorial_spotlight_cuts_a_visible_hole()
+    {
+        // The port's evidence: the calendar step should show the calendar undimmed inside a dimmed
+        // shell. A frame where the hole is not actually transparent looks like a flat scrim.
+        FrameSummary frame = default;
+
+        TestServices.WithInitialisedShell((window, shell) =>
+        {
+            TutorialOverlay overlay = window.GetVisualDescendants().OfType<TutorialOverlay>().Single();
+            var model = (TutorialViewModel)overlay.DataContext!;
+            model.Open();
+            model.Index = model.Steps
+                .Select(static (step, index) => (step, index))
+                .First(static pair => pair.step.TargetName == TutorialTargets.Calendar)
+                .index;
+
+            overlay.IsVisible = true;
+            window.UpdateLayout();
+            for (int i = 0; i < 10; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+
+            frame = Capture(window, "tutorial-spotlight");
+        });
+
+        AssertIsAPicture(frame, 1256, 788);
+
+        // The bottom-left corner is outside the calendar, so it is dimmed rather than the page colour
+        // the un-dimmed shell shows there (#F4F4F5 — see the shell test above).
+        Assert.AreNotEqual(
+            Color.Parse("#FFF4F4F5"),
+            frame.BottomLeft,
+            "The corner is the undimmed page colour, so the scrim is not covering the shell.");
     }
 
     private static FrameSummary Capture(Window window, string name)

@@ -43,7 +43,7 @@
         used often enough to be worth recognising by shape, and it keeps the group from crowding the
         search box.
       -->
-      <Grid x:Name="SearchArea" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto"
+      <Grid x:Name="TutSearch" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto"
             MaxWidth="620" Margin="24,0" VerticalAlignment="Center">
         <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline"
                  PlaceholderText="{Binding Strings.SearchHint}" Text="{Binding Search.Query}" />
@@ -87,7 +87,7 @@
     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="16,0,16,16">
 
       <Grid Grid.Column="0" Width="292" RowDefinitions="Auto,*,Auto" Margin="0,0,12,0" IsVisible="{Binding !LeftCollapsed}">
-        <Border Grid.Row="0" Classes="panel" Padding="14" Margin="0,0,0,12">
+        <Border x:Name="TutCalendar" Grid.Row="0" Classes="panel" Padding="14" Margin="0,0,0,12">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Button Grid.Column="0" Classes="quiet" Content="‹" Padding="10,2" FontSize="16" Command="{Binding Calendar.PreviousMonthCommand}" />
@@ -208,11 +208,11 @@
         <!-- The account strip closes the sidebar: who you are, and the menu for theme and settings.
              At the foot rather than in the title bar because it is about the person using the app,
              not about the notes on screen. -->
-        <views:AccountBar Grid.Row="2" Margin="0,12,0,0" />
+        <views:AccountBar x:Name="TutSettings" Grid.Row="2" Margin="0,12,0,0" />
       </Grid>
 
       <!-- Editor card -->
-      <Border Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
+      <Border x:Name="TutEditor" Grid.Column="1" Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Padding="28,22"
               IsVisible="{Binding IsEditorMode}">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <!--
@@ -359,7 +359,7 @@
                    dingbat star, an ASCII hash and a colour emoji came from four different fonts, at
                    four weights, and the paperclip rendered in its own colour whatever the tab state.
                    The open-todo count keeps its digits beside the checkbox. -->
-              <Button Classes="tab" Classes.active="{Binding TabIsTodo}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}"
+              <Button x:Name="TutTabTodo" Classes="tab" Classes.active="{Binding TabIsTodo}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}"
                       ToolTip.Tip="{Binding Strings.TabTodoName}" AutomationProperties.Name="{Binding Strings.TabTodoName}">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                   <Path Data="{StaticResource Daynote.Geo.TabTodo}" VerticalAlignment="Center" />
@@ -374,7 +374,7 @@
                       ToolTip.Tip="{Binding Strings.TabTagsName}" AutomationProperties.Name="{Binding Strings.TabTagsName}">
                 <Path Data="{StaticResource Daynote.Geo.TabTag}" />
               </Button>
-              <Button Classes="tab" Classes.active="{Binding TabIsFiles}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Files}"
+              <Button x:Name="TutTabFiles" Classes="tab" Classes.active="{Binding TabIsFiles}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Files}"
                       ToolTip.Tip="{Binding Strings.TabFilesName}" AutomationProperties.Name="{Binding Strings.TabFilesName}">
                 <Path Data="{StaticResource Daynote.Geo.TabClip}" />
               </Button>
@@ -675,49 +675,16 @@
         </Border>
       </Border>
 
-      <!-- Onboarding tutorial: a stepping card over the body, shown once on first run. -->
-      <Border Grid.ColumnSpan="3" ZIndex="30" Background="#66000000"
-              IsVisible="{Binding Tutorial.IsOpen, FallbackValue=False}">
-        <Border Classes="panel" Background="{DynamicResource Daynote.Product.Brush.Card}" Width="520"
-                VerticalAlignment="Center" HorizontalAlignment="Center" Padding="26,22" DataContext="{Binding Tutorial}"
-                x:DataType="onboarding:TutorialViewModel">
-          <StackPanel Spacing="14">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding CurrentStep.Title}" TextWrapping="Wrap" />
-              <TextBlock Grid.Column="1" Classes="muted" Text="{Binding ProgressText}" FontSize="11.5" VerticalAlignment="Center" Margin="12,0,0,0" />
-            </Grid>
-            <TextBlock Text="{Binding CurrentStep.Body}" FontSize="13.5" TextWrapping="Wrap" LineHeight="21" />
-            <StackPanel Spacing="6" IsVisible="{Binding CurrentStep.IsShortcuts}">
-              <ItemsControl ItemsSource="{Binding Shortcuts}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="onboarding:ShortcutHint">
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                      <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" VerticalAlignment="Center" />
-                      <Border Grid.Column="1" Classes="chip" Padding="10,3" Margin="0"><TextBlock Text="{Binding Gesture}" /></Border>
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
-                <ToggleSwitch IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
-                              Command="{Binding ToggleStartupCommand}" OnContent="" OffContent="" />
-                <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center"
-                           Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.SettingsStartupLabel}" />
-              </StackPanel>
-            </StackPanel>
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,6,0,0">
-              <Button Grid.Column="0" Classes="quiet" Command="{Binding SkipCommand}" IsVisible="{Binding !IsLast}"
-                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialSkip}" />
-              <Button Grid.Column="2" Classes="quiet" Command="{Binding BackCommand}" IsVisible="{Binding !IsFirst}" Margin="0,0,6,0"
-                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialBack}" />
-              <Button Grid.Column="3" Classes="accent" Command="{Binding NextCommand}" IsVisible="{Binding !IsLast}"
-                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialNext}" />
-              <Button Grid.Column="3" Classes="accent" Command="{Binding FinishCommand}" IsVisible="{Binding IsLast}"
-                      Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings.TutorialFinish}" />
-            </Grid>
-          </StackPanel>
-        </Border>
-      </Border>
     </Grid>
+
+    <!--
+      Onboarding tutorial. The overlay dims the shell and cuts a hole around the step's target
+      (TutorialOverlay); this used to be one flat scrim with a centred card, so every step described
+      a part of the UI without pointing at it. It spans BOTH rows, as the WPF host does: the search
+      step's target is the pill in the title bar, and an overlay that covered only the body clipped
+      that hole away to nothing and silently fell back to dimming everything.
+    -->
+    <views:TutorialOverlay Grid.Row="0" Grid.RowSpan="2" ZIndex="30" DataContext="{Binding Tutorial}"
+                           IsVisible="{Binding IsOpen, FallbackValue=False}" />
   </Grid>
 </Window>
