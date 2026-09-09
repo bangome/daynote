@@ -13,16 +13,29 @@ namespace Daynote.App.Onboarding;
 /// spotlight (null = a centered callout with no highlight). <paramref name="IsShortcuts"/> steps also
 /// render the shortcut table.
 /// </summary>
-public sealed record TutorialStep(string Title, string Body, string? TargetName = null, bool IsShortcuts = false);
+/// <param name="ShowsStickyNote">
+/// The step opens a sticky note while it is showing and closes it when it is left. The sticky is a
+/// window of its own, so the overlay cannot spotlight it; the window sitting undimmed above the
+/// dimmed shell is the highlight.
+/// </param>
+public sealed record TutorialStep(
+    string Title,
+    string Body,
+    string? TargetName = null,
+    bool IsShortcuts = false,
+    bool ShowsStickyNote = false);
 
 /// <summary>x:Names of the ProductWindow elements the tutorial spotlights (kept in sync with ProductWindow.xaml).</summary>
 public static class TutorialTargets
 {
-    public const string Search = "SearchBox";
+    /// <summary>The whole search pill, not the TextBox inside it: the spotlight follows the white shape.</summary>
+    public const string Search = "TutSearch";
     public const string Settings = "TutSettings";
     public const string Calendar = "TutCalendar";
     public const string Editor = "TutEditor";
     public const string TabTodo = "TutTabTodo";
+    public const string TabFavorites = "TutTabFavorites";
+    public const string TabTags = "TutTabTags";
     public const string TabFiles = "TutTabFiles";
 }
 
@@ -72,8 +85,11 @@ public sealed partial class TutorialViewModel : ObservableObject, ILanguageAware
             new(AppStrings.TutorialWelcomeTitle, AppStrings.TutorialWelcomeBody),
             new(AppStrings.TutorialNotesTitle, AppStrings.TutorialNotesBody, TutorialTargets.Calendar),
             new(AppStrings.TutorialTodoTitle, AppStrings.TutorialTodoBody, TutorialTargets.TabTodo),
+            new(AppStrings.TutorialFavoritesTitle, AppStrings.TutorialFavoritesBody, TutorialTargets.TabFavorites),
+            new(AppStrings.TutorialTagsTitle, AppStrings.TutorialTagsBody, TutorialTargets.TabTags),
             new(AppStrings.TutorialFilesTitle, AppStrings.TutorialFilesBody, TutorialTargets.TabFiles),
-            new(AppStrings.TutorialStickyTitle, AppStrings.TutorialStickyBody, TutorialTargets.Editor),
+            // No target: the sticky note itself is what is being shown, and it is its own window.
+            new(AppStrings.TutorialStickyTitle, AppStrings.TutorialStickyBody, ShowsStickyNote: true),
             new(AppStrings.TutorialSearchTitle, AppStrings.TutorialSearchBody, TutorialTargets.Search),
             new(AppStrings.TutorialShortcutsTitle, AppStrings.TutorialShortcutsBody, IsShortcuts: true),
             new(AppStrings.TutorialWrapTitle, AppStrings.TutorialWrapBody, TutorialTargets.Settings),

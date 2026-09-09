@@ -90,7 +90,11 @@ public partial class TutorialView : System.Windows.Controls.UserControl
 
         if (target is { } rect)
         {
-            double radius = 8;
+            // The hole follows the target's own corners. The rect is the target inflated by Pad, so
+            // the matching radius is the target's radius plus Pad — concentric, the way a focus ring
+            // sits outside a rounded control. A fixed 8 looked right on buttons and wrong on the
+            // 10px panels and 14px cards, where the dimmed edge cut across their curve.
+            double radius = SpotlightRadius(_target!) + Pad;
             Scrim.Data = new GeometryGroup
             {
                 FillRule = FillRule.EvenOdd,
@@ -100,6 +104,7 @@ public partial class TutorialView : System.Windows.Controls.UserControl
             Canvas.SetTop(HighlightRing, rect.Y);
             HighlightRing.Width = rect.Width;
             HighlightRing.Height = rect.Height;
+            HighlightRing.CornerRadius = new CornerRadius(radius);
             HighlightRing.Visibility = Visibility.Visible;
             PlaceCallout(rect, w, h);
         }
@@ -111,8 +116,12 @@ public partial class TutorialView : System.Windows.Controls.UserControl
         }
     }
 
+    /// <summary>The element the current step spotlights; set by <see cref="TryGetTargetRect"/>.</summary>
+    private FrameworkElement? _target;
+
     private Rect? TryGetTargetRect(double w, double h)
     {
+        _target = null;
         string? name = _vm?.CurrentStep.TargetName;
         if (string.IsNullOrEmpty(name) || Window.GetWindow(this) is not { } window)
         {
@@ -124,6 +133,8 @@ public partial class TutorialView : System.Windows.Controls.UserControl
         {
             return null;
         }
+
+        _target = element;
 
         Rect bounds = element.TransformToVisual(OverlayCanvas)
             .TransformBounds(new Rect(new System.Windows.Size(element.ActualWidth, element.ActualHeight)));
@@ -177,4 +188,52 @@ public partial class TutorialView : System.Windows.Controls.UserControl
 
     private static double Clamp(double value, double min, double max) =>
         max < min ? min : Math.Clamp(value, min, max);
+
+    /// <summary>
+    /// The corner radius the target actually draws with. A Border says so itself; a templated control
+    /// (a Button, a UserControl) says so through the first rounded Border inside it; a bare TextBox in
+    /// a pill says so through the pill around it. Anything else takes the control radius.
+    /// </summary>
+    public static double SpotlightRadius(FrameworkElement target)
+    {
+        if (target is Border own && own.CornerRadius.TopLeft > 0)
+        {
+            return own.CornerRadius.TopLeft;
+        }
+
+        if (FirstRoundedDescendant(target) is { } inner)
+        {
+            return inner.CornerRadius.TopLeft;
+        }
+
+        for (DependencyObject? parent = VisualTreeHelper.GetParent(target); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+        {
+            if (parent is Border outer && outer.CornerRadius.TopLeft > 0)
+            {
+                return outer.CornerRadius.TopLeft;
+            }
+        }
+
+        return target.TryFindResource("Daynote.Product.Radius.Control") is CornerRadius control ? control.TopLeft : 8;
+    }
+
+    private static Border? FirstRoundedDescendant(DependencyObject root)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, i);
+            if (child is Border border && border.CornerRadius.TopLeft > 0)
+            {
+                return border;
+            }
+
+            if (FirstRoundedDescendant(child) is { } deeper)
+            {
+                return deeper;
+            }
+        }
+
+        return null;
+    }
 }

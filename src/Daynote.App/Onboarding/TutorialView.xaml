@@ -74,8 +74,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <!-- Skip has nothing to skip on the closing card: 시작하기 ends the tour. -->
                     <Button Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.GhostButton}" Padding="8,4"
                             Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                            Visibility="{Binding IsLast, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
                             Content="{loc:Tr TutorialSkip}" Command="{Binding SkipCommand}"
                             AutomationProperties.Name="{loc:Tr TutorialSkip}" />
                     <StackPanel Grid.Column="2" Orientation="Horizontal">

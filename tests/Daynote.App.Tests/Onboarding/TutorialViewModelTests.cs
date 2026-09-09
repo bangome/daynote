@@ -51,16 +51,23 @@ public sealed class TutorialViewModelTests
     {
         TutorialViewModel vm = Create();
 
-        // Welcome + shortcuts steps are centered (no target); the rest point at a named element.
+        // Welcome, sticky and shortcuts steps are centered (no target); the rest point at a named
+        // element. The sticky step shows the sticky window instead, which is its own highlight.
         Assert.IsNull(vm.Steps[0].TargetName);
         Assert.AreEqual(TutorialTargets.Calendar, vm.Steps[1].TargetName);
         Assert.AreEqual(TutorialTargets.TabTodo, vm.Steps[2].TargetName);
-        Assert.AreEqual(TutorialTargets.TabFiles, vm.Steps[3].TargetName);
-        Assert.AreEqual(TutorialTargets.Editor, vm.Steps[4].TargetName);
-        Assert.AreEqual(TutorialTargets.Search, vm.Steps[5].TargetName);
-        Assert.IsTrue(vm.Steps[6].IsShortcuts);
+        Assert.AreEqual(TutorialTargets.TabFavorites, vm.Steps[3].TargetName);
+        Assert.AreEqual(TutorialTargets.TabTags, vm.Steps[4].TargetName);
+        Assert.AreEqual(TutorialTargets.TabFiles, vm.Steps[5].TargetName);
         Assert.IsNull(vm.Steps[6].TargetName);
-        Assert.AreEqual(TutorialTargets.Settings, vm.Steps[7].TargetName);
+        Assert.IsTrue(vm.Steps[6].ShowsStickyNote);
+        Assert.AreEqual(TutorialTargets.Search, vm.Steps[7].TargetName);
+        Assert.IsTrue(vm.Steps[8].IsShortcuts);
+        Assert.IsNull(vm.Steps[8].TargetName);
+        Assert.AreEqual(TutorialTargets.Settings, vm.Steps[9].TargetName);
+        Assert.IsNull(vm.Steps[10].TargetName);
+        Assert.AreEqual(11, vm.Steps.Count);
+        Assert.AreEqual(1, vm.Steps.Count(static step => step.ShowsStickyNote), "Exactly one step shows the sticky note.");
     }
 
     [TestMethod]
