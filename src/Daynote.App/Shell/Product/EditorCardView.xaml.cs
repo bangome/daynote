@@ -189,8 +189,27 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
         HighlightScroll.ScrollToHorizontalOffset(BodyBox.HorizontalOffset);
     }
 
+    /// <summary>"이름 변경" from a row, and the double-click on the heading, share one entry point.</summary>
+    public void FocusTitleForRename()
+    {
+        TitleBox.IsReadOnly = false;
+        TitleBox.Focus();
+        TitleBox.SelectAll();
+    }
+
+    private void OnTitleDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (Shell?.Notes.SelectedTab is { IsProjection: false })
+        {
+            FocusTitleForRename();
+            e.Handled = true;
+        }
+    }
+
     private void OnTitleLostFocus(object sender, RoutedEventArgs e)
     {
+        // Back to a heading, whatever happened: committing and locking are the same moment.
+        TitleBox.IsReadOnly = true;
         if (Shell?.Notes.SelectedTab is { } tab)
         {
             _ = Shell.Notes.RenameAsync(tab, TitleBox.Text);

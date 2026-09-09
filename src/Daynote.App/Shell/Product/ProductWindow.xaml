@@ -89,7 +89,7 @@
                  titlebar also carries the settings (gear) button (was 480, less the 36px button). -->
             <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                   MaxWidth="444" MinWidth="120" Margin="12,0" WindowChrome.IsHitTestVisibleInChrome="True">
-                <Border Background="{DynamicResource Daynote.Product.Brush.Input}"
+                <Border x:Name="TutSearch" Background="{DynamicResource Daynote.Product.Brush.Input}"
                         BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
                         CornerRadius="17" Height="34" Padding="14,0,8,0">
                     <Grid>
@@ -305,7 +305,13 @@
                                             <Button HorizontalContentAlignment="Stretch" Margin="0,0,0,4"
                                                     Visibility="{Binding IsProjection, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
                                                     Command="{Binding DataContext.SelectDayNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}">
+                                                    CommandParameter="{Binding}"
+                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    ContextMenu="{DynamicResource Daynote.Product.Menu.NoteRow}">
+                                                <!-- Menu: Daynote.Product.Styles.xaml, reaching the shell through Tag. Delete deletes the focused row. -->
+                                                <Button.InputBindings>
+                                                    <KeyBinding Key="Delete" CommandParameter="{Binding}" Command="{Binding DataContext.DeleteDayNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                </Button.InputBindings>
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border x:Name="Row" Padding="11,9" CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"

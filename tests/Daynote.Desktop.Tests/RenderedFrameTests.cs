@@ -5,11 +5,9 @@ using Avalonia.Headless;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.Desktop.ViewModels;
 using Daynote.Desktop.Views;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Daynote.Desktop.Tests;
@@ -41,7 +39,7 @@ public sealed class RenderedFrameTests
         FrameSummary light = default;
         FrameSummary dark = default;
 
-        WithInitialisedShell((window, shell) =>
+        TestServices.WithInitialisedShell((window, shell) =>
         {
             // Through the view model, as the theme button does, so everything that depends on the
             // variant (the applier, the wordmark) follows — setting RequestedThemeVariant directly
@@ -71,7 +69,7 @@ public sealed class RenderedFrameTests
         // Found in the first rendered frame: a fresh day carries one projection tab — the editor's
         // blank "노트 1" — and the sidebar drew it as a row while the header said "노트 0개" and the
         // empty-state text sat right under it. The WPF shell hides projection rows; so does this one now.
-        WithInitialisedShell((window, shell) =>
+        TestServices.WithInitialisedShell((window, shell) =>
         {
             Assert.IsTrue(shell.Notes.Tabs.Count > 0, "The fresh day has no tabs at all; the scenario is not the one described.");
             Assert.IsTrue(shell.Notes.Tabs.All(static tab => tab.IsProjection), "The fresh day already has a real note.");
@@ -83,58 +81,6 @@ public sealed class RenderedFrameTests
                 .ToList();
 
             Assert.AreEqual(0, visibleRows.Count, "A projection is listed as a note row on an empty day.");
-        });
-    }
-
-    /// <summary>
-    /// The shell window, shown and initialised the way App.axaml.cs does it, on the UI thread.
-    /// </summary>
-    /// <remarks>
-    /// Without <c>InitializeAsync</c> the calendar has a weekday header and no days, and a frame
-    /// shows an app that has not loaded rather than the app. Its continuations are posted to this
-    /// dispatcher, so the loop pumps it until the task completes, then drains what the
-    /// initialisation posted for after itself (collection refreshes, summaries) so what the body sees
-    /// is the settled UI and not a mid-update one.
-    /// </remarks>
-    private static void WithInitialisedShell(Action<MainWindow, DesktopShellViewModel> body)
-    {
-        using var data = new TempDataRoot();
-
-        HeadlessAppFixture.OnUiThread(() =>
-        {
-            Application application = Application.Current!;
-            ServiceProvider provider = TestServices.Build(data.Path, application);
-            var shell = provider.GetRequiredService<DesktopShellViewModel>();
-            var window = new MainWindow { DataContext = shell, Width = 1256, Height = 788 };
-            try
-            {
-                window.Show();
-
-                Task initialising = shell.InitializeAsync();
-                DateTime deadline = DateTime.UtcNow.AddSeconds(20);
-                while (!initialising.IsCompleted)
-                {
-                    Assert.IsTrue(DateTime.UtcNow < deadline, "The shell did not finish initialising within 20 seconds.");
-                    Dispatcher.UIThread.RunJobs();
-                    Thread.Sleep(5);
-                }
-
-                initialising.GetAwaiter().GetResult();
-
-                for (int i = 0; i < 20; i++)
-                {
-                    Dispatcher.UIThread.RunJobs();
-                    Thread.Sleep(5);
-                }
-
-                window.UpdateLayout();
-                body(window, shell);
-            }
-            finally
-            {
-                window.Close();
-                provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            }
         });
     }
 

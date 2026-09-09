@@ -54,10 +54,17 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="TitleBox" Grid.Column="0"
+                    <!--
+                      A heading until it is double-clicked. It was always editable, so a stray click
+                      in the heading put a caret there; editing is now a deliberate gesture — double
+                      click, or Rename on a row's context menu — and the same one the Avalonia shell
+                      uses. The control does not change, only its read-only state, so nothing shifts.
+                    -->
+                    <TextBox x:Name="TitleBox" Grid.Column="0" IsReadOnly="True"
                              Style="{DynamicResource Daynote.Product.Style.PlainTextBox}"
                              FontSize="{DynamicResource Daynote.Product.Type.Title}" FontWeight="SemiBold"
                              Text="{Binding Notes.SelectedTab.Title, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                             MouseDoubleClick="OnTitleDoubleClick"
                              LostFocus="OnTitleLostFocus"
                              AutomationProperties.Name="{loc:Tr TitlePlaceholder}" />
                     <Button Grid.Column="1" Width="30" Height="30" Style="{DynamicResource Daynote.Product.Style.GhostButton}"

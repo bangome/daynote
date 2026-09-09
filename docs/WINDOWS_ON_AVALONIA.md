@@ -335,6 +335,7 @@ catching something the moment it was written.
 | `MainWindowCompositionTests` (×2, one per variant) | The shell measures and arranges with no binding errors | — |
 | `LocalizationKeyTests` | Every `Strings[Key]` in markup exists in both catalogs | A made-up key that compiled **and** raised no binding error |
 | `RenderedFrameTests` (×3, added 2026-09-08) | The shell (both variants) and the sticky note render to real pixels; an empty day lists no projection row | The phantom "노트 1" row under "노트 0개"; see below |
+| `NoteRowActionsTests` (×4, added 2026-09-09) | The sidebar row's context menu resolves all three commands, Delete on a focused row deletes it, and the heading's rename editor commits on Enter and cancels on Escape | A `MenuItem` inside a `ContextMenu` popup binds through a separate visual tree, so a `$parent[Window]` walk comes back null there and the item renders fine while doing nothing |
 
 Three things learned while building it, all of which shape what is worth testing here:
 

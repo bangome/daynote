@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Daynote.App.Localization;
 using Daynote.Core.Domain.Notes;
 using Daynote.Core.Notes;
 
@@ -27,7 +28,12 @@ public sealed partial class NoteWorkspaceViewModel
         return true;
     }
 
-    /// <summary>Deletes the given note after a safe flush; contiguous orders are restored by the repository.</summary>
+    /// <summary>
+    /// Deletes the given note after a safe flush; contiguous orders are restored by the repository.
+    /// The selection moves to the note above the deleted one — the row the eye is already resting on
+    /// — or to the one below when the first note goes. It used to fall to the top of the list, which
+    /// meant deleting the fifth note jumped the editor to the first.
+    /// </summary>
     [RelayCommand]
     public async Task<bool> DeleteNoteAsync(NoteTabViewModel? tab, CancellationToken cancellationToken = default)
     {
@@ -42,9 +48,65 @@ public sealed partial class NoteWorkspaceViewModel
             return false;
         }
 
+        int index = Tabs.IndexOf(tab);
+        NoteTabViewModel? neighbour = index > 0 ? Tabs[index - 1] : index + 1 < Tabs.Count ? Tabs[index + 1] : null;
+
         DayWorkspace workspace = await _dependencies.DeleteNote
             .ExecuteAsync(SelectedDate, tab.Id, cancellationToken).ConfigureAwait(true);
-        RebuildTabs(workspace, selectId: null);
+        RebuildTabs(workspace, neighbour?.Id);
+        return true;
+    }
+
+    /// <summary>
+    /// Copies a note — title, body and tags — into a new note placed directly after it, and selects
+    /// the copy. The title carries a suffix so the two rows can be told apart until one is renamed.
+    /// </summary>
+    [RelayCommand]
+    public async Task<bool> DuplicateNoteAsync(NoteTabViewModel? tab, CancellationToken cancellationToken = default)
+    {
+        if (tab is null || tab.IsProjection)
+        {
+            return false;
+        }
+
+        FlushResult flush = await FlushAsync(FlushReason.NoteChange, cancellationToken).ConfigureAwait(true);
+        if (!flush.CanProceed)
+        {
+            return false;
+        }
+
+        int index = Tabs.IndexOf(tab);
+        DayWorkspace created = await _dependencies.CreateNote
+            .ExecuteAsync(SelectedDate, cancellationToken).ConfigureAwait(true);
+        NoteId copyId = created.Notes.Notes[^1].Id!.Value;
+
+        // The repository appends an empty note; give it the source's content. Always a custom title:
+        // a copied "노트 3" is not the third note, so it must not be renumbered as one.
+        await _dependencies.Repository.SaveNoteAsync(
+            new NoteSaveRequest(
+                copyId,
+                SelectedDate,
+                tab.Title + AppStrings.NoteDuplicateSuffix,
+                tab.Body,
+                created.RevisionOf(copyId),
+                IsNew: false,
+                HasCustomTitle: true),
+            cancellationToken).ConfigureAwait(true);
+
+        DayWorkspace workspace = created;
+        if (tab.Tags.Count > 0 && _dependencies.SetTags is { } setTags)
+        {
+            workspace = await setTags.ExecuteAsync(SelectedDate, copyId, tab.Tags.ToList(), cancellationToken).ConfigureAwait(true);
+        }
+
+        // Appended at the end by the repository; a copy belongs next to its original.
+        List<NoteId> order = workspace.Notes.Notes.Where(static n => !n.IsProjection).Select(static n => n.Id!.Value).ToList();
+        order.Remove(copyId);
+        order.Insert(Math.Min(index + 1, order.Count), copyId);
+        workspace = await _dependencies.ReorderNotes
+            .ExecuteAsync(SelectedDate, order, cancellationToken).ConfigureAwait(true);
+
+        RebuildTabs(workspace, copyId);
         return true;
     }
 

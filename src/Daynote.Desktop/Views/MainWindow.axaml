@@ -152,6 +152,26 @@
                               IsVisible="{Binding !IsProjection}"
                               Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
                               CommandParameter="{Binding}">
+                        <!-- Delete on a focused row deletes that row; right-click offers rename, copy, delete. -->
+                        <Button.KeyBindings>
+                          <KeyBinding Gesture="Delete"
+                                      Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                      CommandParameter="{Binding}" />
+                        </Button.KeyBindings>
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuRename]}"
+                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).RenameDayNoteCommand}"
+                                      CommandParameter="{Binding}" />
+                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDuplicate]}"
+                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DuplicateDayNoteCommand}"
+                                      CommandParameter="{Binding}" />
+                            <Separator />
+                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDelete]}"
+                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                      CommandParameter="{Binding}" />
+                          </ContextMenu>
+                        </Button.ContextMenu>
                         <StackPanel Spacing="3">
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="★" FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Extras}" IsVisible="{Binding IsFavorite}" />
@@ -206,9 +226,18 @@
             failed, and that is not a moment to make someone decode a glyph.
           -->
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,10">
+            <!-- The heading is a label until it is double-clicked (or a row's Rename is picked);
+                 then the same slot holds a text box with a draft. Enter or focus loss commits, Escape
+                 drops the draft. The TextBox has no chrome of its own so the swap does not jump. -->
             <TextBlock Grid.Column="0" Classes="h1" FontWeight="Bold"
                        Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}"
+                       IsVisible="{Binding !IsRenamingTitle}"
+                       DoubleTapped="OnTitleDoubleTapped"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+            <TextBox x:Name="TitleEditor" Grid.Column="0" Classes="inline titleedit"
+                     Text="{Binding TitleDraft}" IsVisible="{Binding IsRenamingTitle}"
+                     KeyDown="OnTitleEditorKeyDown" LostFocus="OnTitleEditorLostFocus"
+                     VerticalAlignment="Center" Margin="0,0,12,0" />
 
             <TextBlock Grid.Column="1" Classes="muted" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"
                        Text="{Binding Notes.SaveStatusDisplay}" IsVisible="{Binding Notes.HasSaveStatus}" />
@@ -337,11 +366,11 @@
                   <TextBlock Text="{Binding Todo.OpenCount}" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="tab" Classes.active="{Binding TabIsFavorites}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}"
+              <Button x:Name="TutTabFavorites" Classes="tab" Classes.active="{Binding TabIsFavorites}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}"
                       ToolTip.Tip="{Binding Strings.TabFavoritesName}" AutomationProperties.Name="{Binding Strings.TabFavoritesName}">
                 <Path Data="{StaticResource Daynote.Geo.Star}" />
               </Button>
-              <Button Classes="tab" Classes.active="{Binding TabIsTags}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}"
+              <Button x:Name="TutTabTags" Classes="tab" Classes.active="{Binding TabIsTags}" Command="{Binding SelectTabCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}"
                       ToolTip.Tip="{Binding Strings.TabTagsName}" AutomationProperties.Name="{Binding Strings.TabTagsName}">
                 <Path Data="{StaticResource Daynote.Geo.TabTag}" />
               </Button>

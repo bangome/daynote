@@ -417,17 +417,91 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     }
 
     [RelayCommand]
-    private async Task DeleteSelectedNote()
+    private Task DeleteSelectedNote() => DeleteDayNote(Notes.SelectedTab);
+
+    /// <summary>
+    /// Deletes a specific row — the context menu's and the Delete key's version of
+    /// <see cref="DeleteSelectedNote"/>, which act on the row under the pointer rather than the open note.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteDayNote(NoteTabViewModel? tab)
     {
-        if (Notes.SelectedTab is { } tab && await Notes.DeleteNoteAsync(tab).ConfigureAwait(true))
+        if (tab is not null && await Notes.DeleteNoteAsync(tab).ConfigureAwait(true))
         {
-            RefreshHeader();
-            await Calendar.LoadAsync().ConfigureAwait(true);
-            await Todo.RefreshAsync().ConfigureAwait(true);
-            await Favorites.RefreshAsync().ConfigureAwait(true);
-            await TagPanel.RefreshAsync().ConfigureAwait(true);
+            await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
         }
     }
+
+    [RelayCommand]
+    private async Task DuplicateDayNote(NoteTabViewModel? tab)
+    {
+        IsTimelineMode = false;
+        if (await Notes.DuplicateNoteAsync(tab).ConfigureAwait(true))
+        {
+            await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>Everything that counts or lists notes, after one was added, copied or removed.</summary>
+    private async Task RefreshAfterStructureChangeAsync()
+    {
+        RefreshHeader();
+        await Calendar.LoadAsync().ConfigureAwait(true);
+        await Todo.RefreshAsync().ConfigureAwait(true);
+        await Favorites.RefreshAsync().ConfigureAwait(true);
+        await TagPanel.RefreshAsync().ConfigureAwait(true);
+    }
+
+    // ── Title rename ─────────────────────────────────────────────────────────────────────────────
+    // The title is a label until the user asks to change it: double-click on the heading or "이름
+    // 변경" on a row. Then it is a text box holding a draft, committed on Enter or focus loss and
+    // dropped on Escape. The draft is separate from the tab's title so Escape really does cancel.
+
+    [ObservableProperty]
+    private bool _isRenamingTitle;
+
+    [ObservableProperty]
+    private string _titleDraft = string.Empty;
+
+    /// <summary>Selects the row, then opens the title for editing.</summary>
+    [RelayCommand]
+    private async Task RenameDayNote(NoteTabViewModel? tab)
+    {
+        IsTimelineMode = false;
+        if (tab is not null && await Notes.SelectNoteAsync(tab).ConfigureAwait(true))
+        {
+            BeginRenameTitle();
+        }
+    }
+
+    public void BeginRenameTitle()
+    {
+        if (Notes.SelectedTab is { } tab)
+        {
+            TitleDraft = tab.Title;
+            IsRenamingTitle = true;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CommitRenameTitle()
+    {
+        if (!IsRenamingTitle)
+        {
+            return;
+        }
+
+        IsRenamingTitle = false;
+        string draft = TitleDraft.Trim();
+        if (Notes.SelectedTab is { } tab && draft.Length > 0 && !string.Equals(draft, tab.Title, StringComparison.Ordinal))
+        {
+            await Notes.RenameAsync(tab, draft).ConfigureAwait(true);
+            RefreshHeader();
+        }
+    }
+
+    [RelayCommand]
+    private void CancelRenameTitle() => IsRenamingTitle = false;
 
     [RelayCommand]
     private async Task ToggleFavorite()

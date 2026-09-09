@@ -29,6 +29,8 @@ public partial class ProductWindow : Window, IWindowHost, IAccountHost
         DataContext = viewModel;
         SettingsHost.CloseRequested += OnSettingsCloseRequested;
         viewModel.PanelUserToggled += OnPanelUserToggled;
+        viewModel.TitleRenameRequested += (_, _) => TutEditor.FocusTitleForRename();
+        AttachTutorialStickyDemo();
     }
 
     // A collapsed panel disappears entirely (no strip), freeing its full width plus its 10-DIP gap

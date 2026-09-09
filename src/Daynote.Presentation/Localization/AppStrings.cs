@@ -181,6 +181,10 @@ public static class AppStrings
     public static string TutorialNotesBody => LocalizationService.Instance[nameof(TutorialNotesBody)];
     public static string TutorialTodoTitle => LocalizationService.Instance[nameof(TutorialTodoTitle)];
     public static string TutorialTodoBody => LocalizationService.Instance[nameof(TutorialTodoBody)];
+    public static string TutorialFavoritesTitle => LocalizationService.Instance[nameof(TutorialFavoritesTitle)];
+    public static string TutorialFavoritesBody => LocalizationService.Instance[nameof(TutorialFavoritesBody)];
+    public static string TutorialTagsTitle => LocalizationService.Instance[nameof(TutorialTagsTitle)];
+    public static string TutorialTagsBody => LocalizationService.Instance[nameof(TutorialTagsBody)];
     public static string TutorialFilesTitle => LocalizationService.Instance[nameof(TutorialFilesTitle)];
     public static string TutorialFilesBody => LocalizationService.Instance[nameof(TutorialFilesBody)];
     public static string TutorialStickyTitle => LocalizationService.Instance[nameof(TutorialStickyTitle)];
@@ -254,6 +258,10 @@ public static class AppStrings
     public static string CloseStickyNote => LocalizationService.Instance[nameof(CloseStickyNote)];
     public static string StickyNoteBody => LocalizationService.Instance[nameof(StickyNoteBody)];
     public static string DeleteNoteTip => LocalizationService.Instance[nameof(DeleteNoteTip)];
+    public static string NoteMenuRename => LocalizationService.Instance[nameof(NoteMenuRename)];
+    public static string NoteMenuDuplicate => LocalizationService.Instance[nameof(NoteMenuDuplicate)];
+    public static string NoteMenuDelete => LocalizationService.Instance[nameof(NoteMenuDelete)];
+    public static string NoteDuplicateSuffix => LocalizationService.Instance[nameof(NoteDuplicateSuffix)];
     public static string TagAddPlaceholder => LocalizationService.Instance[nameof(TagAddPlaceholder)];
     public static string NoNoteSelected => LocalizationService.Instance[nameof(NoNoteSelected)];
     /// <summary>{0} = character count, {1} = line count.</summary>

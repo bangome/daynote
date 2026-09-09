@@ -26,7 +26,18 @@ public partial class MainWindow : Window
             if (_shell is not null)
             {
                 _shell.StickyNoteRequested += OnStickyNoteRequested;
+                // "이름 변경" from a row's menu opens the editor through the view model; the caret has
+                // to follow, the same as it does after a double-click on the heading.
+                _shell.PropertyChanged += (_, args) =>
+                {
+                    if (args.PropertyName == nameof(DesktopShellViewModel.IsRenamingTitle) && _shell.IsRenamingTitle)
+                    {
+                        FocusTitleEditor();
+                    }
+                };
             }
+
+            AttachTutorialStickyDemo(_shell);
 
             RebuildShortcutBindings();
         };
@@ -153,6 +164,54 @@ public partial class MainWindow : Window
         }
 
         base.OnClosed(e);
+    }
+
+    private void OnTitleDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is DesktopShellViewModel shell && shell.HasOpenNote)
+        {
+            shell.BeginRenameTitle();
+        }
+    }
+
+    /// <summary>
+    /// Puts the caret in the title editor once it is visible. The IsVisible binding lands on the
+    /// next layout pass, so focusing synchronously would hit a collapsed control and do nothing.
+    /// </summary>
+    internal void FocusTitleEditor()
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            TitleEditor.Focus();
+            TitleEditor.SelectAll();
+        });
+    }
+
+    private void OnTitleEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not DesktopShellViewModel shell)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            shell.CommitRenameTitleCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            shell.CancelRenameTitleCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnTitleEditorLostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is DesktopShellViewModel shell)
+        {
+            shell.CommitRenameTitleCommand.Execute(null);
+        }
     }
 
     private void OnTagBoxKeyDown(object? sender, KeyEventArgs e)

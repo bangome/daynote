@@ -64,6 +64,64 @@ public sealed class NoteWorkspaceViewModelTests
     }
 
     [TestMethod]
+    public async Task Delete_SelectsTheNoteAbove_OrTheOneBelowWhenTheFirstGoes()
+    {
+        await using WorkspaceTestContext context = WorkspaceTestContext.Create();
+        await context.Notes.LoadAsync(Day);
+        await context.Notes.AddNoteAsync(); // Note 1
+        await context.Notes.AddNoteAsync(); // Note 2
+        await context.Notes.AddNoteAsync(); // Note 3
+        NoteId[] ids = context.Notes.Tabs.Select(t => t.Id).ToArray();
+
+        // Deleting the last selects the one above it, not the top of the list.
+        await context.Notes.DeleteNoteAsync(context.Notes.Tabs[2]);
+        Assert.AreEqual(ids[1], context.Notes.SelectedTab!.Id, "Deleting Note 3 should select Note 2.");
+
+        // Deleting the first has nothing above it, so the one below takes over.
+        await context.Notes.DeleteNoteAsync(context.Notes.Tabs[0]);
+        Assert.AreEqual(ids[1], context.Notes.SelectedTab!.Id, "Deleting Note 1 should select the note that was below it.");
+        Assert.AreEqual(1, context.Notes.Tabs.Count);
+    }
+
+    [TestMethod]
+    public async Task Duplicate_CopiesTitleBodyAndTags_RightAfterTheSource_AndSelectsTheCopy()
+    {
+        await using WorkspaceTestContext context = WorkspaceTestContext.Create();
+        IReadOnlyList<NoteId> ids = await context.StoreNotesOnDateAsync(
+            Day, ("회의록", "안건 1\n안건 2"), ("다른 노트", "본문"));
+        await context.Notes.LoadAsync(Day);
+        NoteTabViewModel source = context.Notes.Tabs[0];
+        await context.Notes.AddTagAsync(source, "회계");
+        await context.Notes.AddTagAsync(context.Notes.Tabs[0], "월간");
+
+        Assert.IsTrue(await context.Notes.DuplicateNoteAsync(context.Notes.Tabs[0]));
+
+        Assert.AreEqual(3, context.Notes.Tabs.Count);
+        NoteTabViewModel copy = context.Notes.Tabs[1];
+        Assert.AreEqual(ids[0], context.Notes.Tabs[0].Id, "The source stays where it was.");
+        Assert.AreEqual(ids[1], context.Notes.Tabs[2].Id, "The other note moves down one; the copy sits between.");
+        Assert.AreNotEqual(ids[0], copy.Id);
+        Assert.IsTrue(copy.Title.StartsWith("회의록", StringComparison.Ordinal) && copy.Title.Length > "회의록".Length,
+            $"The copy's title should be the source's plus a suffix, got '{copy.Title}'.");
+        Assert.IsTrue(copy.HasCustomTitle, "A copied title must not be renumbered as 'Note N'.");
+        Assert.AreEqual("안건 1\n안건 2", copy.Body);
+        CollectionAssert.AreEqual(new[] { "월간", "회계" }, copy.Tags.OrderBy(t => t, StringComparer.Ordinal).ToArray());
+        Assert.IsTrue(copy.IsSelected, "The copy is what the user works on next.");
+        Assert.AreEqual("안건 1\n안건 2", context.Notes.EditorText);
+    }
+
+    [TestMethod]
+    public async Task Duplicate_OfAProjection_DoesNothing()
+    {
+        await using WorkspaceTestContext context = WorkspaceTestContext.Create();
+        await context.Notes.LoadAsync(Day);
+
+        Assert.IsFalse(await context.Notes.DuplicateNoteAsync(context.Notes.Tabs[0]));
+        Assert.AreEqual(1, context.Notes.Tabs.Count);
+        Assert.IsTrue(context.Notes.Tabs[0].IsProjection);
+    }
+
+    [TestMethod]
     public async Task Reorder_PreservesIdentitiesInNewOrder()
     {
         await using WorkspaceTestContext context = WorkspaceTestContext.Create();

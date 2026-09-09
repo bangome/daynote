@@ -185,6 +185,12 @@ internal static class EnglishStrings
         ["TutorialTodoTitle"] = "To-do checkboxes",
         ["TutorialTodoBody"] = "Type -[] in the body to make a checkbox, and add a due time like (7/25 14:00). They gather by date in the To-do tab on the right.",
 
+        ["TutorialFavoritesTitle"] = "Favourites",
+        ["TutorialFavoritesBody"] = "The star next to the title marks a note as a favourite. They gather in the Favourites tab on the right, whatever their date, so the notes you keep coming back to are one click away.",
+
+        ["TutorialTagsTitle"] = "Tags",
+        ["TutorialTagsBody"] = "Type a word into '+ Tag' under the title to tag the note. The Tags tab on the right groups notes by tag, and clicking one takes you to that note.",
+
         ["TutorialFilesTitle"] = "Attachments and body links",
         ["TutorialFilesBody"] = "Drop files onto the Files tab, or paste an image or file into the body — it is stored as a file and only a link stays in the text. Click the link to open it in the Files tab.",
 
@@ -275,6 +281,10 @@ internal static class EnglishStrings
         ["CloseStickyNote"] = "Close sticky note",
         ["StickyNoteBody"] = "Sticky note body",
         ["DeleteNoteTip"] = "Delete note",
+        ["NoteMenuRename"] = "Rename",
+        ["NoteMenuDuplicate"] = "Duplicate",
+        ["NoteMenuDelete"] = "Delete",
+        ["NoteDuplicateSuffix"] = " (copy)",
         ["TagAddPlaceholder"] = "+ tag",
         ["NoNoteSelected"] = "Pick a note from the list on the left, or create a new one",
         ["NoteMetaFormat"] = "{0} chars · {1} lines",

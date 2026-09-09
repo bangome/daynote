@@ -1,7 +1,8 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:loc="clr-namespace:Daynote.App.Localization">
 
     <!--
       Product visual system for the calendar-notes redesign (DESIGN.md Revision 2026-07-21).
@@ -492,4 +493,96 @@
         <Setter Property="CornerRadius" Value="{DynamicResource Daynote.Product.Radius.Chip}" />
         <Setter Property="Padding" Value="6,1" />
     </Style>
+    <!--
+      The sidebar note row's context menu (ProductWindow). A ContextMenu is its own visual tree, so
+      it cannot walk to the Window; the row puts the shell view model in its Tag and the items reach
+      it through PlacementTarget. Not shared: each row gets its own instance, so a menu left open on
+      one row never carries another row's placement target.
+    -->
+    <!--
+      Menu chrome for the product surfaces. WPF's default ContextMenu is a square white slab in the
+      system font, which reads as another application's menu inside this window; these give it the
+      card's ground, radius and shadow, and the row hover the rest of the shell uses.
+    -->
+    <Style x:Key="Daynote.Product.Style.MenuItem" TargetType="MenuItem">
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}"
+                            CornerRadius="{DynamicResource Daynote.Product.Radius.Small}" Margin="4,1">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Daynote.Product.Style.MenuItem.Destructive" TargetType="MenuItem" BasedOn="{StaticResource Daynote.Product.Style.MenuItem}">
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Danger}" />
+    </Style>
+    <Style x:Key="Daynote.Product.Style.MenuSeparator" TargetType="Separator">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="10,4" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1" Background="{TemplateBinding Background}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Daynote.Product.Style.ContextMenu" TargetType="ContextMenu">
+        <Setter Property="Padding" Value="0,4" />
+        <!--
+          Load-bearing: a ContextMenu's popup window is opaque unless HasDropShadow is set, which is
+          what turns on AllowsTransparency. Without it the rounded corners are drawn over an opaque
+          white rectangle and the menu looks square.
+        -->
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{DynamicResource Daynote.Product.Brush.Card}"
+                            BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
+                            CornerRadius="{DynamicResource Daynote.Product.Radius.Panel}"
+                            Padding="{TemplateBinding Padding}" MinWidth="150"
+                            Effect="{DynamicResource Daynote.Product.Effect.DropdownShadow}">
+                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- HasDropShadow is set here rather than in the style: it is read when the popup window is
+         created, which for a ContextMenu happens before a resource style's setters are applied, and
+         it is what turns on AllowsTransparency so the rounded corners are not drawn over an opaque
+         white rectangle. -->
+    <ContextMenu x:Key="Daynote.Product.Menu.NoteRow" x:Shared="False" HasDropShadow="True"
+                 Style="{StaticResource Daynote.Product.Style.ContextMenu}">
+        <MenuItem Style="{StaticResource Daynote.Product.Style.MenuItem}" Header="{loc:Tr NoteMenuRename}"
+                  Command="{Binding PlacementTarget.Tag.RenameDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                  CommandParameter="{Binding}" />
+        <MenuItem Style="{StaticResource Daynote.Product.Style.MenuItem}" Header="{loc:Tr NoteMenuDuplicate}"
+                  Command="{Binding PlacementTarget.Tag.DuplicateDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                  CommandParameter="{Binding}" />
+        <Separator Style="{StaticResource Daynote.Product.Style.MenuSeparator}" />
+        <MenuItem Style="{StaticResource Daynote.Product.Style.MenuItem.Destructive}" Header="{loc:Tr NoteMenuDelete}"
+                  Command="{Binding PlacementTarget.Tag.DeleteDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                  CommandParameter="{Binding}" />
+    </ContextMenu>
 </ResourceDictionary>

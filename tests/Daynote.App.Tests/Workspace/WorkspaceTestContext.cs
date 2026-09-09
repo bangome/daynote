@@ -43,7 +43,9 @@ internal sealed class WorkspaceTestContext : IAsyncDisposable
             new ReorderNotes(noteRepository),
             new DeleteNote(noteRepository),
             NextId,
-            new InfiniteScheduler());
+            new InfiniteScheduler(),
+            toggleFavorite: new ToggleNoteFavorite(noteRepository),
+            setTags: new SetNoteTags(noteRepository));
         Notes = new NoteWorkspaceViewModel(dependencies);
         Main = new MainWindowViewModel(
             Notes,

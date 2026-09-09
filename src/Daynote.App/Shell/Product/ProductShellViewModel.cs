@@ -287,17 +287,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
     /// <summary>Deletes a note, then refreshes the calendar count and todo panel.</summary>
     [RelayCommand]
-    private async Task DeleteSelectedNote()
-    {
-        if (Notes.SelectedTab is { } tab && await Notes.DeleteNoteAsync(tab).ConfigureAwait(true))
-        {
-            RefreshHeader();
-            await Calendar.LoadAsync().ConfigureAwait(true);
-            await Todo.RefreshAsync().ConfigureAwait(true);
-            await Favorites.RefreshAsync().ConfigureAwait(true);
-            await TagPanel.RefreshAsync().ConfigureAwait(true);
-        }
-    }
+    private Task DeleteSelectedNote() => DeleteDayNote(Notes.SelectedTab);
 
     [RelayCommand]
     private async Task ToggleFavorite()
