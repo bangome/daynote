@@ -65,11 +65,15 @@ database_name = "daynote"
 database_id = "4226d475-a071-44c0-a2c7-4a953cbaa44e"
 migrations_dir = "migrations"
 
-# R2 arrives with Phase 7 (encrypted attachments); left commented so the binding is not silently
-# created before the code that uses it exists.
-# [[r2_buckets]]
-# binding = "ASSETS"
-# bucket_name = "daynote-assets"
+# Encrypted attachment bytes (docs/CLOUD_SYNC.md §5.4). Create it once before the first deploy
+# that serves the asset routes:
+#   wrangler r2 bucket create daynote-assets
+#
+# The binding is ASSET_BUCKET, not the ASSETS the design sketch named: [assets] above already holds
+# that name for the brand site, and a Worker cannot bind one name twice.
+[[r2_buckets]]
+binding = "ASSET_BUCKET"
+bucket_name = "daynote-assets"
 
 [observability]
 enabled = true

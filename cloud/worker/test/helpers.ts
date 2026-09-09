@@ -24,8 +24,8 @@ export const REDIRECT_URI = 'http://127.0.0.1:53219/';
 
 export async function resetDatabase(): Promise<void> {
   for (const table of [
-    'change_log', 'notes', 'billing_events', 'subscriptions', 'refresh_tokens', 'users',
-    'rate_limits',
+    'change_log', 'files', 'assets', 'notes', 'billing_events', 'subscriptions', 'refresh_tokens',
+    'users', 'rate_limits',
   ]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
@@ -71,6 +71,50 @@ export function get(path: string, options: { ip?: string; token?: string } = {})
     headers['authorization'] = `Bearer ${options.token}`;
   }
   return call(path, { method: 'GET', headers, ip: options.ip });
+}
+
+/**
+ * The two binary calls, which cannot go through `call`: it parses every response as JSON, and an
+ * attachment body is neither JSON nor text. `content-length` is set explicitly because the Worker
+ * checks it, and `Request` does not add one for an ArrayBuffer body in this runtime.
+ */
+async function callRaw(
+  path: string,
+  init: RequestInit & { token?: string },
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set('cf-connecting-ip', '203.0.113.1');
+  if (init.token !== undefined) {
+    headers.set('authorization', `Bearer ${init.token}`);
+  }
+
+  const worker = (await import('../src/index')).default;
+  const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+  return worker.fetch(new Request(`${BASE}${path}`, { ...init, headers }), env as any, ctx);
+}
+
+export async function putAsset(
+  key: string,
+  bytes: Uint8Array,
+  token: string,
+): Promise<ApiResponse> {
+  const response = await callRaw(`/v1/assets/${key}`, {
+    method: 'PUT',
+    body: bytes,
+    token,
+    headers: { 'content-length': String(bytes.byteLength) },
+  });
+  const text = await response.text();
+  return { status: response.status, body: text.length === 0 ? {} : JSON.parse(text) };
+}
+
+export async function getAsset(
+  key: string,
+  token: string,
+): Promise<{ status: number; bytes: Uint8Array }> {
+  const response = await callRaw(`/v1/assets/${key}`, { method: 'GET', token });
+  const buffer = await response.arrayBuffer();
+  return { status: response.status, bytes: new Uint8Array(buffer) };
 }
 
 /**

@@ -10,6 +10,16 @@ export interface Env {
    */
   ASSETS?: Fetcher;
 
+  /**
+   * Attachment bytes (docs/CLOUD_SYNC.md §5.4). Named ASSET_BUCKET rather than the ASSETS the
+   * design sketch used, because [assets] — the brand site — already holds that binding name and a
+   * Worker cannot bind the same name twice.
+   *
+   * Optional so the auth and note-sync tests need no bucket. The asset routes answer 500 rather
+   * than pretending to store something when it is missing.
+   */
+  ASSET_BUCKET?: R2Bucket;
+
   /** HS256 signing secret for access tokens. Set with `wrangler secret put JWT_SECRET`. */
   JWT_SECRET: string;
 

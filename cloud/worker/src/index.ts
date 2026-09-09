@@ -2,15 +2,17 @@ import { ApiError, errorResponse, json } from './http';
 import { privacyPage } from './privacy';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
+import * as assets from './assets';
 import * as auth from './auth';
 import * as billing from './billing';
+import * as files from './files';
 import * as sync from './sync';
 import type { Env } from './env';
 
 /**
  * Daynote cloud sync Worker — Google sign-in, sessions, and note sync.
  *
- * The asset routes land with the R2 phase. Note bodies arrive encrypted; by default this Worker also
+ * Note bodies arrive encrypted; by default this Worker also
  * holds the key that opens them (src/dek.ts), so sync is encrypted in transit and at rest but is NOT
  * end-to-end encrypted. An account that turns on the opt-in lock takes that key away from us
  * (/v1/auth/protect). See docs/CLOUD_SYNC.md §1 and §4.1b.
@@ -32,7 +34,28 @@ const ROUTES: Record<string, Handler> = {
   'POST /v1/billing/webhook': billing.webhook,
   'POST /v1/sync/push': sync.push,
   'GET /v1/sync/pull': sync.pull,
+  'POST /v1/files/push': files.push,
 };
+
+/**
+ * The one route with a variable in its path: `/v1/assets/<blinded key>`. Resolved to an ordinary
+ * handler here rather than added to the table, so it goes through the same error handling, rate
+ * sweep and `ApiError` translation as everything else — and so the table stays an exact-match map
+ * instead of a pattern list every other request would have to walk.
+ */
+function assetHandler(request: Request, url: URL): Handler | undefined {
+  const key = assets.blindedKeyFrom(url.pathname);
+  if (key === null) {
+    return undefined;
+  }
+  if (request.method === 'PUT') {
+    return (req, env, now) => assets.put(req, env, now, key);
+  }
+  if (request.method === 'GET') {
+    return (req, env, now) => assets.get(req, env, now, key);
+  }
+  return undefined;
+}
 
 /** Chance per request of tidying expired rate-limit rows, in place of a cron trigger. */
 const SWEEP_PROBABILITY = 0.02;
@@ -53,7 +76,7 @@ export default {
       return privacyPage();
     }
 
-    const handler = ROUTES[`${request.method} ${url.pathname}`];
+    const handler = assetHandler(request, url) ?? ROUTES[`${request.method} ${url.pathname}`];
     if (handler === undefined) {
       return errorResponse(new ApiError('not_found', 'No such endpoint.'));
     }

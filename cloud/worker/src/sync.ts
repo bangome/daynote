@@ -139,13 +139,13 @@ async function readExisting(
  * Refuses the request when the account is not on the paid tier.
  *
  * Text sync (notes, to-dos, tags, favorites) is free for every signed-in account and never calls
- * this. It exists for the image and file sync endpoints (Phase 7, docs/CLOUD_SYNC.md §14): a lapse
- * stops those and nothing else. Every row and object this Worker already holds stays exactly where
+ * this. It exists for the image and file sync endpoints (docs/CLOUD_SYNC.md §14): a lapse stops
+ * those and nothing else. Every row and object this Worker already holds stays exactly where
  * it is; resubscribing resumes from the same cursor, and the user's own PC is unaffected either way.
  *
- * NOTHING CALLS THIS YET, and that is not an oversight: the endpoints it guards do not exist. It is
- * exported so the gate is written once, in the same file as the sync routes, rather than invented
- * again when Phase 7 lands. Until then no request can be refused for want of a subscription.
+ * Called by the asset routes (assets.ts) in both directions, and by the file-metadata upsert in
+ * files.ts. Deliberately NOT called by tombstones or by the pull: a delete that cannot be sent
+ * corrupts the other devices, and metadata shares the notes' cursor. See the header of files.ts.
  */
 export async function requireFileEntitlement(env: Env, userId: string, now: Date): Promise<void> {
   const entitlement = await resolveEntitlement(env, userId, now);
@@ -259,15 +259,18 @@ async function readCursor(env: Env, userId: string): Promise<number> {
 
 interface ChangeRow {
   seq: number;
+  entity: 'note' | 'file';
   entity_id: string;
   payload: string | null;
   updated_utc: string;
   deleted_utc: string | null;
+  blinded_key: string | null;
+  stored_bytes: number | null;
 }
 
 export async function pull(request: Request, env: Env, now: Date): Promise<Response> {
   const user = await authenticate(request, env, now);
-  // No entitlement check: text sync is free.
+  // No entitlement check: text sync is free, and file metadata rides the same cursor (below).
   const url = new URL(request.url);
 
   const since = Number(url.searchParams.get('since') ?? '0');
@@ -283,12 +286,27 @@ export async function pull(request: Request, env: Env, now: Date): Promise<Respo
   // Group by entity so a note edited twenty times since the cursor costs one row in the page, and
   // order by the highest seq per entity so the page boundary stays a clean cursor: every group with
   // a max seq at or below the returned cursor has been delivered.
+  //
+  // Notes and files come down the same page, ordered by the same sequence, because there is one
+  // cursor. A second pull for files would have to advance a cursor of its own or share this one,
+  // and sharing it means whichever pull ran first steps the other past its rows. Files are not
+  // gated here either: metadata and deletions must keep flowing to a lapsed account, or deleting an
+  // attachment on one device would never reach the next. The paywall is on the bytes (assets.ts).
   const { results } = await env.DB.prepare(
-    `SELECT MAX(cl.seq) AS seq, cl.entity_id, n.payload, n.updated_utc, n.deleted_utc
+    `SELECT MAX(cl.seq) AS seq, cl.entity, cl.entity_id,
+            COALESCE(n.payload, f.payload)         AS payload,
+            COALESCE(n.updated_utc, f.updated_utc) AS updated_utc,
+            COALESCE(n.deleted_utc, f.deleted_utc) AS deleted_utc,
+            f.blinded_key                          AS blinded_key,
+            f.stored_bytes                         AS stored_bytes
        FROM change_log cl
-       JOIN notes n ON n.user_id = cl.user_id AND n.id = cl.entity_id
-      WHERE cl.user_id = ?1 AND cl.seq > ?2 AND cl.entity = 'note'
-      GROUP BY cl.entity_id
+       LEFT JOIN notes n
+              ON cl.entity = 'note' AND n.user_id = cl.user_id AND n.id = cl.entity_id
+       LEFT JOIN files f
+              ON cl.entity = 'file' AND f.user_id = cl.user_id AND f.id = cl.entity_id
+      WHERE cl.user_id = ?1 AND cl.seq > ?2
+        AND (n.id IS NOT NULL OR f.id IS NOT NULL)
+      GROUP BY cl.entity, cl.entity_id
       ORDER BY seq
       LIMIT ?3`,
   )
@@ -297,11 +315,16 @@ export async function pull(request: Request, env: Env, now: Date): Promise<Respo
 
   const changes = results.map((row) => ({
     seq: row.seq,
-    entity: 'note' as const,
+    entity: row.entity,
     id: row.entity_id,
     payload: row.payload,
     updated_utc: row.updated_utc,
     deleted_utc: row.deleted_utc,
+    // Present only on files, and needed there: the client asks for the bytes by this key, and
+    // cannot derive it for a file another device uploaded without first decrypting the payload.
+    ...(row.entity === 'file'
+      ? { blinded_key: row.blinded_key, stored_bytes: row.stored_bytes ?? 0 }
+      : {}),
   }));
 
   return json({
