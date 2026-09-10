@@ -36,14 +36,34 @@ public sealed partial class AccountViewModel
     /// <summary>The strong line of the identity row.</summary>
     public string DisplayName => SignedInEmail ?? string.Empty;
 
+    /// <summary>
+    /// Whether this deployment sells anything at all.
+    /// </summary>
+    /// <remarks>
+    /// False when the server lists no plans (<c>/v1/billing/status</c> reports
+    /// <c>can_checkout: false</c>, which is what clearing the price ids in wrangler.toml does) and
+    /// this account has never subscribed. Everything about billing then goes quiet: no plan badge
+    /// beyond 무료, no trial countdown, no lapse banner.
+    /// <para>
+    /// It exists because the alternative is worse than untidy. The trial is granted by the server
+    /// at sign-up regardless, so without this the app would count down to the end of a trial for a
+    /// feature nobody can buy, and then announce that it had stopped. Answering the server rather
+    /// than a build flag means turning the subscription on later is a redeploy, not an app update,
+    /// and it reaches installed copies immediately.
+    /// </para>
+    /// </remarks>
+    public bool OffersSubscription => CanCheckout || CanManageSubscription || Entitlement.HasSubscribed;
+
     /// <summary>The pill next to the name: 무료 / 체험 중 / Pro / 결제 확인 중.</summary>
-    public string PlanBadge => Entitlement.State switch
-    {
-        EntitlementState.Trial => AppStrings.AccountPlanTrial,
-        EntitlementState.Active => AppStrings.AccountPlanPro,
-        EntitlementState.Grace => AppStrings.AccountPlanGrace,
-        _ => AppStrings.AccountPlanFree,
-    };
+    public string PlanBadge => OffersSubscription
+        ? Entitlement.State switch
+        {
+            EntitlementState.Trial => AppStrings.AccountPlanTrial,
+            EntitlementState.Active => AppStrings.AccountPlanPro,
+            EntitlementState.Grace => AppStrings.AccountPlanGrace,
+            _ => AppStrings.AccountPlanFree,
+        }
+        : AppStrings.AccountPlanFree;
 
     /// <summary>True only for a paid, healthy subscription — the one state whose pill is filled.</summary>
     public bool IsPlanPaid => Entitlement.State == EntitlementState.Active;
@@ -59,9 +79,10 @@ public sealed partial class AccountViewModel
         PlanBadge,
         Status.Label);
 
-    public bool HasBanner => Entitlement.State is EntitlementState.Grace
-        || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement)
-        || IsUnpaid;
+    public bool HasBanner => OffersSubscription
+        && (Entitlement.State is EntitlementState.Grace
+            || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement)
+            || IsUnpaid);
 
     /// <summary>True for the two banners that report a problem rather than a countdown.</summary>
     public bool IsBannerUrgent => Entitlement.State == EntitlementState.Grace || IsUnpaid;
@@ -236,6 +257,7 @@ public sealed partial class AccountViewModel
         {
             nameof(AvatarInitial), nameof(DisplayName), nameof(PlanBadge), nameof(IsPlanPaid),
             nameof(IsPlanAttention), nameof(AvatarTooltip), nameof(HasBanner), nameof(IsBannerUrgent),
+            nameof(OffersSubscription),
             nameof(BannerTitle), nameof(BannerBody), nameof(ShowUpgrade), nameof(ShowSubscription),
             nameof(SubscriptionStateText), nameof(SubscriptionDateLabel), nameof(SubscriptionDateText),
             nameof(HasSubscriptionDate), nameof(CheckoutLabel), nameof(PriceMain),

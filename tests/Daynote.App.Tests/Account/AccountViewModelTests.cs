@@ -200,6 +200,36 @@ public sealed class AccountViewModelTests
     }
 
     [TestMethod]
+    public void With_nothing_on_sale_the_account_panel_says_nothing_about_billing()
+    {
+        // The trial is granted by the server at sign-up whether or not a plan is configured, so
+        // without this the app counts down to the end of a trial nobody can buy out of, and then
+        // announces that a feature has stopped. Clearing the price ids has to silence all of it.
+        AccountViewModel vm = Create();
+        vm.Billing = BillingLinks.None;
+        vm.Entitlement = new Entitlement(EntitlementState.Trial, DateTimeOffset.UtcNow.AddDays(1), true, false);
+
+        Assert.IsFalse(vm.OffersSubscription);
+        Assert.IsFalse(vm.HasBanner, "A trial countdown for something that is not for sale.");
+        Assert.IsFalse(vm.ShowUpgrade);
+        Assert.AreEqual(AppStrings.AccountPlanFree, vm.PlanBadge);
+    }
+
+    [TestMethod]
+    public void A_subscriber_still_sees_billing_even_if_the_plans_are_withdrawn()
+    {
+        // Pulling the prices must never strand someone who is already paying: they still need the
+        // portal to cancel. 10.8.6 says the same thing in policy terms.
+        AccountViewModel vm = Create();
+        vm.Billing = new BillingLinks(CanCheckout: false, CanManage: true);
+        vm.Entitlement = new Entitlement(EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(20), true, true);
+
+        Assert.IsTrue(vm.OffersSubscription);
+        Assert.IsTrue(vm.CanManageSubscription);
+        Assert.AreEqual(AppStrings.AccountPlanPro, vm.PlanBadge);
+    }
+
+    [TestMethod]
     public async Task Replaced_notes_are_announced_with_a_way_to_find_them()
     {
         nextReport = new SyncReport(SyncOutcome.Completed, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2, 5);

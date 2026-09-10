@@ -61,7 +61,13 @@ public sealed record SyncReport(
     /// in the same run succeeded, and calling the whole thing a failure would tell the user their
     /// notes had not synced when they had (docs/CLOUD_SYNC.md §14).
     /// </summary>
-    bool FileSyncBlocked = false)
+    bool FileSyncBlocked = false,
+    /// <summary>
+    /// True when the service has no attachment routes — a deployment older than Phase 7. Kept
+    /// apart from <see cref="FileSyncBlocked"/> because the user's response differs: there is
+    /// nothing to buy and nothing to fix, and the client simply carries on syncing text.
+    /// </summary>
+    bool FileSyncUnsupported = false)
 {
     public static SyncReport For(SyncOutcome outcome, long cursor = 0) =>
         new(outcome, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cursor);
@@ -450,6 +456,7 @@ public sealed partial class SyncEngine
         internal int AssetsUploaded;
         internal int AssetsDownloaded;
         internal bool FileSyncBlocked;
+        internal bool FileSyncUnsupported;
         internal long Cursor;
 
         internal SyncReport ToReport(SyncOutcome outcome) => new(
@@ -469,6 +476,7 @@ public sealed partial class SyncEngine
             FilesPulled,
             AssetsUploaded,
             AssetsDownloaded,
-            FileSyncBlocked);
+            FileSyncBlocked,
+            FileSyncUnsupported);
     }
 }

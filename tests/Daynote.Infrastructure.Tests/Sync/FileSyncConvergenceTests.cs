@@ -259,6 +259,28 @@ public sealed class FileSyncConvergenceTests
         Assert.AreEqual(0, (await bob.Files()).Count);
     }
 
+    [TestMethod]
+    public async Task A_service_without_attachment_routes_does_not_make_the_run_look_offline()
+    {
+        // Client and server ship separately, so a client that reached a Worker deployed before
+        // Phase 7 would get 404 from /v1/files/push. Reporting that as Offline would tell the
+        // user their notes had not synced when they had.
+        server.SupportsAttachments = false;
+        await alice.AddFile("첨부.bin", Bytes("구버전 서버", 128));
+
+        SyncReport report = await alice.Sync();
+
+        Assert.AreEqual(SyncOutcome.Completed, report.Outcome);
+        Assert.IsTrue(report.FileSyncUnsupported, "The run has to say why the attachment did not go.");
+        // Distinct from the paywall: there is nothing to buy and nothing to fix.
+        Assert.IsFalse(report.FileSyncBlocked);
+
+        // And nothing is lost — the attachment goes as soon as the service catches up.
+        server.SupportsAttachments = true;
+        await Converge();
+        Assert.AreEqual(1, (await bob.Files()).Count);
+    }
+
     // ---- helpers ----
 
     private async Task Converge()

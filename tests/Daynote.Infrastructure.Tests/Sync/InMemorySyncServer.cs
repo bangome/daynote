@@ -57,6 +57,12 @@ internal sealed class InMemorySyncServer
     /// </remarks>
     internal bool ObjectsHidden { get; set; }
 
+    /// <summary>
+    /// Removes the attachment routes entirely, as a service deployed before Phase 7 has them.
+    /// Answers 404 the way the Worker answers an unknown path.
+    /// </summary>
+    internal bool SupportsAttachments { get; set; } = true;
+
     internal ISyncApiClient ClientFor(string label) => new Client(this, label);
 
     private PushResult Push(PushRequest request)
@@ -120,6 +126,7 @@ internal sealed class InMemorySyncServer
     /// </summary>
     private FilePushResult PushFiles(FilePushRequest request)
     {
+        RequireAttachmentRoutes();
         PushCount += 1;
         var acceptedFiles = new List<string>();
         var rejectedFiles = new List<string>();
@@ -199,14 +206,24 @@ internal sealed class InMemorySyncServer
 
     private void Upload(string blindedKey, ReadOnlyMemory<byte> body)
     {
+        RequireAttachmentRoutes();
         RequireEntitlement();
         objects[blindedKey] = body.ToArray();
     }
 
     private byte[]? Download(string blindedKey)
     {
+        RequireAttachmentRoutes();
         RequireEntitlement();
         return !ObjectsHidden && objects.TryGetValue(blindedKey, out byte[]? stored) ? stored : null;
+    }
+
+    private void RequireAttachmentRoutes()
+    {
+        if (!SupportsAttachments)
+        {
+            throw new SyncTransportException("No such endpoint.", 404);
+        }
     }
 
     private void RequireEntitlement()

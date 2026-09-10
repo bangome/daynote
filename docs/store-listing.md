@@ -9,6 +9,17 @@ Wording is derived from `cloud/site/public/index.html`, which is already reviewe
 consistent with [PRIVACY.md](PRIVACY.md). **Keep the three in step.** A listing that
 promises more than the privacy page allows is the failure mode worth guarding against.
 
+> **This release ships with no subscription.** `PADDLE_PRICE_ID_MONTHLY` and
+> `PADDLE_PRICE_ID_ANNUAL` are empty in `cloud/worker/wrangler.toml`, so the service
+> reports `can_checkout: false` and the app hides every billing surface. Two reasons, the
+> first sufficient on its own: attachment sync is built but not deployed, so there was
+> nothing behind the subscription to sell; and the Company-account question in 10.8.3
+> could not be settled with Partner Center, which stops mattering when nothing is on sale.
+>
+> The copy below is therefore in two parts. **Use the "first release" wording.** The
+> subscription wording is kept underneath it, ready for the update that turns Pro on —
+> which is a Worker redeploy plus a listing edit, not an app change.
+
 ---
 
 ## Product declarations
@@ -17,11 +28,11 @@ Partner Center → **Properties → Product declarations**.
 
 | Question | Answer | Why |
 | --- | --- | --- |
-| This app makes use of a third-party commerce/purchase API | **Yes** ✔ | Required by 10.8.2 whenever payment is not Microsoft's. It is a checkbox; certification does not infer it |
+| This app makes use of a third-party commerce/purchase API | **No** for this release; **Yes** ✔ once Pro is on | Nothing can be bought while the price ids are empty. When they come back this becomes a Yes, and 10.8.2 requires the tick — certification does not infer it |
 | This app depends on non-Microsoft drivers or NT services | No | |
 | This app has been tested for accessibility | Leave unticked unless you have run the audit | Only tick what you have actually done |
 | Can this app run without a network connection? | **Yes** | Every feature except cloud sync and the MCP server works offline; the app opens no connection until you sign in |
-| Does this app call, support, or contain non-Microsoft commerce? | **Yes** — Paddle | Same obligation as the first row |
+| Does this app call, support, or contain non-Microsoft commerce? | **No** for this release; **Yes** — Paddle — once Pro is on | Same as the first row |
 
 **Category**: Productivity. **Subcategory**: Personal finance → no; leave blank or
 "Other".
@@ -45,7 +56,7 @@ access it. The honest answers, which match PRIVACY.md:
 | Email address | **Yes**, only after Google sign-in | Yes | Identifies the account |
 | Other identifiers (Google account id) | **Yes**, only after sign-in | Yes | |
 | User-generated content (note text, attachments) | **Yes**, only after sign-in | **Yes** | Encrypted in transit and at rest, but the service holds the key by default |
-| Payment information | **No** | No | Paddle is the merchant of record; card details never reach Daynote or its service |
+| Payment information | **No** | No | Nothing is sold in this release. Even once Pro is on, Paddle is the merchant of record and card details never reach Daynote or its service |
 | Usage data / analytics / crash reports | **No** | — | There is no telemetry of any kind |
 | Location, contacts, camera, microphone | **No** | — | |
 
@@ -63,6 +74,32 @@ is a server-held key, and PRIVACY.md says so. See CLOUD_SYNC.md §4.1a.
 
 ```
 캘린더에서 날짜를 고르면 그날의 노트, 할 일, 파일이 한자리에. 완전히 로컬로 동작하며, 원하면 Google 계정으로 여러 PC를 잇습니다.
+```
+
+
+### Cloud sync section — FIRST RELEASE
+
+Replace the "클라우드 동기화 (선택)" block in the description below with this one. It
+says what this build actually does: sync is free, and there is nothing to buy.
+
+```
+── 클라우드 동기화 (선택) ──
+
+로그인하지 않으면 Daynote는 완전히 로컬로만 동작합니다. 인터넷 연결을 아예 열지 않습니다.
+
+회사 PC에서 쓴 노트를 집에서 이어 쓰고 싶다면 Google 계정으로 로그인하세요. 노트, 할 일, 태그, 즐겨찾기가 로그인한 모든 PC에서 같은 상태를 유지합니다. 무료이며 기간 제한이 없습니다.
+
+첨부한 이미지와 파일의 동기화는 준비 중입니다.
+
+동기화는 백업이 아니라 전파입니다. 한 PC에서 지우면 모든 PC에서 지워집니다. 백업은 설정의 백업 기능으로 따로 두세요.
+```
+
+In **Product features**, drop the last two lines and add one:
+
+```
+(제거) Google 로그인 시 노트·할 일·태그 동기화 무료
+(제거) 이미지·파일 동기화는 Pro 구독 (월 ₩2,900 / 연 ₩24,000, 14일 무료 체험)
+(추가) Google 로그인 시 노트·할 일·태그가 모든 PC에서 무료로 동기화됩니다
 ```
 
 ### Description (max 10,000)
@@ -182,6 +219,31 @@ Leave blank (the Standard Application License applies).
 Pick a day on the calendar and everything from that day is there: notes, to-dos, files. Fully local, with optional sign-in to keep several PCs in step.
 ```
 
+
+### Cloud sync section — FIRST RELEASE
+
+Replace the "Cloud sync (optional)" block in the description below with this one.
+
+```
+── Cloud sync (optional) ──
+
+Without signing in, Daynote is entirely local. It opens no network connection at all.
+
+Sign in with a Google account when you want the notes you wrote at work to continue at home. Notes, to-dos, tags and favorites stay in step across every PC you sign in on, free and with no time limit.
+
+Syncing attached images and files is in preparation.
+
+Sync is propagation, not backup. Deleting on one PC deletes on all of them, so keep a backup with the Backup feature in Settings.
+```
+
+In **Product features**, drop the last two lines and add one:
+
+```
+(remove) Notes, to-dos and tags sync free with a Google account
+(remove) Image and file sync with Pro ($2.49/mo or $19.99/yr, 14-day free trial)
+(add)    Notes, to-dos and tags sync across every PC, free, with a Google account
+```
+
 ### Description
 
 ```
@@ -299,8 +361,8 @@ no gambling, no drugs. Then the three that are **yes** and are easy to miss:
 - **Does the app allow users to interact or exchange content?** No. Sync is between the
   same person's own devices; there is no sharing between users, no comments, no messages.
 - **Does the app share the user's location?** No.
-- **Does the app allow purchases?** **Yes** — a digital subscription, purchased through
-  an external browser page.
+- **Does the app allow purchases?** **No** for this release — nothing can be bought.
+  **Yes** once Pro is on: a digital subscription bought on an external browser page.
 
 Expected result: everyone / 3+.
 
@@ -308,15 +370,13 @@ Expected result: everyone / 3+.
 
 ## What is still unresolved
 
-- **Company vs Individual account (10.8.3).** The policy requires a Company account for a
-  product that *requires* financial account information. Daynote's cloud sync is optional
-  rather than primary functionality, so an Individual account may be fine — but this is a
-  question to put to Partner Center support **before** the first submission that offers
-  the subscription, not one to discover in review. If it does bite, the fallback that
-  needs no company enrolment is to submit with the subscription hidden (clear
-  `PADDLE_PRICE_ID_MONTHLY` and `PADDLE_PRICE_ID_ANNUAL` in `cloud/worker/wrangler.toml`
-  and redeploy — `/v1/billing/status` then reports `can_checkout: false` and the app hides
-  the buttons, with no app update needed).
+- **Company vs Individual account (10.8.3), deferred rather than answered.** The policy
+  requires a Company account for a product that *requires* financial account information.
+  Daynote's subscription is optional and covers one secondary feature, so an Individual
+  account is probably fine — but Partner Center support could not be reached to confirm
+  it, and a wrong guess is a rejected submission. The fallback became the plan: this
+  release sells nothing, so the question does not arise. It returns the day Pro is turned
+  on, and should be settled before that submission rather than during its review.
 - ~~**Screenshots.**~~ Regenerated 2026-09-10 at 1440×900 by `StoreScreenshotTests`,
   which renders the shipping Avalonia shell through the real service graph and writes
   four images per language:

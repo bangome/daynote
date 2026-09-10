@@ -89,13 +89,26 @@ public sealed partial class SyncEngine
             return true;
         }
 
-        FilePushResult result = await api
-            .PushFilesAsync(
-                new FilePushRequest(
-                    encrypted,
-                    [.. tombstones.Select(t => new EncryptedTombstone(t.Kind, t.Id, t.DeletedUtc))]),
-                cancellationToken)
-            .ConfigureAwait(false);
+        FilePushResult result;
+        try
+        {
+            result = await api
+                .PushFilesAsync(
+                    new FilePushRequest(
+                        encrypted,
+                        [.. tombstones.Select(t => new EncryptedTombstone(t.Kind, t.Id, t.DeletedUtc))]),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (SyncTransportException transport) when (IsUnsupported(transport))
+        {
+            // The service predates attachments. Client and server ship separately, so a client
+            // that treated this as a fault would report the whole run as offline — telling the
+            // user their notes had not synced when they had. Nothing is lost: the queue keeps the
+            // attachment, and the run continues.
+            tally.FileSyncUnsupported = true;
+            return true;
+        }
 
         if (!WithinSkew(result.ServerUtc))
         {
@@ -175,6 +188,11 @@ public sealed partial class SyncEngine
             tally.FileSyncBlocked = true;
             return null;
         }
+        catch (SyncTransportException transport) when (IsUnsupported(transport))
+        {
+            tally.FileSyncUnsupported = true;
+            return null;
+        }
 
         await store.DequeueAssetAsync(assetHash, cancellationToken).ConfigureAwait(false);
         tally.AssetsUploaded += 1;
@@ -224,6 +242,11 @@ public sealed partial class SyncEngine
             catch (SyncTransportException transport) when (transport.RequiresSubscription)
             {
                 tally.FileSyncBlocked = true;
+                return;
+            }
+            catch (SyncTransportException transport) when (IsUnsupported(transport))
+            {
+                tally.FileSyncUnsupported = true;
                 return;
             }
 
@@ -347,6 +370,17 @@ public sealed partial class SyncEngine
             .ConfigureAwait(false);
         return [.. pending.Where(static t => t.Kind == SyncEntityKind.File)];
     }
+
+    /// <summary>
+    /// True when the service has no attachment routes at all — a deployment older than Phase 7.
+    /// </summary>
+    /// <remarks>
+    /// 404 on <c>/v1/files/push</c> is the Worker's answer for an unknown path, and it is
+    /// unambiguous here: the client only ever calls that path, so a 404 is the route missing rather
+    /// than a resource missing. (A missing *object* is a 404 too, but the download reads that from
+    /// a null result, not an exception.)
+    /// </remarks>
+    private static bool IsUnsupported(SyncTransportException transport) => transport.Status == 404;
 
     /// <summary>
     /// What an attachment of this size occupies once sealed: a 12-byte nonce and a 16-byte tag on
