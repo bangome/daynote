@@ -34,7 +34,17 @@ internal static class TestServices
     /// initialisation posted for after itself (collection refreshes, summaries) so what the body sees
     /// is the settled UI and not a mid-update one.
     /// </remarks>
-    internal static void WithInitialisedShell(Action<MainWindow, DesktopShellViewModel> body)
+    internal static void WithInitialisedShell(Action<MainWindow, DesktopShellViewModel> body) =>
+        WithInitialisedShell(1256, 788, body);
+
+    /// <summary>
+    /// The same, at a chosen size. The Store wants listing images of at least 1366x768, which is
+    /// larger than the window every other test renders at.
+    /// </summary>
+    internal static void WithInitialisedShell(
+        double width,
+        double height,
+        Action<MainWindow, DesktopShellViewModel> body)
     {
         using var data = new TempDataRoot();
 
@@ -43,7 +53,7 @@ internal static class TestServices
             Application application = Application.Current!;
             ServiceProvider provider = TestServices.Build(data.Path, application);
             var shell = provider.GetRequiredService<DesktopShellViewModel>();
-            var window = new MainWindow { DataContext = shell, Width = 1256, Height = 788 };
+            var window = new MainWindow { DataContext = shell, Width = width, Height = height };
             try
             {
                 window.Show();

@@ -445,7 +445,10 @@
                       <StackPanel>
                         <Button Classes="noterow" Command="{Binding ToggleExpandCommand}" Padding="14,12">
                           <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="{Binding Tag, StringFormat='#{0}'}" FontSize="12.5" FontWeight="SemiBold"
+                            <!-- No StringFormat: TagItemViewModel.Tag already carries the leading '#',
+                                 and adding a second one rendered every row with a doubled hash. The WPF
+                                 shell binds it plainly; only this one did not. -->
+                            <TextBlock Grid.Column="0" Text="{Binding Tag}" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
                             <TextBlock Grid.Column="1" Classes="muted" Text="{Binding CountText}" FontSize="11" />
                           </Grid>

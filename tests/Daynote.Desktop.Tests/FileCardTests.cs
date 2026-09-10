@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.App.Localization;
+using Daynote.App.Notes;
 using Daynote.App.Shell.Product;
 using Daynote.Core.Domain;
 using Daynote.Core.Files;
@@ -65,6 +66,28 @@ public sealed class FileCardTests
 
         Assert.IsFalse(pending.SaveCommand.CanExecute(null));
         Assert.IsTrue(ready.SaveCommand.CanExecute(null));
+    }
+
+    [TestMethod]
+    public void A_tag_row_carries_exactly_one_hash()
+    {
+        // Found in a Store screenshot, not by a test: the panel rendered "##회의", because
+        // TagItemViewModel.Tag already includes the leading '#' and this shell's markup added a
+        // second one with StringFormat. The WPF shell binds it plainly; only this one did not.
+        TestServices.WithInitialisedShell((window, shell) =>
+        {
+            shell.ActiveTab = RightTab.Tags;
+            shell.TagPanel.Tags.Add(new TagItemViewModel(
+                new TagSummary("회의", 1, []),
+                static _ => Task.CompletedTask));
+            Settle(window);
+
+            string[] rows = [.. Texts(window).Where(static text => text.Contains('#', StringComparison.Ordinal))];
+            Assert.IsFalse(
+                rows.Any(static text => text.Contains("##", StringComparison.Ordinal)),
+                $"A tag row has a doubled hash: {string.Join(" | ", rows)}");
+            Assert.IsTrue(rows.Contains("#회의", StringComparer.Ordinal), "The tag row is not there at all.");
+        });
     }
 
     private static FileItemViewModel Card(bool available) => new(

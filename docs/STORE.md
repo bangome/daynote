@@ -46,7 +46,7 @@ can only be done in your Partner Center account; the rest are already wired in t
      ever discontinued, keep serving it until each period expires. The Worker already refuses
      to shorten a paid period; the listing must not promise less.
 
-## 1. Reserve the app + get its identity **(you)**
+## 1. Reserve the app + get its identity **(you)** — DONE
 
 1. Partner Center → **Apps and games → New product → MSIX/PWA app**.
 2. **Reserve the app name** (e.g. "Daynote").
@@ -55,12 +55,15 @@ can only be done in your Partner Center account; the rest are already wired in t
    - **Package/Identity/Publisher** (e.g. `CN=ABCD1234-...`)
    - **Publisher display name**
 
-## 2. Put the identity into the manifest
+## 2. Put the identity into the manifest — DONE
 
-Edit `packaging/Daynote.Package/Package.appxmanifest` and replace the three
-`PLACEHOLDER-…` values under `<Identity>` and `<Properties>` with the values from
-step 1. Keep `Version` with a **4th part of `0`** (Store requires revision = 0) and
-bump the first three parts for each submission (e.g. `1.0.4.0` → `1.0.5.0`).
+The reserved values are already in the manifest: `BreadJinhwaJeong.-Daynote`,
+`CN=7FDB7ABF-3343-4BA9-9F0C-C601ABED42EE`, "Bread Jinhwa Jeong". What still applies each
+time is the version bump below.
+
+In `packaging/Daynote.Package/Package.appxmanifest`, keep `Version` with a **4th part of
+`0`** (the Store requires revision = 0) and bump the first three parts for each
+submission (e.g. `1.5.0.0` → `1.6.0.0`).
 
 > Alternative: open the solution in Visual Studio → right-click the packaging project
 > → **Publish → Associate App with the Store**, sign in, and pick the reserved name.
@@ -121,7 +124,11 @@ Submit → Microsoft certification → published.
 - **Startup**: "start with Windows" is opt-in (Settings toggle); the app never
   auto-enables it, per Store policy.
 - **x64 only**: no x86/Arm64 package is produced.
-- **No network**: this build makes no network calls, declares no `internetClient`
-  capability, and has no accounts. Declare no data collection. Cloud sync is built but
-  held back — see [CLOUD_SYNC.md §12](CLOUD_SYNC.md) for everything that has to change
-  in the release that turns it on, this listing included.
+- **Network and data collection**: this bullet used to say the build makes no network
+  calls, declares no `internetClient`, and should declare no data collection. All three
+  became false when cloud sync shipped on 2026-09-08, and it contradicted §0 above —
+  which is the dangerous kind of stale, because the wrong answer here is a false
+  declaration rather than a broken build. The manifest declares `internetClient`, the app
+  has accounts (Google sign-in), and the listing must declare the Google account id, the
+  email address, and note content. The listing copy and every Partner Center answer are
+  in [store-listing.md](store-listing.md).
