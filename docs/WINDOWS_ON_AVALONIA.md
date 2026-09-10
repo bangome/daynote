@@ -621,3 +621,7 @@ Still not done: the same test with a real Store-signed install, and the uninstal
   is left untouched until `Daynote.App` goes, so it is deleted once rather than maintained twice.
 - **macOS distribution.** The unpackaged route covers Windows mechanics; notarisation, the Apple
   Developer ID and the DMG are their own open questions.
+- **Attachment sync on the Avalonia shell has not been seen running.** The engine, the store and
+  both shells' markup are shared and tested (docs/CLOUD_SYNC.md §5.5), and the WPF card was checked
+  against a build; the Avalonia card's new "내려받는 중" line was compiled but not looked at, because
+  a running `Daynote.Desktop` held the test assemblies while this landed.

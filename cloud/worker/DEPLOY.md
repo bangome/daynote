@@ -199,7 +199,7 @@ script can report a broken service that is in fact fine. `curl` is unaffected, a
 ## Routine operations
 
 ```sh
-npm test                                        # 84 cases in workerd against a local D1
+npm test                                        # 102 cases in workerd against a local D1
 npx wrangler deploy --dry-run                   # validate config and build
 npx wrangler d1 migrations apply daynote --remote
 npx wrangler tail daynote-cloud                 # live logs
@@ -219,4 +219,18 @@ data root recovers everything from the password alone.
 It also confirmed the registration rate limit works, by blocking the second run. The `@example.test`
 accounts that run created were deleted afterwards; the database is empty.
 
-Two things production cannot confirm yet: DKIM (no sender configured) and attachment sync (not built).
+One thing production cannot confirm yet: DKIM, because no sender is configured.
+
+Attachment sync was built on 2026-09-10 and needs one setup step before the first deploy that
+carries it, because the Worker now binds an R2 bucket that does not exist yet:
+
+```sh
+npx wrangler r2 bucket create daynote-assets
+npx wrangler d1 migrations apply daynote --remote   # 0007_files.sql
+npx wrangler deploy
+```
+
+Deploying without the bucket fails at upload rather than at runtime, which is the good order: the
+old Worker keeps serving. Remember that `wrangler deploy` does **not** apply migrations — the line
+above is not optional, and skipping it leaves `/v1/files/push` failing on a missing table while
+text sync carries on working, which is a confusing way to find out.

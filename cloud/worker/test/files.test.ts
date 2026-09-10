@@ -78,12 +78,10 @@ describe('file metadata push', () => {
 
     const pulled = await get('/v1/sync/pull?since=0', { token });
     expect(pulled.body.changes).toHaveLength(1);
-    expect(pulled.body.changes[0]).toMatchObject({
-      entity: 'file',
-      id: fileId(1),
-      blinded_key: blinded(1),
-      stored_bytes: 1024,
-    });
+    expect(pulled.body.changes[0]).toMatchObject({ entity: 'file', id: fileId(1) });
+    // No blinded key on the wire: the client derives it from the hash inside the payload, so
+    // echoing it would be a plaintext field that buys nothing.
+    expect(pulled.body.changes[0].blinded_key).toBeUndefined();
   });
 
   it('rejects a push older than what is stored', async () => {
@@ -299,7 +297,6 @@ describe('the shared cursor', () => {
     const pulled = await get('/v1/sync/pull?since=0', { token });
     expect(pulled.body.changes).toHaveLength(1);
     expect(pulled.body.changes[0].entity).toBe('note');
-    expect(pulled.body.changes[0].blinded_key).toBeUndefined();
   });
 });
 

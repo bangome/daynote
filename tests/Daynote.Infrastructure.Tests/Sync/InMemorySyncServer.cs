@@ -4,13 +4,14 @@ namespace Daynote.Infrastructure.Tests.Sync;
 
 /// <summary>
 /// An in-memory stand-in for the Cloudflare Worker, deliberately mirroring
-/// <c>cloud/worker/src/sync.ts</c>: same last-write-wins rule, same append-only change log, same
-/// grouped paging. It exists so two real local databases can be synced against each other in-process.
+/// <c>cloud/worker/src/sync.ts</c> and <c>files.ts</c>: same last-write-wins rule, same append-only
+/// change log, same grouped paging, same placement of the paywall. It exists so two real local
+/// databases can be synced against each other in-process.
 /// </summary>
 /// <remarks>
 /// This is a mirror, not the real thing, so the two can drift. The Worker's own behaviour is pinned
-/// by <c>cloud/worker/test/sync.test.ts</c>; the value here is exercising the client engine, the
-/// crypto, and the merge against something that behaves like the server.
+/// by <c>cloud/worker/test/sync.test.ts</c> and <c>files.test.ts</c>; the value here is exercising
+/// the client engine, the crypto, and the merge against something that behaves like the server.
 /// <para>
 /// Like the real server it stores only the envelope, the id, and the clock — see
 /// <see cref="StoredBlobs"/>, which the tests use to prove no plaintext ever reaches it.
@@ -18,7 +19,8 @@ namespace Daynote.Infrastructure.Tests.Sync;
 /// </remarks>
 internal sealed class InMemorySyncServer
 {
-    private readonly Dictionary<string, Row> rows = new(StringComparer.Ordinal);
+    private readonly Dictionary<SyncEntityRef, Row> rows = [];
+    private readonly Dictionary<string, byte[]> objects = new(StringComparer.Ordinal);
     private readonly List<Entry> log = [];
     private long sequence;
 
@@ -33,8 +35,27 @@ internal sealed class InMemorySyncServer
 
     internal int PullCount { get; private set; }
 
+    /// <summary>
+    /// Whether the account may move attachment bytes. False is a lapsed subscription: text still
+    /// syncs, deletes still propagate, and nothing already stored is touched.
+    /// </summary>
+    internal bool EntitledToFiles { get; set; } = true;
+
     /// <summary>Everything the server holds that could conceivably carry content.</summary>
     internal IReadOnlyList<string> StoredBlobs => [.. rows.Values.Select(row => row.Payload).OfType<string>()];
+
+    /// <summary>The sealed attachment objects, by blinded key. Never plaintext.</summary>
+    internal IReadOnlyDictionary<string, byte[]> StoredObjects => objects;
+
+    /// <summary>
+    /// Makes every download answer "not there yet", without discarding anything.
+    /// </summary>
+    /// <remarks>
+    /// Models the one gap the design accepts: metadata and bytes are two calls, so a device can
+    /// pull a file row whose object it cannot fetch. Hiding rather than deleting is the point —
+    /// the test then turns it off and checks that the next run finishes the job.
+    /// </remarks>
+    internal bool ObjectsHidden { get; set; }
 
     internal ISyncApiClient ClientFor(string label) => new Client(this, label);
 
@@ -48,16 +69,18 @@ internal sealed class InMemorySyncServer
 
         foreach (EncryptedNote note in request.Notes)
         {
+            var key = new SyncEntityRef(SyncEntityKind.Note, note.Id);
+
             // Equal is a reject: re-storing an identical version would append a log row and echo to
             // every device for nothing.
-            if (rows.TryGetValue(note.Id, out Row stored) && stored.UpdatedUtc >= note.UpdatedUtc)
+            if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc >= note.UpdatedUtc)
             {
                 rejectedNotes.Add(note.Id);
                 continue;
             }
 
-            rows[note.Id] = new Row(note.Payload, note.UpdatedUtc, null);
-            Append(note.Id);
+            rows[key] = new Row(note.Payload, note.UpdatedUtc, null, null);
+            Append(key);
             acceptedNotes.Add(note.Id);
         }
 
@@ -65,10 +88,11 @@ internal sealed class InMemorySyncServer
         {
             if (tombstone.Kind != SyncEntityKind.Note)
             {
-                throw new InvalidOperationException("Only note tombstones are supported yet.");
+                throw new InvalidOperationException("Attachment tombstones go to /v1/files/push.");
             }
 
-            if (rows.TryGetValue(tombstone.Id, out Row stored) && stored.UpdatedUtc >= tombstone.DeletedUtc)
+            var key = new SyncEntityRef(SyncEntityKind.Note, tombstone.Id);
+            if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc >= tombstone.DeletedUtc)
             {
                 rejectedTombstones.Add(tombstone.Id);
                 continue;
@@ -76,8 +100,8 @@ internal sealed class InMemorySyncServer
 
             // A delete is the row with its blob dropped and the clock set to the deletion instant, so
             // one comparison orders deletes against edits.
-            rows[tombstone.Id] = new Row(null, tombstone.DeletedUtc, tombstone.DeletedUtc);
-            Append(tombstone.Id);
+            rows[key] = new Row(null, tombstone.DeletedUtc, tombstone.DeletedUtc, null);
+            Append(key);
             acceptedTombstones.Add(tombstone.Id);
         }
 
@@ -90,22 +114,78 @@ internal sealed class InMemorySyncServer
             UtcNow());
     }
 
+    /// <summary>
+    /// Attachment metadata and deletes, with the paywall exactly where the Worker puts it: upserts
+    /// are withheld from a lapsed account, tombstones never are.
+    /// </summary>
+    private FilePushResult PushFiles(FilePushRequest request)
+    {
+        PushCount += 1;
+        var acceptedFiles = new List<string>();
+        var rejectedFiles = new List<string>();
+        var acceptedTombstones = new List<string>();
+        var rejectedTombstones = new List<string>();
+        bool blocked = !EntitledToFiles && request.Files.Count > 0;
+
+        foreach (EncryptedFile file in blocked ? [] : request.Files)
+        {
+            var key = new SyncEntityRef(SyncEntityKind.File, file.Id);
+            if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc >= file.UpdatedUtc)
+            {
+                rejectedFiles.Add(file.Id);
+                continue;
+            }
+
+            rows[key] = new Row(file.Payload, file.UpdatedUtc, null, file.BlindedKey);
+            Append(key);
+            acceptedFiles.Add(file.Id);
+        }
+
+        foreach (EncryptedTombstone tombstone in request.Tombstones)
+        {
+            var key = new SyncEntityRef(SyncEntityKind.File, tombstone.Id);
+            if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc > tombstone.DeletedUtc)
+            {
+                rejectedTombstones.Add(tombstone.Id);
+                continue;
+            }
+
+            if (stored.BlindedKey is { } released)
+            {
+                objects.Remove(released);
+            }
+
+            rows[key] = new Row(null, tombstone.DeletedUtc, tombstone.DeletedUtc, null);
+            Append(key);
+            acceptedTombstones.Add(tombstone.Id);
+        }
+
+        return new FilePushResult(
+            acceptedFiles,
+            rejectedFiles,
+            acceptedTombstones,
+            rejectedTombstones,
+            blocked,
+            UtcNow());
+    }
+
     private PullResult Pull(long since, int limit)
     {
         PullCount += 1;
 
         // Collapse the log to the newest entry per entity, exactly as the server's GROUP BY does.
-        var newest = new Dictionary<string, long>(StringComparer.Ordinal);
+        var newest = new Dictionary<SyncEntityRef, long>();
         foreach (Entry entry in log.Where(entry => entry.Seq > since))
         {
-            newest[entry.Id] = Math.Max(newest.GetValueOrDefault(entry.Id), entry.Seq);
+            newest[entry.Key] = Math.Max(newest.GetValueOrDefault(entry.Key), entry.Seq);
         }
 
         var changes = new List<PullChange>();
-        foreach ((string id, long seq) in newest.OrderBy(pair => pair.Value).Take(limit))
+        foreach ((SyncEntityRef key, long seq) in newest.OrderBy(pair => pair.Value).Take(limit))
         {
-            Row row = rows[id];
-            changes.Add(new PullChange(seq, SyncEntityKind.Note, id, row.Payload, row.UpdatedUtc, row.DeletedUtc));
+            Row row = rows[key];
+            // Notes and files share one page and one cursor, as the Worker's pull does.
+            changes.Add(new PullChange(seq, key.Kind, key.Id, row.Payload, row.UpdatedUtc, row.DeletedUtc));
         }
 
         return new PullResult(
@@ -117,15 +197,39 @@ internal sealed class InMemorySyncServer
             UtcNow());
     }
 
-    private void Append(string id)
+    private void Upload(string blindedKey, ReadOnlyMemory<byte> body)
     {
-        sequence += 1;
-        log.Add(new Entry(sequence, id));
+        RequireEntitlement();
+        objects[blindedKey] = body.ToArray();
     }
 
-    private readonly record struct Row(string? Payload, DateTimeOffset UpdatedUtc, DateTimeOffset? DeletedUtc);
+    private byte[]? Download(string blindedKey)
+    {
+        RequireEntitlement();
+        return !ObjectsHidden && objects.TryGetValue(blindedKey, out byte[]? stored) ? stored : null;
+    }
 
-    private readonly record struct Entry(long Seq, string Id);
+    private void RequireEntitlement()
+    {
+        if (!EntitledToFiles)
+        {
+            throw new SyncTransportException("Syncing attachments needs a subscription.", 402);
+        }
+    }
+
+    private void Append(SyncEntityRef key)
+    {
+        sequence += 1;
+        log.Add(new Entry(sequence, key));
+    }
+
+    private readonly record struct Row(
+        string? Payload,
+        DateTimeOffset UpdatedUtc,
+        DateTimeOffset? DeletedUtc,
+        string? BlindedKey);
+
+    private readonly record struct Entry(long Seq, SyncEntityRef Key);
 
     private sealed class Client(InMemorySyncServer server, string label) : ISyncApiClient
     {
@@ -140,6 +244,32 @@ internal sealed class InMemorySyncServer
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(server.Pull(since, limit));
+        }
+
+        public ValueTask<FilePushResult> PushFilesAsync(
+            FilePushRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(server.PushFiles(request));
+        }
+
+        public ValueTask UploadAssetAsync(
+            string blindedKey,
+            ReadOnlyMemory<byte> body,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            server.Upload(blindedKey, body);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<byte[]?> DownloadAssetAsync(
+            string blindedKey,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(server.Download(blindedKey));
         }
     }
 }

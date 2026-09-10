@@ -307,6 +307,8 @@ public static class AppStrings
     public static string AddFile => LocalizationService.Instance[nameof(AddFile)];
     public static string FileTabEmpty => LocalizationService.Instance[nameof(FileTabEmpty)];
 
+    public static string FileAwaitingDownload => LocalizationService.Instance[nameof(FileAwaitingDownload)];
+
     // Search dropdown result kinds
     public static string SearchKindDate => LocalizationService.Instance[nameof(SearchKindDate)];
     public static string SearchKindFile => LocalizationService.Instance[nameof(SearchKindFile)];

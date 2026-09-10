@@ -512,6 +512,29 @@ content. Padding `updated_utc` or blob lengths to hide the rest is out of scope.
 The local `notes.revision` is Daynote's optimistic-concurrency guard *between windows of one
 install*. It is meaningless across devices and must never be pushed or treated as a clock.
 
+### 5.5 Where the paywall sits — BUILT 2026-09-10
+
+§14 said "the Phase 7 attachment endpoints answer 402". Building it showed that to be one rule too
+coarse, in two places, and both corrections are about not letting a billing state become a data
+problem:
+
+| Operation | Needs a subscription | Why |
+| --- | --- | --- |
+| `PUT`/`GET /v1/assets/<blinded key>` | **Yes** | This is the paid feature: moving attachment bytes |
+| `POST /v1/files/push` — file upserts | **Yes**, but as `files_blocked` in a 200, not a 402 | A 402 would fail the whole request, including any tombstones in it. The client must also keep the upload queued, which is why this is reported separately from `rejected_files`: a rejection is *settled* and the queue entry is dropped |
+| `POST /v1/files/push` — tombstones | **No** | A delete that cannot be sent never reaches the other devices and the attachment reappears there forever. Refusing one would make a lapsed subscription corrupt the other devices rather than stop a feature |
+| `GET /v1/sync/pull` — file metadata | **No** | There is one cursor over one `change_log`. A separately-gated file pull would have to share it, and then whichever pull ran first would step the other's rows past the cursor unseen |
+
+The pull returns no `blinded_key`, though the push sends one and the row stores it: the client
+derives the key from the content hash inside the payload it has just decrypted. That keeps a
+plaintext field off the wire, and it means a server that substituted one file's payload for
+another's cannot also point the client at matching bytes.
+
+The client mirrors this. A run whose attachments were withheld reports
+`SyncReport.FileSyncBlocked` and still returns `SyncOutcome.Completed`, because the text in the
+same run *did* sync; the chip says "파일 동기화: 구독 필요" rather than the run being called a
+failure.
+
 ### 5.4 Blinded R2 keys
 
 An R2 key of `sha256(plaintext)` would let the operator run a confirmation attack: hash a known
@@ -761,12 +784,14 @@ bilingual ko/en and an untranslated string is a defect, not a TODO.
 | 5a ✅ | Account layer: `AccountService`, `DpapiSyncSessionStore`, `HttpAuthApiClient`, `SyncTokenProvider`, `FileSystemConflictSink` | **Done.** Register → sync → sign out → sign in on an empty data root restores notes and tags, with the same data key. 18 tests, including token renewal, the indistinguishable wrong-password/unknown-email pair, an unreadable credentials file reading as signed out, conflict files landing as plain text, and the backup zip not containing `credentials.dat` |
 | 5b ✅ | Sign-in view, recovery-key screen, account settings panel, status chip, ko/en strings, DI wiring | **Done.** Account section inside the settings panel, chip in the command row, 42 localized keys in both catalogs, 13 view-model tests. Gated on the resolved sync endpoint: with none, nothing is registered, no `HttpClient` exists, and the section is absent (§12). PRIVACY.md, DATA_AND_RECOVERY.md, and STORE.md rewritten |
 | 6 ✅ | Email sender + `/auth/reset/*` + `/auth/rewrap` + LOCKED/Unlock UI | **Done.** Resend behind an `EmailSender` interface, an 8-character Crockford code with a five-attempt cap, and all three §4.8 unlock paths tested end-to-end including "discard the cloud copy". 19 Worker cases and 23 client cases |
-| 7 | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | A file added on A opens on B; deleting on both releases the R2 object; quota rejects cleanly |
+| 7 ✅ | R2 attachments: blinded keys, encrypted upload/download, refcount + reclaim, quota | **Done 2026-09-10.** `0007_files.sql`, `cloud/worker/src/files.ts` + `assets.ts`, `SyncEngine.Files.cs`, `SqliteSyncStore.Files.cs`, `SqliteFileSyncAssetStore`. 20 Worker cases and 15 client cases: a file added on A opens byte-for-byte on B, deleting the last reference releases the object, identical content shares one object, the quota refuses cleanly, and a lapsed subscription stops the transfer while text and deletes keep flowing. See §5.5 for where the paywall sits and why |
 | 8 | Docs + store metadata: rewrite PRIVACY.md, DATA_AND_RECOVERY.md, STORE.md; backup excludes `credentials.dat` | Docs describe the account, the E2EE boundary, the §5.2 metadata, and server-side deletion |
 
-Phases 1–6 are the minimum shippable unit — password reset is now in scope, so it cannot be deferred
-past launch. Phase 7 may follow as a second release, in which case attachments are explicitly
-labelled "not yet synced" in the UI rather than failing quietly.
+Phases 1–6 were the minimum shippable unit — password reset was in scope, so it could not be
+deferred past launch. Phase 7 followed as planned; the fallback it describes (attachments labelled
+"not yet synced") was never needed, but the shape of it survives in the UI for a different reason:
+a pulled attachment whose bytes have not arrived is shown on the day and greyed, rather than hidden
+or reported as an error.
 
 ## 10. Non-negotiables
 
@@ -832,7 +857,7 @@ never subscribes, or who stops, keeps every note and file on their own PC and ke
 | Free tier | **Text sync, forever.** Plus a **14-day Pro trial** (image and file sync), granted once at sign-up, never re-granted |
 | When it lapses | **File sync stops. Text keeps syncing. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
 | Card data | Never reaches Daynote or the Worker. The checkout is a hosted page in the system browser |
-| Enforcement | The Phase 7 attachment endpoints answer **402 `subscription_required`** via `requireFileEntitlement`; `/v1/sync/push` and `/pull` (text) and every other endpoint stay open. `/v1/auth/me` and `/v1/billing/status` report `can_sync_files` |
+| Enforcement | The asset routes answer **402 `subscription_required`** via `requireFileEntitlement`, and a file-metadata upsert comes back as `files_blocked`. Text push/pull, file *tombstones*, and file metadata on the pull all stay open — see §5.5 for why each. `/v1/auth/me` and `/v1/billing/status` report `can_sync_files` |
 
 ### 14.1 Why 402 and not 403
 

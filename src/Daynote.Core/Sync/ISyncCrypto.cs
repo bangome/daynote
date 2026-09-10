@@ -76,6 +76,25 @@ public interface ISyncCrypto
     DomainResult<string> Decrypt(string envelope, KeyMaterial dataKey, CipherScope scope);
 
     /// <summary>
+    /// Seals attachment bytes as the raw <c>nonce || AES-256-GCM(k_asset, plaintext)</c> the object
+    /// store holds (docs/CLOUD_SYNC.md §5.4).
+    /// </summary>
+    /// <remarks>
+    /// Raw bytes rather than the base64url envelope the note payloads use, and deliberately: an
+    /// envelope would inflate every image by a third for no benefit, since nothing reads an
+    /// attachment as text. The scope is <see cref="CipherScope.Asset"/>, so an object sealed for
+    /// one content hash cannot be served back as another.
+    /// </remarks>
+    byte[] EncryptAsset(ReadOnlySpan<byte> plaintext, KeyMaterial dataKey, CipherScope scope);
+
+    /// <summary>
+    /// Opens what <see cref="EncryptAsset"/> sealed. Fails rather than throws: a corrupted or
+    /// substituted object is something the caller reports and retries, not a crash in a background
+    /// sync.
+    /// </summary>
+    DomainResult<byte[]> DecryptAsset(ReadOnlySpan<byte> sealedBytes, KeyMaterial dataKey, CipherScope scope);
+
+    /// <summary>
     /// The blinded R2 object key for an attachment (docs/CLOUD_SYNC.md §5.4). Deterministic per
     /// account, so per-user de-duplication still works, while the server cannot test whether a user
     /// holds a file whose plaintext hash it knows.

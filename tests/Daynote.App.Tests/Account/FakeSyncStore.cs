@@ -51,4 +51,22 @@ internal sealed class FakeSyncStore : ISyncStore
         State = State with { IsLocked = locked };
         return ValueTask.CompletedTask;
     }
+
+    public ValueTask<IReadOnlyList<PendingFile>> ReadPendingFilesAsync(int limit, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<IReadOnlyList<PendingFile>>([]);
+
+    public ValueTask<FileMergeOutcome> MergeFilesAsync(IReadOnlyList<SyncFile> files, IReadOnlyList<SyncTombstone> tombstones, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(FileMergeOutcome.Empty);
+
+    public ValueTask<IReadOnlyList<string>> ReadAssetQueueAsync(AssetDirection direction, int limit, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<IReadOnlyList<string>>([]);
+
+    public ValueTask EnqueueAssetAsync(string assetHash, AssetDirection direction, CancellationToken cancellationToken = default) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask DequeueAssetAsync(string assetHash, CancellationToken cancellationToken = default) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask RecordAssetFailureAsync(string assetHash, string error, CancellationToken cancellationToken = default) =>
+        ValueTask.CompletedTask;
 }

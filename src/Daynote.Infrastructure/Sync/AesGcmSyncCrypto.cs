@@ -160,6 +160,76 @@ public sealed class AesGcmSyncCrypto : ISyncCrypto
         }
     }
 
+    public byte[] EncryptAsset(ReadOnlySpan<byte> plaintext, KeyMaterial dataKey, CipherScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(dataKey);
+
+        byte[] recordKey = Expand(dataKey.Span, scope.KeyDerivationInfo);
+        try
+        {
+            byte[] output = new byte[NonceBytes + plaintext.Length + TagBytes];
+            Span<byte> nonce = output.AsSpan(0, NonceBytes);
+            RandomNumberGenerator.Fill(nonce);
+
+            using var aes = new AesGcm(recordKey, TagBytes);
+            aes.Encrypt(
+                nonce,
+                plaintext,
+                output.AsSpan(NonceBytes, plaintext.Length),
+                output.AsSpan(NonceBytes + plaintext.Length, TagBytes),
+                Encoding.UTF8.GetBytes(scope.Descriptor));
+
+            return output;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(recordKey);
+        }
+    }
+
+    public DomainResult<byte[]> DecryptAsset(
+        ReadOnlySpan<byte> sealedBytes,
+        KeyMaterial dataKey,
+        CipherScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(dataKey);
+
+        if (sealedBytes.Length < NonceBytes + TagBytes)
+        {
+            return DomainResult<byte[]>.Failure(
+                DomainErrorCode.MalformedCiphertext,
+                "The attachment is too short to be a sealed object.");
+        }
+
+        int length = sealedBytes.Length - NonceBytes - TagBytes;
+        byte[] recordKey = Expand(dataKey.Span, scope.KeyDerivationInfo);
+        byte[] plaintext = new byte[length];
+        try
+        {
+            using var aes = new AesGcm(recordKey, TagBytes);
+            aes.Decrypt(
+                sealedBytes[..NonceBytes],
+                sealedBytes.Slice(NonceBytes, length),
+                sealedBytes.Slice(NonceBytes + length, TagBytes),
+                plaintext,
+                Encoding.UTF8.GetBytes(scope.Descriptor));
+            return DomainResult<byte[]>.Success(plaintext);
+        }
+        catch (AuthenticationTagMismatchException)
+        {
+            // The same three indistinguishable causes as Open: wrong key, tampering, or an object
+            // written for a different content hash. None of them is "use it anyway".
+            CryptographicOperations.ZeroMemory(plaintext);
+            return DomainResult<byte[]>.Failure(
+                DomainErrorCode.CiphertextAuthenticationFailed,
+                "The attachment could not be decrypted with this key.");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(recordKey);
+        }
+    }
+
     public string BlindAssetKey(KeyMaterial dataKey, string contentHash)
     {
         ArgumentNullException.ThrowIfNull(dataKey);

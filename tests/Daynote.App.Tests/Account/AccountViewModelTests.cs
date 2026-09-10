@@ -175,6 +175,31 @@ public sealed class AccountViewModelTests
     }
 
     [TestMethod]
+    public async Task Attachments_withheld_for_want_of_a_subscription_are_not_reported_as_a_failed_sync()
+    {
+        // The notes in the same run synced. Calling the whole thing an error would tell the user
+        // their writing had not been saved to the cloud when it had (docs/CLOUD_SYNC.md §5.5).
+        nextReport = SyncReport.For(SyncOutcome.Completed) with { FileSyncBlocked = true };
+        AccountViewModel vm = Create();
+        await vm.SignInCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(SyncStatusKind.Unpaid, vm.Status.Kind);
+    }
+
+    [TestMethod]
+    public async Task An_unreadable_record_outranks_a_withheld_attachment()
+    {
+        // Both are true; only one is a fault. A record that will not decrypt is the one the user
+        // has to act on.
+        SyncReport unreadable = new(SyncOutcome.Completed, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5);
+        nextReport = unreadable with { FileSyncBlocked = true };
+        AccountViewModel vm = Create();
+        await vm.SignInCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(SyncStatusKind.Error, vm.Status.Kind);
+    }
+
+    [TestMethod]
     public async Task Replaced_notes_are_announced_with_a_way_to_find_them()
     {
         nextReport = new SyncReport(SyncOutcome.Completed, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2, 5);

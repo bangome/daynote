@@ -176,7 +176,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             SyncReport report = await syncNow().ConfigureAwait(true);
             ReplacedNoteCount += report.ConflictsSaved;
             IsKeyMissing = report.Outcome == SyncOutcome.Locked;
-            if (report.Outcome == SyncOutcome.SubscriptionRequired)
+            if (report.Outcome == SyncOutcome.SubscriptionRequired || report.FileSyncBlocked)
             {
                 // The server just said the subscription lapsed. Re-reading it here means the panel
                 // and the chip agree without the user having to reopen settings.
@@ -226,6 +226,10 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         // An unreadable record is not a transient hiccup: something is wrong with the key or the data
         // and the user needs to know rather than wonder why a note never arrived.
         _ when report.HasUnreadableRecords => new SyncStatusView(SyncStatusKind.Error),
+        // A successful run with the attachments withheld. Ranked below the error above because it
+        // is not one: the notes synced, and the chip says which half did not (docs/CLOUD_SYNC.md
+        // §14). Reporting it as a failure would tell the user their notes had not synced.
+        _ when report.FileSyncBlocked => new SyncStatusView(SyncStatusKind.Unpaid),
         _ => new SyncStatusView(SyncStatusKind.Synced),
     };
 

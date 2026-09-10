@@ -505,6 +505,10 @@
                             <TextBlock FontSize="10.5" IsVisible="{Binding SaveFailed}"
                                        Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
                                        Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileFailed]}" />
+                            <!-- Another device attached this and the bytes are still coming. Said
+                                 plainly, or a half-arrived attachment looks like a ready one. -->
+                            <TextBlock Classes="muted" FontSize="10.5" IsVisible="{Binding IsAwaitingDownload}"
+                                       Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[FileAwaitingDownload]}" />
                           </StackPanel>
                           <Button Grid.Column="2" Classes="quiet" Content="✕" FontSize="11" Padding="6,2" Command="{Binding DeleteCommand}" />
                         </Grid>

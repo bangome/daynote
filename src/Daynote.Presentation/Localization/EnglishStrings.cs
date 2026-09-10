@@ -324,6 +324,7 @@ internal static class EnglishStrings
         // Files tab
         ["AddFile"] = "Add files or images",
         ["FileTabEmpty"] = "No files kept on this date",
+        ["FileAwaitingDownload"] = "Downloading",
 
         // Search dropdown result kinds
         ["SearchKindDate"] = "Date",

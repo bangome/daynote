@@ -61,6 +61,35 @@ public sealed class SyncTransportException(string message, int? status = null, E
     public bool RequiresSubscription => Status == 402;
 }
 
+/// <summary>An attachment's metadata as it travels: a sealed payload plus what the quota counts.</summary>
+public sealed record EncryptedFile(
+    string Id,
+    string Payload,
+    string BlindedKey,
+    long StoredBytes,
+    DateTimeOffset UpdatedUtc);
+
+public sealed record FilePushRequest(
+    IReadOnlyList<EncryptedFile> Files,
+    IReadOnlyList<EncryptedTombstone> Tombstones);
+
+/// <summary>
+/// What the server did with an attachment push.
+/// </summary>
+/// <remarks>
+/// <see cref="FilesBlocked"/> is not a rejection and must not be handled as one. A rejection is
+/// settled — the server holds something newer — so the queue entry goes. This means the opposite:
+/// the upload is still owed and has to stay queued until there is a subscription. Treating the two
+/// alike would discard the attachment silently (docs/CLOUD_SYNC.md §14).
+/// </remarks>
+public sealed record FilePushResult(
+    IReadOnlyList<string> AcceptedFileIds,
+    IReadOnlyList<string> RejectedFileIds,
+    IReadOnlyList<string> AcceptedTombstoneIds,
+    IReadOnlyList<string> RejectedTombstoneIds,
+    bool FilesBlocked,
+    DateTimeOffset ServerUtc);
+
 /// <summary>
 /// The transport contract. Deliberately free of HTTP types so the engine above it can be tested
 /// against an in-memory server, and free of anything that could carry plaintext.
@@ -70,6 +99,27 @@ public interface ISyncApiClient
     ValueTask<PushResult> PushAsync(PushRequest request, CancellationToken cancellationToken = default);
 
     ValueTask<PullResult> PullAsync(long since, int limit, CancellationToken cancellationToken = default);
+
+    ValueTask<FilePushResult> PushFilesAsync(
+        FilePushRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stores one sealed attachment. Idempotent, because the name is a hash of the content: a retry
+    /// after a dropped connection rewrites the same bytes rather than duplicating them.
+    /// </summary>
+    ValueTask UploadAssetAsync(
+        string blindedKey,
+        ReadOnlyMemory<byte> body,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches one sealed attachment, or null when the object is not there yet. Null is ordinary:
+    /// metadata and bytes are two calls, so another device's file row can arrive first.
+    /// </summary>
+    ValueTask<byte[]?> DownloadAssetAsync(
+        string blindedKey,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -106,6 +156,10 @@ public interface ISyncStore
         IReadOnlyList<SyncTombstone> acknowledged,
         CancellationToken cancellationToken = default);
 
+    ValueTask<IReadOnlyList<PendingFile>> ReadPendingFilesAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
+
     ValueTask<MergeOutcome> MergeNotesAsync(
         IReadOnlyList<SyncNote> notes,
         IReadOnlyList<SyncTombstone> tombstones,
@@ -120,4 +174,59 @@ public interface ISyncStore
     ValueTask SignOutAsync(CancellationToken cancellationToken = default);
 
     ValueTask SetLockedAsync(bool locked, CancellationToken cancellationToken = default);
+
+    ValueTask<FileMergeOutcome> MergeFilesAsync(
+        IReadOnlyList<SyncFile> files,
+        IReadOnlyList<SyncTombstone> tombstones,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Content hashes whose bytes still have to move, oldest failure last.</summary>
+    ValueTask<IReadOnlyList<string>> ReadAssetQueueAsync(
+        AssetDirection direction,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    ValueTask EnqueueAssetAsync(
+        string assetHash,
+        AssetDirection direction,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a queue entry once its bytes have arrived at the other end.</summary>
+    ValueTask DequeueAssetAsync(string assetHash, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a transfer failed, so the next run can order by attempts and a permanently
+    /// broken asset cannot stall the ones behind it.
+    /// </summary>
+    ValueTask RecordAssetFailureAsync(
+        string assetHash,
+        string error,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// The attachment bytes on this device, as the sync engine needs them.
+/// </summary>
+/// <remarks>
+/// A narrow view over the content-addressed store and <c>file_assets</c> rather than a second copy
+/// of either: the engine only ever needs "give me the bytes for this hash" and "here are the bytes
+/// for this hash". Keeping it this small is what lets the engine be tested with a dictionary.
+/// </remarks>
+public interface ISyncAssetStore
+{
+    /// <summary>True when this device already holds the bytes, so nothing has to be downloaded.</summary>
+    ValueTask<bool> ContainsAsync(string contentHash, CancellationToken cancellationToken = default);
+
+    /// <summary>The plaintext bytes, or null if the asset has gone missing since it was queued.</summary>
+    ValueTask<byte[]?> ReadAsync(string contentHash, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stores downloaded bytes under the hash they were fetched for, verifying that they hash to
+    /// it. The verification is not ceremony: it is what stops a substituted object from being
+    /// written into a content-addressed store under the wrong name.
+    /// </summary>
+    ValueTask<bool> SaveAsync(
+        string contentHash,
+        ReadOnlyMemory<byte> plaintext,
+        CancellationToken cancellationToken = default);
 }

@@ -264,8 +264,6 @@ interface ChangeRow {
   payload: string | null;
   updated_utc: string;
   deleted_utc: string | null;
-  blinded_key: string | null;
-  stored_bytes: number | null;
 }
 
 export async function pull(request: Request, env: Env, now: Date): Promise<Response> {
@@ -296,9 +294,7 @@ export async function pull(request: Request, env: Env, now: Date): Promise<Respo
     `SELECT MAX(cl.seq) AS seq, cl.entity, cl.entity_id,
             COALESCE(n.payload, f.payload)         AS payload,
             COALESCE(n.updated_utc, f.updated_utc) AS updated_utc,
-            COALESCE(n.deleted_utc, f.deleted_utc) AS deleted_utc,
-            f.blinded_key                          AS blinded_key,
-            f.stored_bytes                         AS stored_bytes
+            COALESCE(n.deleted_utc, f.deleted_utc) AS deleted_utc
        FROM change_log cl
        LEFT JOIN notes n
               ON cl.entity = 'note' AND n.user_id = cl.user_id AND n.id = cl.entity_id
@@ -320,11 +316,6 @@ export async function pull(request: Request, env: Env, now: Date): Promise<Respo
     payload: row.payload,
     updated_utc: row.updated_utc,
     deleted_utc: row.deleted_utc,
-    // Present only on files, and needed there: the client asks for the bytes by this key, and
-    // cannot derive it for a file another device uploaded without first decrypting the payload.
-    ...(row.entity === 'file'
-      ? { blinded_key: row.blinded_key, stored_bytes: row.stored_bytes ?? 0 }
-      : {}),
   }));
 
   return json({

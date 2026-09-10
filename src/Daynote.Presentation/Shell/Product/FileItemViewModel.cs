@@ -24,6 +24,7 @@ public sealed partial class FileItemViewModel : ObservableObject
         Name = file.DisplayName;
         Ext = ExtensionOf(file.DisplayName);
         IsImage = file.IsImage;
+        IsAvailable = file.IsAvailable;
         Thumbnail = thumbnail;
         SizeLabel = string.Create(CultureInfo.CurrentCulture, $"{FormatSize(file.ByteLength)} · {Ext}");
         _onDelete = onDelete;
@@ -37,6 +38,20 @@ public sealed partial class FileItemViewModel : ObservableObject
     public string Ext { get; }
 
     public bool IsImage { get; }
+
+    /// <summary>
+    /// Whether this device holds the bytes.
+    /// </summary>
+    /// <remarks>
+    /// False is an ordinary state once cloud sync is on, not an error: another device attached the
+    /// file, the row arrived on the pull, and the object is still coming (docs/CLOUD_SYNC.md §5.5).
+    /// The card has to say so, or a still-downloading attachment looks exactly like a ready one
+    /// until the user double-clicks it and the save fails for no visible reason.
+    /// </remarks>
+    public bool IsAvailable { get; }
+
+    /// <summary>Drives the "내려받는 중" line and hides the actions that need the bytes.</summary>
+    public bool IsAwaitingDownload => !IsAvailable;
 
     public object? Thumbnail { get; }
 
@@ -69,7 +84,11 @@ public sealed partial class FileItemViewModel : ObservableObject
     private Task Delete() => _onDelete(this);
 
     /// <summary>Double-clicking the card writes a copy wherever the user points.</summary>
-    [RelayCommand]
+    /// <summary>
+    /// Saves a copy elsewhere. Disabled while the bytes are still coming down, because there is
+    /// nothing to copy — better a greyed action than a save that fails after the file dialog.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsAvailable))]
     private Task Save() => _onSave(this);
 
     private static string ExtensionOf(string name)

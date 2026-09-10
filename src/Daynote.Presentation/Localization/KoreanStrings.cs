@@ -313,6 +313,7 @@ internal static class KoreanStrings
         // Files tab
         ["AddFile"] = "파일 · 이미지 추가",
         ["FileTabEmpty"] = "이 날짜에 보관된 파일이 없습니다",
+        ["FileAwaitingDownload"] = "내려받는 중",
 
         // Search dropdown result kinds
         ["SearchKindDate"] = "날짜",

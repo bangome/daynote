@@ -243,4 +243,81 @@ public sealed class AesGcmSyncCryptoTests
 
         Assert.AreEqual("KeyMaterial(redacted)", key.ToString());
     }
+
+    // ---- attachment bytes (docs/CLOUD_SYNC.md §5.4) ----
+
+    [TestMethod]
+    public void AttachmentBytesRoundTrip()
+    {
+        using KeyMaterial dataKey = NewDataKey();
+        byte[] plaintext = System.Security.Cryptography.RandomNumberGenerator.GetBytes(5000);
+        CipherScope scope = CipherScope.Asset(UserId, "abc123");
+
+        byte[] sealedBytes = Crypto.EncryptAsset(plaintext, dataKey, scope);
+
+        // Raw bytes, not an envelope: a base64 attachment would cost a third of every image.
+        Assert.AreEqual(plaintext.Length + 12 + 16, sealedBytes.Length);
+        CollectionAssert.AreNotEqual(plaintext, sealedBytes);
+        CollectionAssert.AreEqual(plaintext, Crypto.DecryptAsset(sealedBytes, dataKey, scope).Value);
+    }
+
+    [TestMethod]
+    public void AnAttachmentDoesNotOpenUnderAnotherContentHash()
+    {
+        using KeyMaterial dataKey = NewDataKey();
+        byte[] sealedBytes = Crypto.EncryptAsset(
+            [1, 2, 3, 4],
+            dataKey,
+            CipherScope.Asset(UserId, "hash-a"));
+
+        // Without this the operator could serve one attachment's object in another's place and the
+        // client would accept it: same key, valid tag, wrong file.
+        DomainResult<byte[]> opened = Crypto.DecryptAsset(
+            sealedBytes,
+            dataKey,
+            CipherScope.Asset(UserId, "hash-b"));
+
+        Assert.IsFalse(opened.IsSuccess);
+        Assert.AreEqual(DomainErrorCode.CiphertextAuthenticationFailed, opened.Error.Code);
+    }
+
+    [TestMethod]
+    public void ATamperedAttachmentIsRefusedRatherThanReturned()
+    {
+        using KeyMaterial dataKey = NewDataKey();
+        CipherScope scope = CipherScope.Asset(UserId, "abc123");
+        byte[] sealedBytes = Crypto.EncryptAsset([9, 8, 7, 6, 5], dataKey, scope);
+        sealedBytes[^1] ^= 0x01;
+
+        Assert.IsFalse(Crypto.DecryptAsset(sealedBytes, dataKey, scope).IsSuccess);
+    }
+
+    [TestMethod]
+    public void AnAttachmentTooShortToBeSealedIsRejectedNotIndexedPast()
+    {
+        using KeyMaterial dataKey = NewDataKey();
+
+        DomainResult<byte[]> opened = Crypto.DecryptAsset(
+            new byte[8],
+            dataKey,
+            CipherScope.Asset(UserId, "abc123"));
+
+        Assert.IsFalse(opened.IsSuccess);
+        Assert.AreEqual(DomainErrorCode.MalformedCiphertext, opened.Error.Code);
+    }
+
+    [TestMethod]
+    public void TheBlindedKeyIsStablePerAccountAndDiffersAcrossThem()
+    {
+        using KeyMaterial mine = NewDataKey();
+        using KeyMaterial theirs = NewDataKey();
+        const string Hash = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+
+        // Same content, same account: one object, so per-user dedup works.
+        Assert.AreEqual(Crypto.BlindAssetKey(mine, Hash), Crypto.BlindAssetKey(mine, Hash));
+        // Same content, different account: different objects, so the two cannot be correlated.
+        Assert.AreNotEqual(Crypto.BlindAssetKey(mine, Hash), Crypto.BlindAssetKey(theirs, Hash));
+        // And it is not the hash itself, or the operator could test for a file they already know.
+        Assert.AreNotEqual(Hash, Crypto.BlindAssetKey(mine, Hash));
+    }
 }

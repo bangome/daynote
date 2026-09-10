@@ -61,6 +61,33 @@ public sealed record DisplacedNote(
     string Body,
     DateTimeOffset UpdatedUtc);
 
+/// <summary>Which way an attachment's bytes still have to travel.</summary>
+public enum AssetDirection
+{
+    /// <summary>This device holds bytes the cloud does not.</summary>
+    Up,
+
+    /// <summary>Another device uploaded bytes this one has only the metadata for.</summary>
+    Down,
+}
+
+/// <summary>
+/// What applying a page of remote attachment changes did locally.
+/// </summary>
+/// <remarks>
+/// <see cref="Downloadable"/> is the reason this is not just a <see cref="MergeOutcome"/>: merging
+/// a file row is only half the work, because the bytes are a separate fetch. These are the content
+/// hashes the merge learned about and does not have, queued for the download pass.
+/// </remarks>
+public sealed record FileMergeOutcome(
+    int Applied,
+    int Ignored,
+    int Deleted,
+    IReadOnlyList<string> Downloadable)
+{
+    public static FileMergeOutcome Empty { get; } = new(0, 0, 0, []);
+}
+
 public sealed record MergeOutcome(
     int Applied,
     int Ignored,

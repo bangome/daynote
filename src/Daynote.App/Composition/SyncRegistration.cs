@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using Daynote.App.Account;
+using Daynote.Core.Files;
 using Daynote.Core.Sync;
 using Daynote.Infrastructure.Persistence;
 using Daynote.Infrastructure.Sync;
@@ -62,11 +63,17 @@ public static class SyncRegistration
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
             sp.GetRequiredService<ISyncStore>()));
+        // The attachment bytes, which turn the engine's file phase on (SyncEngine.Files.cs). An
+        // engine built without this syncs text only.
+        services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(
+            sp.GetRequiredService<SqliteDatabase>(),
+            sp.GetRequiredService<IFileAssetStore>()));
         services.AddSingleton(sp => new SyncEngine(
             sp.GetRequiredService<ISyncApiClient>(),
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncStore>(),
-            conflicts: sp.GetRequiredService<ISyncConflictSink>()));
+            conflicts: sp.GetRequiredService<ISyncConflictSink>(),
+            assets: sp.GetRequiredService<ISyncAssetStore>()));
 
         services.AddSingleton<IRecoveryKeyExporter, WpfRecoveryKeyExporter>();
         services.AddSingleton(sp => new AccountViewModel(

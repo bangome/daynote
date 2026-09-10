@@ -22,6 +22,11 @@ import type { Env } from './env';
  *   over one `change_log`; a second, separately-gated pull would let the note cursor step past file
  *   rows and silently lose them. See sync.ts.
  *
+ * The pull returns no blinded key, though the push sends one and the row stores it. The client
+ * derives the key from the content hash inside the payload it has just decrypted, so echoing it
+ * back would add a plaintext field that buys nothing — and deriving it means a server that
+ * substituted one file's payload for another's cannot also point the client at matching bytes.
+ *
  * So a lapsed account keeps syncing text, keeps propagating its deletions, learns that a file
  * exists — and cannot move a byte of it. Nothing is deleted by lapsing, here or anywhere.
  */

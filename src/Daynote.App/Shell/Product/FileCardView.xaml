@@ -68,6 +68,11 @@
                 <TextBlock Text="{loc:Tr SaveFileFailed}" FontSize="10.5" Margin="0,1,0,0"
                            Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
                            Visibility="{Binding SaveFailed, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                <!-- Another device attached this and the bytes are still coming. Said plainly, or a
+                     half-arrived attachment is indistinguishable from a ready one. -->
+                <TextBlock Text="{loc:Tr FileAwaitingDownload}" FontSize="10.5" Margin="0,1,0,0"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                           Visibility="{Binding IsAwaitingDownload, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
             </StackPanel>
             <Button Grid.Column="2" Content="{loc:Tr Delete}" FontSize="11" VerticalAlignment="Center"
                     Foreground="{DynamicResource Daynote.Product.Brush.Text2}"

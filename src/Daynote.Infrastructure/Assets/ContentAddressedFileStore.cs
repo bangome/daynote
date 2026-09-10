@@ -278,6 +278,28 @@ public sealed class ContentAddressedFileStore : IFileAssetStore
         }
     }
 
+    /// <summary>
+    /// Where an asset of this content hash and filename lives, relative to the files root.
+    /// </summary>
+    /// <remarks>
+    /// Public because cloud sync has to name the file *before* it holds it: a pulled attachment
+    /// gets its <c>file_assets</c> row at merge time and its bytes on a later download. Deriving
+    /// the path in two places would be a layout that silently disagrees with itself, so both go
+    /// through this and through <see cref="SafeExtension"/>.
+    /// </remarks>
+    public static string RelativePathFor(string contentHash, string? displayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentHash);
+        if (contentHash.Length < 2)
+        {
+            throw new ArgumentException("A content hash is longer than that.", nameof(contentHash));
+        }
+
+        string extension = SafeExtension(
+            string.IsNullOrEmpty(displayName) ? null : Path.GetExtension(displayName));
+        return Path.Combine(contentHash[..2], contentHash + extension);
+    }
+
     private static string SafeExtension(string? extension)
     {
         if (string.IsNullOrEmpty(extension) || extension.Length is < 2 or > 17 || extension[0] != '.')

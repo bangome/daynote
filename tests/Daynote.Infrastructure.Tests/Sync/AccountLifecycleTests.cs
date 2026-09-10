@@ -426,5 +426,30 @@ public sealed class AccountLifecycleTests
             _ = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
             return await inner.PullAsync(since, limit, cancellationToken).ConfigureAwait(false);
         }
+
+        public async ValueTask<FilePushResult> PushFilesAsync(
+            FilePushRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            _ = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            return await inner.PushFilesAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async ValueTask UploadAssetAsync(
+            string blindedKey,
+            ReadOnlyMemory<byte> body,
+            CancellationToken cancellationToken = default)
+        {
+            _ = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            await inner.UploadAssetAsync(blindedKey, body, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async ValueTask<byte[]?> DownloadAssetAsync(
+            string blindedKey,
+            CancellationToken cancellationToken = default)
+        {
+            _ = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            return await inner.DownloadAssetAsync(blindedKey, cancellationToken).ConfigureAwait(false);
+        }
     }
 }

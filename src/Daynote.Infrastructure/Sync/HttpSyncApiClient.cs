@@ -22,7 +22,7 @@ public interface ISyncTokenProvider
     ValueTask<bool> TryRefreshAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class HttpSyncApiClient : ISyncApiClient
+public sealed partial class HttpSyncApiClient : ISyncApiClient
 {
     private static readonly JsonSerializerOptions Json = new()
     {

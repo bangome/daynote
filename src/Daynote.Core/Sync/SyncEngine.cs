@@ -50,7 +50,18 @@ public sealed record SyncReport(
     int Undecryptable,
     int Malformed,
     int ConflictsSaved,
-    long Cursor)
+    long Cursor,
+    int FilesPushed = 0,
+    int FilesPulled = 0,
+    int AssetsUploaded = 0,
+    int AssetsDownloaded = 0,
+    /// <summary>
+    /// True when attachments were withheld for want of a subscription. Deliberately a flag on an
+    /// otherwise ordinary report rather than an <see cref="SyncOutcome"/> of its own: the text sync
+    /// in the same run succeeded, and calling the whole thing a failure would tell the user their
+    /// notes had not synced when they had (docs/CLOUD_SYNC.md §14).
+    /// </summary>
+    bool FileSyncBlocked = false)
 {
     public static SyncReport For(SyncOutcome outcome, long cursor = 0) =>
         new(outcome, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cursor);
@@ -72,7 +83,7 @@ public sealed record SyncSession(string UserId, KeyMaterial DataKey);
 /// Encryption happens here and nowhere below: <see cref="ISyncApiClient"/> only ever sees envelopes.
 /// </para>
 /// </remarks>
-public sealed class SyncEngine
+public sealed partial class SyncEngine
 {
     /// <summary>
     /// How far the clocks may disagree before we refuse. Generous enough for ordinary drift, tight
@@ -92,18 +103,27 @@ public sealed class SyncEngine
     private readonly Func<DateTimeOffset> utcNow;
     private readonly ISyncConflictSink? conflicts;
 
+    /// <summary>
+    /// This device's attachment bytes. Null turns the whole attachment phase off (see
+    /// SyncEngine.Files.cs), which is what a caller that syncs only text — and every test that is
+    /// about notes — gets by not passing one.
+    /// </summary>
+    private readonly ISyncAssetStore? assets;
+
     public SyncEngine(
         ISyncApiClient api,
         ISyncCrypto crypto,
         ISyncStore store,
         Func<DateTimeOffset>? utcNow = null,
-        ISyncConflictSink? conflicts = null)
+        ISyncConflictSink? conflicts = null,
+        ISyncAssetStore? assets = null)
     {
         this.api = api ?? throw new ArgumentNullException(nameof(api));
         this.crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
         this.store = store ?? throw new ArgumentNullException(nameof(store));
         this.utcNow = utcNow ?? (static () => DateTimeOffset.UtcNow);
         this.conflicts = conflicts;
+        this.assets = assets;
     }
 
     public async ValueTask<SyncReport> SyncAsync(
@@ -170,10 +190,22 @@ public sealed class SyncEngine
             return tally.ToReport(SyncOutcome.ClockSkew);
         }
 
+        // Attachments after the notes, and for one reason: a note's body can reference a file, so
+        // the file row should not arrive at another device ahead of the note that explains it.
+        if (!await PushFilesAsync(session, tally, cancellationToken).ConfigureAwait(false))
+        {
+            return tally.ToReport(SyncOutcome.ClockSkew);
+        }
+
         if (!await PullAsync(session, tally, cancellationToken).ConfigureAwait(false))
         {
             return tally.ToReport(SyncOutcome.ClockSkew);
         }
+
+        // Last, because it is the only part that can be slow, and because everything above has
+        // already been committed by the time it starts: if the connection dies mid-download the
+        // notes and the file rows are still synced, and the queue resumes next run.
+        await DownloadAssetsAsync(session, tally, cancellationToken).ConfigureAwait(false);
 
         return tally.ToReport(SyncOutcome.Completed);
     }
@@ -190,8 +222,10 @@ public sealed class SyncEngine
                 return true;
             }
 
-            // Only notes reach the server so far; file tombstones stay queued for the R2 phase rather
-            // than being dropped, which would lose the delete entirely.
+            // One queue holds both kinds, so a page can come back all files. Those go to
+            // /v1/files/push (SyncEngine.Files.cs) later in this same run, which clears them — so a
+            // large backlog of attachment deletes slows the note deletes behind it by a run or two
+            // rather than blocking them.
             var notes = pending.Where(static t => t.Kind == SyncEntityKind.Note).ToArray();
             if (notes.Length == 0)
             {
@@ -316,10 +350,12 @@ public sealed class SyncEngine
 
             var notes = new List<SyncNote>();
             var tombstones = new List<SyncTombstone>();
+            var fileChanges = new List<PullChange>();
             foreach (PullChange change in result.Changes)
             {
-                if (change.Kind != SyncEntityKind.Note)
+                if (change.Kind == SyncEntityKind.File)
                 {
+                    fileChanges.Add(change);
                     continue;
                 }
 
@@ -376,6 +412,8 @@ public sealed class SyncEngine
                 }
             }
 
+            await MergeFilesAsync(session, tally, fileChanges, cancellationToken).ConfigureAwait(false);
+
             // Only a pull moves the cursor, and only forwards. The push response also carries a
             // cursor, but it is the log head: adopting it would skip every change already sitting in
             // the log below it that this device has not read.
@@ -407,6 +445,11 @@ public sealed class SyncEngine
         internal int Undecryptable;
         internal int Malformed;
         internal int ConflictsSaved;
+        internal int FilesPushed;
+        internal int FilesPulled;
+        internal int AssetsUploaded;
+        internal int AssetsDownloaded;
+        internal bool FileSyncBlocked;
         internal long Cursor;
 
         internal SyncReport ToReport(SyncOutcome outcome) => new(
@@ -421,6 +464,11 @@ public sealed class SyncEngine
             Undecryptable,
             Malformed,
             ConflictsSaved,
-            Cursor);
+            Cursor,
+            FilesPushed,
+            FilesPulled,
+            AssetsUploaded,
+            AssetsDownloaded,
+            FileSyncBlocked);
     }
 }

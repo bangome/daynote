@@ -81,6 +81,14 @@ already uploaded are kept.
 Either way the service holds your Google account id and email address, and the times each note
 changed.
 
+Attached files are stored the same way your notes are — sealed, with the filename and the day they
+belong to inside the sealed part, so the service does not learn what any of them is called. What it
+does hold for each one is its size, because storage has to be counted, and a per-account key derived
+from the file's contents, because the stored object needs a name. That key is derived with your
+account's own key, so the same file in two accounts is stored under two unrelated names and cannot
+be matched up between them — and it cannot be worked backwards to test whether you hold a file
+someone already has.
+
 ## Daynote only stores what you create — no background capture
 
 Daynote stores only the content you actively create or add inside the app:
