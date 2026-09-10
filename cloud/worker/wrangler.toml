@@ -73,10 +73,12 @@ GOOGLE_CLIENT_ID = "298036592294-mp11166n940ojbq4js3u5233ruvkk2ic.apps.googleuse
 # end of something nobody can buy. Restoring the two ids below and redeploying turns it all back
 # on, with no app update: installed copies pick it up on their next status call.
 #
-#   PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
-#   PADDLE_PRICE_ID_ANNUAL  = "pri_01m1nb2txkj2aner6c88g1m2f4"
-PADDLE_PRICE_ID_MONTHLY = ""
-PADDLE_PRICE_ID_ANNUAL = ""
+# TEMPORARILY RESTORED (2026-09-10) to verify the attachment round trip against the real R2 and
+# D1 — the trial the server grants at sign-up is what unlocks file sync for the check. PUT THEM
+# BACK TO "" AND REDEPLOY before the Store submission, or the listing (which says nothing is for
+# sale) and the service will disagree.
+PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
+PADDLE_PRICE_ID_ANNUAL = "pri_01m1nb2txkj2aner6c88g1m2f4"
 
 [[d1_databases]]
 binding = "DB"
