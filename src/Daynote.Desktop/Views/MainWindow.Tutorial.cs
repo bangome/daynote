@@ -79,9 +79,28 @@ public partial class MainWindow
             // Upper right of the shell, clear of the centred tutorial card and its buttons.
             if (WindowState != Avalonia.Controls.WindowState.Minimized)
             {
-                var scale = RenderScaling;
-                int x = Position.X + (int)((Bounds.Width - sticky.Bounds.Width - 48) * scale);
+                // Window positions are physical pixels on Windows but points on macOS, where the
+                // backend never applies the Retina factor to them. Scaling by RenderScaling there
+                // doubled the offset and pushed the note past the right edge of the screen.
+                double scale = OperatingSystem.IsMacOS() ? 1 : RenderScaling;
+
+                // Bounds is still empty right after Show(); the declared size is the real one then.
+                double stickyWidth = sticky.Bounds.Width > 0 ? sticky.Bounds.Width : sticky.Width;
+                double stickyHeight = sticky.Bounds.Height > 0 ? sticky.Bounds.Height : sticky.Height;
+
+                int x = Position.X + (int)((Bounds.Width - stickyWidth - 48) * scale);
                 int y = Position.Y + (int)(120 * scale);
+
+                // Keep the whole note on the screen the shell is on, whatever the shell's own size.
+                if (Screens.ScreenFromWindow(this) is { } screen)
+                {
+                    Avalonia.PixelRect area = screen.WorkingArea;
+                    int w = (int)(stickyWidth * scale);
+                    int h = (int)(stickyHeight * scale);
+                    x = Math.Clamp(x, area.X, Math.Max(area.X, area.Right - w));
+                    y = Math.Clamp(y, area.Y, Math.Max(area.Y, area.Bottom - h));
+                }
+
                 sticky.Position = new Avalonia.PixelPoint(x, y);
             }
         }
