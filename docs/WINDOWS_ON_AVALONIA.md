@@ -621,7 +621,9 @@ Still not done: the same test with a real Store-signed install, and the uninstal
   is left untouched until `Daynote.App` goes, so it is deleted once rather than maintained twice.
 - **macOS distribution.** The unpackaged route covers Windows mechanics; notarisation, the Apple
   Developer ID and the DMG are their own open questions.
-- **Attachment sync on the Avalonia shell has not been seen running.** The engine, the store and
-  both shells' markup are shared and tested (docs/CLOUD_SYNC.md §5.5), and the WPF card was checked
-  against a build; the Avalonia card's new "내려받는 중" line was compiled but not looked at, because
-  a running `Daynote.Desktop` held the test assemblies while this landed.
+- ~~**Attachment sync on the Avalonia shell has not been seen running.**~~ Checked 2026-09-10:
+  `FileCardTests` renders the shell with the 파일 tab open and reads the visual tree, so the
+  "내려받는 중" line is asserted where it is drawn rather than on the view model. That is the level
+  it needed: the label is bound through `Strings[FileAwaitingDownload]`, and a compiled binding does
+  not check that the key inside an indexer exists — a missing one renders empty, which is
+  indistinguishable from the state never happening. Mutation-checked by deleting the line.
