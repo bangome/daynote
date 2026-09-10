@@ -662,7 +662,13 @@
                 VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
           <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Strings[AccountWindowTitle]}" />
+              <!-- One heading for the card, in the header beside the close button: "Sign in to
+                   Daynote" while signed out, "Daynote account" once signed in. The panel itself
+                   draws no heading, so the title is never printed twice. -->
+              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Strings[AccountSignInTitle]}"
+                         IsVisible="{Binding Account.IsSignedOut}" />
+              <TextBlock Grid.Column="0" Classes="h1" Text="{Binding Strings[AccountWindowTitle]}"
+                         IsVisible="{Binding Account.IsSignedIn}" />
               <Button Grid.Column="1" Classes="quiet" Content="✕" FontSize="12" Command="{Binding CloseAccountCommand}" />
             </Grid>
             <views:AccountPanel Grid.Row="1" DataContext="{Binding Account}" />

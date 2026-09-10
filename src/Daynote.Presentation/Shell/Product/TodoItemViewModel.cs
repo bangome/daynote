@@ -33,9 +33,13 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public bool Overdue => _line.Overdue;
 
-    /// <summary>"note title · M/D" origin label shown beneath the task text.</summary>
-    public string NoteLabel => string.Create(
-        CultureInfo.CurrentCulture, $"{_line.NoteTitle} · {_line.Date.Month}/{_line.Date.Day}");
+    /// <summary>
+    /// The origin label beneath the task text: "note title · M/D", or just the title when the row also
+    /// shows a due label, so the date is not printed twice side by side.
+    /// </summary>
+    public string NoteLabel => HasDue
+        ? _line.NoteTitle
+        : string.Create(CultureInfo.CurrentCulture, $"{_line.NoteTitle} · {_line.Date.Month}/{_line.Date.Day}");
 
     [RelayCommand]
     private Task Toggle() => _onToggle(_line);
