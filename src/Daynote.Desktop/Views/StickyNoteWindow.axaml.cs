@@ -49,6 +49,8 @@ public partial class StickyNoteWindow : Window
 
         if (OperatingSystem.IsMacOS())
         {
+            // The TitleBar role below is Win32-only; on macOS the strip has to start the move itself.
+            MacTitleBarDrag.Attach(this, TitleBarRow);
             return;
         }
 

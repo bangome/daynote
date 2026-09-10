@@ -37,6 +37,9 @@ public partial class MainWindow
     /// <summary>The app's own inset when nothing of the system's sits in the strip.</summary>
     private const double PlainInset = 16;
 
+    /// <summary>Room the brand lockup takes when it joins the centred search group on macOS.</summary>
+    private const double BrandInset = 140;
+
     /// <summary>
     /// Applies the platform's title-bar shape. Called once the window is open, because
     /// <see cref="Window.WindowDecorations"/> is only meaningful after the platform impl exists.
@@ -48,6 +51,18 @@ public partial class MainWindow
             // The traffic lights are the system's; leave room and draw nothing.
             TitleBarRow.Margin = new Thickness(TrafficLightInset, 0, PlainInset, 0);
             CaptionButtons.IsVisible = false;
+
+            // The brand goes beside the search box rather than alone next to the traffic lights, so
+            // the strip reads as one centred group. The group widens by the lockup's footprint so the
+            // search box keeps the width it has on Windows.
+            TitleBarRow.Children.Remove(BrandArea);
+            BrandArea.Margin = new Thickness(0, 0, 16, 0);
+            Grid.SetColumn(BrandArea, 0);
+            CenterGroup.Children.Insert(0, BrandArea);
+            CenterGroup.MaxWidth += BrandInset;
+
+            // The TitleBar role below is Win32-only; on macOS the strip has to start the move itself.
+            MacTitleBarDrag.Attach(this, TitleBarRow);
             return;
         }
 

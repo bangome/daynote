@@ -43,8 +43,12 @@
         used often enough to be worth recognising by shape, and it keeps the group from crowding the
         search box.
       -->
-      <Grid x:Name="TutSearch" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto"
+      <!-- CenterGroup exists for macOS: MainWindow.Chrome.cs moves the brand lockup into its first
+           column so the logo sits beside the search box instead of alone by the traffic lights. On
+           Windows the column stays empty and the group is just the search row, as before. -->
+      <Grid x:Name="CenterGroup" Grid.Column="1" ColumnDefinitions="Auto,*"
             MaxWidth="620" Margin="24,0" VerticalAlignment="Center">
+      <Grid x:Name="TutSearch" Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto">
         <!-- VerticalContentAlignment is load-bearing: Avalonia's TextBox defaults it to Top and the
              inline style gives a 30px MinHeight, so the text sat high inside the pill. -->
         <TextBox x:Name="SearchBox" Grid.Column="0" Classes="inline" VerticalContentAlignment="Center"
@@ -62,6 +66,7 @@
                 AutomationProperties.Name="{Binding Strings.TimelineToggle}">
           <Path Data="{StaticResource Daynote.Geo.Timeline}" />
         </Button>
+      </Grid>
       </Grid>
 
       <!-- Windows caption buttons, drawn by the app so they match the shell instead of the theme.
