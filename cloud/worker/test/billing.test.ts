@@ -130,6 +130,43 @@ describe('trial', () => {
     expect((await pushOne(account.accessToken)).status).toBe(200);
   });
 
+  it('is not silently skipped for an account that predates the column', async () => {
+    // 0006 added trial_ends_utc with a bare ALTER and no backfill, so every account already in
+    // the database was left with NULL — which resolve() reads as "no trial", indistinguishable
+    // from "trial finished". Those accounts were never given the 14 days they were promised.
+    //
+    // No test caught it because every test creates its account through sign-in, which sets the
+    // column, and a fresh database has no rows to miss. It only exists in a database that was
+    // migrated rather than created — production. 0008 backfills it from created_utc.
+    const account = await signIn();
+    await env.DB.prepare('UPDATE users SET trial_ends_utc = NULL WHERE id = ?1')
+      .bind(account.userId)
+      .run();
+
+    const stranded = await get('/v1/auth/me', { token: account.accessToken });
+    expect(stranded.body.entitlement.state).toBe('expired');
+    expect(stranded.body.entitlement.can_sync_files).toBe(false);
+
+    // What 0008 does, run here against the same SQLite the migration runs against, so the date
+    // arithmetic and the canonical format are exercised rather than assumed.
+    await env.DB.prepare(
+      `UPDATE users
+          SET trial_ends_utc =
+              strftime('%Y-%m-%dT%H:%M:%f', substr(created_utc, 1, 23), '+14 days') || '0000Z'
+        WHERE trial_ends_utc IS NULL`,
+    ).run();
+
+    const healed = await get('/v1/auth/me', { token: account.accessToken });
+    expect(healed.body.entitlement.state).toBe('trial');
+    expect(healed.body.entitlement.can_sync_files).toBe(true);
+    // Canonical, or it would compare wrong against every other timestamp here (src/time.ts).
+    expect(healed.body.entitlement.until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
+    // From created_utc, not from now: an account old enough to have used its trial gets a lapsed
+    // one rather than a windfall.
+    const granted = Date.parse(healed.body.entitlement.until) - Date.now();
+    expect(granted).toBeLessThanOrEqual(14 * 24 * 60 * 60 * 1000);
+  });
+
   it('is granted once and not renewed by signing in again', async () => {
     const account = await signIn();
     const first = (await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.until;
