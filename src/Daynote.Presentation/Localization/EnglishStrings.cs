@@ -425,6 +425,7 @@ internal static class EnglishStrings
         ["BillingSubscribeMonthly"] = "Monthly · $2.49 / month",
         ["BillingManage"] = "Manage subscription",
         ["BillingLapseNote"] = "Nothing is deleted when file sync stops. Notes keep syncing, the files on this PC are untouched, and your cloud copy is kept — resubscribe and it picks up where it left off.",
+        ["BillingNoSaleBannerBody"] = "Your notes keep syncing. The files on this PC and anything already uploaded are kept.",
         ["BillingBrowserHint"] = "Payment happens in your browser. Card details are handled by the payment provider; Daynote never stores them.",
         ["SyncChipUnpaid"] = "Files: subscription needed",
         ["AccountSignOut"] = "Sign out",

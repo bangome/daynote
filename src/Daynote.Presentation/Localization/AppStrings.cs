@@ -409,6 +409,7 @@ public static class AppStrings
     public static string BillingSubscribeMonthly => LocalizationService.Instance[nameof(BillingSubscribeMonthly)];
     public static string BillingManage => LocalizationService.Instance[nameof(BillingManage)];
     public static string BillingLapseNote => LocalizationService.Instance[nameof(BillingLapseNote)];
+    public static string BillingNoSaleBannerBody => LocalizationService.Instance[nameof(BillingNoSaleBannerBody)];
     public static string BillingBrowserHint => LocalizationService.Instance[nameof(BillingBrowserHint)];
     public static string SyncChipUnpaid => LocalizationService.Instance[nameof(SyncChipUnpaid)];
     public static string AccountSignOut => LocalizationService.Instance[nameof(AccountSignOut)];

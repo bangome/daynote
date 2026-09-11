@@ -89,7 +89,7 @@ says what this build actually does: sync is free, and there is nothing to buy.
 
 회사 PC에서 쓴 노트를 집에서 이어 쓰고 싶다면 Google 계정으로 로그인하세요. 노트, 할 일, 태그, 즐겨찾기가 로그인한 모든 PC에서 같은 상태를 유지합니다. 무료이며 기간 제한이 없습니다.
 
-첨부한 이미지와 파일의 동기화는 준비 중입니다.
+첨부한 이미지와 파일은 가입 후 14일 동안 함께 동기화됩니다. 그 기간이 지나면 파일 동기화만 멈추고, 노트는 계속 동기화됩니다. 이 PC의 파일은 그대로이며, 이미 올라간 파일도 삭제되지 않습니다.
 
 동기화는 백업이 아니라 전파입니다. 한 PC에서 지우면 모든 PC에서 지워집니다. 백업은 설정의 백업 기능으로 따로 두세요.
 ```
@@ -100,6 +100,7 @@ In **Product features**, drop the last two lines and add one:
 (제거) Google 로그인 시 노트·할 일·태그 동기화 무료
 (제거) 이미지·파일 동기화는 Pro 구독 (월 ₩2,900 / 연 ₩24,000, 14일 무료 체험)
 (추가) Google 로그인 시 노트·할 일·태그가 모든 PC에서 무료로 동기화됩니다
+(추가) 이미지·파일 동기화는 가입 후 14일 포함
 ```
 
 ### Description (max 10,000)
@@ -231,7 +232,7 @@ Without signing in, Daynote is entirely local. It opens no network connection at
 
 Sign in with a Google account when you want the notes you wrote at work to continue at home. Notes, to-dos, tags and favorites stay in step across every PC you sign in on, free and with no time limit.
 
-Syncing attached images and files is in preparation.
+Attached images and files sync too, for the first 14 days after you sign up. After that only file syncing stops; your notes keep syncing, the files on this PC are untouched, and anything already uploaded is kept.
 
 Sync is propagation, not backup. Deleting on one PC deletes on all of them, so keep a backup with the Backup feature in Settings.
 ```
@@ -242,6 +243,7 @@ In **Product features**, drop the last two lines and add one:
 (remove) Notes, to-dos and tags sync free with a Google account
 (remove) Image and file sync with Pro ($2.49/mo or $19.99/yr, 14-day free trial)
 (add)    Notes, to-dos and tags sync across every PC, free, with a Google account
+(add)    Image and file sync included for the first 14 days
 ```
 
 ### Description
@@ -370,6 +372,12 @@ Expected result: everyone / 3+.
 
 ## What is still unresolved
 
+- **File sync works for 14 days and then cannot be bought.** The server grants its trial at
+  sign-up whether or not a plan is configured, and that was left alone on purpose (decided
+  2026-09-11): early users get to try attachment sync rather than being shown nothing. The
+  listing says exactly that instead of promising more. What it leaves is a feature that stops
+  with no way to restore it until Pro is switched on — acceptable for a first release, and the
+  reason to turn Pro on rather than leave this indefinitely.
 - **Company vs Individual account (10.8.3), deferred rather than answered.** The policy
   requires a Company account for a product that *requires* financial account information.
   Daynote's subscription is optional and covers one secondary feature, so an Individual

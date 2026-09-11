@@ -55,15 +55,18 @@ public sealed partial class AccountViewModel
     public bool OffersSubscription => CanCheckout || CanManageSubscription || Entitlement.HasSubscribed;
 
     /// <summary>The pill next to the name: 무료 / 체험 중 / Pro / 결제 확인 중.</summary>
-    public string PlanBadge => OffersSubscription
-        ? Entitlement.State switch
-        {
-            EntitlementState.Trial => AppStrings.AccountPlanTrial,
-            EntitlementState.Active => AppStrings.AccountPlanPro,
-            EntitlementState.Grace => AppStrings.AccountPlanGrace,
-            _ => AppStrings.AccountPlanFree,
-        }
-        : AppStrings.AccountPlanFree;
+    /// <remarks>
+    /// Not gated on <see cref="OffersSubscription"/>: the trial is real whether or not anything is
+    /// for sale — it is what is opening file sync right now — and calling it 무료 while it runs
+    /// would be the app disagreeing with itself.
+    /// </remarks>
+    public string PlanBadge => Entitlement.State switch
+    {
+        EntitlementState.Trial => AppStrings.AccountPlanTrial,
+        EntitlementState.Active => AppStrings.AccountPlanPro,
+        EntitlementState.Grace => AppStrings.AccountPlanGrace,
+        _ => AppStrings.AccountPlanFree,
+    };
 
     /// <summary>True only for a paid, healthy subscription — the one state whose pill is filled.</summary>
     public bool IsPlanPaid => Entitlement.State == EntitlementState.Active;
@@ -79,10 +82,15 @@ public sealed partial class AccountViewModel
         PlanBadge,
         Status.Label);
 
-    public bool HasBanner => OffersSubscription
-        && (Entitlement.State is EntitlementState.Grace
-            || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement)
-            || IsUnpaid);
+    /// <remarks>
+    /// The trial countdown and the lapse notice show whether or not anything is on sale. Hiding
+    /// them would make the app silent about a feature that is going to stop — the one thing the
+    /// banner exists to prevent. Only <see cref="EntitlementState.Grace"/> is gated, because a
+    /// failed payment cannot happen on an account that was never able to pay.
+    /// </remarks>
+    public bool HasBanner => (Entitlement.State == EntitlementState.Grace && OffersSubscription)
+        || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement)
+        || IsUnpaid;
 
     /// <summary>True for the two banners that report a problem rather than a countdown.</summary>
     public bool IsBannerUrgent => Entitlement.State == EntitlementState.Grace || IsUnpaid;
@@ -109,6 +117,14 @@ public sealed partial class AccountViewModel
         get
         {
             int days = Entitlement.DaysRemaining(DateTimeOffset.UtcNow) ?? 0;
+            // Both of the ordinary bodies tell the reader to subscribe. With nothing on sale that
+            // is an instruction they cannot follow, so they get the half that is still true:
+            // notes keep syncing and no file is gone.
+            if (!OffersSubscription)
+            {
+                return AppStrings.BillingNoSaleBannerBody;
+            }
+
             return Entitlement.State switch
             {
                 EntitlementState.Trial => AppStrings.BillingTrialBannerBody,

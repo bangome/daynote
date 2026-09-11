@@ -414,6 +414,7 @@ internal static class KoreanStrings
         ["BillingSubscribeMonthly"] = "월간 구독 · ₩2,900/월",
         ["BillingManage"] = "구독 관리",
         ["BillingLapseNote"] = "파일 동기화가 멈춰도 지워지는 것은 없습니다. 노트는 계속 동기화되고, 이 PC의 파일은 그대로이며, 클라우드 사본도 보관되어 다시 구독하면 이어집니다.",
+        ["BillingNoSaleBannerBody"] = "노트는 계속 동기화됩니다. 이 PC의 파일도, 이미 올라간 파일도 그대로 남습니다.",
         ["BillingBrowserHint"] = "결제는 브라우저에서 진행됩니다. 카드 정보는 결제사가 처리하며 데이노트는 저장하지 않습니다.",
         ["SyncChipUnpaid"] = "파일 동기화: 구독 필요",
         ["AccountSignOut"] = "로그아웃",

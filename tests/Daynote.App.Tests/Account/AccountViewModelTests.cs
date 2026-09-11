@@ -200,19 +200,35 @@ public sealed class AccountViewModelTests
     }
 
     [TestMethod]
-    public void With_nothing_on_sale_the_account_panel_says_nothing_about_billing()
+    public void With_nothing_on_sale_the_trial_is_still_announced_but_never_sold()
     {
-        // The trial is granted by the server at sign-up whether or not a plan is configured, so
-        // without this the app counts down to the end of a trial nobody can buy out of, and then
-        // announces that a feature has stopped. Clearing the price ids has to silence all of it.
+        // The server grants the trial whether or not a plan is configured, and it genuinely opens
+        // file sync — so the countdown is a fact and hiding it would leave the app silent about a
+        // feature that is about to stop. What must go is the invitation to buy: the upgrade card,
+        // and the body copy that tells the reader to subscribe.
         AccountViewModel vm = Create();
         vm.Billing = BillingLinks.None;
         vm.Entitlement = new Entitlement(EntitlementState.Trial, DateTimeOffset.UtcNow.AddDays(1), true, false);
 
         Assert.IsFalse(vm.OffersSubscription);
-        Assert.IsFalse(vm.HasBanner, "A trial countdown for something that is not for sale.");
+        Assert.IsTrue(vm.HasBanner, "The user gets no warning that file sync is about to stop.");
+        Assert.AreEqual(AppStrings.BillingNoSaleBannerBody, vm.BannerBody);
+        Assert.AreEqual(AppStrings.AccountPlanTrial, vm.PlanBadge);
+        Assert.IsFalse(vm.ShowUpgrade, "There is nothing to buy.");
+    }
+
+    [TestMethod]
+    public void A_lapse_with_nothing_on_sale_does_not_tell_the_user_to_subscribe()
+    {
+        // "구독하면 다시 시작됩니다" is an instruction that cannot be followed while the price ids
+        // are empty. The half that stays true is that nothing was deleted.
+        AccountViewModel vm = Create();
+        vm.Billing = BillingLinks.None;
+        vm.Entitlement = new Entitlement(EntitlementState.Expired, DateTimeOffset.UtcNow.AddDays(-1), false, false);
+
+        Assert.IsTrue(vm.HasBanner);
+        Assert.AreEqual(AppStrings.BillingNoSaleBannerBody, vm.BannerBody);
         Assert.IsFalse(vm.ShowUpgrade);
-        Assert.AreEqual(AppStrings.AccountPlanFree, vm.PlanBadge);
     }
 
     [TestMethod]
