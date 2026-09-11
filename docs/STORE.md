@@ -96,6 +96,46 @@ version you just bumped to** — the older ones are still sitting there.
 > of the release you already shipped. The version check above catches it now; the fix is
 > to delete `packaging\Daynote.Package\bin` and `\obj`, then build again.
 
+## 3b. Automating it, from the second release on
+
+The first submission is done by hand — the age-rating questionnaire and the product declarations
+have to be answered once in the dashboard, and the listing copy is worth reading on the page it
+will appear on. After that, `scripts\Submit-Store.ps1` does the repetitive half:
+
+```powershell
+scripts\Submit-Store.ps1 -ProductId <from `msstore apps list`> -BumpVersion -NoCommit
+```
+
+It bumps the manifest version, builds the `.msixupload`, uploads it, and either leaves the
+submission in draft (`-NoCommit`) or commits it and waits for certification.
+
+**MSIX goes through the Microsoft Store Developer CLI**, not the newer "Store submission API" —
+that one is MSI/EXE only. Checked against the docs on 2026-09-11. Prerequisites the script cannot
+do for you:
+
+1. `winget install "Microsoft Store Developer CLI"` (needs the .NET 9 Desktop Runtime).
+2. **A Microsoft Entra ID tenant associated with the Partner Center account.** A personal Microsoft
+   account is not enough. Partner Center can create a tenant; this is the step that usually stops a
+   solo publisher, and it is worth doing before you want to ship rather than when you do.
+3. `msstore reconfigure --tenantId … --sellerId … --clientId … --clientSecret …`, from secrets in CI.
+
+Two things the script exists to prevent, both of which cost a release if you meet them by hand:
+
+- **`msstore publish` deletes the pending draft** and recreates it from the last published
+  submission, discarding any listing edit staged in Partner Center and not yet submitted. The
+  script refuses to run while a draft is pending unless told otherwise.
+- A package whose version is already published is rejected, and the packaging path has been seen
+  writing a file *named* for the new version containing the old one (see the warning in §3). The
+  version is read back out of what was actually built.
+
+**The listing is not written by the script.** It could be (`msstore submission get` → edit the JSON
+→ `submission update`), but the copy lives in [store-listing.md](store-listing.md), changes far less
+often than the package, and a script that rewrites it on every release is one that can quietly
+publish the wrong words.
+
+Note that CLI app updates are documented as supported for **free products only**. Daynote is free —
+the subscription is sold outside the Store — so this applies today; re-check if that changes.
+
 ## 4. Complete the submission **(you)**
 
 In Partner Center for the reserved app:
