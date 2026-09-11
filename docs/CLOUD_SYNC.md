@@ -512,6 +512,29 @@ content. Padding `updated_utc` or blob lengths to hide the rest is out of scope.
 The local `notes.revision` is Daynote's optimistic-concurrency guard *between windows of one
 install*. It is meaningless across devices and must never be pushed or treated as a clock.
 
+### 5.6 Verified against the real service — 2026-09-11
+
+The round trip was exercised end to end for the first time: a second device with an empty data
+root signed in, pulled 46 notes and 4 attachment rows, downloaded the objects from R2, and
+**every file's SHA-256 matched its content-addressed name** — 20KB, 65KB and a 2.2MB
+spreadsheet. That is the whole chain proved at once, because the store refuses to write bytes
+under a name they do not hash to: sealed on one device, blinded in R2, pulled, decrypted, and
+byte-identical on another.
+
+Two things this found that no test could have:
+
+- **The account had no trial at all.** `0006_billing.sql` added `trial_ends_utc` with a bare
+  `ALTER` and no backfill, so the one account that predated it was left NULL — which
+  `resolve()` reads as "no trial", indistinguishable from "trial finished". File sync answered
+  402 for a trial that had never been granted. Fixed by `0008_trial_backfill.sql`
+  (`created_utc + 14 days`, so an old account gets a lapsed trial rather than a windfall). Every
+  test creates its account through the sign-in path, which sets the column, and a fresh database
+  has no rows to miss: the defect existed only in a database that was *migrated* rather than
+  *created*, which is the one in production.
+- **A file tombstone from 2026-09-08 arrived**, two days before attachment sync existed. The
+  delete had been sitting in the local queue since the day it was made, and went up on the first
+  run of a client that had somewhere to send it. Nothing was lost by the feature not existing yet.
+
 ### 5.5 Where the paywall sits — BUILT 2026-09-10
 
 §14 said "the Phase 7 attachment endpoints answer 402". Building it showed that to be one rule too
