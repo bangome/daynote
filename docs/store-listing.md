@@ -378,6 +378,11 @@ Expected result: everyone / 3+.
   listing says exactly that instead of promising more. What it leaves is a feature that stops
   with no way to restore it until Pro is switched on — acceptable for a first release, and the
   reason to turn Pro on rather than leave this indefinitely.
+- **A Company account buys two things at once.** Partner Center support could not be reached about
+  10.8.3, but 2026-09-14 settled the other half by trying it: submission automation also needs a
+  Company account, because the Entra application the CLI authenticates with can only be created
+  under user management, and an Individual account has none (STORE.md §3b). So the subscription
+  question and the automation question are one decision, to be taken together rather than twice.
 - **Company vs Individual account (10.8.3), deferred rather than answered.** The policy
   requires a Company account for a product that *requires* financial account information.
   Daynote's subscription is optional and covers one secondary feature, so an Individual

@@ -34,9 +34,10 @@
     Prerequisites, none of which this script can do for you:
 
       1. `winget install "Microsoft Store Developer CLI"` (needs the .NET 9 Desktop Runtime).
-      2. A Microsoft Entra ID tenant ASSOCIATED WITH the Partner Center account. A personal
-         Microsoft account is not enough; Partner Center can create a tenant for you. This is the
-         step that usually blocks a solo publisher.
+      2. A COMPANY Partner Center account. This is the real gate, and it is not about permissions:
+         an Individual account has no user management at all, so the Microsoft Entra applications
+         tab that mints the client id and secret does not exist for it. Being a global administrator
+         of the tenant changes nothing. See STORE.md 3b.
       3. `msstore reconfigure --tenantId ... --sellerId ... --clientId ... --clientSecret ...`
          (in CI, from secrets).
       4. The age-rating questionnaire and the product declarations completed once in the dashboard.
@@ -95,7 +96,23 @@ if (-not (Get-Command msstore -ErrorAction SilentlyContinue)) {
 
 # `info` prints the configured tenant/seller/client. It fails when the CLI has never been
 # configured, which is a far clearer error here than a 401 in the middle of an upload.
-Invoke-MSStore -Arguments @('info') | Out-Null
+try {
+    Invoke-MSStore -Arguments @('info') | Out-Null
+}
+catch {
+    # Almost always the same cause, and the CLI's own message ("SellerId is not set") does not say
+    # it: the credentials come from an Entra application, which only a Company account can create.
+    throw @"
+msstore is not configured. Run:
+
+    msstore reconfigure --tenantId ... --sellerId ... --clientId ... --clientSecret ...
+
+The client id and secret come from Partner Center -> Account settings -> User management ->
+Microsoft Entra applications, which exists only for a COMPANY account. See STORE.md 3b.
+
+$($_.Exception.Message)
+"@
+}
 
 Write-Step "Checking for a pending draft on $ProductId"
 $status = (Invoke-MSStore -Arguments @('submission', 'status', $ProductId)) -join "`n"

@@ -110,13 +110,27 @@ It bumps the manifest version, builds the `.msixupload`, uploads it, and either 
 submission in draft (`-NoCommit`) or commits it and waits for certification.
 
 **MSIX goes through the Microsoft Store Developer CLI**, not the newer "Store submission API" —
-that one is MSI/EXE only. Checked against the docs on 2026-09-11. Prerequisites the script cannot
-do for you:
+that one is MSI/EXE only. Checked against the docs on 2026-09-11.
+
+> **This needs a Company account, and that is the whole prerequisite.** Tried on 2026-09-14 with the
+> Individual account: Account settings → User management has no **Microsoft Entra applications**
+> tab, because it has no user management at all. The docs are explicit — "**Individual accounts** do
+> not support multiple users", and the Entra applications tab lives inside user management. Being a
+> global administrator of the tenant makes no difference; the section is not there to administer.
+> Without it there is no way to mint the client id and secret the CLI authenticates with.
+>
+> So automation and **policy 10.8.3** (the Company-account question for selling a subscription, see
+> [store-listing.md](store-listing.md)) turn out to be the same gate, not two. Converting is a
+> business verification with real paperwork and lead time, so the sensible order is: ship the first
+> release manually from the Individual account, and convert when the decision to sell Pro is taken —
+> the automation comes along with it.
+
+The rest, once the account allows it:
 
 1. `winget install "Microsoft Store Developer CLI"` (needs the .NET 9 Desktop Runtime).
-2. **A Microsoft Entra ID tenant associated with the Partner Center account.** A personal Microsoft
-   account is not enough. Partner Center can create a tenant; this is the step that usually stops a
-   solo publisher, and it is worth doing before you want to ship rather than when you do.
+2. An Entra application under Account settings → User management → Microsoft Entra applications,
+   with the **Manager** role. It yields the tenant id and client id; create the secret there and copy
+   it at once, because it is shown only on creation. The seller id is under Account settings.
 3. `msstore reconfigure --tenantId … --sellerId … --clientId … --clientSecret …`, from secrets in CI.
 
 Two things the script exists to prevent, both of which cost a release if you meet them by hand:
