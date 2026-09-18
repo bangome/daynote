@@ -363,6 +363,14 @@
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
     <Setter Property="AcceptsReturn" Value="True" />
     <Setter Property="TextWrapping" Value="Wrap" />
+    <!-- Selection has to paint its own glyphs here, and that is a consequence of the two-layer
+         editor rather than a preference. The visible text belongs to the TextBlock underneath; this
+         TextBox draws none (Foreground is Transparent) and sits on top, so its selection rectangle
+         covers the coloured glyphs and nothing redraws them. SelectionForegroundBrush is what does:
+         the presenter paints the selected run in it, over the rectangle, while everything unselected
+         stays transparent and keeps showing the layer below. -->
+    <Setter Property="SelectionBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionBg}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionText}" />
   </Style>
   <Style Selector="TextBox.editor:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="Transparent" />

@@ -20,6 +20,12 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FFEDEDF0" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" />
+      <!-- Text selection in the note body. A pair rather than reusing Accent/OnAccent, because the
+           inversion runs the opposite way in each theme: this accent is dark enough to carry white
+           text (5.67:1), while the dark theme's is a pale blue that white sits on at 2.01:1 —
+           unreadable. Measured, not chosen by eye. -->
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionBg" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionText" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Heat1" Color="#FFAFD9F5" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Heat2" Color="#FF54A9E8" />
@@ -63,6 +69,10 @@
       <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FF131417" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FF232428" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" />
+      <!-- See the note in the light palette: white on this accent is 2.01:1, so the dark theme
+           inverts the other way and puts the page colour on it (9.26:1). -->
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionBg" Color="#FF4CC2FF" />
+      <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionText" Color="#FF121316" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Heat1" Color="#FF2A5C7A" />
       <SolidColorBrush x:Key="Daynote.Product.Brush.Heat2" Color="#FF3792CC" />

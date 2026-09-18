@@ -21,6 +21,10 @@
     <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FF232428" po:Freeze="True" />
     <!-- v3 keeps white on accent in dark too (calendar selected day, 새 노트 pill) -->
     <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" po:Freeze="True" />
+    <!-- See the note in the light palette: white on this accent is 2.01:1, so the dark theme
+         inverts the other way and puts the page colour on it (9.26:1). -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionBg" Color="#FF4CC2FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionText" Color="#FF121316" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.SwitchKnob" Color="#FFFFFFFF" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.OnClose" Color="#FFFFFFFF" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFE8A33D" po:Freeze="True" />

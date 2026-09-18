@@ -174,7 +174,14 @@
                                    FontSize="{DynamicResource Daynote.Product.Type.Editor}"
                                    Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
                     </ScrollViewer>
+                    <!-- SelectionOpacity 1 with a SelectionTextBrush, for the reason given in the
+                         Avalonia styles: the glyphs under the selection belong to the layer below,
+                         so the selection has to draw its own or the text vanishes beneath it. The
+                         default 0.4 wash leaves the coloured text showing through muddily instead. -->
                     <TextBox x:Name="BodyBox" Background="Transparent" Foreground="Transparent" BorderThickness="0"
+                             SelectionBrush="{DynamicResource Daynote.Product.Brush.SelectionBg}"
+                             SelectionTextBrush="{DynamicResource Daynote.Product.Brush.SelectionText}"
+                             SelectionOpacity="1"
                              CaretBrush="{DynamicResource Daynote.Product.Brush.Text}" Padding="22,14"
                              FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
                              FontSize="{DynamicResource Daynote.Product.Type.Editor}"
