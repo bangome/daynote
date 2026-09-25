@@ -1,0 +1,16 @@
+<Project Sdk="MSTest.Sdk/4.3.2">
+  <PropertyGroup>
+    <!--
+      The phone UI, headless. It runs on any machine and needs neither mobile workload, which is the
+      whole reason Daynote.Mobile targets plain net10.0: the screens can be composed, laid out and
+      checked for binding errors without an emulator or a simulator anywhere in sight.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daynote.Mobile\Daynote.Mobile.csproj" />
+    <PackageReference Include="Avalonia.Headless" />
+    <!-- Skia is not transitive here: the phone app references Avalonia, not Avalonia.Desktop. -->
+    <PackageReference Include="Avalonia.Skia" />
+  </ItemGroup>
+</Project>

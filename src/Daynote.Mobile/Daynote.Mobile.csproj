@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The shared mobile app: one Avalonia UI that both heads (Android, iOS) start. It targets plain
+      net10.0 rather than the mobile TFMs on purpose — nothing here may touch Java or UIKit, so the
+      phone UI stays buildable and testable on any machine, and every platform service arrives
+      through a port the head fills in (MobileServiceRegistration).
+
+      Namespaces keep the Daynote.App.* convention of the presentation layer for the view models it
+      reuses; this project's own types live under Daynote.Mobile.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Daynote.Mobile</RootNamespace>
+    <AssemblyName>Daynote.Mobile</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <Nullable>enable</Nullable>
+    <!--
+      The Android RIDs, for the same reason the Mac ones are here: an Android head always builds
+      RID-specific, so it asks this project for an android-arm64 target and locked-mode restore
+      rejects one the project never declared. Only arm64 and x64 (the emulator): .NET 10 dropped
+      32-bit Android, and its RIDs map to runtime packs that are not published.
+
+      iOS is deliberately absent. Its runtime packs only resolve under a net10.0-ios target, so
+      declaring ios-arm64 on a net10.0 project fails outright; the iOS head reaches this assembly
+      through the framework-dependent path instead and needs nothing here.
+    -->
+    <RuntimeIdentifiers>$(RuntimeIdentifiers);android-arm64;android-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
+    <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
+    <ProjectReference Include="..\Daynote.Presentation\Daynote.Presentation.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The palette and the icon geometry are the desktop's files, compiled into this assembly rather
+      than copied: one colour decision and one drawn mark for every Daynote. Neither file references
+      its own assembly by uri, so they resolve as avares://Daynote.Mobile/Themes/... here. The
+      control styles are NOT shared - see Themes/Daynote.Mobile.Styles.axaml.
+    -->
+    <AvaloniaResource Include="..\Daynote.Desktop\Themes\Daynote.Product.axaml" Link="Themes\Daynote.Product.axaml" />
+    <AvaloniaResource Include="..\Daynote.Desktop\Themes\Daynote.Icons.axaml" Link="Themes\Daynote.Icons.axaml" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.png" Link="Assets\daynote-favicon-v1.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-trimmed.png" Link="Assets\daynote-logo-en-trimmed.png" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-dark-trimmed.png" Link="Assets\daynote-logo-en-dark-trimmed.png" />
+  </ItemGroup>
+</Project>

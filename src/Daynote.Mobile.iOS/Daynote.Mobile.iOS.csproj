@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The iOS head. It owns Info.plist, the app delegate and the one service that needs UIKit
+      (ASWebAuthenticationSession). The Keychain protector is shared with macOS, because the two
+      platforms have the same Security.framework.
+    -->
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Daynote.Mobile.iOS</RootNamespace>
+    <AssemblyName>Daynote.Mobile.iOS</AssemblyName>
+    <!-- The same bundle id as the Mac app, which is allowed and is what lets one App Store listing
+         carry both. The Mac build is not distributed through the store today, so nothing collides. -->
+    <ApplicationId>cc.arachat.daynote</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
+    <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <!--
+      Trimming off. It is not a size preference: Core and Infrastructure serialize the sync payloads,
+      the auth DTOs and the backup manifest with reflection-based System.Text.Json, and the trimmer
+      cannot see those types, so a trimmed build would compile and then fail at runtime the first
+      time a note synced. The proper fix is a JsonSerializerContext over those payloads, which is
+      shared code the desktop also uses and so is its own change; until then the phone app ships
+      untrimmed, exactly as every other Daynote does.
+
+      The iOS SDK refuses PublishTrimmed=false outright (it needs the trimmer in the pipeline for
+      AOT), so the switch here is MtouchLink=None: the trimmer runs and keeps every assembly whole.
+    -->
+    <MtouchLink>None</MtouchLink>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!--
+      Clears the repo-wide RuntimeIdentifiers (Directory.Build.props), which exists only to keep the
+      Windows MSIX publish from invalidating the lock files. A mobile build reads that list as
+      "resolve a Mono runtime pack for each of these" and fails looking for a win-x64 Mono pack that
+      does not exist. The mobile SDK picks its own RIDs.
+    -->
+    <RuntimeIdentifiers></RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daynote.Mobile\Daynote.Mobile.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.iOS" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The asset catalog is compiled by actool, not copied, so it is declared as ImageAsset rather
+      than BundleResource; a copied .xcassets folder produces an app with no icon and is rejected at
+      upload. Which icon it is comes from XSAppIconAssets in Info.plist, because MSBuild's
+      ApplicationIcon property is claimed by Avalonia's resource task for its own .ico.
+    -->
+    <ImageAsset Include="Resources\Assets.xcassets\**" />
+
+    <!--
+      Info.plist sits at the project root, which is the only place the iOS SDK looks. Under
+      Resources it was silently ignored and the SDK generated its own: the built app had no icon and,
+      worse, none of the CFBundleURLTypes the sign-in redirect needs.
+    -->
+    <None Include="Info.plist" />
+  </ItemGroup>
+</Project>

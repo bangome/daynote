@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.MainView"
+             x:DataType="vm:MobileShellViewModel"
+             Background="{DynamicResource Daynote.Product.Brush.Bg1}">
+  <!--
+    The phone shell: one page at a time over a bottom bar, with the note editor as a layer above
+    everything. The desktop puts the same surfaces in three columns side by side; here they are four
+    destinations, because a phone that tried to show a left rail, an editor and a right rail at once
+    would show three unusable slivers.
+
+    Every page is built and kept alive, and only its visibility changes. They are cheap (the view
+    models behind them are singletons either way) and swapping visibility keeps scroll position and
+    keyboard focus across a tab switch, which recreating them would throw away.
+  -->
+  <Grid RowDefinitions="*,Auto">
+
+    <Panel Grid.Row="0">
+      <views:DayPage IsVisible="{Binding IsDayPage}" />
+      <views:SearchPage IsVisible="{Binding IsSearchPage}" />
+      <views:ListsPage IsVisible="{Binding IsListsPage}" />
+      <views:SettingsPage IsVisible="{Binding IsSettingsPage}" />
+
+      <!-- The editor covers the page it was opened from, including the safe-area padding, so the
+           note really does get the whole screen. The bottom bar stays: leaving the editor by tapping
+           another tab is a normal thing to do and flushes on the way out. -->
+      <views:EditorPage IsVisible="{Binding IsEditorOpen}" />
+    </Panel>
+
+    <!-- Bottom bar. It sits directly on the window edge; the platform keeps the window itself clear
+         of the gesture bar (MainView.axaml.cs). -->
+    <Border Grid.Row="1" Background="{DynamicResource Daynote.Product.Brush.Card}"
+            BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,*,*,*">
+        <Button Grid.Column="0" Classes="tabbar" Classes.active="{Binding IsDayPage}"
+                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Day}"
+                AutomationProperties.Name="{Binding Strings[TabDay]}">
+          <StackPanel Spacing="3">
+            <Path Data="{StaticResource Daynote.Geo.Today}" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding Strings[TabDay]}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1" Classes="tabbar" Classes.active="{Binding IsSearchPage}"
+                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Search}"
+                AutomationProperties.Name="{Binding Strings[TabSearch]}">
+          <StackPanel Spacing="3">
+            <Path Data="{StaticResource Daynote.Geo.Search}" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding Strings[TabSearch]}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Classes="tabbar" Classes.active="{Binding IsListsPage}"
+                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Lists}"
+                AutomationProperties.Name="{Binding Strings[TabLists]}">
+          <StackPanel Spacing="3">
+            <Path Data="{StaticResource Daynote.Geo.TabTodo}" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding Strings[TabLists]}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3" Classes="tabbar" Classes.active="{Binding IsSettingsPage}"
+                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Settings}"
+                AutomationProperties.Name="{Binding Strings[Settings]}">
+          <StackPanel Spacing="3">
+            <Path Data="{StaticResource Daynote.Geo.Settings}" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding Strings[Settings]}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

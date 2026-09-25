@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Avalonia draws every pixel of the UI, so the Android theme only has to get out of the way: no
+    action bar, and a window background that matches the app's own so the launch frame does not
+    flash white before the first Avalonia frame lands.
+  -->
+  <style name="MyTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <item name="windowActionBar">false</item>
+    <item name="windowNoTitle">true</item>
+    <item name="android:windowBackground">@color/window_background</item>
+    <!--
+      Deliberately not transparent and not shortEdges. The app does not draw edge to edge (see
+      MainView.axaml.cs), so the system bars keep their own background and the window is laid out
+      between them.
+    -->
+    <item name="android:windowLayoutInDisplayCutoutMode">default</item>
+  </style>
+</resources>

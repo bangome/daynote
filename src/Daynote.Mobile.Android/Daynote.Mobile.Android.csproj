@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The Android head. It owns the manifest, the activity and the three services that need Java:
+      the KeyStore-sealed session, Custom Tabs sign-in, and the system browser. Everything else is in
+      Daynote.Mobile, which targets plain net10.0 and so cannot reference any of this.
+    -->
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Daynote.Mobile.Android</RootNamespace>
+    <AssemblyName>Daynote.Mobile.Android</AssemblyName>
+    <ApplicationId>cc.arachat.daynote</ApplicationId>
+    <!--
+      versionCode must rise with every upload; versionName is what Play shows. Kept in step with the
+      desktop's 1.5.0 so one number describes the product on every platform.
+    -->
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
+    <!-- Android 8.0. Below that there is no adaptive icon and no usable KeyStore AES-GCM. -->
+    <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+    <!--
+      Partial trimming, not full. Core and Infrastructure serialize the sync payloads, the auth DTOs
+      and the backup manifest with reflection-based System.Text.Json; the trimmer cannot see those
+      types, so a fully trimmed build compiles and then fails at runtime the first time a note
+      syncs. Partial mode trims only assemblies that opt in with IsTrimmable - the framework does,
+      this app's do not - so the payload types survive whole. AOT stays on, which is what keeps the
+      cold start fast; it is trimming, not AOT, that breaks reflection here.
+
+      The real fix is a JsonSerializerContext over those payloads. That is shared code the desktop
+      also uses, so it is its own change rather than a detour inside the phone port.
+    -->
+    <TrimMode>partial</TrimMode>
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <!--
+      Replaces the repo-wide RuntimeIdentifiers (Directory.Build.props), which exists only to keep
+      the Windows MSIX publish from invalidating the lock files. A mobile build reads that list as
+      "resolve a Mono runtime pack for each of these" and fails looking for a win-x64 Mono pack that
+      does not exist. Only arm64 and x64 (the emulator): .NET 10 dropped 32-bit Android.
+    -->
+    <RuntimeIdentifiers></RuntimeIdentifiers>
+    <!--
+      One ABI per publish. Building both in a single invocation has the SDK build each shared
+      project twice, concurrently, through the same obj directory, and the two passes clobber each
+      other's intermediate state (MSB3030 on an assembly one of them was still writing). The Play
+      upload wants both, so scripts/Build-AndroidApp.sh runs the publish once per ABI.
+    -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daynote.Mobile\Daynote.Mobile.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Xamarin.AndroidX.Browser" />
+  </ItemGroup>
+</Project>

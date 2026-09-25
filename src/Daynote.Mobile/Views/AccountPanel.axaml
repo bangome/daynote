@@ -1,0 +1,158 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:account="using:Daynote.App.Account"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             x:Class="Daynote.Mobile.Views.AccountPanel"
+             x:Name="Root"
+             x:DataType="account:AccountViewModel">
+  <!--
+    The cloud account on a phone: sign in when signed out, otherwise the sync state, the optional
+    note lock and the subscription. Same view model as the desktop panel, so a change to what an
+    account can do reaches both; the layout is a single column of cards, and the subscription is
+    read-only here - see the note on the upgrade row.
+  -->
+  <StackPanel Spacing="14">
+
+    <!-- Signed out -->
+    <StackPanel Spacing="12" IsVisible="{Binding IsSignedOut}">
+      <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountSignInLead]}" />
+      <StackPanel Spacing="10">
+        <StackPanel Spacing="1">
+          <TextBlock Text="{Binding #Root.Strings[AccountPerkSyncTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDesc]}" FontSize="12" />
+        </StackPanel>
+        <StackPanel Spacing="1">
+          <TextBlock Text="{Binding #Root.Strings[AccountPerkLockTitle]}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkLockDesc]}" FontSize="12" />
+        </StackPanel>
+      </StackPanel>
+      <Button Classes="accent" HorizontalAlignment="Stretch"
+              Content="{Binding #Root.Strings[AccountSignInWithGoogle]}"
+              Command="{Binding SignInCommand}" IsEnabled="{Binding !IsBusy}" />
+      <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" IsVisible="{Binding IsBusy}"
+                 Text="{Binding #Root.Strings[AccountSignInBrowserHint]}" />
+      <TextBlock FontSize="12" TextAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                 Text="{Binding ErrorMessage}"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+        <Button Classes="quiet" FontSize="12" MinHeight="36" Content="{Binding #Root.Strings[AccountTerms]}"
+                Command="{Binding OpenTermsCommand}" />
+        <Button Classes="quiet" FontSize="12" MinHeight="36" Content="{Binding #Root.Strings[AccountPrivacy]}"
+                Command="{Binding OpenPrivacyCommand}" />
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Signed in -->
+    <StackPanel Spacing="14" IsVisible="{Binding IsSignedIn}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="quiet" Content="{Binding #Root.Strings[AccountSyncNow]}"
+                Command="{Binding SyncCommand}" IsEnabled="{Binding !IsBusy}" />
+        <Button Classes="quiet" Content="{Binding #Root.Strings[AccountSignOut]}"
+                Command="{Binding SignOutCommand}" IsEnabled="{Binding !IsBusy}" />
+      </StackPanel>
+
+      <TextBlock FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                 Text="{Binding ErrorMessage}"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <!-- Entitlement banner: text only, as on the desktop. -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding HasBanner}"
+              Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding BannerTitle}" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Classes="muted" Text="{Binding BannerBody}" FontSize="12" />
+        </StackPanel>
+      </Border>
+
+      <!-- Key missing on this device -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsKeyMissing}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountKeyMissingBlurb]}" />
+          <Button Classes="accent" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[AccountRestoreKey]}" Command="{Binding RestoreKeyCommand}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Locked -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsLocked}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountUnlockTitle]}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountUnlockBlurb]}" />
+          <TextBox x:Name="UnlockPassphraseBox" PasswordChar="•" IsVisible="{Binding !IsUsingRecoveryKey}"
+                   PlaceholderText="{Binding #Root.Strings[AccountPassphrase]}" />
+          <TextBox Text="{Binding RecoveryKeyEntry}" IsVisible="{Binding IsUsingRecoveryKey}"
+                   PlaceholderText="{Binding #Root.Strings[AccountRecoveryKeyLabel]}" />
+          <Button Classes="accent" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[AccountUnlock]}" Click="OnUnlock" IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ToggleRecoveryKeyEntryCommand}"
+                  Content="{Binding IsUsingRecoveryKey, Converter={x:Static vm:MobileConverters.UnlockMethodLabel}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Lock settings -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding !IsLocked}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountLockTitle]}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountLockBlurb]}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsLockEnabled}"
+                  Content="{Binding #Root.Strings[AccountLockEnable]}" Command="{Binding ToggleEnableLockCommand}"
+                  IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding IsLockEnabled}"
+                  Content="{Binding #Root.Strings[AccountLockDisable]}" Command="{Binding DisableLockCommand}"
+                  IsEnabled="{Binding !IsBusy}" />
+          <StackPanel Spacing="8" IsVisible="{Binding IsEnablingLock}">
+            <TextBox x:Name="NewPassphraseBox" PasswordChar="•"
+                     PlaceholderText="{Binding #Root.Strings[AccountPassphrase]}" />
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding PassphraseHint}" />
+            <Button Classes="accent" HorizontalAlignment="Stretch"
+                    Content="{Binding #Root.Strings[AccountLockConfirm]}" Click="OnEnableLock" IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="quiet" HorizontalAlignment="Stretch"
+                    Content="{Binding #Root.Strings[AccountLockCancel]}" Command="{Binding ToggleEnableLockCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- One-time recovery key -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsShowingRecoveryKey}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[RecoveryKeyTitle]}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[RecoveryKeyBlurb]}" />
+          <SelectableTextBlock Text="{Binding RecoveryKeyDisplay}" FontFamily="Menlo, monospace" FontSize="14" TextWrapping="Wrap" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding CopyRecoveryKeyCommand}"
+                  Content="{Binding RecoveryKeyCopied, Converter={x:Static vm:MobileConverters.CopyLabel}}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[RecoveryKeySaveToFile]}" Command="{Binding SaveRecoveryKeyCommand}" />
+          <CheckBox IsChecked="{Binding RecoveryKeyAcknowledged}" FontSize="12.5"
+                    Content="{Binding #Root.Strings[RecoveryKeyConfirm]}" />
+          <Button Classes="accent" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[RecoveryKeyDone]}" Command="{Binding DismissRecoveryKeyCommand}"
+                  IsEnabled="{Binding RecoveryKeyAcknowledged}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Conflict copies -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding HasReplacedNotes}">
+        <TextBlock Classes="muted" FontSize="12.5" Text="{Binding ReplacedNotesMessage}" />
+      </Border>
+
+      <!-- Subscription, read only.
+           Deliberately without a checkout button: Apple and Google require their own in-app purchase
+           for a digital subscription, so offering the web checkout here would have the app rejected.
+           What a subscriber already has is still shown, because reading it is not selling it. -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding ShowSubscription}">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[BillingDetailTitle]}" />
+          <TextBlock FontSize="13" Text="{Binding SubscriptionPlanText}" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[BillingRowState]}" />
+            <TextBlock FontSize="12.5" Text="{Binding SubscriptionStateText}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasSubscriptionDate}">
+            <TextBlock Classes="muted" FontSize="12.5" Text="{Binding SubscriptionDateLabel}" />
+            <TextBlock FontSize="12.5" Text="{Binding SubscriptionDateText}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

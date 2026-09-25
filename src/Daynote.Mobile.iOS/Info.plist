@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key><string>Daynote</string>
+  <key>CFBundleName</key><string>Daynote</string>
+  <key>CFBundleIdentifier</key><string>cc.arachat.daynote</string>
+  <key>CFBundleShortVersionString</key><string>1.5.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSRequiresIPhoneOS</key><true/>
+  <key>MinimumOSVersion</key><string>15.0</string>
+  <key>UILaunchScreen</key><dict/>
+  <!--
+    The app icon, named here rather than through MSBuild's ApplicationIcon: Avalonia's resource task
+    claims that property for its own .ico and fails the build looking for a file by that name.
+  -->
+  <key>XSAppIconAssets</key><string>Resources/Assets.xcassets/AppIcon.appiconset</string>
+  <key>UIRequiredDeviceCapabilities</key>
+  <array><string>arm64</string></array>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <!--
+    The OAuth redirect. ASWebAuthenticationSession matches the callback by scheme, and iOS will only
+    hand it to an app that declares the scheme here. It must equal the scheme in the Google iOS
+    client's redirect URI; docs/MOBILE_PORT.md says where that value comes from.
+  -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>cc.arachat.daynote.oauth</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>cc.arachat.daynote</string></array>
+    </dict>
+  </array>
+  <!--
+    Declared so the account panel's terms and privacy links can open Safari. Nothing else leaves the
+    app, and there is no photo, camera, contacts or location use to declare.
+  -->
+  <key>LSApplicationQueriesSchemes</key>
+  <array><string>https</string></array>
+  <key>ITSAppUsesNonExemptEncryption</key><false/>
+</dict>
+</plist>

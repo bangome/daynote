@@ -1,0 +1,269 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    The phone's control styles. The palette and the icon geometry are shared with the desktop; these
+    are not, because every size in the desktop sheet assumes a mouse pointer. The numbers below come
+    from one rule: anything you tap is at least 44 effective pixels tall, which is the smaller of the
+    two platform minimums (Apple 44pt, Android 48dp) and so satisfies both.
+  -->
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.empty">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="Margin" Value="24,40" />
+  </Style>
+
+  <!-- Surfaces -->
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Panel}" />
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Panel}" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+  <Style Selector="Border.chip">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.AccentSoft}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Pill}" />
+    <Setter Property="Padding" Value="10,5" />
+  </Style>
+
+  <!--
+    Buttons. A row is a full-width tap target with its content left-aligned, which is the shape all
+    of the list surfaces want; the variants below only change the paint.
+  -->
+  <Style Selector="Button">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+  </Style>
+  <Style Selector="Button.accent">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.quiet">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+  </Style>
+  <Style Selector="Button.row">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+  <Style Selector="Button.row:pressed">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+  </Style>
+  <Style Selector="Button.icon">
+    <Setter Property="MinWidth" Value="44" />
+    <Setter Property="Padding" Value="10" />
+  </Style>
+  <Style Selector="Button.icon Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+
+  <!-- The floating "new note" button: one primary action per screen, bottom right, above the bar. -->
+  <Style Selector="Button.fab">
+    <Setter Property="Width" Value="56" />
+    <Setter Property="Height" Value="56" />
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="28" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+  </Style>
+  <Style Selector="Button.fab Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+
+  <!-- The bottom bar. The label under the mark is not decoration: an icon-only bar makes people
+       guess, and there is room for four words. -->
+  <Style Selector="Button.tabbar">
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="Padding" Value="4,6" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <!--
+      Stretch is load-bearing, not tidiness. A button left to itself hugs its content, so each tab
+      was a ~30-point strip at the left of its quarter instead of the whole quarter: the marks sat
+      visibly off-centre and a tap anywhere else in the column did nothing at all.
+    -->
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.tabbar Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+  <Style Selector="Button.tabbar.active">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.tabbar.active Path">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.tabbar TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+  </Style>
+
+  <!-- Segmented control, for the lists page. -->
+  <Style Selector="Border.seg">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="3" />
+  </Style>
+  <Style Selector="Button.segtab">
+    <!-- Same reason as the tab bar: the segment has to fill its share of the control. -->
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="Button.segtab.active">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- Text entry -->
+  <Style Selector="TextBox">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Control}" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Input}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <!--
+    The editor. Deliberately borderless and transparent, filling the screen: on a phone the note IS
+    the screen, and a framed box inside a framed page wastes the width the text needs.
+  -->
+  <Style Selector="TextBox.editor">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="16,8,16,16" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="LineHeight" Value="26" />
+    <Setter Property="AcceptsReturn" Value="True" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+  </Style>
+  <!--
+    The theme paints the focused and hovered states on the template's own border, so clearing them on
+    the TextBox is not enough: without these the note sat inside a white, blue-outlined box the moment
+    the keyboard opened, which is the opposite of "the note is the screen".
+  -->
+  <Style Selector="TextBox.editor:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.editor:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!--
+    Calendar day cells: a 44-point circle, which is both the tap-target minimum and the shape the
+    selected day reads best as. Sized explicitly and centred in its column, because a button left to
+    its own devices shrinks to the width of the number - "26" came out a 20-point vertical capsule.
+  -->
+  <Style Selector="Button.day">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinWidth" Value="44" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="CornerRadius" Value="22" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.day.outside">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="Button.day.sunday">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
+  </Style>
+  <Style Selector="Button.day.saturday">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
+  </Style>
+  <Style Selector="Button.day.today">
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Button.day.selected">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+
+  <!-- The to-do checkbox, as a round tap target rather than a 13px square. -->
+  <Style Selector="Button.check">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+  </Style>
+  <Style Selector="Button.check.checked">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+  </Style>
+  <Style Selector="TextBlock.done">
+    <Setter Property="TextDecorations" Value="Strikethrough" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="TextBlock.due">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="TextBlock.due.overdue">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Overdue}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+</Styles>

@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:pvm="using:Daynote.App.Shell.Product"
+             x:Class="Daynote.Mobile.Views.ListsPage"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    The desktop's right rail: to-dos, favourites and tags. There it is a column of tabs beside the
+    editor; here the three share one screen behind a segmented control, because they are read one at
+    a time and a phone cannot spare a permanent column for them.
+  -->
+  <Grid RowDefinitions="Auto,*" Margin="16,12,16,0">
+
+    <Border Grid.Row="0" Classes="seg" Margin="0,0,0,12">
+      <UniformGrid Columns="3">
+        <Button Classes="segtab" Classes.active="{Binding IsTodoList}" Content="{Binding Strings[SegmentTodo]}"
+                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}" />
+        <Button Classes="segtab" Classes.active="{Binding IsFavoritesList}" Content="{Binding Strings[SegmentFavorites]}"
+                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}" />
+        <Button Classes="segtab" Classes.active="{Binding IsTagsList}" Content="{Binding Strings[SegmentTags]}"
+                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}" />
+      </UniformGrid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="0,0,0,24">
+
+        <!-- To-do -->
+        <StackPanel IsVisible="{Binding IsTodoList}">
+          <StackPanel.Resources>
+            <DataTemplate x:Key="TodoRow" x:DataType="pvm:TodoItemViewModel">
+              <Border Classes="card" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Button Grid.Column="0" Classes="check" Classes.checked="{Binding Checked}"
+                          Command="{Binding ToggleCommand}" Margin="0,1,12,0"
+                          Content="{Binding Checked, Converter={x:Static vm:MobileConverters.CheckGlyph}}" />
+                  <Button Grid.Column="1" Classes="row" Background="Transparent" Padding="0"
+                          Command="{Binding JumpCommand}">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{Binding Text}" FontSize="14" Classes.done="{Binding Checked}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="muted" Text="{Binding NoteLabel}" FontSize="11.5" />
+                        <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" Text="{Binding DueLabel}"
+                                   FontSize="11.5" IsVisible="{Binding HasDue}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </StackPanel.Resources>
+
+          <TextBlock Classes="h2" Text="{Binding Strings[Today]}" Margin="2,0,2,8" IsVisible="{Binding Todo.HasToday}" />
+          <ItemsControl ItemsSource="{Binding Todo.TodayItems}" ItemTemplate="{StaticResource TodoRow}"
+                        IsVisible="{Binding Todo.HasToday}" />
+          <Border Height="1" Margin="2,4,2,12" Background="{DynamicResource Daynote.Product.Brush.Stroke}"
+                  IsVisible="{Binding Todo.HasToday}" />
+          <ItemsControl ItemsSource="{Binding Todo.Items}" ItemTemplate="{StaticResource TodoRow}" />
+          <TextBlock Classes="empty" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding Todo.IsEmpty}" />
+        </StackPanel>
+
+        <!-- Favourites -->
+        <StackPanel IsVisible="{Binding IsFavoritesList}">
+          <ItemsControl ItemsSource="{Binding Favorites.Items}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pvm:FavoriteItemViewModel">
+                <Button Classes="row" Command="{Binding OpenCommand}" Margin="0,0,0,8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" Text="{Binding DateLabel}" FontSize="11.5" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="empty" Text="{Binding Strings[FavoritesPanelEmpty]}" IsVisible="{Binding Favorites.IsEmpty}" />
+        </StackPanel>
+
+        <!-- Tags -->
+        <StackPanel IsVisible="{Binding IsTagsList}">
+          <ItemsControl ItemsSource="{Binding TagPanel.Tags}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pvm:TagItemViewModel">
+                <Border Classes="card" Margin="0,0,0,8">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding Tag, StringFormat='#{0}'}" FontSize="14" FontWeight="SemiBold" />
+                      <TextBlock Classes="muted" Text="{Binding CountText}" FontSize="11.5" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding Occurrences}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:TagOccurrenceViewModel">
+                          <Button Classes="row" Background="Transparent" Padding="0,8" Command="{Binding JumpCommand}">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Grid.Column="0" Text="{Binding NoteTitle}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Classes="muted" Text="{Binding DateLabel}" FontSize="11" Margin="8,0,0,0" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="empty" Text="{Binding Strings[TagPanelEmpty]}" IsVisible="{Binding TagPanel.IsEmpty}" />
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

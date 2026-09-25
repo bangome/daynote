@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             x:Class="Daynote.Mobile.Views.EditorPage"
+             x:DataType="vm:MobileShellViewModel"
+             Background="{DynamicResource Daynote.Product.Brush.Bg1}">
+  <!--
+    The note, full screen. The desktop keeps the editor in the middle column with the note list and
+    the right rail flanking it; here it covers them, because a 390-point-wide screen has room for the
+    text and nothing else.
+  -->
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <!-- Header: back, title, and the two actions worth a permanent place. -->
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="4,4,8,0">
+      <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="22"
+              Command="{Binding CloseEditorCommand}"
+              AutomationProperties.Name="{Binding Strings[Back]}" />
+      <TextBlock Grid.Column="1" Classes="h2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                 Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" />
+      <Button Grid.Column="2" Classes="icon" Command="{Binding ToggleFavoriteCommand}"
+              AutomationProperties.Name="{Binding Strings[Favorite]}">
+        <Path Data="{StaticResource Daynote.Geo.Star}"
+              Fill="{Binding Notes.SelectedTab.IsFavorite, FallbackValue=False, Converter={x:Static vm:MobileConverters.FavoriteFill}}" />
+      </Button>
+      <Button Grid.Column="3" Classes="icon" Command="{Binding DeleteNoteCommand}"
+              CommandParameter="{Binding Notes.SelectedTab}"
+              AutomationProperties.Name="{Binding Strings[NoteMenuDelete]}">
+        <Path Data="{StaticResource Daynote.Geo.Trash}" />
+      </Button>
+    </Grid>
+
+    <!-- Save state and tags. The save line is the phone's only feedback that a note is safe, so it
+         is not hidden behind a menu the way a desktop status bar can be. -->
+    <StackPanel Grid.Row="1" Margin="16,2,16,6" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Notes.HasSaveStatus}">
+        <TextBlock Classes="muted" FontSize="11.5" VerticalAlignment="Center" Text="{Binding Notes.SaveStatusDisplay}" />
+        <Button Classes="quiet" FontSize="11.5" MinHeight="32" Padding="10,4"
+                Content="{Binding Strings[RetrySave]}" Command="{Binding Notes.RetryCommand}"
+                IsVisible="{Binding Notes.HasSaveError}" />
+      </StackPanel>
+
+      <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <Border Classes="chip" Margin="0,0,6,6">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding StringFormat='#{0}'}" FontSize="12" VerticalAlignment="Center" />
+                <Button Classes="icon" MinWidth="24" MinHeight="24" Width="24" Height="24" Padding="0" Content="✕" FontSize="10"
+                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).RemoveTagCommand}"
+                        CommandParameter="{Binding}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBox Text="{Binding TagInput}" MinHeight="38" FontSize="13"
+               PlaceholderText="{Binding Strings[TagAddPlaceholder]}">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding CommitTagCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
+    </StackPanel>
+
+    <TextBox Grid.Row="2" Classes="editor" Text="{Binding Notes.EditorText}" />
+  </Grid>
+</UserControl>

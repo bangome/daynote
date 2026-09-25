@@ -1,0 +1,89 @@
+name: mobile
+
+# The phone builds. Two jobs on purpose: the shared UI compiles and its headless tests run on a
+# plain SDK, which is fast and is what gates most pull requests; the heads need the android and ios
+# workloads, which take minutes to install, so they run separately and only after the shared job
+# has passed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shared:
+    name: shared UI and headless tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked)
+        run: dotnet restore src/Daynote.Mobile/Daynote.Mobile.csproj --locked-mode
+
+      - name: Build shared mobile app (Release, warnings as errors)
+        run: dotnet build src/Daynote.Mobile/Daynote.Mobile.csproj -c Release --no-restore -warnaserror
+
+      - name: Test (phone UI, headless)
+        run: dotnet test tests/Daynote.Mobile.Tests/Daynote.Mobile.Tests.csproj -c Release --minimum-expected-tests 1
+
+      # The rendered screens, so a layout regression can be seen rather than deduced.
+      - name: Upload rendered screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daynote-mobile-screens
+          path: artifacts/mobile-screens
+
+  heads:
+    name: android and ios heads
+    needs: shared
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Not `dotnet workload restore`: that reads every project in the solution and would pull in
+      # workloads the desktop projects do not need.
+      - name: Install mobile workloads
+        run: dotnet workload install android ios
+
+      - name: Restore (locked)
+        run: >
+          dotnet restore src/Daynote.Mobile.Android/Daynote.Mobile.Android.csproj --locked-mode &&
+          dotnet restore src/Daynote.Mobile.iOS/Daynote.Mobile.iOS.csproj --locked-mode
+
+      # Debug-signed: a release upload needs the store credentials, which are not in CI.
+      - name: Build Android (Release, unsigned .apk)
+        run: scripts/Build-AndroidApp.sh -f apk -o artifacts/android
+
+      # Simulator, because a device build needs an Apple Developer signing identity.
+      - name: Build iOS (Release, simulator)
+        run: scripts/Build-IosApp.sh -t simulator -o artifacts/ios
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: daynote-mobile-heads
+          path: |
+            artifacts/android
+            artifacts/ios

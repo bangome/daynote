@@ -7,5 +7,16 @@
       WPF projects must NOT list them (no WindowsDesktop runtime pack exists for macOS).
     -->
     <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
+    <!--
+      The Android RIDs, for the same reason the Mac ones are here: an Android head always builds
+      RID-specific, so it asks this project for an android-arm64 target and locked-mode restore
+      rejects one the project never declared. Only arm64 and x64 (the emulator): .NET 10 dropped
+      32-bit Android, and its RIDs map to runtime packs that are not published.
+
+      iOS is deliberately absent. Its runtime packs only resolve under a net10.0-ios target, so
+      declaring ios-arm64 on a net10.0 project fails outright; the iOS head reaches this assembly
+      through the framework-dependent path instead and needs nothing here.
+    -->
+    <RuntimeIdentifiers>$(RuntimeIdentifiers);android-arm64;android-x64</RuntimeIdentifiers>
   </PropertyGroup>
 </Project>

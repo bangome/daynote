@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.SettingsPage"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    Settings. Much shorter than the desktop panel, and not because anything was dropped in a hurry:
+    the login item, the global hotkey, the MCP registration, the updater and the backup archive have
+    no phone equivalent, so what is left is the account, the theme and the language.
+  -->
+  <ScrollViewer>
+    <StackPanel Margin="16,12,16,24" Spacing="14">
+
+      <TextBlock Classes="h1" Text="{Binding Strings[Settings]}" Margin="2,0,0,4" />
+
+      <!-- Account -->
+      <Border Classes="card" IsVisible="{Binding HasAccount}">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="2">
+            <TextBlock Classes="h2" Text="{Binding AccountBarTitle}" />
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding AccountBarSubtitle}"
+                       IsVisible="{Binding AccountBarSubtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+          <views:AccountPanel DataContext="{Binding Account}" />
+        </StackPanel>
+      </Border>
+
+      <!-- A build with no sync endpoint says where the notes actually live rather than nothing. -->
+      <Border Classes="card" IsVisible="{Binding !HasAccount}">
+        <TextBlock Classes="muted" FontSize="12.5" Text="{Binding Strings[AccountBarLocalMobile]}" />
+      </Border>
+
+      <!-- Appearance -->
+      <Border Classes="card">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="h2" VerticalAlignment="Center" Text="{Binding Strings[ThemeToggle]}" />
+          <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsDark}" OnContent="" OffContent=""
+                        AutomationProperties.Name="{Binding Strings[ThemeToggle]}" />
+        </Grid>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

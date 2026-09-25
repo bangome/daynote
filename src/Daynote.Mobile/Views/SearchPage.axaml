@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:pvm="using:Daynote.App.Shell.Product"
+             x:Class="Daynote.Mobile.Views.SearchPage"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    Search, as its own screen rather than the desktop's drop-down under the title bar. A drop-down
+    over a phone keyboard would leave about two rows visible.
+  -->
+  <Grid RowDefinitions="Auto,*" Margin="16,12,16,0">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+      <TextBox Grid.Column="0" Text="{Binding Search.Query}"
+               PlaceholderText="{Binding Strings[UnifiedSearchHint]}" />
+      <Button Grid.Column="1" Classes="icon" Content="✕" Margin="6,0,0,0"
+              Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}"
+              AutomationProperties.Name="{Binding Strings[ClearSearch]}" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="0,0,0,24">
+        <ItemsControl ItemsSource="{Binding Search.Results}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
+              <Button Classes="row" Command="{Binding ActivateCommand}" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Grid.Column="0" Classes="chip" Margin="0,0,10,0" Padding="8,3" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding Kind}" FontSize="11" />
+                  </Border>
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="12" MaxLines="2" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="11"
+                             Margin="10,0,0,0" VerticalAlignment="Top" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="empty" Text="{Binding Strings[SearchNoResultsRow]}" IsVisible="{Binding Search.NoResults}" />
+        <TextBlock Classes="empty" Text="{Binding Strings[SearchFailedRow]}" IsVisible="{Binding Search.Failed}"
+                   Foreground="{DynamicResource Daynote.Product.Brush.Danger}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

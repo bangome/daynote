@@ -504,6 +504,25 @@ internal static class KoreanStrings
         ["AccountTermsUrl"] = "/terms/",
         ["AccountPrivacyUrl"] = "/privacy",
 
+        // ── Mobile ───────────────────────────────────────────────────────────────────────────────
+        // The phone's bottom bar and the two controls that only exist where there is no keyboard.
+        // Short on purpose: a tab label has about four characters before it is trimmed.
+        ["TabDay"] = "날짜",
+        ["TabSearch"] = "검색",
+        ["TabLists"] = "목록",
+        // The segmented control on the Lists page. The desktop's TabTodoName and friends end in
+        // "탭" because there they name a tab in a tooltip; as segment labels they read as noise.
+        ["SegmentTodo"] = "할 일",
+        ["SegmentFavorites"] = "즐겨찾기",
+        ["SegmentTags"] = "태그",
+        // The desktop says "이 PC에만 저장", which is wrong on a phone.
+        ["AccountBarLocalMobile"] = "이 기기에만 저장",
+        ["Back"] = "뒤로",
+        ["PreviousDay"] = "전날",
+        ["NextDay"] = "다음날",
+        ["PreviousMonth"] = "이전 달",
+        ["NextMonth"] = "다음 달",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

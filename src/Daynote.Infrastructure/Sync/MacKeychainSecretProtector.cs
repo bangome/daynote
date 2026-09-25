@@ -9,8 +9,16 @@ namespace Daynote.Infrastructure.Sync;
 /// password, and the payload is sealed with AES-GCM under that key. The Keychain item is bound to this
 /// user on this Mac (and, by default, to the application that created it), so the sealed file alone is
 /// worthless elsewhere. Entropy rides along as associated data, mirroring DPAPI's optional entropy.
+/// <para>
+/// Used unchanged on iOS, which is why the name is the only Mac-specific thing left about it: the
+/// two platforms ship the same Security.framework and CoreFoundation at the same paths, and a
+/// generic password item behaves identically. The difference is in who is kept out — on macOS the
+/// item is bound to the user and the creating application, on iOS the system scopes it to the app
+/// and destroys it when the app is uninstalled.
+/// </para>
 /// </summary>
 [SupportedOSPlatform("macos")]
+[SupportedOSPlatform("ios13.0")]
 public sealed class MacKeychainSecretProtector : ISecretProtector
 {
     private const byte FormatVersion = 0x01;

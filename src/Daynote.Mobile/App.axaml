@@ -1,0 +1,21 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Daynote.Mobile.App"
+             Name="Daynote"
+             RequestedThemeVariant="Light">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- The palette and the icon geometry are the desktop's, linked into this assembly by the
+             project file: one colour decision and one drawn mark serve every Daynote. Only the
+             control styles differ, because a finger is not a mouse pointer. -->
+        <ResourceInclude Source="avares://Daynote.Mobile/Themes/Daynote.Product.axaml" />
+        <ResourceInclude Source="avares://Daynote.Mobile/Themes/Daynote.Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Daynote.Mobile/Themes/Daynote.Mobile.Styles.axaml" />
+  </Application.Styles>
+</Application>

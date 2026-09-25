@@ -6,6 +6,9 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <!-- The container on its own, for the phone heads: they compose a service provider but have no
+         use for the generic host's lifetime, configuration or logging. -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageVersion Include="ModelContextProtocol" Version="2.0.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <!-- Argon2id for the cloud-sync master key (docs/CLOUD_SYNC.md §4.2). Pure managed, no native
@@ -15,6 +18,14 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
     <PackageVersion Include="MSTest.Sdk" Version="4.3.2" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <!--
+      The phone natives. Microsoft.Data.Sqlite pulls these in transitively at 2.1.11, which carries
+      GHSA-2m69-gcr7-jv3q (a vulnerable bundled SQLite) and so fails the build's NuGet audit. The
+      advisory covers <= 2.1.11; 2.1.13 is the newest release of these ids and is outside it. They
+      have no 3.x line, which is why the version differs from the desktop native above.
+    -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3.android" Version="2.1.13" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3.ios" Version="2.1.13" />
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <!-- Avalonia: the cross-platform UI for Daynote.Desktop (macOS first). One version for every package. -->
     <PackageVersion Include="Avalonia" Version="12.1.2" />
@@ -23,6 +34,14 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <!-- Headless rendering for the Avalonia UI tests; never referenced by the app itself. -->
     <PackageVersion Include="Avalonia.Headless" Version="12.1.2" />
+    <!-- Real drawing under the headless tests. The desktop app brings it in through
+         Avalonia.Desktop; the phone test project has to ask for it by name. -->
+    <PackageVersion Include="Avalonia.Skia" Version="12.1.2" />
+    <!-- The mobile heads. Same Avalonia version as the desktop app, so one UI fix lands everywhere. -->
+    <PackageVersion Include="Avalonia.Android" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.iOS" Version="12.1.2" />
+    <!-- Custom Tabs, for Google sign-in on Android. Not a web view: Google refuses sign-in from one. -->
+    <PackageVersion Include="Xamarin.AndroidX.Browser" Version="1.9.0.2" />
     <!-- Velopack: the Windows installer and the auto-updater the Store used to provide
          (docs/WINDOWS_ON_AVALONIA.md §5). Windows-only in practice; the Mac bundle is signed and
          notarized instead. -->

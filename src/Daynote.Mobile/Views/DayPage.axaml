@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:pvm="using:Daynote.App.Shell.Product"
+             xmlns:notes="using:Daynote.App.Notes"
+             x:Class="Daynote.Mobile.Views.DayPage"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    The day: a month grid over the notes of the selected date. This is the phone's home, and it is
+    the desktop's left column - the calendar and the day's note list - promoted to a whole screen,
+    because on a phone that column is the app.
+  -->
+  <Panel>
+    <ScrollViewer>
+      <StackPanel Margin="16,12,16,96" Spacing="14">
+
+        <!-- Month header -->
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+          <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="20"
+                  Command="{Binding Calendar.PreviousMonthCommand}"
+                  AutomationProperties.Name="{Binding Strings[PreviousMonth]}" />
+          <TextBlock Grid.Column="1" Classes="h2" Text="{Binding Calendar.MonthLabel}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="icon" Content="›" FontSize="20"
+                  Command="{Binding Calendar.NextMonthCommand}"
+                  AutomationProperties.Name="{Binding Strings[NextMonth]}" />
+          <Button Grid.Column="3" Classes="quiet" Content="{Binding Strings[Today]}"
+                  Command="{Binding GoToTodayCommand}" Margin="6,0,0,0" />
+        </Grid>
+
+        <!-- Month grid -->
+        <Border Classes="card" Padding="8,10">
+          <StackPanel Spacing="4">
+            <UniformGrid Columns="7">
+              <TextBlock Text="{Binding Strings[WeekdaySun]}" FontSize="11" TextAlignment="Center"
+                         Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
+              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayMon]}" FontSize="11" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayTue]}" FontSize="11" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayWed]}" FontSize="11" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayThu]}" FontSize="11" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayFri]}" FontSize="11" TextAlignment="Center" />
+              <TextBlock Text="{Binding Strings[WeekdaySat]}" FontSize="11" TextAlignment="Center"
+                         Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
+            </UniformGrid>
+            <ItemsControl ItemsSource="{Binding Calendar.Cells}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
+                  <Button Classes="day" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
+                          Classes.saturday="{Binding IsSaturday}" Classes.today="{Binding IsToday}"
+                          Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}">
+                    <StackPanel Spacing="1">
+                      <TextBlock Text="{Binding DayText}" TextAlignment="Center"
+                                 Foreground="{Binding $parent[Button].Foreground}" />
+                      <!-- The activity dot always occupies its row, transparent on an empty day, so
+                           the numbers do not shift by a pixel between days with and without notes. -->
+                      <Ellipse Width="4" Height="4" HorizontalAlignment="Center"
+                               Fill="{Binding $parent[Button].Foreground}"
+                               Opacity="{Binding HasActivity, Converter={x:Static vm:MobileConverters.DotOpacity}}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- The selected day -->
+        <Grid ColumnDefinitions="*,Auto" Margin="2,4,2,0">
+          <StackPanel Grid.Column="0" Spacing="1">
+            <TextBlock Classes="h2" Text="{Binding DayLabel}" />
+            <TextBlock Classes="muted" Text="{Binding NoteCountText}" FontSize="11.5" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+            <Button Classes="icon" Content="‹" FontSize="18" Command="{Binding PreviousDayCommand}"
+                    AutomationProperties.Name="{Binding Strings[PreviousDay]}" />
+            <Button Classes="icon" Content="›" FontSize="18" Command="{Binding NextDayCommand}"
+                    AutomationProperties.Name="{Binding Strings[NextDay]}" />
+          </StackPanel>
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding Notes.Tabs}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="notes:NoteTabViewModel">
+              <!-- A projection is the editor's blank note for a day with nothing on it yet. It is not
+                   a note until something is typed, so the row stays hidden, as on the desktop. -->
+              <Button Classes="row" IsVisible="{Binding !IsProjection}" Margin="0,0,0,8"
+                      Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).OpenNoteCommand}"
+                      CommandParameter="{Binding}">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="★" FontSize="12" IsVisible="{Binding IsFavorite}"
+                               Foreground="{DynamicResource Daynote.Product.Brush.Extras}" />
+                    <TextBlock Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="12.5" MaxLines="2"
+                             TextTrimming="CharacterEllipsis"
+                             IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,2,0,0">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <Border Classes="chip" Padding="8,2" Margin="0,0,5,4">
+                          <TextBlock Text="{Binding StringFormat='#{0}'}" FontSize="11" />
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Classes="empty" Text="{Binding Strings[DayNotesEmpty]}" IsVisible="{Binding IsDayEmpty}" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- One primary action, always reachable with the thumb. -->
+    <Button Classes="fab" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20"
+            Command="{Binding NewNoteCommand}" AutomationProperties.Name="{Binding Strings[AddNote]}">
+      <Path Data="{StaticResource Daynote.Geo.Plus}" />
+    </Button>
+  </Panel>
+</UserControl>

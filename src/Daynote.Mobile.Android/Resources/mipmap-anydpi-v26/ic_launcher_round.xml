@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The adaptive icon. Android masks the foreground to whatever shape the launcher uses (circle,
+  squircle, teardrop), so the mark is inset to 66/108 of the canvas and the brand cream fills the
+  rest; a full-bleed raster would have its corners cut off on most launchers.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@color/ic_launcher_background" />
+  <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+  <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

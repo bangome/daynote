@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Daynote.Product.Brush.Bg1, light variant: the colour the first Avalonia frame paints anyway. -->
+  <color name="window_background">#FAF7F2</color>
+  <!-- The adaptive icon's backdrop: the brand cream, so the mark sits on paper at any mask shape. -->
+  <color name="ic_launcher_background">#FAF7F2</color>
+</resources>
