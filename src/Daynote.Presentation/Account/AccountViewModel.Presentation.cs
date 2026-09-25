@@ -102,10 +102,7 @@ public sealed partial class AccountViewModel
             int days = Entitlement.DaysRemaining(DateTimeOffset.UtcNow) ?? 0;
             return Entitlement.State switch
             {
-                EntitlementState.Trial => string.Format(
-                    CultureInfo.CurrentCulture,
-                    AppStrings.BillingTrialBannerTitleFormat,
-                    days),
+                EntitlementState.Trial => AppStrings.BillingTrialBannerTitle(days),
                 EntitlementState.Grace => AppStrings.BillingGraceBannerTitle,
                 _ => AppStrings.BillingExpiredBannerTitle,
             };

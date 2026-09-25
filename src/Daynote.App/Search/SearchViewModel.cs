@@ -100,7 +100,7 @@ public sealed partial class SearchViewModel : ObservableObject, IDisposable, ILa
         SearchLoadState.Error => Localization.AppStrings.SearchUnavailableShort,
         _ => _hasMore
             ? string.Format(System.Globalization.CultureInfo.CurrentCulture, Localization.AppStrings.SearchResultsShownFormat, Results.Count)
-            : string.Format(System.Globalization.CultureInfo.CurrentCulture, Localization.AppStrings.SearchResultsCountFormat, Results.Count),
+            : Localization.AppStrings.SearchResultsCount(Results.Count),
     };
 
     /// <summary>Completes when the current debounced/in-flight search has applied or been superseded.</summary>

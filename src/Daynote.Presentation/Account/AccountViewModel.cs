@@ -89,10 +89,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         }
     }
 
-    public string ReplacedNotesMessage => string.Format(
-        CultureInfo.CurrentCulture,
-        AppStrings.AccountConflictsFormat,
-        ReplacedNoteCount);
+    public string ReplacedNotesMessage => AppStrings.AccountConflicts(ReplacedNoteCount);
 
     /// <summary>
     /// Reads the persisted state at startup. Deliberately does not sync: launching must not depend on

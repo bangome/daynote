@@ -155,7 +155,7 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
             dateRows.Add(Row(
                 AppStrings.SearchKindDate,
                 Composition.LocalDates.DisplayLong(date),
-                string.Format(CultureInfo.CurrentCulture, AppStrings.SearchDateNoteCountFormat, count),
+                AppStrings.SearchDateNoteCount(count),
                 date,
                 text,
                 new SearchNavigation(date, null, null),

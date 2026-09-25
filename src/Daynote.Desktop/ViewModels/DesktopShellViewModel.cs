@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
@@ -604,7 +603,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     {
         DayLabel = LocalDates.DisplayDayHeading(SelectedDate);
         int count = Notes.ProjectionOnly ? 0 : Notes.Tabs.Count(t => !t.IsProjection);
-        NoteCountText = string.Format(CultureInfo.CurrentCulture, AppStrings.NoteCountFormat, count);
+        NoteCountText = AppStrings.NoteCount(count);
         IsDayEmpty = count == 0;
         OnPropertyChanged(nameof(HasOpenNote));
     }

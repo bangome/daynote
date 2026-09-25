@@ -84,6 +84,7 @@ internal static class KoreanStrings
         ["SearchUnavailableShort"] = "검색 사용 불가",
         ["SearchResultsShownFormat"] = "결과 {0}개 표시됨",
         ["SearchResultsCountFormat"] = "결과 {0}개",
+        ["SearchResultsCountFormatOne"] = "결과 {0}개",
 
         // Consent
 
@@ -258,6 +259,7 @@ internal static class KoreanStrings
         // Note list
         ["NewNote"] = "새 노트",
         ["NoteCountFormat"] = "노트 {0}개",
+        ["NoteCountFormatOne"] = "노트 {0}개",
         ["DayNotesEmpty"] = "이 날짜에 노트가 없습니다",
 
         // Editor
@@ -321,6 +323,7 @@ internal static class KoreanStrings
         ["SearchNoResultsRow"] = "검색 결과가 없습니다",
         ["SearchFailedRow"] = "검색에 실패했습니다. 다시 입력해 보세요.",
         ["SearchDateNoteCountFormat"] = "노트 {0}개",
+        ["SearchDateNoteCountFormatOne"] = "노트 {0}개",
 
         // Language (settings)
         ["SettingsLanguageRow"] = "언어",
@@ -403,6 +406,7 @@ internal static class KoreanStrings
         ["BillingTitle"] = "구독",
         ["BillingBlurb"] = "노트·할 일의 실시간 동기화는 무료입니다. 이미지와 파일 동기화는 Pro 구독 기능이며, 앱 자체와 이 PC의 노트·파일은 구독과 무관하게 계속 사용할 수 있습니다.",
         ["BillingTrialFormat"] = "무료 체험 {0}일 남았습니다.",
+        ["BillingTrialFormatOne"] = "무료 체험 {0}일 남았습니다.",
         ["BillingActive"] = "구독 중입니다.",
         ["BillingActiveFormat"] = "구독 중입니다. 다음 결제일: {0}",
         ["BillingGraceFormat"] = "결제가 확인되지 않았습니다. {0}일 안에 결제 수단을 확인해 주세요.",
@@ -429,6 +433,7 @@ internal static class KoreanStrings
         ["AccountNeverSynced"] = "아직 동기화하지 않았습니다",
         // {0} = number of notes replaced by a newer version from another device.
         ["AccountConflictsFormat"] = "노트 {0}개가 다른 기기의 최신 버전으로 교체되었습니다. 이전 내용은 사본으로 남겨 두었습니다.",
+        ["AccountConflictsFormatOne"] = "노트 {0}개가 다른 기기의 최신 버전으로 교체되었습니다. 이전 내용은 사본으로 남겨 두었습니다.",
         ["AccountOpenConflicts"] = "사본 폴더 열기",
         ["SyncChipSynced"] = "동기화됨",
         ["SyncChipSyncing"] = "동기화 중",
@@ -464,6 +469,7 @@ internal static class KoreanStrings
         ["AccountPlanPro"] = "Pro",
         ["AccountPlanGrace"] = "결제 확인 중",
         ["BillingTrialBannerTitleFormat"] = "Pro 체험 기간이 {0}일 남았습니다",
+        ["BillingTrialBannerTitleFormatOne"] = "Pro 체험 기간이 {0}일 남았습니다",
         ["BillingTrialBannerBody"] = "체험이 끝나기 전에 구독하면 이미지·파일 동기화가 끊기지 않습니다. 끊겨도 노트는 계속 동기화되고, 파일은 그대로 남습니다.",
         ["BillingGraceBannerTitle"] = "결제가 확인되지 않았습니다",
         ["BillingGraceBannerBodyFormat"] = "{0}일 안에 결제 수단을 확인해 주세요. 그때까지는 파일 동기화가 계속됩니다.",

@@ -507,4 +507,41 @@ public static class AppStrings
     public static string AccountTermsUrl => LocalizationService.Instance[nameof(AccountTermsUrl)];
     /// <summary>Path on the product site, appended to the service origin.</summary>
     public static string AccountPrivacyUrl => LocalizationService.Instance[nameof(AccountPrivacyUrl)];
+
+    // ── Counted copy ─────────────────────────────────────────────────────────────────────────────
+    // English inflects for number and Korean does not, so a single "{0} notes" reads as "1 notes"
+    // for a whole third of the days a user opens. Each of these has a matching "...One" key holding
+    // the singular; in Korean the two are the same sentence, stated rather than inherited, because
+    // the catalog falls back to Korean and then to the key name and an English-only key would render
+    // as "NoteCountFormatOne" the moment the UI switched.
+    //
+    // A count is never negative here, so "one or not one" is the whole rule. A language with a dual
+    // or a paucal would need the count passed to the catalog instead; none is offered today.
+
+    /// <summary>"3 notes" / "노트 3개", and the singular when there is exactly one.</summary>
+    public static string NoteCount(int count) => Counted(nameof(NoteCountFormat), count);
+
+    /// <summary>The same, for a date row in the search results.</summary>
+    public static string SearchDateNoteCount(int count) => Counted(nameof(SearchDateNoteCountFormat), count);
+
+    /// <summary>"12 results" / "결과 12개".</summary>
+    public static string SearchResultsCount(int count) => Counted(nameof(SearchResultsCountFormat), count);
+
+    /// <summary>"2 days left in your free trial."</summary>
+    public static string BillingTrial(int days) => Counted(nameof(BillingTrialFormat), days);
+
+    /// <summary>The banner headline of the same.</summary>
+    public static string BillingTrialBannerTitle(int days) => Counted(nameof(BillingTrialBannerTitleFormat), days);
+
+    /// <summary>
+    /// "4 notes were replaced ..." — the verb changes with the number too, which is why this needs a
+    /// whole second sentence rather than a plural suffix.
+    /// </summary>
+    public static string AccountConflicts(int count) => Counted(nameof(AccountConflictsFormat), count);
+
+    private static string Counted(string pluralKey, int count) =>
+        string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            LocalizationService.Instance[count == 1 ? pluralKey + "One" : pluralKey],
+            count);
 }

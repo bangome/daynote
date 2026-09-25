@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
@@ -435,7 +434,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     {
         DayLabel = FormatDayLabel(SelectedDate);
         int count = Notes.ProjectionOnly ? 0 : Notes.Tabs.Count(t => !t.IsProjection);
-        NoteCountText = string.Format(CultureInfo.CurrentCulture, Localization.AppStrings.NoteCountFormat, count);
+        NoteCountText = Localization.AppStrings.NoteCount(count);
         IsDayEmpty = count == 0;
     }
 

@@ -1,4 +1,3 @@
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
@@ -25,7 +24,7 @@ public sealed class TimelineDateHeaderRow : TimelineRow
     {
         Date = date;
         Heading = LocalDates.DisplayDayHeading(date);
-        CountText = string.Format(CultureInfo.CurrentCulture, AppStrings.NoteCountFormat, noteCount);
+        CountText = AppStrings.NoteCount(noteCount);
     }
 
     public LocalDate Date { get; }

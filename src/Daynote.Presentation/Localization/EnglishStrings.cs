@@ -83,6 +83,7 @@ internal static class EnglishStrings
         ["SearchUnavailableShort"] = "Search unavailable",
         ["SearchResultsShownFormat"] = "Showing {0} results",
         ["SearchResultsCountFormat"] = "{0} results",
+        ["SearchResultsCountFormatOne"] = "{0} result",
 
         // Settings
         ["SettingsTitle"] = "Settings",
@@ -269,6 +270,7 @@ internal static class EnglishStrings
         // Note list
         ["NewNote"] = "New note",
         ["NoteCountFormat"] = "{0} notes",
+        ["NoteCountFormatOne"] = "{0} note",
         ["DayNotesEmpty"] = "No notes on this date",
 
         // Editor
@@ -332,6 +334,7 @@ internal static class EnglishStrings
         ["SearchFailedRow"] = "The search failed. Try typing it again.",
         ["SearchNoResultsRow"] = "No results found",
         ["SearchDateNoteCountFormat"] = "{0} notes",
+        ["SearchDateNoteCountFormatOne"] = "{0} note",
 
         // Language (settings)
         ["SettingsLanguageRow"] = "Language",
@@ -414,6 +417,7 @@ internal static class EnglishStrings
         ["BillingTitle"] = "Subscription",
         ["BillingBlurb"] = "Real-time sync of notes and to-dos is free. Syncing images and files is the Pro subscription; Daynote itself, and the notes and files on this PC, keep working either way.",
         ["BillingTrialFormat"] = "{0} days left in your free trial.",
+        ["BillingTrialFormatOne"] = "{0} day left in your free trial.",
         ["BillingActive"] = "Subscribed.",
         ["BillingActiveFormat"] = "Subscribed. Renews on {0}.",
         ["BillingGraceFormat"] = "We could not take your payment. Please check your payment method within {0} days.",
@@ -440,6 +444,7 @@ internal static class EnglishStrings
         ["AccountNeverSynced"] = "Not synced yet",
         // {0} = number of notes replaced by a newer version from another device.
         ["AccountConflictsFormat"] = "{0} notes were replaced by a newer version from another device. The earlier text was kept as a copy.",
+        ["AccountConflictsFormatOne"] = "{0} note was replaced by a newer version from another device. The earlier text was kept as a copy.",
         ["AccountOpenConflicts"] = "Open the copies folder",
         ["SyncChipSynced"] = "Synced",
         ["SyncChipSyncing"] = "Syncing",
@@ -475,6 +480,7 @@ internal static class EnglishStrings
         ["AccountPlanPro"] = "Pro",
         ["AccountPlanGrace"] = "Payment pending",
         ["BillingTrialBannerTitleFormat"] = "{0} days left in your Pro trial",
+        ["BillingTrialBannerTitleFormatOne"] = "{0} day left in your Pro trial",
         ["BillingTrialBannerBody"] = "Subscribe before the trial ends and image and file sync carries on without a break. If it does stop, notes keep syncing and your files stay where they are.",
         ["BillingGraceBannerTitle"] = "A payment did not go through",
         ["BillingGraceBannerBodyFormat"] = "Please check your payment method within {0} days. File sync keeps working until then.",

@@ -47,10 +47,7 @@ public sealed partial class AccountViewModel
             int? days = Entitlement.DaysRemaining(DateTimeOffset.UtcNow);
             return Entitlement.State switch
             {
-                EntitlementState.Trial => string.Format(
-                    CultureInfo.CurrentCulture,
-                    AppStrings.BillingTrialFormat,
-                    days ?? 0),
+                EntitlementState.Trial => AppStrings.BillingTrial(days ?? 0),
                 EntitlementState.Active => Entitlement.Until is { } until
                     ? string.Format(
                         CultureInfo.CurrentCulture,
