@@ -89,8 +89,8 @@
   <Style Selector="Button.icon Path">
     <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text}" />
     <Setter Property="StrokeThickness" Value="1.6" />
-    <Setter Property="Width" Value="20" />
-    <Setter Property="Height" Value="20" />
+    <Setter Property="Width" Value="23" />
+    <Setter Property="Height" Value="23" />
     <Setter Property="Stretch" Value="Uniform" />
   </Style>
 
@@ -115,8 +115,11 @@
   <!-- The bottom bar. The label under the mark is not decoration: an icon-only bar makes people
        guess, and there is room for four words. -->
   <Style Selector="Button.tabbar">
-    <Setter Property="MinHeight" Value="52" />
-    <Setter Property="Padding" Value="4,6" />
+    <!-- 58, which is what a 23-point mark, a 9-point gap and a 10-point label add up to inside
+         6 points of padding. Tall for a tab bar but not out of range: iOS puts its content in 49,
+         Android allows up to 80, and the gap is what the row needed most. -->
+    <Setter Property="MinHeight" Value="58" />
+    <Setter Property="Padding" Value="2,6,2,6" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
     <!--
@@ -127,11 +130,23 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="VerticalAlignment" Value="Stretch" />
   </Style>
+  <!--
+    23 against a 10-point label. The ratio is what matters, not either number: at 20/11 the word
+    "Settings" outweighed the mark beside it and the row read as four captions. Both platforms'
+    own bars sit near 2.3, which is where this lands.
+
+    StrokeThickness is set per mark in the markup rather than here, and that is not fussiness.
+    Stretch="Uniform" scales the stroke along with the glyph, and the four geometries are drawn on
+    canvases of different sizes (Daynote.Icons.axaml: the checkbox spans 10 units, the calendar
+    16.5), so one thickness here came out nearly twice as heavy on the checkbox as on the calendar.
+    The per-mark values below divide out each canvas.
+  -->
   <Style Selector="Button.tabbar Path">
     <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
-    <Setter Property="StrokeThickness" Value="1.6" />
-    <Setter Property="Width" Value="22" />
-    <Setter Property="Height" Value="22" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Width" Value="23" />
+    <Setter Property="Height" Value="23" />
     <Setter Property="Stretch" Value="Uniform" />
   </Style>
   <Style Selector="Button.tabbar.active">
@@ -141,8 +156,12 @@
     <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
   </Style>
   <Style Selector="Button.tabbar TextBlock">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="TextAlignment" Value="Center" />
+    <!-- The global TextBlock style wraps; a tab label that wrapped would shove the mark upward and
+         leave one tab a line taller than its neighbours. -->
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
   </Style>
 

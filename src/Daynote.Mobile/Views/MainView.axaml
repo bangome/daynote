@@ -37,32 +37,32 @@
         <Button Grid.Column="0" Classes="tabbar" Classes.active="{Binding IsDayPage}"
                 Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Day}"
                 AutomationProperties.Name="{Binding Strings[TabDay]}">
-          <StackPanel Spacing="3">
-            <Path Data="{StaticResource Daynote.Geo.Today}" HorizontalAlignment="Center" />
+          <StackPanel Spacing="9">
+            <Path Data="{StaticResource Daynote.Geo.Today}" HorizontalAlignment="Center" StrokeThickness="1.3" />
             <TextBlock Text="{Binding Strings[TabDay]}" />
           </StackPanel>
         </Button>
         <Button Grid.Column="1" Classes="tabbar" Classes.active="{Binding IsSearchPage}"
                 Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Search}"
                 AutomationProperties.Name="{Binding Strings[TabSearch]}">
-          <StackPanel Spacing="3">
-            <Path Data="{StaticResource Daynote.Geo.Search}" HorizontalAlignment="Center" />
+          <StackPanel Spacing="9">
+            <Path Data="{StaticResource Daynote.Geo.Search}" HorizontalAlignment="Center" StrokeThickness="0.95" />
             <TextBlock Text="{Binding Strings[TabSearch]}" />
           </StackPanel>
         </Button>
         <Button Grid.Column="2" Classes="tabbar" Classes.active="{Binding IsListsPage}"
                 Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Lists}"
                 AutomationProperties.Name="{Binding Strings[TabLists]}">
-          <StackPanel Spacing="3">
-            <Path Data="{StaticResource Daynote.Geo.TabTodo}" HorizontalAlignment="Center" />
+          <StackPanel Spacing="9">
+            <Path Data="{StaticResource Daynote.Geo.TabTodo}" HorizontalAlignment="Center" StrokeThickness="0.8" />
             <TextBlock Text="{Binding Strings[TabLists]}" />
           </StackPanel>
         </Button>
         <Button Grid.Column="3" Classes="tabbar" Classes.active="{Binding IsSettingsPage}"
                 Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Settings}"
                 AutomationProperties.Name="{Binding Strings[Settings]}">
-          <StackPanel Spacing="3">
-            <Path Data="{StaticResource Daynote.Geo.Settings}" HorizontalAlignment="Center" />
+          <StackPanel Spacing="9">
+            <Path Data="{StaticResource Daynote.Geo.Settings}" HorizontalAlignment="Center" StrokeThickness="1.05" />
             <TextBlock Text="{Binding Strings[Settings]}" />
           </StackPanel>
         </Button>
