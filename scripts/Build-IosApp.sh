@@ -28,6 +28,39 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/src/Daynote.Mobile.iOS/Daynote.Mobile.iOS.csproj"
 
+# The shared projects' lock files, put back exactly as they were once this build is done.
+#
+# Not tidiness. An iOS build has to restore with a RID, and NuGet then records an
+# "iossimulator-arm64" (or "ios-arm64") target in the lock file of every project it pulls in. A
+# plain net10.0 project cannot declare that RID to match, because iOS runtime packs only resolve
+# under a net10.0-ios target — so the next `dotnet restore Daynote.sln --locked-mode`, which the
+# macOS and Windows workflows both run, fails with NU1004 on a file this build quietly edited.
+# Nothing downstream needs the iOS target recorded, so the build borrows the files and returns them.
+SHARED_LOCKS=(
+  "$ROOT/src/Daynote.Core/packages.lock.json"
+  "$ROOT/src/Daynote.Infrastructure/packages.lock.json"
+  "$ROOT/src/Daynote.Presentation/packages.lock.json"
+  "$ROOT/src/Daynote.Mobile/packages.lock.json"
+)
+LOCK_BACKUP="$(mktemp -d)"
+save_locks() {
+  local i=0
+  for lock in "${SHARED_LOCKS[@]}"; do
+    [[ -f "$lock" ]] && cp "$lock" "$LOCK_BACKUP/$i.json"
+    i=$((i + 1))
+  done
+}
+restore_locks() {
+  local i=0
+  for lock in "${SHARED_LOCKS[@]}"; do
+    [[ -f "$LOCK_BACKUP/$i.json" ]] && cp "$LOCK_BACKUP/$i.json" "$lock"
+    i=$((i + 1))
+  done
+  rm -rf "$LOCK_BACKUP"
+}
+trap restore_locks EXIT
+save_locks
+
 if [[ "$TARGET" == "simulator" ]]; then
   # The Simulator runs the host's architecture; arm64 on Apple silicon.
   RID="iossimulator-$(uname -m | sed 's/x86_64/x64/')"
