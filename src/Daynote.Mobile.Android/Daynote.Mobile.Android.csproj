@@ -33,6 +33,16 @@
     <TrimMode>partial</TrimMode>
     <AndroidPackageFormat>aab</AndroidPackageFormat>
     <!--
+      No lock file for this project, and that is the honest shape of it rather than a shortcut.
+      Its graph depends on two things that are not the same on two machines: the installed mobile
+      workload, which supplies Microsoft.NET.ILLink.Tasks at whatever version it happens to carry
+      (10.0.8 here, 10.0.11 on the runner), and the RID being built, which is iossimulator-arm64 on
+      an Apple silicon Mac and iossimulator-x64 elsewhere. A committed lock file pinned both and
+      then failed locked-mode restore for everyone who did not match. The projects it references
+      are all locked; only this head is not.
+    -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <!--
       Replaces the repo-wide RuntimeIdentifiers (Directory.Build.props), which exists only to keep
       the Windows MSIX publish from invalidating the lock files. A mobile build reads that list as
       "resolve a Mono runtime pack for each of these" and fails looking for a win-x64 Mono pack that

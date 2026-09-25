@@ -173,6 +173,25 @@ fails the first time a note syncs, so `TrimMode` is `partial`: only assemblies t
 breaks reflection here. The real fix is a `JsonSerializerContext` over those payloads, which is
 shared code the desktop also uses and so is its own change.
 
+### Why the heads are not in Daynote.sln, and carry no lock file
+
+Both follow from the same fact: a head's dependency graph is not the same on two machines.
+
+`Daynote.sln` holds `Daynote.Mobile` and its tests but not `Daynote.Mobile.Android` or
+`Daynote.Mobile.iOS`. The macOS and Windows workflows restore and build the whole solution and do
+not install the mobile workloads, so a head in the solution failed them outright with NETSDK1147.
+The mobile workflow restores the heads by path instead.
+
+Neither head has a `packages.lock.json`. The workload supplies `Microsoft.NET.ILLink.Tasks` at
+whatever version it happens to carry — 10.0.8 on one machine, 10.0.11 on a runner — and the RID
+differs too: `iossimulator-arm64` on an Apple silicon Mac, `iossimulator-x64` elsewhere. A committed
+lock file pinned both and then failed locked-mode restore for everyone who did not match. Every
+project the heads reference is still locked; only the heads are not.
+
+For the same reason `Build-IosApp.sh` puts the four shared lock files back after it runs: an iOS
+build has to restore with a RID, and NuGet writes that RID into each of them, which the next
+`dotnet restore Daynote.sln --locked-mode` rejects.
+
 ### And one the iOS Simulator needs
 
 **A clean build.** An incremental build into an existing `-o` directory leaves a bundle whose

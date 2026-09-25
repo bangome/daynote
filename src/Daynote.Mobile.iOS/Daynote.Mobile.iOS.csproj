@@ -18,6 +18,16 @@
     <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
     <!--
+      No lock file for this project, and that is the honest shape of it rather than a shortcut.
+      Its graph depends on two things that are not the same on two machines: the installed mobile
+      workload, which supplies Microsoft.NET.ILLink.Tasks at whatever version it happens to carry
+      (10.0.8 here, 10.0.11 on the runner), and the RID being built, which is iossimulator-arm64 on
+      an Apple silicon Mac and iossimulator-x64 elsewhere. A committed lock file pinned both and
+      then failed locked-mode restore for everyone who did not match. The projects it references
+      are all locked; only this head is not.
+    -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <!--
       Trimming off. It is not a size preference: Core and Infrastructure serialize the sync payloads,
       the auth DTOs and the backup manifest with reflection-based System.Text.Json, and the trimmer
       cannot see those types, so a trimmed build would compile and then fail at runtime the first

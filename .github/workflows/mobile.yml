@@ -67,10 +67,13 @@ jobs:
       - name: Install mobile workloads
         run: dotnet workload install android ios
 
-      - name: Restore (locked)
+      # Not --locked-mode, and the heads carry no lock file: their graph depends on the installed
+      # workload version and on the RID being built, neither of which matches between a developer's
+      # Mac and this runner. Everything they reference is still locked.
+      - name: Restore
         run: >
-          dotnet restore src/Daynote.Mobile.Android/Daynote.Mobile.Android.csproj --locked-mode &&
-          dotnet restore src/Daynote.Mobile.iOS/Daynote.Mobile.iOS.csproj --locked-mode
+          dotnet restore src/Daynote.Mobile.Android/Daynote.Mobile.Android.csproj &&
+          dotnet restore src/Daynote.Mobile.iOS/Daynote.Mobile.iOS.csproj
 
       # Debug-signed: a release upload needs the store credentials, which are not in CI.
       - name: Build Android (Release, unsigned .apk)
