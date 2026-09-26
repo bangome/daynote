@@ -171,6 +171,15 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         }
 
         Page = page;
+
+        // The settings page carries the account card, and the subscription rows on it are read from
+        // the service rather than stored. The desktop refreshes them when the account window opens;
+        // the phone has no such window, so arriving on the tab is the equivalent moment. Not awaited:
+        // it is one HTTP call whose only job is to replace a row of text.
+        if (page == MobilePage.Settings && Account is { IsSignedIn: true } account)
+        {
+            _ = account.RefreshBillingCommand.ExecuteAsync(null);
+        }
     }
 
     /// <summary>Opens a note full screen. Everything that navigates to a note ends here.</summary>

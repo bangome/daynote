@@ -73,6 +73,25 @@ public class MainActivity : AvaloniaMainActivity
     }
 
     /// <summary>
+    /// Ends a sign-in the user walked away from.
+    /// </summary>
+    /// <remarks>
+    /// Dismissing the Custom Tab - back gesture, swipe, the tab's own X - leaves no redirect
+    /// behind, so nothing else would ever resolve the wait and the account card sat with its
+    /// button greyed out until the app was killed. Coming back to this activity is the one signal
+    /// Android gives that the tab is gone.
+    ///
+    /// Safe to call after a successful sign-in too: the redirect arrives through
+    /// <c>OnNewIntent</c>, which runs before <c>OnResume</c> and has already taken the pending
+    /// completion, so there is nothing left here to abandon.
+    /// </remarks>
+    protected override void OnResume()
+    {
+        base.OnResume();
+        Platform.AndroidAuthSession.Abandon();
+    }
+
+    /// <summary>
     /// Backgrounding is the last moment an Android app is guaranteed to run, so the open note is
     /// flushed here rather than in <c>OnDestroy</c>, which may never be called.
     /// </summary>

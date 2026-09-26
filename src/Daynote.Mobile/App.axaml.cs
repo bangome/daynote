@@ -68,9 +68,29 @@ public partial class App : Application
         view.DataContext = _shell;
         singleView.MainView = view;
 
-        _ = _shell.InitializeAsync();
+        _ = StartAsync(_shell);
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Loads the day's notes, then reads back the stored sign-in.
+    /// </summary>
+    /// <remarks>
+    /// The account read comes second on purpose, and it is the same order the desktop start-up uses:
+    /// it touches the keystore and the settings row, and a note is worth showing before either. It is
+    /// not optional, though - without it a signed-in user relaunching the app sees the sign-in button
+    /// again, because nothing else ever reads the session back off disk. Sync itself still waits for
+    /// the user to ask, so a launch never depends on the network.
+    /// </remarks>
+    private static async Task StartAsync(MobileShellViewModel shell)
+    {
+        await shell.InitializeAsync().ConfigureAwait(true);
+
+        if (shell.Account is { } account)
+        {
+            await account.InitializeAsync().ConfigureAwait(true);
+        }
     }
 
     /// <summary>

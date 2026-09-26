@@ -48,6 +48,7 @@ public sealed class MobileGoogleIdentityProvider : IIdentityProvider
 
     private readonly string _clientId;
     private readonly string _redirectUri;
+    private readonly OAuthClientKind _client;
     private readonly AuthenticationSession _session;
 
     /// <param name="clientId">The iOS or Android OAuth client id for this build.</param>
@@ -56,12 +57,18 @@ public sealed class MobileGoogleIdentityProvider : IIdentityProvider
     /// reversed client id as the scheme, e.g.
     /// <c>com.googleusercontent.apps.123-abc:/oauth2redirect</c>.
     /// </param>
-    public MobileGoogleIdentityProvider(string clientId, string redirectUri, AuthenticationSession session)
+    /// <param name="client">
+    /// Which OAuth client this build signs in with. It travels to the Worker with the code, because
+    /// Google issued the code to one client and refuses to exchange it against another.
+    /// </param>
+    public MobileGoogleIdentityProvider(
+        string clientId, string redirectUri, OAuthClientKind client, AuthenticationSession session)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
         ArgumentException.ThrowIfNullOrWhiteSpace(redirectUri);
         _clientId = clientId;
         _redirectUri = redirectUri;
+        _client = client;
         _session = session ?? throw new ArgumentNullException(nameof(session));
     }
 
@@ -131,7 +138,7 @@ public sealed class MobileGoogleIdentityProvider : IIdentityProvider
             throw new AccountException(AccountFailure.ServerError, "Google returned no authorization code.");
         }
 
-        return new IdentityGrant(code, verifier, _redirectUri);
+        return new IdentityGrant(code, verifier, _redirectUri, _client);
     }
 
     private static string CreateVerifier() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));

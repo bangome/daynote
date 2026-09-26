@@ -61,32 +61,77 @@ which on a phone is the last moment either OS guarantees the process runs.
 
 ## Sign-in: what still has to be set up
 
-**This is the one thing that is written but not yet live.** `GoogleAndroidClientId` and
-`GoogleIosClientId` are both empty strings today, and while they are, `MobileSyncRegistration`
-registers no account at all — the app runs local-only rather than showing a sign-in button that
-cannot work.
+**Everything is in place except the two client ids.** `GoogleAndroidClientId` and
+`GoogleIosClientId` are empty strings, and while they are, `MobileSyncRegistration` registers no
+account at all — the app runs local-only rather than showing a sign-in button that cannot work.
+Filling them in is the whole remaining step.
 
-Three things have to happen, in this order:
+There is no way to automate the first step: Google offers **no API for iOS and Android OAuth
+clients**, and the only programmatic path it does offer issues web clients for IAP. So the console
+step is by hand, and everything after it is one script.
 
 1. **Two new OAuth clients in the Google console**, in the same project as the existing desktop
    client. Google binds a mobile client to the app's identity and rejects a call that mixes them up,
    so the desktop client id in `DaynoteAppOptions` cannot be reused.
-   - *iOS*: bundle id `cc.arachat.daynote`.
-   - *Android*: package name `cc.arachat.daynote`, plus the SHA-1 of the signing certificate —
-     both the upload key and, once Play re-signs, the Play app-signing key.
+
+   | | value |
+   | --- | --- |
+   | iOS bundle id | `cc.arachat.daynote` |
+   | Android package name | `cc.arachat.daynote` |
+   | Android SHA-1, debug | `BF:2D:90:66:F7:13:5C:8A:93:68:E2:58:E4:08:FC:89:AA:60:74:52` |
+
+   **That fingerprint is not Android Studio's.** The .NET Android SDK keeps its own debug
+   keystore, and an unsigned build gets that one - `~/.android/debug.keystore` is never consulted.
+   Registering the Studio key instead produces a client that looks correct and refuses every
+   sign-in, because Google checks the certificate the APK was actually signed with. Read the right
+   one from the artifact rather than from a keystore path:
+
+   ```
+   JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+     $ANDROID_HOME/build-tools/*/apksigner verify --print-certs \
+     dist/android/cc.arachat.daynote-Signed.apk
+   ```
+
+   `keytool -printcert -jarfile` does not work here: it only understands the v1 JAR signature and
+   an APK signed with scheme v2/v3 comes back as "not a signed jar file".
+
+   This is a debug key and is only good for local runs. A release build is signed with the
+   `DAYNOTE_ANDROID_*` keystore, and its SHA-1 - plus, once Play re-signs, the Play app-signing
+   key's - has to be registered too before sign-in works outside this machine.
+
    Neither client type has a client secret, so, as on the desktop, nothing secret ships in the app.
 
-2. **Paste each id into its head**: `AndroidPlatformServices.GoogleAndroidClientId` and
-   `IosPlatformServices.GoogleIosClientId`. The redirect scheme is already wired — `AndroidManifest`
-   routes it through `AuthCallbackActivity`, and `Info.plist` declares it under `CFBundleURLTypes`.
-   If Google issues a reversed-client-id scheme instead of the bundle id, change `Scheme` in
-   `AuthCallbackActivity` and the matching `CFBundleURLSchemes` entry to match.
+2. **Run the script** with whichever ids you got:
 
-3. **The Worker has to accept the new client ids.** `cloud/worker` exchanges the authorization code
-   today using the desktop client id and its secret. A code issued to the iOS or Android client must
-   be exchanged against *that* client id and with no secret, so the exchange needs to pick the client
-   by which one issued the code. Until that ships, sign-in from a phone will fail at the exchange
-   even with the ids filled in.
+   ```
+   scripts/Set-GoogleOAuthClients.sh --ios <id> --android <id>
+   ```
+
+   It writes all four places that have to agree: the constant in each head, the `CFBundleURLSchemes`
+   entry in `Info.plist`, and `GOOGLE_IOS_CLIENT_ID` / `GOOGLE_ANDROID_CLIENT_ID` in
+   `cloud/worker/wrangler.toml`. Passing `""` clears one and puts that platform back to local-only.
+
+   The iOS redirect scheme is **not** the bundle id. An iOS client redirects to the *reversed client
+   id* — `com.googleusercontent.apps.NNN-xyz` — and Google has deprecated the bundle-id form.
+   `IosPlatformServices.CallbackScheme` derives it from the id so the two cannot drift, and the
+   script writes the matching `Info.plist` entry. Android is different again and needs no scheme
+   registered: a client there is identified by package name and certificate fingerprint, and
+   redirects to the package-name scheme `AndroidManifest.xml` already routes through
+   `AuthCallbackActivity`.
+
+3. **Deploy and rebuild**: `npx wrangler deploy` in `cloud/worker`, then the head that changed. The
+   Worker reads the ids from `wrangler.toml`, so it needs the deploy before a phone can sign in.
+
+The Worker side is done. It takes a `client` field of `desktop`, `ios` or `android` on
+`/v1/auth/google`, exchanges the code against that client, sends the secret only for the desktop one,
+and checks the redirect against the shape that client can own — a loopback port for the desktop, a
+private URI scheme for a phone. A platform with no id configured is refused with a message the app
+can show rather than a 500. Covered by seven tests in `cloud/worker/test/auth.test.ts`.
+
+**What was verified without a real client.** A build with a made-up id opens Chrome Custom Tabs on
+`accounts.google.com` and gets back `401 invalid_client` — which is exactly what that id deserves,
+and means the authorize URL, PKCE, the custom scheme and the tab are all correct. Everything up to
+Google works; only the client itself is missing.
 
 The flow itself is the sanctioned one on both platforms: PKCE plus a private-URI redirect (RFC 8252
 §7.1), run in Custom Tabs on Android and `ASWebAuthenticationSession` on iOS. Not a web view —

@@ -18,10 +18,28 @@ public static class IosPlatformServices
     /// so the app runs local-only rather than showing a button that cannot work. The console steps,
     /// and the Worker change that has to accompany them, are in docs/MOBILE_PORT.md.
     /// </remarks>
-    public const string GoogleIosClientId = "";
+    public const string GoogleIosClientId = "298036592294-21i9l31vhlihpfi6898b8inc0045nnhh.apps.googleusercontent.com";
 
-    /// <summary>The scheme declared in Info.plist under CFBundleURLTypes. The two must agree.</summary>
-    private const string CallbackScheme = "cc.arachat.daynote";
+    /// <summary>
+    /// The scheme Google redirects back to, derived from the client id rather than written down.
+    /// </summary>
+    /// <remarks>
+    /// An iOS OAuth client accepts a redirect on the "reversed client id": the id with its
+    /// dot-separated parts in the opposite order, which for
+    /// <c>NNN-xyz.apps.googleusercontent.com</c> is <c>com.googleusercontent.apps.NNN-xyz</c>. It
+    /// used to also accept a scheme equal to the bundle id, which is what this file hardcoded, and
+    /// Google has deprecated that form - so the bundle-id scheme was going to come back as a
+    /// redirect_uri_mismatch the first time a real client id was pasted in.
+    ///
+    /// Deriving it means the scheme cannot drift from the id. The same string has to appear in
+    /// Info.plist under CFBundleURLSchemes, because iOS reads that statically before any of this
+    /// runs; scripts/Set-GoogleOAuthClients.sh writes both from one argument.
+    /// </remarks>
+    private static string CallbackScheme => ReverseClientId(GoogleIosClientId);
+
+    /// <summary>Turns <c>NNN-xyz.apps.googleusercontent.com</c> into a URL scheme.</summary>
+    internal static string ReverseClientId(string clientId) =>
+        string.Join('.', clientId.Split('.').Reverse());
 
     public static MobilePlatformServices Create() =>
         new(
@@ -63,6 +81,7 @@ public static class IosPlatformServices
             : new MobileGoogleIdentityProvider(
                 GoogleIosClientId,
                 $"{CallbackScheme}:/oauth2redirect",
+                Daynote.Core.Sync.OAuthClientKind.Ios,
                 (url, scheme, token) => new IosAuthSession().StartAsync(url, scheme, token));
 
     private static void OpenExternal(string target)

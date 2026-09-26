@@ -531,6 +531,10 @@ internal static class EnglishStrings
         ["SegmentTags"] = "Tags",
         // The desktop says "Stored on this PC only", which is wrong on a phone.
         ["AccountBarLocalMobile"] = "Stored on this device only",
+        // The account card on a phone. The desktop copy says "PC" and names a laptop and a desktop,
+        // which is the wrong half of the sentence to read on the device you are holding.
+        ["AccountSignInLeadMobile"] = "Your notes stay on this device either way. Signing in is only for seeing the same notes on your phone and your computer.",
+        ["AccountPerkSyncDescMobile"] = "The same notes on your phone and your computer",
         ["Back"] = "Back",
         ["PreviousDay"] = "Previous day",
         ["NextDay"] = "Next day",

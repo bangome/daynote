@@ -521,6 +521,10 @@ internal static class KoreanStrings
         ["SegmentTags"] = "태그",
         // The desktop says "이 PC에만 저장", which is wrong on a phone.
         ["AccountBarLocalMobile"] = "이 기기에만 저장",
+        // The account card on a phone. The desktop copy says "PC" and names a laptop and a desktop,
+        // which is the wrong half of the sentence to read on the device you are holding.
+        ["AccountSignInLeadMobile"] = "노트는 이 기기에 그대로 저장됩니다. 로그인은 폰과 PC에서 같은 노트를 보고 싶을 때만 필요합니다.",
+        ["AccountPerkSyncDescMobile"] = "폰과 PC에서 같은 노트를",
         ["Back"] = "뒤로",
         ["PreviousDay"] = "전날",
         ["NextDay"] = "다음날",

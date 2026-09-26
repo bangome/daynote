@@ -18,7 +18,7 @@ public static class AndroidPlatformServices
     /// so the app runs local-only rather than showing a button that cannot work. The console steps,
     /// and the Worker change that has to accompany them, are in docs/MOBILE_PORT.md.
     /// </remarks>
-    public const string GoogleAndroidClientId = "";
+    public const string GoogleAndroidClientId = "298036592294-n5uff4qakgibac545udo1jthfqonvku2.apps.googleusercontent.com";
 
     /// <param name="context">The application context, which outlives every activity.</param>
     /// <param name="currentActivity">
@@ -62,6 +62,7 @@ public static class AndroidPlatformServices
             : new MobileGoogleIdentityProvider(
                 GoogleAndroidClientId,
                 $"{AuthCallbackActivity.Scheme}:/oauth2redirect",
+                Daynote.Core.Sync.OAuthClientKind.Android,
                 (url, scheme, token) => currentActivity() is { } activity
                     ? AndroidAuthSession.StartAsync(activity, url, scheme, token)
                     : Task.FromResult<Uri?>(null));

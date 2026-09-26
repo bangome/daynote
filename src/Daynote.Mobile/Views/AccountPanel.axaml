@@ -15,11 +15,11 @@
 
     <!-- Signed out -->
     <StackPanel Spacing="12" IsVisible="{Binding IsSignedOut}">
-      <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountSignInLead]}" />
+      <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountSignInLeadMobile]}" />
       <StackPanel Spacing="10">
         <StackPanel Spacing="1">
           <TextBlock Text="{Binding #Root.Strings[AccountPerkSyncTitle]}" FontWeight="SemiBold" FontSize="13" />
-          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDesc]}" FontSize="12" />
+          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDescMobile]}" FontSize="12" />
         </StackPanel>
         <StackPanel Spacing="1">
           <TextBlock Text="{Binding #Root.Strings[AccountPerkLockTitle]}" FontWeight="SemiBold" FontSize="13" />

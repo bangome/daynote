@@ -40,7 +40,7 @@
     <dict>
       <key>CFBundleURLName</key><string>cc.arachat.daynote.oauth</string>
       <key>CFBundleURLSchemes</key>
-      <array><string>cc.arachat.daynote</string></array>
+      <array><string>com.googleusercontent.apps.298036592294-21i9l31vhlihpfi6898b8inc0045nnhh</string></array>
     </dict>
   </array>
   <!--
