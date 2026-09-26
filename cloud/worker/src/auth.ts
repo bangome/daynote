@@ -12,6 +12,7 @@ import {
   deviceName,
   requireKdfParams,
   requireRawDek,
+  requireClient,
   requireRedirectUri,
   requireString,
   requireWrappedDek,
@@ -186,14 +187,15 @@ export async function google(request: Request, env: Env, now: Date): Promise<Res
   const body = await readJsonObject(request);
   const code = requireString(body, 'code');
   const codeVerifier = requireString(body, 'code_verifier');
-  const redirectUri = requireRedirectUri(body);
+  const client = requireClient(body);
+  const redirectUri = requireRedirectUri(body, client);
   const device = deviceName(body);
 
   // Counted before the exchange, so a flood of junk codes costs the sender its slots rather than
   // costing us a request to Google each time.
   await enforce(env, SIGNIN_LIMITS(clientIp(request)), now);
 
-  const identity = await identify(env, code, codeVerifier, redirectUri);
+  const identity = await identify(env, code, codeVerifier, redirectUri, client);
   const user = await upsertUser(env, identity.subject, identity.email, now);
 
   return json(await sessionPayload(env, user, device, now, true));

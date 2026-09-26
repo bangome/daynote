@@ -56,7 +56,8 @@ public sealed partial class AccountService
                 grant.AuthorizationCode,
                 grant.CodeVerifier,
                 grant.RedirectUri,
-                deviceName()),
+                deviceName(),
+                grant.Client),
             cancellationToken).ConfigureAwait(false);
 
         if (session.Keys is not { } material)

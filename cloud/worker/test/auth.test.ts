@@ -8,6 +8,9 @@ import {
   signIn,
   signInAgain,
   stubGoogle,
+  MOBILE_REDIRECT_URI,
+  recordGoogleClient,
+  unstubGoogle,
 } from './helpers';
 
 beforeEach(resetDatabase);
@@ -208,6 +211,118 @@ describe('routing', () => {
       '/v1/auth/reset/request', '/v1/auth/reset/confirm', '/v1/auth/rewrap']) {
       const response = await post(path, {});
       expect(response.status, path).toBe(404);
+    }
+  });
+});
+
+describe('signing in from a phone', () => {
+  it('exchanges the code against that platform’s own OAuth client', async () => {
+    const recorded = recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-ios',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: MOBILE_REDIRECT_URI,
+      client: 'ios',
+      device_name: 'iPhone',
+    });
+
+    expect(response.status).toBe(200);
+    expect(recorded.seen).toEqual(['ios']);
+    expect(response.body.email).toBe('ios@example.test');
+  });
+
+  it('accepts the app’s private scheme as the redirect', async () => {
+    recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-android',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: MOBILE_REDIRECT_URI,
+      client: 'android',
+      device_name: 'Pixel',
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  // The shapes are checked per client so a caller cannot nominate a redirect the app it claims to
+  // be could never have received the code on.
+  it('refuses a loopback redirect from a phone', async () => {
+    recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-1',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: REDIRECT_URI,
+      client: 'ios',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/own URI scheme/);
+  });
+
+  it('refuses a private scheme from the desktop app', async () => {
+    recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-1',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: MOBILE_REDIRECT_URI,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/loopback/);
+  });
+
+  it('refuses an https redirect dressed up as a private scheme', async () => {
+    recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-1',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: 'https://evil.example/oauth2redirect',
+      client: 'android',
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects a client name it does not know', async () => {
+    recordGoogleClient();
+
+    const response = await post('/v1/auth/google', {
+      code: 'code-1',
+      code_verifier: 'a'.repeat(43),
+      redirect_uri: MOBILE_REDIRECT_URI,
+      client: 'web',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/desktop, ios or android/);
+  });
+
+  // A platform whose client id has not been set has to read as a refusal the phone can show
+  // rather than a 500. The id is cleared on env for the one call instead of leaning on
+  // wrangler.toml still being blank: it is not blank any more, and a test that passes only until
+  // someone fills in a config value is a test that was measuring the config, not the code.
+  it('says so plainly when that platform has no client configured', async () => {
+    unstubGoogle();
+
+    const configured = env.GOOGLE_IOS_CLIENT_ID;
+    (env as { GOOGLE_IOS_CLIENT_ID?: string }).GOOGLE_IOS_CLIENT_ID = '';
+    try {
+      const response = await post('/v1/auth/google', {
+        code: 'code-1',
+        code_verifier: 'a'.repeat(43),
+        redirect_uri: MOBILE_REDIRECT_URI,
+        client: 'ios',
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not configured on this server yet/);
+    } finally {
+      (env as { GOOGLE_IOS_CLIENT_ID?: string }).GOOGLE_IOS_CLIENT_ID = configured;
     }
   });
 });

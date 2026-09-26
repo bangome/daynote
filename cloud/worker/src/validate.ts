@@ -1,3 +1,4 @@
+import type { OAuthClient } from './google';
 import { fromBase64Url } from './bytes';
 import { ApiError } from './http';
 
@@ -40,7 +41,35 @@ export function requireString(body: Record<string, unknown>, field: string): str
  * Accepting any URL here would let a caller point the exchange at a host of its choosing, and the
  * value is passed straight to Google.
  */
-export function requireRedirectUri(body: Record<string, unknown>): string {
+/**
+ * Which app is signing in. Absent means the desktop one, which is the only client that existed
+ * before the phones and the only one whose requests will not carry the field.
+ */
+export function requireClient(body: Record<string, unknown>): OAuthClient {
+  const value = body['client'];
+  if (value === undefined || value === null) {
+    return 'desktop';
+  }
+  if (value === 'desktop' || value === 'ios' || value === 'android') {
+    return value;
+  }
+  throw new ApiError('bad_request', "Field 'client' must be desktop, ios or android.");
+}
+
+/**
+ * The address Google was told to send the code back to, checked against the shape that client can
+ * actually own.
+ *
+ * The desktop app listens on a loopback port, so only an `http://127.0.0.1` style address makes
+ * sense for it. A phone cannot hold a listening socket the system browser can reach, so it
+ * registers a private scheme with the OS and Google redirects to that instead (RFC 8252 §7.1). The
+ * check is per client because accepting either shape for either app would let a caller nominate a
+ * redirect the app it claims to be could never have received.
+ *
+ * It is a shape check, not an allow-list: Google already refuses a redirect the client is not
+ * registered with, so this only turns a confusing failure at Google into a clear one here.
+ */
+export function requireRedirectUri(body: Record<string, unknown>, client: OAuthClient): string {
   const value = requireString(body, 'redirect_uri');
 
   let parsed: URL;
@@ -50,13 +79,26 @@ export function requireRedirectUri(body: Record<string, unknown>): string {
     throw new ApiError('bad_request', "Field 'redirect_uri' is not a URL.");
   }
 
-  const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]' ||
-    parsed.hostname === 'localhost';
-  if (parsed.protocol !== 'http:' || !loopback) {
-    throw new ApiError('bad_request', "Field 'redirect_uri' must be an http loopback address.");
+  if (client === 'desktop') {
+    const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]' ||
+      parsed.hostname === 'localhost';
+    if (parsed.protocol !== 'http:' || !loopback) {
+      throw new ApiError('bad_request', "Field 'redirect_uri' must be an http loopback address.");
+    }
+    return value;
+  }
+
+  // A private-use scheme: at least one dot, as Google requires, and nothing that could be http(s)
+  // or a scheme-relative URL pointing somewhere on the web.
+  const scheme = parsed.protocol.slice(0, -1);
+  if (!PRIVATE_SCHEME.test(scheme)) {
+    throw new ApiError('bad_request', "Field 'redirect_uri' must use the app's own URI scheme.");
   }
   return value;
 }
+
+/** A reversed-domain scheme, which is the only kind Google issues to an installed app. */
+const PRIVATE_SCHEME = /^[a-z][a-z0-9+.-]*\.[a-z0-9+.-]+$/;
 
 export function requireWrappedDek(body: Record<string, unknown>, field: string): string {
   const value = requireString(body, field);

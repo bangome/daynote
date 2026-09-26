@@ -1,4 +1,4 @@
-import type { GoogleIdentity } from './google';
+import type { GoogleIdentity, OAuthClient } from './google';
 
 export interface Env {
   /** The D1 binding declared in wrangler.toml. */
@@ -38,6 +38,20 @@ export interface Env {
    */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+
+  /**
+   * The Google OAuth clients for the phone apps, one per platform.
+   *
+   * Separate clients because Google binds an installed-app client to the app's identity — the
+   * bundle id on iOS, the package name and signing certificate on Android — and refuses a code
+   * exchanged against a client it was not issued for. Neither has a secret: Google does not issue
+   * one for these types, and PKCE is what binds the code to the attempt instead.
+   *
+   * Absent means that platform cannot sign in, which is the state the app ships in until the
+   * clients exist; see docs/MOBILE_PORT.md.
+   */
+  GOOGLE_IOS_CLIENT_ID?: string;
+  GOOGLE_ANDROID_CLIENT_ID?: string;
 
   /**
    * Paddle, the merchant of record for subscriptions (docs/CLOUD_SYNC.md §14). The webhook secret
@@ -82,6 +96,7 @@ export interface Env {
     code: string,
     codeVerifier: string,
     redirectUri: string,
+    client: OAuthClient,
   ) => Promise<GoogleIdentity>;
 }
 

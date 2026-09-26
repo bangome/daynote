@@ -2,23 +2,68 @@ import { ApiError } from './http';
 import type { Env } from './env';
 
 /**
- * Google sign-in: the authorization-code half of the desktop OAuth flow.
+ * Google sign-in: the authorization-code half of the OAuth flow, for every app Daynote ships.
  *
- * The app opens the system browser, receives the code on a loopback redirect, and posts it here with
- * its PKCE verifier. The code-for-token exchange happens in the Worker, not in the app, because it
- * needs the OAuth client secret: Google documents the secret of an "installed app" client as not
+ * The app opens the browser, receives the code on a redirect it owns, and posts it here with its
+ * PKCE verifier. The exchange happens in the Worker rather than in the app because the desktop
+ * client has a secret: Google documents the secret of an "installed app" client as not
  * confidential, but a value shipped inside a WPF binary can be lifted out of it with a hex editor,
  * and there is no reason to publish one when the Worker can hold it.
  *
- * PKCE is still used even though the exchange is server-side. It binds the code to the browser
- * session that started the flow, which is what stops a code intercepted on the loopback redirect
- * from being redeemed by anything else on the machine.
+ * The phone clients have no secret at all — Google does not issue one for the iOS or Android client
+ * types — so for those the exchange carries the client id alone. That is not a weaker flow: PKCE is
+ * what binds the code to the attempt either way, and it is the reason the desktop redirect (a
+ * loopback port any local process could have listened on) and the phone redirect (a custom scheme
+ * another app could have registered) are both safe to use.
+ *
+ * Which client a code belongs to is decided by the caller, and a wrong answer cannot be turned into
+ * an attack: Google issued the code to one client and refuses to exchange it against another.
  */
 
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 
 /** What the Worker needs about the person who just signed in. */
+/** Which of Daynote's OAuth clients a sign-in belongs to. */
+export type OAuthClient = 'desktop' | 'ios' | 'android';
+
+/** The client's id, and its secret where Google issues one. */
+interface ClientCredentials {
+  readonly id: string;
+  readonly secret?: string;
+}
+
+/**
+ * Picks the credentials for one client, failing loudly when that platform is not configured.
+ *
+ * A missing phone client id is a deployment state rather than a bug — the app ships with sign-in
+ * switched off until the clients exist — so it reads as a refusal the caller can show, not a 500.
+ */
+function credentialsFor(env: Env, client: OAuthClient): ClientCredentials {
+  if (client === 'desktop') {
+    const id = env.GOOGLE_CLIENT_ID;
+    const secret = env.GOOGLE_CLIENT_SECRET;
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new Error('GOOGLE_CLIENT_ID is not configured; see cloud/worker/DEPLOY.md.');
+    }
+    if (typeof secret !== 'string' || secret.length === 0) {
+      throw new Error('GOOGLE_CLIENT_SECRET is not set. Run: wrangler secret put GOOGLE_CLIENT_SECRET');
+    }
+    return { id, secret };
+  }
+
+  const id = client === 'ios' ? env.GOOGLE_IOS_CLIENT_ID : env.GOOGLE_ANDROID_CLIENT_ID;
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new ApiError(
+      'bad_request',
+      `Signing in from ${client} is not configured on this server yet.`,
+    );
+  }
+
+  // No secret: Google issues none for these client types.
+  return { id };
+}
+
 export interface GoogleIdentity {
   /** The `sub` claim: Google's stable, never-reused account id. */
   readonly subject: string;
@@ -101,31 +146,29 @@ export async function identify(
   code: string,
   codeVerifier: string,
   redirectUri: string,
+  client: OAuthClient = 'desktop',
 ): Promise<GoogleIdentity> {
   if (env.GOOGLE_EXCHANGE !== undefined) {
-    return env.GOOGLE_EXCHANGE(code, codeVerifier, redirectUri);
+    return env.GOOGLE_EXCHANGE(code, codeVerifier, redirectUri, client);
   }
 
-  const clientId = env.GOOGLE_CLIENT_ID;
-  const clientSecret = env.GOOGLE_CLIENT_SECRET;
-  if (typeof clientId !== 'string' || clientId.length === 0) {
-    throw new Error('GOOGLE_CLIENT_ID is not configured; see cloud/worker/DEPLOY.md.');
-  }
-  if (typeof clientSecret !== 'string' || clientSecret.length === 0) {
-    throw new Error('GOOGLE_CLIENT_SECRET is not set. Run: wrangler secret put GOOGLE_CLIENT_SECRET');
+  const { id: clientId, secret } = credentialsFor(env, client);
+
+  const form = new URLSearchParams({
+    code,
+    client_id: clientId,
+    code_verifier: codeVerifier,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code',
+  });
+  if (secret !== undefined) {
+    form.set('client_secret', secret);
   }
 
   const response = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      code_verifier: codeVerifier,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
+    body: form,
   });
 
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;

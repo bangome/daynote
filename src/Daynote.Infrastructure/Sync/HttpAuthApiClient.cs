@@ -43,6 +43,14 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                         code_verifier = request.CodeVerifier,
                         redirect_uri = request.RedirectUri,
                         device_name = request.DeviceName,
+                        // Omitted for the desktop apps, whose requests predate the field and whom
+                        // the Worker still reads as "desktop" when it is absent.
+                        client = request.Client switch
+                        {
+                            OAuthClientKind.Ios => "ios",
+                            OAuthClientKind.Android => "android",
+                            _ => null,
+                        },
                     },
                     options: Json),
             },

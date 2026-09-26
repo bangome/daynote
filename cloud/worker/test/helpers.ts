@@ -132,6 +132,29 @@ export function stubGoogle(codes: Record<string, { subject: string; email: strin
   };
 }
 
+/** The client each stubbed exchange was asked for, so a test can assert the routing. */
+export function recordGoogleClient(): { readonly seen: string[] } {
+  const seen: string[] = [];
+  (env as { GOOGLE_EXCHANGE?: unknown }).GOOGLE_EXCHANGE = async (
+    _code: string,
+    _verifier: string,
+    _redirect: string,
+    client: string,
+  ) => {
+    seen.push(client);
+    return { subject: `sub-${client}`, email: `${client}@example.test` };
+  };
+  return { seen };
+}
+
+/** Removes the stub so a test can reach the real credential lookup. */
+export function unstubGoogle(): void {
+  delete (env as { GOOGLE_EXCHANGE?: unknown }).GOOGLE_EXCHANGE;
+}
+
+/** The redirect a phone app receives its code on: its own private scheme (RFC 8252 §7.1). */
+export const MOBILE_REDIRECT_URI = 'cc.arachat.daynote:/oauth2redirect';
+
 /** A structurally valid `v1.<12-byte nonce>.<48-byte ct+tag>` envelope. Opaque to the server. */
 export function fakeWrappedDek(): string {
   const nonce = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));

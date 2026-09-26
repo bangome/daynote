@@ -50,6 +50,13 @@ ACCESS_TOKEN_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "60"
 GOOGLE_CLIENT_ID = "298036592294-mp11166n940ojbq4js3u5233ruvkk2ic.apps.googleusercontent.com"
 
+# The phone clients, from the same Google project. Empty until they exist, and while one is empty
+# that platform's sign-in is refused with a message rather than failing somewhere inside Google.
+# Neither has a secret to set: Google issues none for the iOS or Android client type, and PKCE is
+# what binds the code to the attempt. See docs/MOBILE_PORT.md.
+GOOGLE_IOS_CLIENT_ID = "298036592294-21i9l31vhlihpfi6898b8inc0045nnhh.apps.googleusercontent.com"
+GOOGLE_ANDROID_CLIENT_ID = "298036592294-n5uff4qakgibac545udo1jthfqonvku2.apps.googleusercontent.com"
+
 # The two prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"). Public,
 # so vars. Monthly ₩2,900 / $2.49, annual ₩24,000 / $19.99; the site's pricing page and the Store
 # listing state the same numbers. The app picks one and POSTs {"plan": "monthly" | "annual"}.

@@ -9,7 +9,25 @@ namespace Daynote.Core.Sync;
 /// verifier travels with the code so the Worker can prove the exchange belongs to the browser
 /// session that started it. See docs/CLOUD_SYNC.md §4.
 /// </remarks>
-public sealed record IdentityGrant(string AuthorizationCode, string CodeVerifier, string RedirectUri);
+/// <summary>Which of Daynote's OAuth clients a sign-in was started with.</summary>
+/// <remarks>
+/// The Worker exchanges the code against this client, because Google issued it to one client and
+/// refuses it for any other. The desktop apps leave it at its default; the phone heads set it,
+/// since Google binds an installed-app client to the bundle id or the package name and will not
+/// take a phone's code on the desktop client's behalf.
+/// </remarks>
+public enum OAuthClientKind
+{
+    Desktop,
+    Ios,
+    Android,
+}
+
+public sealed record IdentityGrant(
+    string AuthorizationCode,
+    string CodeVerifier,
+    string RedirectUri,
+    OAuthClientKind Client = OAuthClientKind.Desktop);
 
 /// <summary>
 /// Runs the interactive sign-in for one identity provider. Google today; the shape is deliberately
@@ -29,7 +47,8 @@ public sealed record GoogleSignInRequest(
     string AuthorizationCode,
     string CodeVerifier,
     string RedirectUri,
-    string DeviceName);
+    string DeviceName,
+    OAuthClientKind Client = OAuthClientKind.Desktop);
 
 /// <summary>Which custody an account's data key is in (docs/CLOUD_SYNC.md §4.1b).</summary>
 public enum KeyProtection
