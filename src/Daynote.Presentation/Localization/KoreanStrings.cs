@@ -505,11 +505,15 @@ internal static class KoreanStrings
         ["AccountPrivacyUrl"] = "/privacy",
 
         // ── Mobile ───────────────────────────────────────────────────────────────────────────────
-        // The phone's bottom bar and the two controls that only exist where there is no keyboard.
-        // Short on purpose: a tab label has about four characters before it is trimmed.
-        ["TabDay"] = "날짜",
+        // The phone's bottom bar. Short on purpose: a tab label has about four characters before
+        // it is trimmed. The first tab reuses "Today", which is the action it performs.
         ["TabSearch"] = "검색",
         ["TabLists"] = "목록",
+        // The floating helpers over the note body: they type the syntax a thumb would otherwise
+        // have to hunt for two keyboard layers down.
+        ["InsertTodo"] = "할 일",
+        ["InsertDate"] = "날짜",
+        ["InsertTime"] = "시각",
         // The segmented control on the Lists page. The desktop's TabTodoName and friends end in
         // "탭" because there they name a tab in a tooltip; as segment labels they read as noise.
         ["SegmentTodo"] = "할 일",
@@ -520,8 +524,6 @@ internal static class KoreanStrings
         ["Back"] = "뒤로",
         ["PreviousDay"] = "전날",
         ["NextDay"] = "다음날",
-        ["PreviousMonth"] = "이전 달",
-        ["NextMonth"] = "다음 달",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",

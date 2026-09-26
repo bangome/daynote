@@ -285,4 +285,105 @@
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Overdue}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+
+  <!--
+    The note title in the editor header, as a button that does not look like one: tapping it starts
+    a rename, and the box that replaces it sits at the same size on the same baseline so the header
+    does not jump on every tap.
+  -->
+  <Style Selector="Button.titletap">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="TextBox.titleedit">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!--
+    The floating helper bar over the note body. A card rather than a toolbar strip: it sits on top
+    of the text, so it needs a ground and an edge of its own or it reads as three stray words.
+  -->
+  <Style Selector="Border.floatbar">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Pill}" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="BoxShadow" Value="0 3 12 0 #26000000" />
+  </Style>
+  <Style Selector="Button.floataction">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Pill}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.floataction:pressed">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.AccentSoft}" />
+  </Style>
+
+  <!--
+    The month header, as a button that still reads as a heading. Centred content, no fill: the
+    chevron beside the label is what says it opens something.
+  -->
+  <Style Selector="Button.monthtap">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="MinHeight" Value="44" />
+    <!-- Stretch, so the whole width between the two arrows opens the picker. Left to itself the
+         button would hug the label and leave most of the header dead to a tap. -->
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!--
+    A sheet over the page, and the scrim that dismisses it. The scrim is a button rather than a
+    Border with a handler so it takes the tap, keeps the keyboard focus rules, and is reachable to
+    a screen reader as the way out.
+  -->
+  <Style Selector="Button.scrim">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Scrim.Modal}" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.sheet">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Daynote.Product.Radius.Panel}" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="BoxShadow" Value="0 8 28 0 #33000000" />
+  </Style>
+
+  <!--
+    Twelve of these to a sheet. Stretch and centre are both load-bearing: a button left to itself
+    shrinks to the width of its own word and sits at the left of its column, so "Jan", "Feb" and
+    "Sep" came out three different sizes in three different places inside an even grid.
+  -->
+  <Style Selector="Button.monthcell">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.monthcell.current">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnAccent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
 </Styles>

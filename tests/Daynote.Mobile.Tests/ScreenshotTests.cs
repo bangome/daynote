@@ -49,6 +49,12 @@ public sealed class ScreenshotTests
             shell.Page = MobilePage.Day;
             shell.IsEditorOpen = true;
             Capture(view, $"editor-{variantName}".ToLowerInvariant());
+
+            // And the month picker, for the same reason.
+            shell.IsEditorOpen = false;
+            shell.OpenMonthPickerCommand.Execute(null);
+            Capture(view, $"monthpicker-{variantName}".ToLowerInvariant());
+            shell.CloseMonthPickerCommand.Execute(null);
         });
     }
 

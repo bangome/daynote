@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
@@ -201,6 +202,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             return true;
         }
 
+        IsRenamingTitle = false;
         IsEditorOpen = false;
         await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
         return true;
@@ -320,8 +322,100 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
     private Task SelectDateFromCalendarAsync(LocalDate date) => SelectDateAsync(date);
 
+    // ── Year and month picker ────────────────────────────────────────────────────────────────────
+    // Tapping the month header opens it. Reaching March of last year by the arrows either side of
+    // that header is eighteen taps; this is two.
+
+    [ObservableProperty]
+    private bool _isMonthPickerOpen;
+
+    /// <summary>The year the picker is showing, which is not the calendar's until a month is chosen.</summary>
+    [ObservableProperty]
+    private int _pickerYear;
+
+    /// <summary>The twelve months, named by the active culture.</summary>
+    public ObservableCollection<MonthOption> PickerMonths { get; } = [];
+
+    [RelayCommand]
+    private void OpenMonthPicker()
+    {
+        PickerYear = Calendar.CursorYear;
+        BuildPickerMonths();
+        IsMonthPickerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseMonthPicker() => IsMonthPickerOpen = false;
+
+    [RelayCommand]
+    private void PickerPreviousYear()
+    {
+        PickerYear--;
+        MarkCurrentMonth();
+    }
+
+    [RelayCommand]
+    private void PickerNextYear()
+    {
+        PickerYear++;
+        MarkCurrentMonth();
+    }
+
+    /// <summary>
+    /// Moves the calendar to the chosen month. The selected day is left alone, exactly as the
+    /// arrows either side of the header leave it: this is a way of looking, not of choosing.
+    /// </summary>
+    [RelayCommand]
+    private async Task PickMonth(int month)
+    {
+        IsMonthPickerOpen = false;
+        Calendar.CursorYear = PickerYear;
+        Calendar.CursorMonth = month;
+        await Calendar.LoadAsync().ConfigureAwait(true);
+        Calendar.SyncSelection(SelectedDate);
+    }
+
+    private void BuildPickerMonths()
+    {
+        if (PickerMonths.Count == 0)
+        {
+            for (int month = 1; month <= 12; month++)
+            {
+                PickerMonths.Add(new MonthOption(month, MonthLabel(month)));
+            }
+        }
+
+        MarkCurrentMonth();
+    }
+
+    private void MarkCurrentMonth()
+    {
+        foreach (MonthOption option in PickerMonths)
+        {
+            option.IsCurrent = PickerYear == Calendar.CursorYear && option.Number == Calendar.CursorMonth;
+        }
+    }
+
+    private static string MonthLabel(int month) =>
+        new DateOnly(2000, month, 1).ToString("MMM", LocalizationService.Instance.Culture);
+
     [RelayCommand]
     private Task GoToToday() => SelectDateAsync(LocalDates.Today(_clock));
+
+    /// <summary>
+    /// The first tab: show the day screen, on today.
+    /// </summary>
+    /// <remarks>
+    /// One command rather than a tab plus a button, because a tab that only sometimes moves the
+    /// date would be the worst of both. Tapping it from anywhere lands on today; tapping it while
+    /// already there is still a way back from a month spent browsing.
+    /// </remarks>
+    [RelayCommand]
+    private async Task GoToTodayPage()
+    {
+        GoToPage(MobilePage.Day);
+        await SelectDateAsync(LocalDates.Today(_clock)).ConfigureAwait(true);
+    }
 
     [RelayCommand]
     private Task PreviousDay() => SelectDateAsync(LocalDates.AddDays(SelectedDate, -1));
@@ -353,6 +447,58 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
         }
     }
+
+    // ── Renaming the open note ───────────────────────────────────────────────────────────────────
+    // The title is a label until it is tapped, then a text box holding a draft. The draft is kept
+    // apart from the tab's own title so backing out really does cancel, and so a half-typed name is
+    // never what the day list shows.
+
+    [ObservableProperty]
+    private bool _isRenamingTitle;
+
+    [ObservableProperty]
+    private string _titleDraft = string.Empty;
+
+    /// <summary>Raised when the title box has appeared and wants the caret and the keyboard.</summary>
+    public event EventHandler? TitleRenameStarted;
+
+    [RelayCommand]
+    private void BeginRenameTitle()
+    {
+        if (Notes.SelectedTab is { IsProjection: false } tab)
+        {
+            TitleDraft = tab.Title;
+            IsRenamingTitle = true;
+            TitleRenameStarted?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    [RelayCommand]
+    private async Task CommitRenameTitle()
+    {
+        if (!IsRenamingTitle)
+        {
+            return;
+        }
+
+        IsRenamingTitle = false;
+        string draft = TitleDraft.Trim();
+
+        // An empty box is a cancel, not a request for a nameless note: the note keeps the title it
+        // had, which for an untitled one is the date-and-number the workspace gives it.
+        if (Notes.SelectedTab is { } tab && draft.Length > 0
+            && !string.Equals(draft, tab.Title, StringComparison.Ordinal)
+            && await Notes.RenameAsync(tab, draft).ConfigureAwait(true))
+        {
+            RefreshHeader();
+            await Todo.RefreshAsync().ConfigureAwait(true);
+            await Favorites.RefreshAsync().ConfigureAwait(true);
+            await TagPanel.RefreshAsync().ConfigureAwait(true);
+        }
+    }
+
+    [RelayCommand]
+    private void CancelRenameTitle() => IsRenamingTitle = false;
 
     [RelayCommand]
     private async Task ToggleFavorite()
@@ -418,6 +564,13 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     {
         RefreshHeader();
         RefreshAccountBar();
+
+        // The month names came from the culture, so they are wrong the moment it changes.
+        PickerMonths.Clear();
+        if (IsMonthPickerOpen)
+        {
+            BuildPickerMonths();
+        }
     }
 
     public async ValueTask DisposeAsync()

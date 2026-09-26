@@ -516,10 +516,14 @@ internal static class EnglishStrings
         ["AccountPrivacyUrl"] = "/privacy",
 
         // ── Mobile ───────────────────────────────────────────────────────────────────────────────
-        // The phone's bottom bar and the two controls that only exist where there is no keyboard.
-        ["TabDay"] = "Day",
+        // The phone's bottom bar. The first tab reuses "Today", which is the action it performs.
         ["TabSearch"] = "Search",
         ["TabLists"] = "Lists",
+        // The floating helpers over the note body: they type the syntax a thumb would otherwise
+        // have to hunt for two keyboard layers down.
+        ["InsertTodo"] = "To-do",
+        ["InsertDate"] = "Date",
+        ["InsertTime"] = "Time",
         // The segmented control on the Lists page. The desktop's TabTodoName and friends end in
         // "tab" because there they name a tab in a tooltip; as segment labels they read as noise.
         ["SegmentTodo"] = "To-do",
@@ -530,8 +534,6 @@ internal static class EnglishStrings
         ["Back"] = "Back",
         ["PreviousDay"] = "Previous day",
         ["NextDay"] = "Next day",
-        ["PreviousMonth"] = "Previous month",
-        ["NextMonth"] = "Next month",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",

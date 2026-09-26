@@ -15,17 +15,25 @@
       <StackPanel Margin="16,12,16,96" Spacing="14">
 
         <!-- Month header -->
-        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <!-- Month, and the two arrows that move it. "Today" used to sit at the right of this row
+             and is now the first tab in the bottom bar. -->
+        <Grid ColumnDefinitions="Auto,*,Auto">
           <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="20"
                   Command="{Binding Calendar.PreviousMonthCommand}"
                   AutomationProperties.Name="{Binding Strings[PreviousMonth]}" />
-          <TextBlock Grid.Column="1" Classes="h2" Text="{Binding Calendar.MonthLabel}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="monthtap" Command="{Binding OpenMonthPickerCommand}"
+                  AutomationProperties.Name="{Binding Strings[CalendarMonth]}">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+              <TextBlock Classes="h2" Text="{Binding Calendar.MonthLabel}" VerticalAlignment="Center" />
+              <!-- A chevron, so the label reads as something to press rather than a caption. -->
+              <Path Data="{StaticResource Daynote.Geo.ChevronUp}" Width="10" Height="10" Stretch="Uniform"
+                    VerticalAlignment="Center" RenderTransform="rotate(180deg)"
+                    Stroke="{DynamicResource Daynote.Product.Brush.Text2}" StrokeThickness="1.6" />
+            </StackPanel>
+          </Button>
           <Button Grid.Column="2" Classes="icon" Content="›" FontSize="20"
                   Command="{Binding Calendar.NextMonthCommand}"
                   AutomationProperties.Name="{Binding Strings[NextMonth]}" />
-          <Button Grid.Column="3" Classes="quiet" Content="{Binding Strings[Today]}"
-                  Command="{Binding GoToTodayCommand}" Margin="6,0,0,0" />
         </Grid>
 
         <!-- Month grid -->
@@ -122,8 +130,44 @@
 
     <!-- One primary action, always reachable with the thumb. -->
     <Button Classes="fab" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20"
-            Command="{Binding NewNoteCommand}" AutomationProperties.Name="{Binding Strings[AddNote]}">
+            Command="{Binding NewNoteCommand}" AutomationProperties.Name="{Binding Strings[AddNote]}"
+            IsVisible="{Binding !IsMonthPickerOpen}">
       <Path Data="{StaticResource Daynote.Geo.Plus}" />
     </Button>
+
+    <!--
+      The year and month picker, over the day. A scrim that closes on a tap rather than a modal with
+      a cancel button: there is nothing to confirm here, and the nearest way out of a sheet on a
+      phone is a tap beside it.
+    -->
+    <Panel IsVisible="{Binding IsMonthPickerOpen}">
+      <Button Classes="scrim" Command="{Binding CloseMonthPickerCommand}"
+              AutomationProperties.Name="{Binding Strings[WindowClose]}" />
+      <Border Classes="sheet" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="20"
+                    Command="{Binding PickerPreviousYearCommand}" />
+            <TextBlock Grid.Column="1" Classes="h2" TextAlignment="Center" VerticalAlignment="Center"
+                       Text="{Binding PickerYear}" />
+            <Button Grid.Column="2" Classes="icon" Content="›" FontSize="20"
+                    Command="{Binding PickerNextYearCommand}" />
+          </Grid>
+          <ItemsControl ItemsSource="{Binding PickerMonths}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MonthOption">
+                <Button Classes="monthcell" Classes.current="{Binding IsCurrent}" Margin="3"
+                        Content="{Binding Label}"
+                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).PickMonthCommand}"
+                        CommandParameter="{Binding Number}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </Panel>
   </Panel>
 </UserControl>

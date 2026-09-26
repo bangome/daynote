@@ -10,10 +10,12 @@
     <item name="windowNoTitle">true</item>
     <item name="android:windowBackground">@color/window_background</item>
     <!--
-      Deliberately not transparent and not shortEdges. The app does not draw edge to edge (see
-      MainView.axaml.cs), so the system bars keep their own background and the window is laid out
-      between them.
+      Transparent bars and shortEdges, because the app draws edge to edge: its own background fills
+      the status bar strip and the bottom bar's fill runs under the gesture area, instead of each
+      being a band of the platform's own colour. MainView.axaml.cs keeps the content clear of both.
     -->
-    <item name="android:windowLayoutInDisplayCutoutMode">default</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
   </style>
 </resources>

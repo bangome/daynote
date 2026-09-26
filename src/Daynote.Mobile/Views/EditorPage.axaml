@@ -16,8 +16,17 @@
       <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="22"
               Command="{Binding CloseEditorCommand}"
               AutomationProperties.Name="{Binding Strings[Back]}" />
-      <TextBlock Grid.Column="1" Classes="h2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                 Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" />
+      <!-- The title is a label until it is tapped, then a text box over a draft. A tap rather than
+           the desktop's double-click: a phone has no second click, and a note whose name cannot be
+           changed from the only screen that shows it is a note stuck with "노트 1". -->
+      <Button Grid.Column="1" Classes="titletap" Command="{Binding BeginRenameTitleCommand}"
+              IsVisible="{Binding !IsRenamingTitle}"
+              AutomationProperties.Name="{Binding Strings[NoteMenuRename]}">
+        <TextBlock Classes="h2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" />
+      </Button>
+      <TextBox Grid.Column="1" x:Name="TitleBox" Classes="titleedit" Text="{Binding TitleDraft}"
+               IsVisible="{Binding IsRenamingTitle}" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
       <Button Grid.Column="2" Classes="icon" Command="{Binding ToggleFavoriteCommand}"
               AutomationProperties.Name="{Binding Strings[Favorite]}">
         <Path Data="{StaticResource Daynote.Geo.Star}"
@@ -66,6 +75,31 @@
       </TextBox>
     </StackPanel>
 
-    <TextBox Grid.Row="2" Classes="editor" Text="{Binding Notes.EditorText}" />
+    <Panel Grid.Row="2">
+      <TextBox x:Name="Body" Classes="editor" Text="{Binding Notes.EditorText}" />
+
+      <!--
+        The writing helpers, floating over the text rather than pinned to a toolbar. The note body
+        carries a small syntax - a checkbox opens a line, a (M/D) or (M/D H:mm) at the end of one
+        gives it a due time - and on a desktop you simply type it. On a phone those brackets are two
+        keyboard layers away, which is enough friction to stop people using the feature at all.
+
+        Shown only while the body has focus, so it is out of the way when reading. The buttons are
+        not focusable on purpose: taking focus would close the keyboard and move the caret, which is
+        the opposite of what a helper should do.
+      -->
+      <Border Classes="floatbar" IsVisible="{Binding #Body.IsFocused}"
+              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+          <Button Classes="floataction" Focusable="False" Click="OnInsertTodo"
+                  Content="{Binding Strings[InsertTodo]}" />
+          <Border Width="1" Margin="2,8" Background="{DynamicResource Daynote.Product.Brush.Stroke}" />
+          <Button Classes="floataction" Focusable="False" Click="OnInsertDate"
+                  Content="{Binding Strings[InsertDate]}" />
+          <Button Classes="floataction" Focusable="False" Click="OnInsertTime"
+                  Content="{Binding Strings[InsertTime]}" />
+        </StackPanel>
+      </Border>
+    </Panel>
   </Grid>
 </UserControl>

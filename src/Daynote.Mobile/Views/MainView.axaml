@@ -31,15 +31,17 @@
 
     <!-- Bottom bar. It sits directly on the window edge; the platform keeps the window itself clear
          of the gesture bar (MainView.axaml.cs). -->
-    <Border Grid.Row="1" Background="{DynamicResource Daynote.Product.Brush.Card}"
+    <Border x:Name="TabBar" Grid.Row="1" Background="{DynamicResource Daynote.Product.Brush.Card}"
             BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="0,1,0,0">
       <Grid ColumnDefinitions="*,*,*,*">
+        <!-- "Today", not "Day": it goes to the day screen and lands on today, which is what the
+             button in the day screen's top right used to do. One thing in one place. -->
         <Button Grid.Column="0" Classes="tabbar" Classes.active="{Binding IsDayPage}"
-                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Day}"
-                AutomationProperties.Name="{Binding Strings[TabDay]}">
+                Command="{Binding GoToTodayPageCommand}"
+                AutomationProperties.Name="{Binding Strings[Today]}">
           <StackPanel Spacing="9">
             <Path Data="{StaticResource Daynote.Geo.Today}" HorizontalAlignment="Center" StrokeThickness="1.3" />
-            <TextBlock Text="{Binding Strings[TabDay]}" />
+            <TextBlock Text="{Binding Strings[Today]}" />
           </StackPanel>
         </Button>
         <Button Grid.Column="1" Classes="tabbar" Classes.active="{Binding IsSearchPage}"
