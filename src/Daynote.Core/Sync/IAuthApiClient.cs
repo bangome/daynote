@@ -43,6 +43,42 @@ public interface IIdentityProvider
     ValueTask<IdentityGrant> AuthorizeAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>What Sign in with Apple hands back: a one-time code the Worker redeems with Apple.</summary>
+public sealed record AppleIdentityGrant(string AuthorizationCode);
+
+/// <summary>
+/// Sign in with Apple, on the platforms that have it (iOS). Separate from
+/// <see cref="IIdentityProvider"/> because the grant has a different shape: no PKCE and no redirect,
+/// but a nonce the Worker checks against the ID token Apple issues, which ties that token to this
+/// one request.
+/// </summary>
+public interface IAppleIdentityProvider
+{
+    /// <param name="nonceSha256Hex">
+    /// The lowercase hex SHA-256 of a nonce the caller keeps. Apple embeds exactly this in the ID
+    /// token; the raw nonce goes to the Worker, which hashes it and compares.
+    /// </param>
+    /// <exception cref="AccountException">
+    /// <see cref="AccountFailure.SignInCancelled"/> when the user dismisses the Apple sheet.
+    /// </exception>
+    ValueTask<AppleIdentityGrant> AuthorizeAsync(string nonceSha256Hex, CancellationToken cancellationToken = default);
+}
+
+/// <summary>How <see cref="AccountService.DeleteAccountAsync"/> ended.</summary>
+public enum AccountDeletion
+{
+    /// <summary>The server deleted the account just now, and this device is signed out.</summary>
+    Deleted,
+
+    /// <summary>
+    /// The server no longer recognised this device's session, so it was signed out without a delete
+    /// being sent — usually because an earlier delete went through and its answer was lost.
+    /// </summary>
+    SessionAlreadyGone,
+}
+
+public sealed record AppleSignInRequest(string AuthorizationCode, string Nonce, string DeviceName);
+
 public sealed record GoogleSignInRequest(
     string AuthorizationCode,
     string CodeVerifier,
@@ -110,7 +146,21 @@ public interface IAuthApiClient
         GoogleSignInRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Redeems a Sign in with Apple code. Same response as <see cref="SignInWithGoogleAsync"/>: an
+    /// Apple identity is a separate account, created on first use.
+    /// </summary>
+    ValueTask<SessionResponse> SignInWithAppleAsync(
+        AppleSignInRequest request,
+        CancellationToken cancellationToken = default);
+
     ValueTask<SessionResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes the account and everything the service holds for it — synced notes, files, sessions —
+    /// at once and for good. Both app stores require this to be reachable from inside the app.
+    /// </summary>
+    ValueTask DeleteAccountAsync(string accessToken, CancellationToken cancellationToken = default);
 
     /// <summary>Best-effort: a network failure here must not block a local sign-out.</summary>
     ValueTask LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);

@@ -52,7 +52,8 @@ public static class MobileSyncRegistration
             sp.GetRequiredService<IIdentityProvider>(),
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
-            sp.GetRequiredService<ISyncStore>()));
+            sp.GetRequiredService<ISyncStore>(),
+            apple: platform.AppleIdentity));
         services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(
             sp.GetRequiredService<SqliteDatabase>(),
             sp.GetRequiredService<IFileAssetStore>()));
@@ -70,7 +71,10 @@ public static class MobileSyncRegistration
             () => RunSyncAsync(sp),
             sp.GetRequiredService<IRecoveryKeyExporter>(),
             platform.OpenExternal,
-            Path.Combine(options.DataRoot, "conflicts")));
+            Path.Combine(options.DataRoot, "conflicts"))
+        {
+            IsPhone = true,
+        });
 
         return services;
     }

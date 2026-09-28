@@ -121,6 +121,23 @@ internal sealed class FakeAccounts
             return ValueTask.CompletedTask;
         }
 
+        public ValueTask<SessionResponse> SignInWithAppleAsync(
+            AppleSignInRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            owner.SignInCalls += 1;
+            Throw();
+            owner.SignedOut = false;
+            return ValueTask.FromResult(Session(includeKeys: true));
+        }
+
+        public ValueTask DeleteAccountAsync(string accessToken, CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.SignedOut = true;
+            return ValueTask.CompletedTask;
+        }
+
         public ValueTask<AccountSummary> GetAccountAsync(
             string accessToken,
             CancellationToken cancellationToken = default)

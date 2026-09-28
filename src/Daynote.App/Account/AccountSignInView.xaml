@@ -104,5 +104,8 @@
         <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,12,0,0"
                    TextAlignment="Center" Text="{Binding ErrorMessage}"
                    Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+        <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,12,0,0"
+                   TextAlignment="Center" Text="{Binding NoticeMessage}"
+                   Visibility="{Binding NoticeMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
     </StackPanel>
 </UserControl>

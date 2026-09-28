@@ -360,6 +360,38 @@ public static class AppStrings
     public static string CloudSyncPrivacyNote => LocalizationService.Instance[nameof(CloudSyncPrivacyNote)];
     public static string CloudSyncLocalNote => LocalizationService.Instance[nameof(CloudSyncLocalNote)];
     public static string AccountSignInWithGoogle => LocalizationService.Instance[nameof(AccountSignInWithGoogle)];
+
+    public static string AccountDeletedSessionGone => LocalizationService.Instance[nameof(AccountDeletedSessionGone)];
+
+    public static string AccountAppleFallbackName => LocalizationService.Instance[nameof(AccountAppleFallbackName)];
+
+    public static string AccountAppleOnlyNote => LocalizationService.Instance[nameof(AccountAppleOnlyNote)];
+
+    public static string AccountKeyMissingBlurbMobile => LocalizationService.Instance[nameof(AccountKeyMissingBlurbMobile)];
+
+    public static string AccountLockBlurbMobile => LocalizationService.Instance[nameof(AccountLockBlurbMobile)];
+
+    public static string AccountUnlockBlurbMobile => LocalizationService.Instance[nameof(AccountUnlockBlurbMobile)];
+
+    public static string BillingNoSaleBannerBodyPhone => LocalizationService.Instance[nameof(BillingNoSaleBannerBodyPhone)];
+
+    public static string SyncChipFilesOff => LocalizationService.Instance[nameof(SyncChipFilesOff)];
+
+    public static string AccountSignInWithApple => LocalizationService.Instance[nameof(AccountSignInWithApple)];
+
+    public static string AccountDelete => LocalizationService.Instance[nameof(AccountDelete)];
+
+    public static string AccountDeleteTitle => LocalizationService.Instance[nameof(AccountDeleteTitle)];
+
+    public static string AccountDeleteBody => LocalizationService.Instance[nameof(AccountDeleteBody)];
+
+    public static string AccountDeleteConfirm => LocalizationService.Instance[nameof(AccountDeleteConfirm)];
+
+    public static string AccountDeleteCancel => LocalizationService.Instance[nameof(AccountDeleteCancel)];
+
+    public static string AccountDeleted => LocalizationService.Instance[nameof(AccountDeleted)];
+
+    public static string AccountErrorSubscriptionActive => LocalizationService.Instance[nameof(AccountErrorSubscriptionActive)];
     public static string AccountSignInBrowserHint => LocalizationService.Instance[nameof(AccountSignInBrowserHint)];
     public static string AccountKeyMissingBlurb => LocalizationService.Instance[nameof(AccountKeyMissingBlurb)];
     public static string AccountRestoreKey => LocalizationService.Instance[nameof(AccountRestoreKey)];

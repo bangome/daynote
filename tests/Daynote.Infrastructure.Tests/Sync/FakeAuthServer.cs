@@ -73,6 +73,63 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
         return ValueTask.FromResult(NewSession(account, includeKeys: true));
     }
 
+    /// <summary>Apple codes the fake will redeem, mapped to the Apple subject behind them.</summary>
+    internal Dictionary<string, (string Subject, string Email)> AppleCodes { get; } =
+        new(StringComparer.Ordinal);
+
+    /// <summary>The nonce each Apple sign-in carried, so a test can check it matches the hash.</summary>
+    internal List<string> AppleNonces { get; } = [];
+
+    /// <summary>Set to make deletion refuse the way the Worker does for a running subscription.</summary>
+    internal bool SubscriptionStillActive { get; set; }
+
+    internal int DeleteCalls { get; private set; }
+
+    public ValueTask<SessionResponse> SignInWithAppleAsync(
+        AppleSignInRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        SignInCalls += 1;
+        AppleNonces.Add(request.Nonce);
+        Record(request.AuthorizationCode, request.Nonce, request.DeviceName);
+
+        if (!AppleCodes.TryGetValue(request.AuthorizationCode, out (string Subject, string Email) identity))
+        {
+            throw new AccountException(AccountFailure.InvalidCredentials, "That Apple sign-in is no longer valid.");
+        }
+
+        // An Apple identity is its own account, even when the address matches a Google one.
+        string key = $"apple:{identity.Subject}";
+        if (!accounts.TryGetValue(key, out Account? account))
+        {
+            account = new Account(
+                Guid.NewGuid().ToString("D"), identity.Email, KeyMaterial.Random(), KeyProtection.Server, null, null, null);
+            accounts[key] = account;
+        }
+
+        return ValueTask.FromResult(NewSession(account, includeKeys: true));
+    }
+
+    public ValueTask DeleteAccountAsync(string accessToken, CancellationToken cancellationToken = default)
+    {
+        DeleteCalls += 1;
+        Account account = Authenticate(accessToken);
+        if (SubscriptionStillActive)
+        {
+            throw new AccountException(
+                AccountFailure.SubscriptionStillActive, "Cancel the subscription before deleting the account.");
+        }
+
+        string subject = accounts.Single(entry => entry.Value.UserId == account.UserId).Key;
+        accounts.Remove(subject);
+        foreach (string token in refreshTokens.Where(entry => entry.Value.UserId == account.UserId).Select(entry => entry.Key).ToList())
+        {
+            refreshTokens[token] = refreshTokens[token] with { Revoked = true };
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<SessionResponse> RefreshAsync(
         string refreshToken,
         CancellationToken cancellationToken = default)
@@ -86,7 +143,8 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
 
         // Rotation: the presented token is spent, and presenting it again is treated as theft.
         refreshTokens[refreshToken] = session with { Revoked = true };
-        Account account = accounts.Values.Single(candidate => candidate.UserId == session.UserId);
+        Account account = accounts.Values.SingleOrDefault(candidate => candidate.UserId == session.UserId)
+            ?? throw new AccountException(AccountFailure.InvalidCredentials, "The refresh token is not valid.");
 
         // No key material on refresh, matching the Worker: a refresh renews a session.
         return ValueTask.FromResult(NewSession(account, includeKeys: false));
@@ -302,5 +360,23 @@ internal sealed class FakeIdentityProvider(FakeAuthServer server, string subject
             server.IssueCode(subject, email),
             "verifier",
             "http://127.0.0.1:53219/"));
+    }
+}
+
+/// <summary>
+/// Stands in for the Sign in with Apple sheet: hands back a code the fake server will redeem, and
+/// remembers the hashed nonce it was given so a test can check it against the raw one.
+/// </summary>
+internal sealed class FakeAppleIdentityProvider(FakeAuthServer server, string subject, string email)
+    : IAppleIdentityProvider
+{
+    internal List<string> HashedNonces { get; } = [];
+
+    public ValueTask<AppleIdentityGrant> AuthorizeAsync(string nonceSha256Hex, CancellationToken cancellationToken = default)
+    {
+        HashedNonces.Add(nonceSha256Hex);
+        string code = $"apple-code-{Guid.NewGuid():N}";
+        server.AppleCodes[code] = (subject, email);
+        return ValueTask.FromResult(new AppleIdentityGrant(code));
     }
 }

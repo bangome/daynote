@@ -120,6 +120,13 @@ public enum AccountFailure
 
     Offline,
 
+    /// <summary>
+    /// Deleting the account was refused because a paid subscription is still running and could not
+    /// be cancelled for the user. Deleting anyway would leave them billed for an account that no
+    /// longer exists.
+    /// </summary>
+    SubscriptionStillActive,
+
     ServerError,
 }
 

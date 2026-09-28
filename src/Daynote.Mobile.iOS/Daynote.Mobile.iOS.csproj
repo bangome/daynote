@@ -47,6 +47,7 @@
       does not exist. The mobile SDK picks its own RIDs.
     -->
     <RuntimeIdentifiers></RuntimeIdentifiers>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
   </PropertyGroup>
 
   <ItemGroup>
@@ -70,5 +71,8 @@
       worse, none of the CFBundleURLTypes the sign-in redirect needs.
     -->
     <None Include="Info.plist" />
+
+    <!-- Copied to the bundle root under exactly this name; App Store Connect looks nowhere else. -->
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
   </ItemGroup>
 </Project>

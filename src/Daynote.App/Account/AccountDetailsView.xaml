@@ -214,6 +214,27 @@
         <!-- ── The lock, the notices, and the privacy footnote, unchanged from the settings panel ── -->
         <account:AccountLockSection />
 
+        <!-- ── Deleting the account: asked, then done (App Store 5.1.1(v), Google Play policy) ── -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" Padding="16,14"
+                Visibility="{Binding IsConfirmingDelete, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Text="{loc:Tr AccountDeleteTitle}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr AccountDeleteBody}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,8,0,0" Text="{Binding ErrorMessage}"
+                           Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Background="{DynamicResource Daynote.Product.Brush.Danger}"
+                            Command="{Binding DeleteAccountCommand}" Content="{loc:Tr AccountDeleteConfirm}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr AccountDeleteConfirm}" />
+                    <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                            Command="{Binding CancelDeleteAccountCommand}" Content="{loc:Tr AccountDeleteCancel}"
+                            AutomationProperties.Name="{loc:Tr AccountDeleteCancel}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- ── Footer: the way out, and the build ── -->
         <Grid Margin="4,2,4,0">
             <Grid.ColumnDefinitions>
@@ -225,6 +246,12 @@
                     Command="{Binding SignOutCommand}" Content="{loc:Tr AccountSignOut}"
                     IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
                     AutomationProperties.Name="{loc:Tr AccountSignOut}" />
+            <Button Grid.Column="1" Margin="16,0,0,0" HorizontalAlignment="Left"
+                    Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                    Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                    Command="{Binding BeginDeleteAccountCommand}" Content="{loc:Tr AccountDelete}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                    AutomationProperties.Name="{loc:Tr AccountDelete}" />
             <TextBlock Grid.Column="2" VerticalAlignment="Center"
                        Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0"
                        Text="{Binding AppVersionText}" />

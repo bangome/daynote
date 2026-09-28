@@ -128,8 +128,10 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         null => AppStrings.AccountBarLocal,
     };
 
-    public string AccountBarSubtitle =>
-        Account is { IsSignedIn: true, Status.IsVisible: true } account ? account.Status.Label : string.Empty;
+    public string AccountBarSubtitle => Account is { IsSignedIn: true, Status.IsVisible: true } account
+        // "Subscription needed" is a sales line the phone cannot follow up; say what is true instead.
+        ? account.Status.Kind == Daynote.App.Account.SyncStatusKind.Unpaid ? AppStrings.SyncChipFilesOff : account.Status.Label
+        : string.Empty;
 
     /// <summary>Catalog strings the views bind to; refreshed wholesale on a language switch.</summary>
     public MobileStrings Strings => MobileStrings.Instance;

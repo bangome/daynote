@@ -52,7 +52,15 @@ public sealed partial class AccountViewModel
     /// and it reaches installed copies immediately.
     /// </para>
     /// </remarks>
-    public bool OffersSubscription => CanCheckout || CanManageSubscription || Entitlement.HasSubscribed;
+    public bool OffersSubscription => !IsPhone && (CanCheckout || CanManageSubscription || Entitlement.HasSubscribed);
+
+    /// <summary>
+    /// True on the phone apps, which cannot sell a subscription: both stores require their own
+    /// in-app purchase for one and reject copy that points anywhere else. On a phone the account card
+    /// therefore reports what is syncing and never what could be bought — no trial countdown, no
+    /// "subscribe", no "subscription needed".
+    /// </summary>
+    public bool IsPhone { get; init; }
 
     /// <summary>The pill next to the name: 무료 / 체험 중 / Pro / 결제 확인 중.</summary>
     /// <remarks>
@@ -89,7 +97,7 @@ public sealed partial class AccountViewModel
     /// failed payment cannot happen on an account that was never able to pay.
     /// </remarks>
     public bool HasBanner => (Entitlement.State == EntitlementState.Grace && OffersSubscription)
-        || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement)
+        || (Entitlement.State == EntitlementState.Trial && ShouldWarnAboutEntitlement && !IsPhone)
         || IsUnpaid;
 
     /// <summary>True for the two banners that report a problem rather than a countdown.</summary>
@@ -119,7 +127,7 @@ public sealed partial class AccountViewModel
             // notes keep syncing and no file is gone.
             if (!OffersSubscription)
             {
-                return AppStrings.BillingNoSaleBannerBody;
+                return IsPhone ? AppStrings.BillingNoSaleBannerBodyPhone : AppStrings.BillingNoSaleBannerBody;
             }
 
             return Entitlement.State switch

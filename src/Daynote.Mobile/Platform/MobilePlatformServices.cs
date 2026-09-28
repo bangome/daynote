@@ -39,12 +39,17 @@ namespace Daynote.Mobile.Platform;
 /// Resolves the window that owns pickers and the clipboard. A function rather than a value because
 /// on Android the activity is recreated on rotation and the old top level is then detached.
 /// </param>
+/// <param name="AppleIdentity">
+/// Sign in with Apple, on iOS only; null elsewhere, and the button is then absent. App Review 4.8
+/// requires it beside Google on iOS.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
     Daynote.Core.Sync.IIdentityProvider? Identity,
     Action<string> OpenExternal,
-    Func<Avalonia.Controls.TopLevel?> TopLevel)
+    Func<Avalonia.Controls.TopLevel?> TopLevel,
+    Daynote.Core.Sync.IAppleIdentityProvider? AppleIdentity = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

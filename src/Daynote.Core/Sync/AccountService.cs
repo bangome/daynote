@@ -25,6 +25,7 @@ public sealed partial class AccountService
     private readonly ISyncSessionStore sessions;
     private readonly ISyncStore store;
     private readonly Func<string> deviceName;
+    private readonly IAppleIdentityProvider? apple;
 
     public AccountService(
         IAuthApiClient auth,
@@ -32,8 +33,10 @@ public sealed partial class AccountService
         ISyncCrypto crypto,
         ISyncSessionStore sessions,
         ISyncStore store,
-        Func<string>? deviceName = null)
+        Func<string>? deviceName = null,
+        IAppleIdentityProvider? apple = null)
     {
+        this.apple = apple;
         this.auth = auth ?? throw new ArgumentNullException(nameof(auth));
         this.crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
         this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -60,6 +63,91 @@ public sealed partial class AccountService
                 grant.Client),
             cancellationToken).ConfigureAwait(false);
 
+        return await AdoptSessionAsync(session, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>True on a platform that offers Sign in with Apple.</summary>
+    public bool CanSignInWithApple => apple is not null;
+
+    /// <summary>
+    /// Sign in with Apple, then the same key custody and enrolment as a Google sign-in. The nonce is
+    /// minted here, per attempt, so a code intercepted from one attempt cannot be replayed with a
+    /// token from another.
+    /// </summary>
+    public async ValueTask<string> SignInWithAppleAsync(CancellationToken cancellationToken = default)
+    {
+        if (apple is null)
+        {
+            throw new InvalidOperationException("Sign in with Apple is not available on this platform.");
+        }
+
+        string nonce = System.Buffers.Text.Base64Url.EncodeToString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        string hashed = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(nonce)));
+        AppleIdentityGrant grant = await apple.AuthorizeAsync(hashed, cancellationToken).ConfigureAwait(false);
+
+        SessionResponse session = await auth.SignInWithAppleAsync(
+            new AppleSignInRequest(grant.AuthorizationCode, nonce, deviceName()),
+            cancellationToken).ConfigureAwait(false);
+
+        return await AdoptSessionAsync(session, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Deletes the account on the server, then signs this device out. The notes on this device are
+    /// left exactly where they are: deleting a cloud account is not a request to lose local work.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The session is refreshed first rather than trusting the stored access token, which may have
+    /// expired while the app sat idle. The refresh rotates the refresh token, so the rotated pair is
+    /// saved before the delete is sent: if the delete is then refused — a subscription still running,
+    /// the network gone — the device keeps a valid session, where discarding the pair would leave it
+    /// holding a spent token that the server treats as stolen on the next use.
+    /// </para>
+    /// <para>
+    /// A refresh the server rejects means the session is already gone: most likely a delete that
+    /// succeeded while its response was lost. There is nothing left to delete from here, so the
+    /// device signs out and says so rather than leaving the user stuck signed in to nothing.
+    /// </para>
+    /// </remarks>
+    public async ValueTask<AccountDeletion> DeleteAccountAsync(CancellationToken cancellationToken = default)
+    {
+        SyncCredentials credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
+
+        using (credentials)
+        {
+            SessionResponse renewed;
+            try
+            {
+                renewed = await auth.RefreshAsync(credentials.RefreshToken, cancellationToken).ConfigureAwait(false);
+            }
+            catch (AccountException failure) when (failure.Failure == AccountFailure.InvalidCredentials)
+            {
+                await ForgetLocallyAsync(cancellationToken).ConfigureAwait(false);
+                return AccountDeletion.SessionAlreadyGone;
+            }
+
+            await sessions.UpdateTokensAsync(
+                renewed.AccessToken, renewed.AccessExpiresUtc, renewed.RefreshToken, cancellationToken)
+                .ConfigureAwait(false);
+            await auth.DeleteAccountAsync(renewed.AccessToken, cancellationToken).ConfigureAwait(false);
+        }
+
+        // No server logout: the tokens died with the account.
+        await ForgetLocallyAsync(cancellationToken).ConfigureAwait(false);
+        return AccountDeletion.Deleted;
+    }
+
+    private async ValueTask ForgetLocallyAsync(CancellationToken cancellationToken)
+    {
+        await sessions.ClearAsync(cancellationToken).ConfigureAwait(false);
+        await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<string> AdoptSessionAsync(SessionResponse session, CancellationToken cancellationToken)
+    {
         if (session.Keys is not { } material)
         {
             throw new AccountException(

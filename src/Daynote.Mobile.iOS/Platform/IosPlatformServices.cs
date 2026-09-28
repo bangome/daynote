@@ -47,7 +47,8 @@ public static class IosPlatformServices
             SecretProtector: new MacKeychainSecretProtector(),
             Identity: CreateIdentity(),
             OpenExternal: OpenExternal,
-            TopLevel: ResolveTopLevel);
+            TopLevel: ResolveTopLevel,
+            AppleIdentity: new IosAppleIdentityProvider());
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.

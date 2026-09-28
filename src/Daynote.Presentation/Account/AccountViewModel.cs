@@ -106,7 +106,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         IsKeyMissing = resumed.State == ResumeState.KeyMissing;
         IsLocked = resumed.State == ResumeState.Locked;
         IsLockEnabled = IsLocked;
-        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? resumed.Email : null;
+        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? NameFor(resumed.Email) : null;
         ApplyLastSync(state.LastSyncUtc);
         RefreshStatus(state);
     }
@@ -120,7 +120,17 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     {
         await RunAsync(async () =>
         {
-            SignedInEmail = await accounts.SignInAsync().ConfigureAwait(true);
+            Notice = AccountNotice.None;
+            IsBrowserSignInRunning = true;
+            try
+            {
+                SignedInEmail = await accounts.SignInAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                IsBrowserSignInRunning = false;
+            }
+
             IsKeyMissing = false;
             IsLocked = false;
             IsLockEnabled = false;
@@ -151,17 +161,23 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             // cleared it, and the next account's first pull would start from there.
             await syncInFlight.ConfigureAwait(true);
             await accounts.SignOutAsync().ConfigureAwait(true);
-            Entitlement = Entitlement.Unknown;
-            Billing = BillingLinks.None;
-            SignedInEmail = null;
-            IsKeyMissing = false;
-            IsLocked = false;
-            IsLockEnabled = false;
-            IsEnablingLock = false;
-            ReplacedNoteCount = 0;
-            LastSyncText = null;
-            Status = SyncStatusView.Hidden;
+            ResetToSignedOut();
         }).ConfigureAwait(true);
+    }
+
+    /// <summary>Everything the panel shows about an account, back to "none", after it is gone.</summary>
+    private void ResetToSignedOut()
+    {
+        Entitlement = Entitlement.Unknown;
+        Billing = BillingLinks.None;
+        SignedInEmail = null;
+        IsKeyMissing = false;
+        IsLocked = false;
+        IsLockEnabled = false;
+        IsEnablingLock = false;
+        ReplacedNoteCount = 0;
+        LastSyncText = null;
+        Status = SyncStatusView.Hidden;
     }
 
     /// <summary>
@@ -264,6 +280,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     public void OnLanguageChanged()
     {
         OnPropertyChanged(nameof(ReplacedNotesMessage));
+        OnPropertyChanged(nameof(NoticeMessage));
         OnPropertyChanged(nameof(EntitlementSummary));
         OnPropertyChanged(nameof(PassphraseHint));
         OnPropertyChanged(nameof(Status));
@@ -359,6 +376,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         AccountFailure.SignInCancelled => AppStrings.AccountErrorSignInCancelled,
         AccountFailure.UnverifiedIdentity => AppStrings.AccountErrorUnverifiedIdentity,
         AccountFailure.Offline => AppStrings.AccountErrorOffline,
+        AccountFailure.SubscriptionStillActive => AppStrings.AccountErrorSubscriptionActive,
         _ => AppStrings.AccountErrorServer,
     };
 

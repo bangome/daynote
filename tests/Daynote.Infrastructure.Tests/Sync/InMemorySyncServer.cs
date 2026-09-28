@@ -65,6 +65,18 @@ internal sealed class InMemorySyncServer
 
     internal ISyncApiClient ClientFor(string label) => new Client(this, label);
 
+    /// <summary>
+    /// What the Worker does to a deleted account's data: all of it goes. This fake holds a single
+    /// account's worth, so forgetting everything is the same thing. The log keeps counting, as the
+    /// real change_log sequence does.
+    /// </summary>
+    internal void ForgetEverything()
+    {
+        rows.Clear();
+        objects.Clear();
+        log.Clear();
+    }
+
     private PushResult Push(PushRequest request)
     {
         PushCount += 1;

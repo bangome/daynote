@@ -266,7 +266,173 @@ public sealed class AccountLifecycleTests
             ? Path.Combine(Path.GetTempPath(), "daynote-account", Guid.NewGuid().ToString("N"))
             : dataRoot;
         Directory.CreateDirectory(root);
-        return Pc.Create(root, authServer, syncServer, () => now, freshRoot);
+        return Pc.Create(root, authServer, syncServer, () => now, freshRoot, apple);
+    }
+
+    /// <summary>Set before <see cref="NewPc"/> to give that PC a Sign in with Apple sheet.</summary>
+    private FakeAppleIdentityProvider? apple;
+
+    // ---- deleting the account ----
+
+    [TestMethod]
+    public async Task Deleting_the_account_removes_it_and_signs_out_but_keeps_the_notes_here()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+        await pc.AddNote(1, "회의록", "분기 계획 논의");
+        await pc.Sync();
+
+        await pc.Accounts.DeleteAccountAsync();
+
+        Assert.AreEqual(0, authServer.AccountCount, "The server still has the account.");
+        Assert.IsFalse((await pc.Store.ReadStateAsync()).IsSignedIn);
+        Assert.IsNull(await pc.Sessions.LoadAsync(), "The session outlived the account.");
+        Assert.AreEqual("분기 계획 논의", (await pc.Notes()).Single().Body, "Deleting the cloud account took the local note.");
+    }
+
+    [TestMethod]
+    public async Task Deleting_renews_the_session_first_so_a_stale_token_cannot_block_it()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+        int refreshesBefore = authServer.RefreshCalls;
+
+        // Long enough for the stored access token to have expired.
+        now = now.AddHours(3);
+        await pc.Accounts.DeleteAccountAsync();
+
+        Assert.AreEqual(refreshesBefore + 1, authServer.RefreshCalls);
+        Assert.AreEqual(1, authServer.DeleteCalls);
+        Assert.AreEqual(0, authServer.AccountCount);
+    }
+
+    [TestMethod]
+    public async Task A_running_subscription_stops_the_deletion_and_leaves_the_device_signed_in()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+        authServer.SubscriptionStillActive = true;
+
+        var refused = await Assert.ThrowsExactlyAsync<AccountException>(() => pc.Accounts.DeleteAccountAsync().AsTask());
+
+        Assert.AreEqual(AccountFailure.SubscriptionStillActive, refused.Failure);
+        Assert.AreEqual(1, authServer.AccountCount);
+        Assert.IsTrue((await pc.Store.ReadStateAsync()).IsSignedIn, "A refused deletion signed the device out anyway.");
+    }
+
+    [TestMethod]
+    public async Task A_refused_deletion_can_be_retried_once_the_subscription_is_cancelled()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+        authServer.SubscriptionStillActive = true;
+        await Assert.ThrowsExactlyAsync<AccountException>(() => pc.Accounts.DeleteAccountAsync().AsTask());
+
+        // The refused attempt rotated the refresh token. Had the new one been thrown away, the retry
+        // would present a spent token, the server would read it as theft, and the user would be
+        // signed out instead of deleted.
+        authServer.SubscriptionStillActive = false;
+        AccountDeletion outcome = await pc.Accounts.DeleteAccountAsync();
+
+        Assert.AreEqual(AccountDeletion.Deleted, outcome);
+        Assert.AreEqual(0, authServer.AccountCount);
+    }
+
+    [TestMethod]
+    public async Task A_session_the_server_no_longer_knows_signs_out_instead_of_sticking()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+
+        // A delete that went through on the server while its answer was lost on the way back.
+        await using (Pc elsewhere = NewPc(freshRoot: true))
+        {
+            await elsewhere.Accounts.SignInAsync();
+            await elsewhere.Accounts.DeleteAccountAsync();
+        }
+
+        AccountDeletion outcome = await pc.Accounts.DeleteAccountAsync();
+
+        Assert.AreEqual(AccountDeletion.SessionAlreadyGone, outcome);
+        Assert.IsFalse((await pc.Store.ReadStateAsync()).IsSignedIn);
+        Assert.IsNull(await pc.Sessions.LoadAsync());
+    }
+
+    [TestMethod]
+    public async Task A_new_account_after_deletion_gets_the_local_notes_pushed_again()
+    {
+        await using Pc pc = NewPc();
+        await pc.Accounts.SignInAsync();
+        await pc.AddNote(1, "남은 노트", "이 기기에 있던 내용");
+        await pc.Sync();
+        await pc.Accounts.DeleteAccountAsync();
+        syncServer.ForgetEverything();
+
+        // Signing in again makes a brand-new account on the server; what is on this device goes up.
+        await pc.Accounts.SignInAsync();
+        await pc.Sync();
+        await using Pc other = NewPc(freshRoot: true);
+        await other.Accounts.SignInAsync();
+        await other.Sync();
+
+        Assert.AreEqual("이 기기에 있던 내용", (await other.Notes()).Single().Body);
+    }
+
+    // ---- Sign in with Apple ----
+
+    [TestMethod]
+    public async Task Apple_sign_in_sends_the_raw_nonce_whose_hash_went_to_Apple()
+    {
+        apple = new FakeAppleIdentityProvider(authServer, "apple-sub-alice", "relay@privaterelay.appleid.com");
+        await using Pc pc = NewPc();
+        Assert.IsTrue(pc.Accounts.CanSignInWithApple);
+
+        string email = await pc.Accounts.SignInWithAppleAsync();
+
+        Assert.AreEqual("relay@privaterelay.appleid.com", email);
+        string raw = authServer.AppleNonces.Single();
+        string hashed = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(raw)));
+        Assert.AreEqual(hashed, apple.HashedNonces.Single());
+        Assert.IsTrue((await pc.Store.ReadStateAsync()).IsSignedIn);
+    }
+
+    [TestMethod]
+    public async Task Every_Apple_attempt_gets_its_own_nonce()
+    {
+        apple = new FakeAppleIdentityProvider(authServer, "apple-sub-alice", "a@example.test");
+        await using Pc pc = NewPc();
+
+        await pc.Accounts.SignInWithAppleAsync();
+        await pc.Accounts.SignOutAsync();
+        await pc.Accounts.SignInWithAppleAsync();
+
+        Assert.AreEqual(2, authServer.AppleNonces.Distinct().Count());
+        Assert.AreEqual(1, authServer.AccountCount, "The second Apple sign-in made another account.");
+    }
+
+    [TestMethod]
+    public async Task Apple_notes_sync_like_any_other_account()
+    {
+        apple = new FakeAppleIdentityProvider(authServer, "apple-sub-alice", "a@example.test");
+        await using Pc phone = NewPc();
+        await phone.Accounts.SignInWithAppleAsync();
+        await phone.AddNote(1, "아이폰", "Apple 계정으로 쓴 노트");
+        await phone.Sync();
+
+        await using Pc tablet = NewPc(freshRoot: true);
+        await tablet.Accounts.SignInWithAppleAsync();
+        await tablet.Sync();
+
+        Assert.AreEqual("Apple 계정으로 쓴 노트", (await tablet.Notes()).Single().Body);
+    }
+
+    [TestMethod]
+    public void Without_an_Apple_sheet_the_option_is_absent()
+    {
+        Pc pc = NewPc();
+        Assert.IsFalse(pc.Accounts.CanSignInWithApple);
+        pc.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     private static Guid Id(int suffix) => Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}");
@@ -320,7 +486,8 @@ public sealed class AccountLifecycleTests
             FakeAuthServer authServer,
             InMemorySyncServer syncServer,
             Func<DateTimeOffset> utcNow,
-            bool deleteRoot)
+            bool deleteRoot,
+            IAppleIdentityProvider? apple = null)
         {
             TestDatabase fixture = TestDatabase.CreateIn(root);
             fixture.Database.Initialize();
@@ -331,7 +498,7 @@ public sealed class AccountLifecycleTests
             // Every simulated PC signs in as the same Google account, which is what makes "a fresh
             // data root gets the notes back" a real test rather than two unrelated accounts.
             var identity = new FakeIdentityProvider(authServer, Subject, Email);
-            var accounts = new AccountService(authServer, identity, Crypto, sessions, store, () => "Test PC");
+            var accounts = new AccountService(authServer, identity, Crypto, sessions, store, () => "Test PC", apple);
             var tokens = new SyncTokenProvider(authServer, sessions, utcNow);
             var engine = new SyncEngine(
                 new TokenAwareSyncClient(syncServer.ClientFor(root), tokens),

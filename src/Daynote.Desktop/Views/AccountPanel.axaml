@@ -31,6 +31,8 @@
             <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkExportDesc]}" FontSize="11.5" TextWrapping="Wrap" />
           </StackPanel>
         </StackPanel>
+        <TextBlock Text="{Binding NoticeMessage}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                   IsVisible="{Binding NoticeMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <!-- The call to action and the legal links sit centred under the perks, as a footer. -->
         <Button Classes="accent" Content="{Binding #Root.Strings[AccountSignInWithGoogle]}" Command="{Binding SignInCommand}"
                 IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Center" Margin="0,8,0,0" />
@@ -207,6 +209,24 @@
             <Button Classes="accent" Content="{Binding CheckoutLabel}" Command="{Binding CheckoutSelectedCommand}" IsEnabled="{Binding !IsBusy}"
                     HorizontalAlignment="Center" HorizontalContentAlignment="Center" MinWidth="200" />
             <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingProviderNote]}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400" />
+          </StackPanel>
+        </Border>
+
+        <!-- Deleting the account: asked, then done. Last in the panel, away from Sign out. -->
+        <Button Classes="quiet" HorizontalAlignment="Left" IsVisible="{Binding !IsConfirmingDelete}"
+                Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                Content="{Binding #Root.Strings[AccountDelete]}" Command="{Binding BeginDeleteAccountCommand}" IsEnabled="{Binding !IsBusy}" />
+        <Border Classes="panel" Padding="16,14" IsVisible="{Binding IsConfirmingDelete}" Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="{Binding #Root.Strings[AccountDeleteTitle]}" FontWeight="SemiBold" FontSize="13" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountDeleteBody]}" FontSize="12" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                      Content="{Binding #Root.Strings[AccountDeleteConfirm]}" Command="{Binding DeleteAccountCommand}" IsEnabled="{Binding !IsBusy}" />
+              <Button Classes="quiet" Content="{Binding #Root.Strings[AccountDeleteCancel]}" Command="{Binding CancelDeleteAccountCommand}" />
+            </StackPanel>
           </StackPanel>
         </Border>
 

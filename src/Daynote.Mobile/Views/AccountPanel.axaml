@@ -5,6 +5,41 @@
              x:Class="Daynote.Mobile.Views.AccountPanel"
              x:Name="Root"
              x:DataType="account:AccountViewModel">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <!-- Apple's button styles: black on a light screen, white on a dark one. -->
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppleButtonBackground" Color="#000000" />
+          <SolidColorBrush x:Key="AppleButtonForeground" Color="#FFFFFF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppleButtonBackground" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppleButtonForeground" Color="#000000" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- Apple's guidelines let a custom button keep its colours in every state, so the template's
+         hover and pressed brushes are pinned rather than left to the theme. -->
+    <Style Selector="Button.apple">
+      <Setter Property="Foreground" Value="{DynamicResource AppleButtonForeground}" />
+    </Style>
+    <Style Selector="Button.apple /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppleButtonBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppleButtonForeground}" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.apple:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppleButtonBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppleButtonForeground}" />
+    </Style>
+    <Style Selector="Button.apple:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppleButtonBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppleButtonForeground}" />
+    </Style>
+  </UserControl.Styles>
   <!--
     The cloud account on a phone: sign in when signed out, otherwise the sync state, the optional
     note lock and the subscription. Same view model as the desktop panel, so a change to what an
@@ -26,10 +61,32 @@
           <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkLockDesc]}" FontSize="12" />
         </StackPanel>
       </StackPanel>
+      <TextBlock FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap"
+                 Text="{Binding NoticeMessage}"
+                 IsVisible="{Binding NoticeMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <!-- Sign in with Apple first and just as large: App Store 4.8 wants it offered on equal terms
+           beside Google, and Apple's guidelines ask for its logo with an approved title. Only on iOS. -->
+      <StackPanel Spacing="6" IsVisible="{Binding CanSignInWithApple}">
+        <Button Classes="apple" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                MinHeight="44" Command="{Binding SignInWithAppleCommand}" IsEnabled="{Binding !IsBusy}"
+                AutomationProperties.Name="{Binding #Root.Strings[AccountSignInWithApple]}">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Path Width="15" Height="18" Stretch="Uniform" VerticalAlignment="Center"
+                  Fill="{Binding $parent[Button].Foreground}"
+                  Data="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+            <!-- Bound like the logo: the app-wide TextBlock style would otherwise repaint it in the
+                 body colour, which vanishes on the black (or white) button. -->
+            <TextBlock Text="{Binding #Root.Strings[AccountSignInWithApple]}" FontWeight="SemiBold" FontSize="15"
+                       Foreground="{Binding $parent[Button].Foreground}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                   Text="{Binding #Root.Strings[AccountAppleOnlyNote]}" />
+      </StackPanel>
       <Button Classes="accent" HorizontalAlignment="Stretch"
               Content="{Binding #Root.Strings[AccountSignInWithGoogle]}"
               Command="{Binding SignInCommand}" IsEnabled="{Binding !IsBusy}" />
-      <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" IsVisible="{Binding IsBusy}"
+      <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" IsVisible="{Binding IsBrowserSignInRunning}"
                  Text="{Binding #Root.Strings[AccountSignInBrowserHint]}" />
       <TextBlock FontSize="12" TextAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
                  Text="{Binding ErrorMessage}"
@@ -67,7 +124,7 @@
       <!-- Key missing on this device -->
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsKeyMissing}">
         <StackPanel Spacing="10">
-          <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountKeyMissingBlurb]}" />
+          <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountKeyMissingBlurbMobile]}" />
           <Button Classes="accent" HorizontalAlignment="Stretch"
                   Content="{Binding #Root.Strings[AccountRestoreKey]}" Command="{Binding RestoreKeyCommand}" />
         </StackPanel>
@@ -77,7 +134,7 @@
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsLocked}">
         <StackPanel Spacing="10">
           <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountUnlockTitle]}" />
-          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountUnlockBlurb]}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountUnlockBlurbMobile]}" />
           <TextBox x:Name="UnlockPassphraseBox" PasswordChar="•" IsVisible="{Binding !IsUsingRecoveryKey}"
                    PlaceholderText="{Binding #Root.Strings[AccountPassphrase]}" />
           <TextBox Text="{Binding RecoveryKeyEntry}" IsVisible="{Binding IsUsingRecoveryKey}"
@@ -93,7 +150,7 @@
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding !IsLocked}">
         <StackPanel Spacing="10">
           <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountLockTitle]}" />
-          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountLockBlurb]}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding #Root.Strings[AccountLockBlurbMobile]}" />
           <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsLockEnabled}"
                   Content="{Binding #Root.Strings[AccountLockEnable]}" Command="{Binding ToggleEnableLockCommand}"
                   IsEnabled="{Binding !IsBusy}" />
@@ -151,6 +208,29 @@
             <TextBlock Classes="muted" FontSize="12.5" Text="{Binding SubscriptionDateLabel}" />
             <TextBlock FontSize="12.5" Text="{Binding SubscriptionDateText}" />
           </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Deleting the account: asked, then done. Last on the page, away from Sign out. -->
+      <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsConfirmingDelete}"
+              Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+              Content="{Binding #Root.Strings[AccountDelete]}" Command="{Binding BeginDeleteAccountCommand}"
+              IsEnabled="{Binding !IsBusy}" />
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsConfirmingDelete}"
+              Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountDeleteTitle]}" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding #Root.Strings[AccountDeleteBody]}" />
+          <!-- The failure is said here, next to the button that caused it, not at the top of a long page. -->
+          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                     Text="{Binding ErrorMessage}"
+                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
+                  Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                  Content="{Binding #Root.Strings[AccountDeleteConfirm]}" Command="{Binding DeleteAccountCommand}"
+                  IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[AccountDeleteCancel]}" Command="{Binding CancelDeleteAccountCommand}" />
         </StackPanel>
       </Border>
     </StackPanel>

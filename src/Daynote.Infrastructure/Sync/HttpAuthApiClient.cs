@@ -60,6 +60,41 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         return ToSession(await ReadSessionAsync(response, cancellationToken).ConfigureAwait(false));
     }
 
+    public async ValueTask<SessionResponse> SignInWithAppleAsync(
+        AppleSignInRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using HttpResponseMessage response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, "v1/auth/apple")
+            {
+                Content = JsonContent.Create(
+                    new
+                    {
+                        authorization_code = request.AuthorizationCode,
+                        nonce = request.Nonce,
+                        device_name = request.DeviceName,
+                    },
+                    options: Json),
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return ToSession(await ReadSessionAsync(response, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async ValueTask DeleteAccountAsync(string accessToken, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        using HttpResponseMessage response = await SendAsync(
+            () => Authorized(HttpMethod.Delete, "v1/account", accessToken),
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
     public async ValueTask<SessionResponse> RefreshAsync(
         string refreshToken,
         CancellationToken cancellationToken = default)
@@ -230,6 +265,15 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             return;
         }
 
+        string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        string? code = ReadErrorCode(body);
+        if (code == SubscriptionActiveCode)
+        {
+            throw new AccountException(
+                AccountFailure.SubscriptionStillActive,
+                "Cancel the subscription before deleting the account.");
+        }
+
         AccountFailure failure = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => AccountFailure.InvalidCredentials,
@@ -245,8 +289,31 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             _ => $"The sync service returned an error ({(int)response.StatusCode}).",
         };
 
-        _ = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         throw new AccountException(failure, message);
+    }
+
+    /// <summary>The Worker's code for "a paid subscription would outlive the account".</summary>
+    private const string SubscriptionActiveCode = "subscription_active";
+
+    /// <summary>
+    /// The machine-readable half of the Worker's <c>{"error": code, "message": text}</c> body. Only the
+    /// code is read: the message is English written for developers and never reaches the UI.
+    /// </summary>
+    private static string? ReadErrorCode(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("error", out JsonElement error)
+                && error.ValueKind == JsonValueKind.String
+                    ? error.GetString()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static async ValueTask<SessionBody> ReadSessionAsync(

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sign in with Apple. App Review guideline 4.8 requires it once an app offers a third-party sign-in
+  (Google here). The provisioning profile has to carry the same capability: enable "Sign in with
+  Apple" on the cc.arachat.daynote App ID and regenerate the profile, or signing fails with an
+  entitlement mismatch.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.developer.applesignin</key>
+  <array>
+    <string>Default</string>
+  </array>
+</dict>
+</plist>
