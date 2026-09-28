@@ -80,8 +80,8 @@ public partial class App : Application
     /// The account read comes second on purpose, and it is the same order the desktop start-up uses:
     /// it touches the keystore and the settings row, and a note is worth showing before either. It is
     /// not optional, though - without it a signed-in user relaunching the app sees the sign-in button
-    /// again, because nothing else ever reads the session back off disk. Sync itself still waits for
-    /// the user to ask, so a launch never depends on the network.
+    /// again, because nothing else ever reads the session back off disk. Automatic sync starts only
+    /// after both, and in the background, so a launch still never waits on the network.
     /// </remarks>
     private static async Task StartAsync(MobileShellViewModel shell)
     {
@@ -91,7 +91,15 @@ public partial class App : Application
         {
             await account.InitializeAsync().ConfigureAwait(true);
         }
+
+        shell.StartAutoSync();
     }
+
+    /// <summary>
+    /// The app came back to the foreground. Each head calls this; it is when a phone most likely
+    /// has notes waiting from another device.
+    /// </summary>
+    public void NotifyResumed() => _shell?.NotifyResumed();
 
     /// <summary>
     /// Saves the open note. Each head calls this when the OS is about to background the app, which on

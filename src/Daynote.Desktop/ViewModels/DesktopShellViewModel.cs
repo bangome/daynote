@@ -623,6 +623,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         }
 
         _disposed = true;
+        _syncScheduler?.Dispose();
         _todoRefreshCts?.Cancel();
         Notes.PropertyChanged -= OnNotesPropertyChanged;
         await Notes.DisposeAsync().ConfigureAwait(false);

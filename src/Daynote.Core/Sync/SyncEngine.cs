@@ -74,6 +74,12 @@ public sealed record SyncReport(
 
     /// <summary>True when a record arrived that we could not read. Never silently ignorable.</summary
     public bool HasUnreadableRecords => Undecryptable > 0 || Malformed > 0;
+
+    /// <summary>
+    /// True when the run wrote something into the local database — a note or file from another
+    /// device, a delete, or attachment bytes. Only then do the open views need re-reading.
+    /// </summary>
+    public bool ChangedLocalData => Applied > 0 || Deleted > 0 || AssetsDownloaded > 0;
 }
 
 /// <summary>The signed-in account and the key that opens its content, for one sync run.</summary>

@@ -50,6 +50,8 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     private int replacedNoteCount;
 
     private SyncStatusView status = SyncStatusView.Hidden;
+    private bool isSyncing;
+    private Task syncInFlight = Task.CompletedTask;
 
     public AccountViewModel(
         AccountService accounts,
@@ -145,6 +147,9 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     {
         await RunAsync(async () =>
         {
+            // A run still on the wire would write the old account's cursor back after sign-out
+            // cleared it, and the next account's first pull would start from there.
+            await syncInFlight.ConfigureAwait(true);
             await accounts.SignOutAsync().ConfigureAwait(true);
             Entitlement = Entitlement.Unknown;
             Billing = BillingLinks.None;
@@ -159,18 +164,56 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         }).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Raised after every sync run that reached the engine, whoever started it. Views that list or
+    /// count notes listen for <see cref="SyncReport.ChangedLocalData"/> and re-read, since a pull
+    /// writes straight to the database underneath them.
+    /// </summary>
+    public event EventHandler<SyncReport>? Synced;
+
     [RelayCommand]
-    private async Task SyncAsync()
+    private Task SyncAsync() => RunSyncAsync(userInitiated: true);
+
+    /// <summary>
+    /// A sync nobody asked for, from <see cref="SyncScheduler"/>. It stands aside while anything else
+    /// is using the account — a sign-in, a lock change, a run already in flight — and when the device
+    /// is locked, since that run could only report the lock again. Being offline is not news to
+    /// someone who did not press anything, so it changes the status chip but raises no message.
+    /// </summary>
+    /// <returns>False when the run was skipped.</returns>
+    public Task<bool> SyncInBackgroundAsync()
     {
-        if (!IsSignedIn)
+        if (IsBusy || IsLocked || IsKeyMissing)
         {
-            return;
+            return Task.FromResult(false);
         }
 
+        return RunSyncAsync(userInitiated: false);
+    }
+
+    private async Task<bool> RunSyncAsync(bool userInitiated)
+    {
+        // One run at a time: the button, the scheduler and the sign-in flow all end up here, and two
+        // overlapping runs would push the same outbox twice.
+        if (!IsSignedIn || isSyncing)
+        {
+            return false;
+        }
+
+        isSyncing = true;
+        var finished = new TaskCompletionSource();
+        syncInFlight = finished.Task;
         Status = new SyncStatusView(SyncStatusKind.Syncing);
         try
         {
             SyncReport report = await syncNow().ConfigureAwait(true);
+            if (!IsSignedIn)
+            {
+                // Signed out while the run was on the wire. What it found belongs to the old
+                // session, and the status it would set would contradict the signed-out screen.
+                return true;
+            }
+
             ReplacedNoteCount += report.ConflictsSaved;
             IsKeyMissing = report.Outcome == SyncOutcome.Locked;
             if (report.Outcome == SyncOutcome.SubscriptionRequired || report.FileSyncBlocked)
@@ -183,13 +226,32 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             SyncStateSnapshot state = await store.ReadStateAsync().ConfigureAwait(true);
             ApplyLastSync(state.LastSyncUtc);
             Status = FromReport(report);
+            Synced?.Invoke(this, report);
         }
         catch (AccountException failure)
         {
-            ErrorMessage = Describe(failure.Failure);
+            if (userInitiated || failure.Failure != AccountFailure.Offline)
+            {
+                ErrorMessage = Describe(failure.Failure);
+            }
+
             Status = new SyncStatusView(
                 failure.Failure == AccountFailure.Offline ? SyncStatusKind.Offline : SyncStatusKind.Error);
         }
+        catch (Exception unexpected) when (!userInitiated && unexpected is not OperationCanceledException)
+        {
+            // A scheduled run has no command to surface a fault through, and its caller discards the
+            // task. Leaving the chip on "Syncing" would be the only trace of it.
+            System.Diagnostics.Debug.WriteLine($"Background sync failed: {unexpected}");
+            Status = new SyncStatusView(SyncStatusKind.Error);
+        }
+        finally
+        {
+            isSyncing = false;
+            finished.SetResult();
+        }
+
+        return true;
     }
 
     [RelayCommand]

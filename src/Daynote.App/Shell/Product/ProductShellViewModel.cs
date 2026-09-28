@@ -448,6 +448,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         }
 
         _disposed = true;
+        _syncScheduler?.Dispose();
         _todoRefreshCts?.Cancel();
         Notes.PropertyChanged -= OnNotesPropertyChanged;
         await Notes.DisposeAsync().ConfigureAwait(false);

@@ -28,6 +28,7 @@ public partial class App : System.Windows.Application
     private TrayIconService? _tray;
     private GlobalHotkeyService? _hotkeys;
     private bool _relaunchAfterExit;
+    private Task _accountReady = Task.CompletedTask;
 
     /// <summary>
     /// A restore was staged; quit (flushing) and mark for relaunch so the staged data is applied on the
@@ -135,14 +136,37 @@ public partial class App : System.Windows.Application
         };
         if (window.ViewModel.SettingsViewModel.Account is { } account)
         {
-            _ = account.InitializeAsync();
+            _accountReady = account.InitializeAsync();
         }
+
+        // Back from the tray or another app: pick up what other devices wrote meanwhile.
+        window.Activated += (_, _) => window.ViewModel.NotifyActivated();
 
         // Switching language rewrites the untouched first-run sample note into the new language too.
         Localization.LocalizationService.Instance.LanguageChanged += (_, _) => _ = RelocalizeSampleNoteAsync(window);
 
         window.Show();
         _ = InitializeAsync(window);
+    }
+
+    /// <summary>
+    /// Automatic sync waits for the notes to be on screen and the stored sign-in to be read, then
+    /// runs in the background, so a launch never waits on the network. Kept off the start-up path:
+    /// an account that cannot be read must not cost the user their shortcuts or the tutorial.
+    /// </summary>
+    private async Task StartAutoSyncWhenReadyAsync(Shell.Product.ProductWindow window)
+    {
+        try
+        {
+            await _accountReady.ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            System.Diagnostics.Debug.WriteLine($"Reading the stored sign-in failed: {exception}");
+            return;
+        }
+
+        window.ViewModel.StartAutoSync();
     }
 
     /// <summary>Re-localizes the untouched sample note on a language switch and reloads it if it's onscreen.</summary>
@@ -201,6 +225,7 @@ public partial class App : System.Windows.Application
         }
 
         await window.ViewModel.InitializeAsync().ConfigureAwait(true);
+        _ = StartAutoSyncWhenReadyAsync(window);
 
         // Apply persisted in-app shortcut overrides (rebuilds the window's KeyBindings).
         if (_provider is not null)

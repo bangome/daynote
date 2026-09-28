@@ -83,6 +83,9 @@ public partial class App : Application
 
         window.AttachShortcuts(_provider.GetRequiredService<Daynote.App.Input.ConfigurableShortcuts>());
 
+        // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile.
+        window.Activated += (_, _) => shell.NotifyActivated();
+
         window.Show();
         _ = InitializeAsync(shell);
 
@@ -120,6 +123,8 @@ public partial class App : Application
             {
                 await account.InitializeAsync().ConfigureAwait(true);
             }
+
+            shell.StartAutoSync();
 
             // Look for a newer build in the background. Deliberately not awaited and never surfaced:
             // it downloads, stages, and the next start runs it. Nothing about writing a note should

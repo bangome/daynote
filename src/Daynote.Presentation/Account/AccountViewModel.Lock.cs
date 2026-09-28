@@ -67,6 +67,8 @@ public sealed partial class AccountViewModel
     {
         await RunAsync(async () =>
         {
+            // Re-wrapping the key under a run that is still pushing with it is not a race worth having.
+            await syncInFlight.ConfigureAwait(true);
             RecoveryKey key = await accounts.EnableLockAsync(passphrase ?? string.Empty)
                 .ConfigureAwait(true);
 
@@ -84,6 +86,7 @@ public sealed partial class AccountViewModel
     {
         await RunAsync(async () =>
         {
+            await syncInFlight.ConfigureAwait(true);
             await accounts.DisableLockAsync().ConfigureAwait(true);
             IsLockEnabled = false;
         }).ConfigureAwait(true);

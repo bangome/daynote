@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Daynote.Core.Domain.Notes;
 using Daynote.Core.Notes;
 
 namespace Daynote.App.Notes;
@@ -97,6 +98,34 @@ public sealed partial class NoteWorkspaceViewModel
     }
 
     private void OnRecoverableError(RecoverableNoteError error) => Post(() => ApplySaveError(error));
+
+    private void OnAutosaved(NoteSaveRequest request) => Post(() => ApplyAutosave(request.Id));
+
+    /// <summary>
+    /// The debounced save that runs while the user pauses. Before this, only an explicit flush
+    /// (switching note or date) reported success, so after ordinary typing the header said
+    /// "Unsaved" over text already on disk, and anything waiting for a clean save — the to-do rail,
+    /// automatic sync — never heard of it.
+    /// </summary>
+    private void ApplyAutosave(NoteId id)
+    {
+        // Typing resumed before this reached the UI thread, or a flush already reported the save.
+        if (_disposed || _autosave.IsDirty || SaveStatus != SaveStatusKind.Dirty)
+        {
+            return;
+        }
+
+        _projectionOnly = false;
+        foreach (NoteTabViewModel tab in Tabs)
+        {
+            if (tab.Id == id && tab.SaveState != NoteSaveState.Clean)
+            {
+                tab.SaveState = NoteSaveState.Clean;
+            }
+        }
+
+        SaveStatus = SaveStatusKind.Saved;
+    }
 
     private void ApplySaveError(RecoverableNoteError error)
     {

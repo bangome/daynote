@@ -826,11 +826,27 @@ acceptable with this escape hatch; silent data loss is not.
 
 ### 7.5 Trigger points
 
-- On sign-in, on app resume from tray, and on a 5-minute idle timer.
+- On sign-in, on app start once the stored sign-in has been read, when the app comes back to the
+  foreground (window activated / tray restore on desktop, `OnResume` on Android, `Activated` on iOS;
+  skipped within 30 s of the last run), and on a 5-minute idle timer.
 - Debounced ~10 s after the autosave coordinator reports a clean save (never mid-edit).
 - Manual **Sync now** in Settings.
 - Never on a blocked or failed autosave — `AutosaveCoordinator` already blocks navigation there, and
   sync must not race an unsaved buffer.
+
+**Implemented 2026-09-28.** Until then only sign-in and the button synced; a live Mac ↔ Android test
+showed two signed-in devices exchanging nothing until someone pressed it. `SyncScheduler`
+(`Daynote.Presentation/Account`) owns the timers and is attached by all three shells
+(`ProductShellViewModel`, `DesktopShellViewModel`, `MobileShellViewModel`). A scheduled run stands
+aside while `NoteWorkspaceViewModel.HasPendingEdits` is true or another account operation is busy, and
+being offline on a run nobody asked for changes the status chip without raising a message.
+
+A run that wrote locally (`SyncReport.ChangedLocalData`) re-reads the open day, calendar, rails and
+files, keeping the open note selected (`ReloadAfterSyncAsync`). If unsaved text kept the workspace as
+it was, the re-read happens after the next clean save instead. A phone whose full-screen editor was
+on a note deleted elsewhere returns to the list. The same test found the debounced autosave never
+reported success to the view model, which left "Unsaved" on screen and would have held automatic
+sync back indefinitely; `AutosaveCoordinator.Saved` now reports it.
 
 ## 8. Client architecture
 

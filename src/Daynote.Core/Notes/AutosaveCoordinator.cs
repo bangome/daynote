@@ -71,6 +71,12 @@ public sealed class AutosaveCoordinator : IAsyncDisposable
 
     public event Action<RecoverableNoteError>? RecoverableError;
 
+    /// <summary>
+    /// A save landed and left nothing newer waiting — the note on disk is what the editor holds.
+    /// Raised on whichever thread saved, which for the debounced save is not the UI thread.
+    /// </summary>
+    public event Action<NoteSaveRequest>? Saved;
+
     public async ValueTask WaitForPendingSaveAsync(CancellationToken cancellationToken = default)
     {
         Task scheduled;
@@ -181,12 +187,15 @@ public sealed class AutosaveCoordinator : IAsyncDisposable
                 return FlushResult.Block(error);
             }
 
+            bool caughtUp;
             lock (_stateGate)
             {
                 _lastRecoverableError = null;
-                if (generation == _generation) _dirty = null;
+                caughtUp = generation == _generation;
+                if (caughtUp) _dirty = null;
             }
 
+            if (caughtUp) Saved?.Invoke(request);
             return FlushResult.Proceed;
         }
         finally

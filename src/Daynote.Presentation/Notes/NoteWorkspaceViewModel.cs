@@ -15,6 +15,19 @@ public enum SaveStatusKind
     Error,
 }
 
+/// <summary>What <see cref="NoteWorkspaceViewModel.ReloadAfterSyncAsync"/> did.</summary>
+public enum SyncReloadResult
+{
+    /// <summary>Unsaved edits, or nothing loaded yet: the workspace was left alone.</summary>
+    Skipped,
+
+    /// <summary>Re-read, with the open note (if any) still open.</summary>
+    Reloaded,
+
+    /// <summary>Re-read, and the note that was open is gone — another device deleted or moved it.</summary>
+    OpenNoteRemoved,
+}
+
 /// <summary>Use cases and collaborators the note workspace composes (Todo 4 contracts).</summary>
 public sealed class NoteWorkspaceDependencies
 {
@@ -76,6 +89,7 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
     private readonly AutosaveCoordinator _autosave;
     private readonly System.Threading.SynchronizationContext? _sync;
     private bool _suppressEditorSync;
+    private long _tabsVersion;
     private bool _projectionOnly = true;
     private bool _disposed;
 
@@ -84,6 +98,7 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
         _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
         _autosave = new AutosaveCoordinator(dependencies.Repository, dependencies.Scheduler, dependencies.Debounce);
         _autosave.RecoverableError += OnRecoverableError;
+        _autosave.Saved += OnAutosaved;
         _sync = System.Threading.SynchronizationContext.Current;
         SelectedDate = default;
         DateDisplay = string.Empty;
@@ -141,9 +156,48 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
 
     internal AutosaveCoordinator Autosave => _autosave;
 
+    /// <summary>
+    /// True while the editor holds anything not yet safely on disk: typing the debounce has not
+    /// saved, a save in flight, or a failed save waiting on Retry. Sync never runs over that buffer
+    /// (docs/CLOUD_SYNC.md §7.5), and a reload must not replace it.
+    /// </summary>
+    public bool HasPendingEdits =>
+        _autosave.IsDirty || SaveStatus is SaveStatusKind.Dirty or SaveStatusKind.Saving or SaveStatusKind.Error;
+
+    /// <summary>
+    /// Re-reads the shown date after a sync wrote to the database, keeping the open note selected
+    /// when it still exists. The editor text only changes if that note's body changed, so a caret
+    /// in an untouched note stays where it was.
+    /// </summary>
+    public async Task<SyncReloadResult> ReloadAfterSyncAsync(CancellationToken cancellationToken = default)
+    {
+        if (HasPendingEdits || string.IsNullOrEmpty(DateDisplay))
+        {
+            return SyncReloadResult.Skipped;
+        }
+
+        LocalDate date = SelectedDate;
+        long version = _tabsVersion;
+        DayWorkspace workspace = await _dependencies.GetDayWorkspace
+            .ExecuteAsync(date, cancellationToken).ConfigureAwait(true);
+
+        // The read is a round trip. The user may have started typing during it, or a navigation,
+        // add or delete may have rebuilt the tabs from a newer read; either way this one is stale.
+        if (HasPendingEdits || date != SelectedDate || version != _tabsVersion)
+        {
+            return SyncReloadResult.Skipped;
+        }
+
+        // A projection's id is minted per read, so only a stored note can be "lost".
+        NoteId? open = SelectedTab is { IsProjection: false } tab ? tab.Id : null;
+        RebuildTabs(workspace, selectId: null);
+        return open is { } id && SelectedTab?.Id != id ? SyncReloadResult.OpenNoteRemoved : SyncReloadResult.Reloaded;
+    }
+
     /// <summary>Loads a date's note set, replacing the tab strip and editor buffer.</summary>
     public async Task LoadAsync(LocalDate date, CancellationToken cancellationToken = default)
     {
+        _tabsVersion++;
         SelectedDate = date;
         DateDisplay = Composition.LocalDates.DisplayLong(date);
         DayWorkspace workspace = await _dependencies.GetDayWorkspace
@@ -154,6 +208,7 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
 
     private void RebuildTabs(DayWorkspace workspace, NoteId? selectId)
     {
+        _tabsVersion++;
         _projectionOnly = workspace.Notes.IsProjectionOnly;
         NoteId? previous = selectId ?? SelectedTab?.Id;
         Tabs.Clear();
@@ -219,6 +274,7 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
 
         _disposed = true;
         _autosave.RecoverableError -= OnRecoverableError;
+        _autosave.Saved -= OnAutosaved;
         await _autosave.DisposeAsync().ConfigureAwait(false);
     }
 

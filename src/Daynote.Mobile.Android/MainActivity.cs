@@ -84,11 +84,17 @@ public class MainActivity : AvaloniaMainActivity
     /// Safe to call after a successful sign-in too: the redirect arrives through
     /// <c>OnNewIntent</c>, which runs before <c>OnResume</c> and has already taken the pending
     /// completion, so there is nothing left here to abandon.
+    ///
+    /// It is also the moment to pick up what other devices wrote while this one was away.
     /// </remarks>
     protected override void OnResume()
     {
         base.OnResume();
         Platform.AndroidAuthSession.Abandon();
+        if (Avalonia.Application.Current is App app)
+        {
+            app.NotifyResumed();
+        }
     }
 
     /// <summary>

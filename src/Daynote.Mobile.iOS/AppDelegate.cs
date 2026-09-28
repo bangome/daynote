@@ -7,7 +7,7 @@ namespace Daynote.Mobile.iOS;
 
 /// <summary>
 /// The iOS application delegate. Avalonia owns the single window; this supplies the platform
-/// services and forwards the two lifecycle moments the app actually cares about.
+/// services and forwards the lifecycle moments the app actually cares about.
 /// </summary>
 [Register(nameof(AppDelegate))]
 public partial class AppDelegate : AvaloniaAppDelegate<App>
@@ -25,6 +25,15 @@ public partial class AppDelegate : AvaloniaAppDelegate<App>
             if (Avalonia.Application.Current is App app)
             {
                 app.FlushAsync().GetAwaiter().GetResult();
+            }
+        };
+
+        // Coming back to the foreground is when other devices' notes are most likely waiting.
+        ((IAvaloniaAppDelegate)this).Activated += (_, _) =>
+        {
+            if (Avalonia.Application.Current is App app)
+            {
+                app.NotifyResumed();
             }
         };
 

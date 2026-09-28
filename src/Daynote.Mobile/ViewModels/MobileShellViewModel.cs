@@ -590,6 +590,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         }
 
         _disposed = true;
+        _syncScheduler?.Dispose();
         Notes.PropertyChanged -= OnNotesPropertyChanged;
         await Notes.DisposeAsync().ConfigureAwait(false);
     }
