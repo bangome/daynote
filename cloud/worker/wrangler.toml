@@ -20,6 +20,10 @@ preview_urls = false
 # Seals each account's data key at rest (src/dek.ts):
 #   wrangler secret put DEK_WRAP_KEY
 #
+# Sign in with Apple, for the iPhone app (DEPLOY.md §2c). The .p8 key from the Apple Developer
+# console signs the client secret Apple wants on every token call:
+#   wrangler secret put APPLE_PRIVATE_KEY
+#
 # Subscriptions, over Paddle (docs/CLOUD_SYNC.md §14, DEPLOY.md §2b):
 #   wrangler secret put PADDLE_WEBHOOK_SECRET   # Developer tools -> Notifications -> destination
 #   wrangler secret put PADDLE_API_KEY          # Developer tools -> Authentication
@@ -43,7 +47,7 @@ directory = "../site/public"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
-run_worker_first = ["/v1/*", "/privacy"]
+run_worker_first = ["/v1/*", "/privacy", "/delete-account"]
 
 [vars]
 ACCESS_TOKEN_TTL_SECONDS = "900"
@@ -56,6 +60,14 @@ GOOGLE_CLIENT_ID = "298036592294-mp11166n940ojbq4js3u5233ruvkk2ic.apps.googleuse
 # what binds the code to the attempt. See docs/MOBILE_PORT.md.
 GOOGLE_IOS_CLIENT_ID = "298036592294-21i9l31vhlihpfi6898b8inc0045nnhh.apps.googleusercontent.com"
 GOOGLE_ANDROID_CLIENT_ID = "298036592294-n5uff4qakgibac545udo1jthfqonvku2.apps.googleusercontent.com"
+
+# Sign in with Apple (src/apple.ts, DEPLOY.md §2c). The bundle id is the app's and doubles as the
+# OAuth client id; the team id and the id of the Sign in with Apple key come from the Apple
+# Developer console. Public, so vars. While either id or the APPLE_PRIVATE_KEY secret is empty,
+# POST /v1/auth/apple is refused with a message the app shows, as for an unconfigured Google client.
+APPLE_BUNDLE_ID = "cc.arachat.daynote"
+APPLE_TEAM_ID = ""
+APPLE_KEY_ID = ""
 
 # The two prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"). Public,
 # so vars. Monthly ₩2,900 / $2.49, annual ₩24,000 / $19.99; the site's pricing page and the Store

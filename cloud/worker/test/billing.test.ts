@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  del,
   env,
   expireEntitlement,
   get,
   grantSubscription,
+  jsonResponse,
+  mockFetch,
   post,
   resetDatabase,
   signIn,
@@ -347,6 +350,40 @@ describe('webhook', () => {
       .first<{ current_period_end_utc: string }>();
 
     expect(row?.current_period_end_utc).toBe(far);
+  });
+
+  it('keeps the subscription id when a transaction event arrives, so deletion cancels the right one', async () => {
+    // On transaction.* events data.id is the transaction. Reading it as the subscription id once
+    // replaced sub_... with txn_..., and every later cancel went to a URL that 404s.
+    const account = await signIn();
+    await deliver(subscriptionEvent(account.userId, {
+      type: 'subscription.created',
+      subscriptionId: 'sub_real',
+    }));
+    await deliver({
+      event_id: `evt_${crypto.randomUUID()}`,
+      event_type: 'transaction.payment_failed',
+      data: { id: 'txn_01failed', subscription_id: 'sub_real', customer_id: 'ctm_abc', status: 'past_due' },
+    });
+
+    const row = await env.DB.prepare('SELECT subscription_id, status FROM subscriptions WHERE user_id = ?1')
+      .bind(account.userId)
+      .first<{ subscription_id: string; status: string }>();
+    expect(row).toEqual({ subscription_id: 'sub_real', status: 'past_due' });
+
+    (env as { PADDLE_API_KEY?: string }).PADDLE_API_KEY = 'pdl_test_key';
+    const calls = mockFetch(() => jsonResponse({ data: { id: 'sub_real', status: 'canceled' } }));
+    try {
+      const deleted = await del('/v1/account', { token: account.accessToken });
+
+      expect(deleted.status).toBe(204);
+      expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+        'POST https://api.paddle.com/subscriptions/sub_real/cancel',
+      ]);
+    } finally {
+      vi.restoreAllMocks();
+      delete (env as { PADDLE_API_KEY?: string }).PADDLE_API_KEY;
+    }
   });
 
   it('records an event it cannot match to an account instead of dropping it', async () => {

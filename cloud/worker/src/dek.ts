@@ -75,6 +75,41 @@ export async function open(env: Env, wrapped: string): Promise<Uint8Array> {
   return new Uint8Array(plaintext);
 }
 
+/**
+ * Seals a provider credential of any length — today only Apple's refresh token — under the same
+ * `DEK_WRAP_KEY`, in a `t1.` envelope that cannot be mistaken for a data key.
+ *
+ * The `purpose` is bound in as associated data, so a sealed token can only be opened as the thing
+ * it was sealed as: a row whose value was swapped for another account's sealed data key fails to
+ * open rather than being sent to Apple.
+ */
+export async function sealText(env: Env, purpose: string, text: string): Promise<string> {
+  const nonce = randomBytes(NONCE_BYTES);
+  const sealed = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce as BufferSource, additionalData: new TextEncoder().encode(purpose) },
+    await wrappingKey(env),
+    new TextEncoder().encode(text),
+  );
+  return `t1.${toBase64Url(nonce)}.${toBase64Url(new Uint8Array(sealed))}`;
+}
+
+/** Opens a `t1.` envelope. Throws, like `open`, because a row this Worker wrote cannot be malformed. */
+export async function openText(env: Env, purpose: string, wrapped: string): Promise<string> {
+  const match = /^t1\.([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{22,})$/.exec(wrapped);
+  const nonce = match === null ? null : fromBase64Url(match[1]!);
+  const sealed = match === null ? null : fromBase64Url(match[2]!);
+  if (nonce === null || sealed === null) {
+    throw new Error('The stored credential is not a t1 envelope.');
+  }
+
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: nonce as BufferSource, additionalData: new TextEncoder().encode(purpose) },
+    await wrappingKey(env),
+    sealed as BufferSource,
+  );
+  return new TextDecoder().decode(plaintext);
+}
+
 /** The wire form handed to the client: raw base64url, over TLS. */
 export function toWire(dek: Uint8Array): string {
   return toBase64Url(dek);

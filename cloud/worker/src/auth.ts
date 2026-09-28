@@ -1,5 +1,6 @@
+import { identify as identifyWithApple } from './apple';
 import { uuid } from './bytes';
-import { createDek, open, seal, toWire } from './dek';
+import { createDek, open, seal, sealText, toWire } from './dek';
 import { accessTtlSeconds, refreshTtlDays, requireJwtSecret, type Env } from './env';
 import { resolve as resolveEntitlement, toWire as entitlementToWire, trialEnd } from './entitlement';
 import { identify } from './google';
@@ -19,16 +20,27 @@ import {
 } from './validate';
 
 /**
- * Accounts and sessions, on Google sign-in.
+ * Accounts and sessions, on Google sign-in and Sign in with Apple.
  *
- * There is no register endpoint and no password. The first successful Google sign-in for a subject
+ * There is no register endpoint and no password. The first successful sign-in for a subject
  * creates the account, so "sign up" and "sign in" are the same request — with an identity provider
  * there is nothing for a separate registration step to collect.
+ *
+ * An account belongs to exactly one provider. A Google account and an Apple account with the same
+ * address are two accounts: linking them by address would hand one to whoever controls the other's
+ * mailbox, and an Apple address is often a relay that matches nothing anyway.
  */
+
+/** Which provider subject an account is found by. Column names, so never from input. */
+type ProviderColumn = 'google_sub' | 'apple_sub';
+
+/** Purpose label for the sealed Apple refresh token (dek.ts `sealText`). */
+export const APPLE_REFRESH_PURPOSE = 'apple-refresh-token';
 
 interface UserRow {
   id: string;
-  google_sub: string;
+  /** Null for an account created through Apple. */
+  google_sub: string | null;
   email: string;
   /** Null exactly when `protection` is 'passphrase': the server destroyed its copy. */
   wrapped_dek: string | null;
@@ -93,29 +105,41 @@ export async function authenticate(request: Request, env: Env, now: Date): Promi
 }
 
 /**
- * Finds the account for a Google subject, creating it on first sign-in.
+ * Finds the account for a provider subject, creating it on first sign-in.
  *
- * The lookup is by `google_sub`, never by address: Google lets people change the address on an
- * account, and matching on the address would either lose the account or, worse, hand it to whoever
- * holds the address now. The stored address is refreshed on every sign-in so the settings panel
- * shows the current one.
+ * The lookup is by the subject, never by address: Google lets people change the address on an
+ * account, Apple may hand out a relay, and matching on the address would either lose the account
+ * or, worse, hand it to whoever holds the address now. The stored address is refreshed whenever the
+ * provider sends one, so the settings panel shows the current one — and kept when it does not,
+ * which Apple does on most sign-ins after the first. An account that has never had one stores ''
+ * (the column is NOT NULL).
+ *
+ * `appleRefreshToken` is already sealed. It replaces the stored one when Apple sends a new one, so
+ * the revoke at deletion uses the newest.
  */
 async function upsertUser(
   env: Env,
+  column: ProviderColumn,
   subject: string,
-  email: string,
+  email: string | null,
   now: Date,
+  appleRefreshToken: string | null = null,
 ): Promise<UserRow> {
   const stamp = canonicalUtc(now);
-  const existing = await env.DB.prepare(`${SELECT} WHERE google_sub = ?1`)
+  const existing = await env.DB.prepare(`${SELECT} WHERE ${column} = ?1`)
     .bind(subject)
     .first<UserRow>();
 
   if (existing !== null) {
-    await env.DB.prepare('UPDATE users SET email = ?2, last_seen_utc = ?3 WHERE id = ?1')
-      .bind(existing.id, email, stamp)
+    await env.DB.prepare(
+      `UPDATE users
+          SET email = COALESCE(?2, email), last_seen_utc = ?3,
+              apple_refresh_token = COALESCE(?4, apple_refresh_token)
+        WHERE id = ?1`,
+    )
+      .bind(existing.id, email, stamp, appleRefreshToken)
       .run();
-    return { ...existing, email };
+    return { ...existing, email: email ?? existing.email };
   }
 
   const id = uuid();
@@ -123,15 +147,16 @@ async function upsertUser(
   try {
     await env.DB.prepare(
       `INSERT INTO users
-         (id, google_sub, email, wrapped_dek, protection, trial_ends_utc, created_utc, last_seen_utc)
-       VALUES (?1, ?2, ?3, ?4, 'server', ?5, ?6, ?6)`,
+         (id, ${column}, email, wrapped_dek, protection, apple_refresh_token, trial_ends_utc,
+          created_utc, last_seen_utc)
+       VALUES (?1, ?2, ?3, ?4, 'server', ?5, ?6, ?7, ?7)`,
     )
-      .bind(id, subject, email, dek.wrapped, trialEnd(now), stamp)
+      .bind(id, subject, email ?? '', dek.wrapped, appleRefreshToken, trialEnd(now), stamp)
       .run();
   } catch (error) {
     if (String(error).includes('UNIQUE')) {
       // Two sign-ins for a brand-new account raced. The other one won; use its row.
-      const raced = await env.DB.prepare(`${SELECT} WHERE google_sub = ?1`)
+      const raced = await env.DB.prepare(`${SELECT} WHERE ${column} = ?1`)
         .bind(subject)
         .first<UserRow>();
       if (raced !== null) {
@@ -143,8 +168,8 @@ async function upsertUser(
 
   return {
     id,
-    google_sub: subject,
-    email,
+    google_sub: column === 'google_sub' ? subject : null,
+    email: email ?? '',
     wrapped_dek: dek.wrapped,
     protection: 'server',
     wrapped_dek_pw: null,
@@ -196,7 +221,31 @@ export async function google(request: Request, env: Env, now: Date): Promise<Res
   await enforce(env, SIGNIN_LIMITS(clientIp(request)), now);
 
   const identity = await identify(env, code, codeVerifier, redirectUri, client);
-  const user = await upsertUser(env, identity.subject, identity.email, now);
+  const user = await upsertUser(env, 'google_sub', identity.subject, identity.email, now);
+
+  return json(await sessionPayload(env, user, device, now, true));
+}
+
+/**
+ * Sign in with Apple, from the iPhone app. The app sends the authorization code from Apple's native
+ * sheet and the raw nonce whose hash it gave Apple; the exchange happens in `apple.ts`.
+ *
+ * The response is exactly the Google one, so the app parses both with the same code.
+ */
+export async function apple(request: Request, env: Env, now: Date): Promise<Response> {
+  const body = await readJsonObject(request);
+  const code = requireString(body, 'authorization_code');
+  const nonce = requireString(body, 'nonce');
+  const device = deviceName(body);
+
+  // Counted before the exchange, for the same reason as Google's.
+  await enforce(env, SIGNIN_LIMITS(clientIp(request)), now);
+
+  const identity = await identifyWithApple(env, code, nonce, now);
+  const sealedRefresh = identity.refreshToken === null
+    ? null
+    : await sealText(env, APPLE_REFRESH_PURPOSE, identity.refreshToken);
+  const user = await upsertUser(env, 'apple_sub', identity.subject, identity.email, now, sealedRefresh);
 
   return json(await sessionPayload(env, user, device, now, true));
 }

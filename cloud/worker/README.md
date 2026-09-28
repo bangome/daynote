@@ -25,17 +25,21 @@ honesty, not capability:
 | --- | --- | --- |
 | GET | `/v1/health` | — |
 | POST | `/v1/auth/google` | authorization code + PKCE verifier in body |
+| POST | `/v1/auth/apple` | Apple authorization code + raw nonce in body |
 | POST | `/v1/auth/refresh` | refresh token in body |
 | POST | `/v1/auth/logout` | refresh token in body |
 | GET | `/v1/auth/me` | Bearer |
 | GET | `/v1/auth/data-key` | Bearer |
 | POST | `/v1/auth/protect` | Bearer + both envelopes |
 | POST | `/v1/auth/unprotect` | Bearer + the raw data key |
+| DELETE | `/v1/account` | Bearer — deletes the account and everything it stored |
 | POST | `/v1/sync/push` | Bearer |
 | GET | `/v1/sync/pull` | Bearer |
 
-`/v1/auth/google` is both sign-up and sign-in: the first successful exchange for a Google subject
-creates the account. `/v1/auth/data-key` re-issues the key to a device that is still signed in but
+`/v1/auth/google` and `/v1/auth/apple` are both sign-up and sign-in: the first successful exchange
+for a provider subject creates the account, and both answer with the same body. `DELETE /v1/account`
+is immediate and permanent (docs/CLOUD_SYNC.md §4.12); it refuses with `409 subscription_active`
+when a subscription is still billing and this Worker has no Paddle key to cancel it. `/v1/auth/data-key` re-issues the key to a device that is still signed in but
 lost its local copy, so a restored Windows profile does not need another trip through the browser.
 
 ## Secrets
@@ -43,8 +47,10 @@ lost its local copy, so a restored Windows profile does not need another trip th
 ```sh
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 npx wrangler secret put DEK_WRAP_KEY
+npx wrangler secret put APPLE_PRIVATE_KEY   # Sign in with Apple; DEPLOY.md §2c
 ```
 
+`APPLE_PRIVATE_KEY` signs the short-lived client secret Apple wants on every token and revoke call.
 `GOOGLE_CLIENT_SECRET` redeems the authorization code the app collects in the browser;
 `DEK_WRAP_KEY` seals each account's data key at rest. Neither ships in the app. There is no email
 sender any more — password reset left with the password. See
@@ -121,8 +127,11 @@ Worker, and Cloudflare does not let a second Worker share it, so the site rides 
 - Source: `../site/template.html` + the ko/en strings in `../site/build.mjs`; output lands in
   `../site/public/` (committed, so a deploy never depends on the build having run).
 - `npm run build:site` regenerates the two HTML files; `npm run deploy` runs it first (`predeploy`).
-- `run_worker_first = ["/v1/*", "/privacy"]` keeps the API and the privacy policy in code; every
-  other path is answered from `public/`, with `404.html` for misses.
+- `run_worker_first = ["/v1/*", "/privacy", "/delete-account"]` keeps the API, the privacy policy,
+  and the bare deletion URL in code; every other path is answered from `public/`, with `404.html`
+  for misses. `/delete-account` serves the built `public/delete-account/` (ko) or
+  `public/en/delete-account/` page by Accept-Language, so rebuild the site before deploying a change
+  to its text.
 - The Store button points at a Store search until the listing has a product id — change
   `STORE_URL` in `build.mjs` to `https://apps.microsoft.com/detail/<ProductId>` then.
 - Images under `public/img/` are derived from `docs/brand/` (see the PIL snippet in the git history

@@ -95,3 +95,39 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('<strong>not bold</strong>');
   });
 });
+
+describe('GET /delete-account', () => {
+  it('serves the deletion page Google Play links to, as HTML', async () => {
+    const response = await fetchPath('/delete-account');
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
+
+    const html = await response.text();
+    // English unless the browser asks for Korean: a store reviewer is the likeliest first reader.
+    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('Delete your account');
+    expect(html).toContain('mailto:');
+    expect(html).not.toContain('{{');
+  });
+
+  it('answers in Korean when the browser prefers it', async () => {
+    const worker = (await import('../src/index')).default;
+    const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+    const response = await worker.fetch(
+      new Request(`${BASE}/delete-account`, { headers: { 'accept-language': 'ko-KR,ko;q=0.9' } }),
+      env as any,
+      ctx,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('vary')).toBe('accept-language');
+    expect(await response.text()).toContain('<html lang="ko">');
+  });
+
+  it('is linked from the privacy policy', async () => {
+    const html = await (await fetchPath('/privacy')).text();
+
+    expect(html).toContain('href="https://daynote.arachat.cc/delete-account"');
+  });
+});

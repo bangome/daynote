@@ -11,6 +11,9 @@ Current state, 2026-09-02:
 | `GOOGLE_CLIENT_ID` (var) | set in `wrangler.toml` |
 | `GOOGLE_CLIENT_SECRET` (secret) | **must be set** — `wrangler secret put GOOGLE_CLIENT_SECRET` |
 | `DEK_WRAP_KEY` (secret) | **must be set** — `wrangler secret put DEK_WRAP_KEY` |
+| `APPLE_BUNDLE_ID` (var) | set in `wrangler.toml` (`cc.arachat.daynote`) |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID` (vars), `APPLE_PRIVATE_KEY` (secret) | **empty** — Apple sign-in is refused until they are set; see §2c |
+| Migration `0009_apple_and_deletion.sql` | **must be applied before** deploying the Worker that serves `/v1/auth/apple` and `DELETE /v1/account` — see §2c |
 | `PADDLE_WEBHOOK_SECRET`, `PADDLE_API_KEY` (secrets) | **must be set** for subscriptions — see §2b |
 | `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` (vars) | set in `wrangler.toml` (₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual) — see §2b |
 | Google consent screen | Testing or Production — see §2 |
@@ -171,6 +174,72 @@ customer (`POST /customers/{id}/portal-sessions`), which must never be stored. `
 creates one per click, which is why `PADDLE_API_KEY` is needed and why there is no
 `PADDLE_MANAGE_URL` to configure. An earlier revision of this file had one; it was wrong.
 
+## 2c. Sign in with Apple, and account deletion
+
+The iPhone app offers Sign in with Apple next to Google (App Store guideline 4.8), and both phone
+apps offer **Delete account** (App Store 5.1.1(v), Google Play). The flow is the Google one with a
+different token endpoint: the app posts Apple's authorization code and the raw nonce to
+`POST /v1/auth/apple`, and the Worker redeems the code with a client secret it signs itself. See
+docs/CLOUD_SYNC.md §4.1c and §4.12.
+
+### In the Apple Developer console
+
+1. **Certificates, Identifiers & Profiles → Identifiers →** the App ID `cc.arachat.daynote` →
+   tick **Sign in with Apple** (leave it as a primary App ID) → **Save**. The app's provisioning
+   profiles have to be regenerated afterwards, and the Xcode/MSBuild entitlements must carry
+   `com.apple.developer.applesignin = ["Default"]`.
+2. **Keys → +** → name it (e.g. "Daynote Sign in with Apple") → tick **Sign in with Apple** →
+   **Configure** → primary App ID `cc.arachat.daynote` → **Save → Continue → Register**.
+3. **Download** the `.p8` file. Apple lets you download it **once**; keep it somewhere safe, and
+   never commit it. Note the **Key ID** shown on the key's page (10 characters).
+4. Note the **Team ID**: top right of the developer site, or **Membership details** (10 characters).
+
+### On the Worker
+
+Put the two ids in `wrangler.toml` (`APPLE_TEAM_ID`, `APPLE_KEY_ID`; `APPLE_BUNDLE_ID` is already
+`cc.arachat.daynote`), and the key in as a secret, whole, header lines included:
+
+```sh
+npx wrangler secret put APPLE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8
+```
+
+Redirecting the file keeps its line breaks and keeps it out of shell history. A PEM pasted with its
+line breaks flattened to literal `\n` is accepted too. While any of the four values is empty,
+`/v1/auth/apple` answers `400 bad_request` "Signing in with Apple is not configured on this server
+yet." — the app shows it — rather than failing inside Apple.
+
+The same key signs the revoke call made on account deletion, so **revoking the key in the console
+also stops those revokes** (deletion itself still succeeds; the failure is logged). Rotate it by
+creating a new key, switching both ids and the secret, then revoking the old one.
+
+### Before deploying
+
+Migration 0009 has to be applied first, and it is heavier than it looks: it rebuilds `users` and the
+five tables that reference it (the header explains why a plain rebuild would have emptied them).
+It runs in one transaction, so it either completes or leaves the database as it was.
+
+```sh
+npx wrangler d1 time-travel info daynote      # note the bookmark, in case it is needed
+npx wrangler d1 migrations apply daynote --remote
+npx wrangler deploy
+```
+
+Deploying the new Worker first would fail every sign-in on the missing `apple_sub` column.
+
+### Account deletion needs `PADDLE_API_KEY`
+
+`DELETE /v1/account` cancels a live subscription at Paddle before deleting anything. Without
+`PADDLE_API_KEY` it cannot, and an account whose subscription is still billing is refused with
+`409 subscription_active` rather than deleted. Accounts with no subscription, or a cancelled one,
+are unaffected.
+
+### The web page Google Play asks for
+
+Play Console → **App content → Data safety → Data deletion** wants a URL where a user can request
+deletion without the app. Use `https://daynote.arachat.cc/delete-account`. It is built from
+`../site/content/delete-account.*.html` and served by this Worker; the email fallback on it is
+`SUPPORT_EMAIL` in `../site/build.mjs`, so that mailbox has to be read.
+
 ## 3. Point the app at it
 
 **The shipped app does not talk to this service.** `DaynoteAppOptions.SyncEnabledByDefault` is
@@ -199,7 +268,7 @@ script can report a broken service that is in fact fine. `curl` is unaffected, a
 ## Routine operations
 
 ```sh
-npm test                                        # 102 cases in workerd against a local D1
+npm test                                        # the suite, in workerd against a local D1
 npx wrangler deploy --dry-run                   # validate config and build
 npx wrangler d1 migrations apply daynote --remote
 npx wrangler tail daynote-cloud                 # live logs

@@ -1,7 +1,9 @@
+import { deleteAccountPage } from './deleteAccountPage';
 import { ApiError, errorResponse, json } from './http';
 import { privacyPage } from './privacy';
 import { sweep } from './ratelimit';
 import { canonicalUtc } from './time';
+import * as account from './account';
 import * as assets from './assets';
 import * as auth from './auth';
 import * as billing from './billing';
@@ -10,7 +12,7 @@ import * as sync from './sync';
 import type { Env } from './env';
 
 /**
- * Daynote cloud sync Worker — Google sign-in, sessions, and note sync.
+ * Daynote cloud sync Worker — Google and Apple sign-in, sessions, note sync, and account deletion.
  *
  * Note bodies arrive encrypted; by default this Worker also
  * holds the key that opens them (src/dek.ts), so sync is encrypted in transit and at rest but is NOT
@@ -22,12 +24,14 @@ type Handler = (request: Request, env: Env, now: Date) => Promise<Response>;
 
 const ROUTES: Record<string, Handler> = {
   'POST /v1/auth/google': auth.google,
+  'POST /v1/auth/apple': auth.apple,
   'POST /v1/auth/refresh': auth.refresh,
   'POST /v1/auth/logout': auth.logout,
   'GET /v1/auth/me': auth.me,
   'GET /v1/auth/data-key': auth.dataKey,
   'POST /v1/auth/protect': auth.protect,
   'POST /v1/auth/unprotect': auth.unprotect,
+  'DELETE /v1/account': account.remove,
   'GET /v1/billing/status': billing.status,
   'POST /v1/billing/checkout': billing.checkout,
   'POST /v1/billing/portal': billing.portal,
@@ -74,6 +78,11 @@ export default {
     // routing table: it is a static page, and it must not reach D1 or the rate limiter.
     if (request.method === 'GET' && url.pathname === '/privacy') {
       return privacyPage();
+    }
+
+    // The deletion page Google Play links to; the same static-page rules as /privacy.
+    if (request.method === 'GET' && url.pathname === '/delete-account') {
+      return deleteAccountPage(request);
     }
 
     const handler = assetHandler(request, url) ?? ROUTES[`${request.method} ${url.pathname}`];

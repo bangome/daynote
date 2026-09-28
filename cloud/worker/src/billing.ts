@@ -120,7 +120,11 @@ async function verify(env: Env, request: Request, rawBody: string, now: Date): P
  * the app. Later events for the same subscription may not carry it, which is what the stored
  * provider ids are for.
  */
-async function resolveUser(env: Env, data: PaddleSubscriptionData): Promise<string | null> {
+async function resolveUser(
+  env: Env,
+  data: PaddleSubscriptionData,
+  subscriptionId: string | null,
+): Promise<string | null> {
   const fromCustomData = data.custom_data?.user_id;
   if (typeof fromCustomData === 'string' && fromCustomData.length > 0) {
     const exists = await env.DB.prepare('SELECT id FROM users WHERE id = ?1')
@@ -131,8 +135,7 @@ async function resolveUser(env: Env, data: PaddleSubscriptionData): Promise<stri
     }
   }
 
-  const subscriptionId = data.id ?? data.subscription_id;
-  if (typeof subscriptionId === 'string') {
+  if (subscriptionId !== null) {
     const row = await env.DB.prepare('SELECT user_id FROM subscriptions WHERE subscription_id = ?1')
       .bind(subscriptionId)
       .first<{ user_id: string }>();
@@ -177,7 +180,8 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
   const eventId = event.event_id ?? (await sha256Hex(rawBody));
   const eventType = event.event_type ?? 'unknown';
   const data = event.data ?? {};
-  const userId = await resolveUser(env, data);
+  const subscriptionId = subscriptionIdOf(eventType, data);
+  const userId = await resolveUser(env, data, subscriptionId);
 
   // Idempotency first: a retried delivery must not be applied twice. INSERT OR IGNORE returns no
   // rows when the event has been seen, which is the whole check.
@@ -226,7 +230,7 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
     .bind(
       userId,
       data.customer_id ?? null,
-      data.id ?? data.subscription_id ?? null,
+      subscriptionId,
       status,
       periodEnd,
       grace,
@@ -235,6 +239,17 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
     .run();
 
   return noContent();
+}
+
+/**
+ * The subscription an event is about. `data.id` means the subscription only on `subscription.*`
+ * events; on `transaction.*` it is the transaction (`txn_...`), and the subscription is
+ * `data.subscription_id`. Reading `data.id` for both once let a failed payment overwrite the stored
+ * `sub_...` with a `txn_...` (COALESCE keeps any non-null), after which nothing could cancel it.
+ */
+function subscriptionIdOf(eventType: string, data: PaddleSubscriptionData): string | null {
+  const id = eventType.startsWith('subscription.') ? data.id ?? data.subscription_id : data.subscription_id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
 }
 
 /** The billing intervals on offer. The wire names are also the app's; keep them lower-case. */
@@ -394,6 +409,123 @@ export async function portal(request: Request, env: Env, now: Date): Promise<Res
   }
 
   return json({ url, server_utc: canonicalUtc(now) });
+}
+
+/**
+ * Makes sure an account about to be deleted can never be charged again (src/account.ts).
+ *
+ * Anything short of `canceled` is treated as able to bill — `active` and `trialing` obviously, but
+ * also `past_due` (Paddle is still retrying the card), `paused` (resumable from the portal), and a
+ * status this version does not know. Failing towards "cancel it" is the only safe direction: an
+ * account that is gone but still renewing is a charge the customer can no longer even see.
+ *
+ * The cancellation is immediate rather than at the period end. The service the period paid for is
+ * being deleted at the customer's request, so there is nothing left to deliver until then.
+ *
+ * Without an API key this server cannot cancel anything, so it refuses the deletion with
+ * `subscription_active` and the customer cancels first, from the portal — as it does when it cannot
+ * tell which subscription to cancel. Nothing is deleted in either case: the refusal comes before
+ * every destructive step.
+ */
+export async function cancelForDeletion(env: Env, userId: string, now: Date): Promise<void> {
+  const row = await env.DB.prepare(
+    'SELECT customer_id, subscription_id, status FROM subscriptions WHERE user_id = ?1',
+  )
+    .bind(userId)
+    .first<{ customer_id: string | null; subscription_id: string | null; status: string }>();
+
+  if (row === null || row.status === 'canceled') {
+    return;
+  }
+
+  const apiKey = env.PADDLE_API_KEY;
+  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+    throw cancelFirst();
+  }
+
+  // A row written before the webhook fix may hold a transaction id (`txn_...`) where the
+  // subscription id belongs, and cancelling that would 404 on every retry. Anything that is not a
+  // `sub_...` is looked up again from the customer instead of trusted.
+  const subscriptionIds = row.subscription_id?.startsWith('sub_')
+    ? [row.subscription_id]
+    : await billableSubscriptionsOf(apiKey, row.customer_id);
+  if (subscriptionIds === null) {
+    throw cancelFirst();
+  }
+
+  for (const id of subscriptionIds) {
+    const subscriptionId = encodeURIComponent(id);
+    const response = await fetch(`https://api.paddle.com/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ effective_from: 'immediately' }),
+    });
+
+    // Paddle refuses to cancel what is already cancelled — a webhook we missed, or a retry after
+    // the first attempt cancelled and then something else failed. Asking what state it is in
+    // settles both without depending on the wording of Paddle's error codes.
+    if (!response.ok && !(await isCanceledAtPaddle(apiKey, subscriptionId))) {
+      console.error('paddle cancel failed', response.status, (await response.text()).slice(0, 300));
+      throw new ApiError(
+        'server_error',
+        'The subscription could not be cancelled, so nothing was deleted. Try again in a few minutes.',
+      );
+    }
+  }
+
+  // Recorded before anything is deleted, so a retry after a later failure does not cancel twice.
+  await env.DB.prepare(
+    "UPDATE subscriptions SET status = 'canceled', updated_utc = ?2 WHERE user_id = ?1",
+  )
+    .bind(userId, canonicalUtc(now))
+    .run();
+}
+
+/** The refusal when this server cannot be sure the subscription will stop. */
+function cancelFirst(): ApiError {
+  return new ApiError(
+    'subscription_active',
+    'Cancel your subscription before deleting the account, or it would keep renewing. ' +
+      'Use Manage subscription in the app, or the link in your Paddle receipt, then try again.',
+  );
+}
+
+/**
+ * Every subscription of this customer that could still bill, from Paddle itself. Null when that
+ * cannot be established — no customer id, or Paddle would not answer — which the caller turns into
+ * a refusal: guessing "nothing to cancel" is the one wrong answer here.
+ */
+async function billableSubscriptionsOf(
+  apiKey: string,
+  customerId: string | null,
+): Promise<string[] | null> {
+  if (customerId === null) {
+    return null;
+  }
+
+  const query = new URLSearchParams({
+    customer_id: customerId,
+    status: 'active,trialing,past_due,paused',
+  });
+  const response = await fetch(`https://api.paddle.com/subscriptions?${query}`, {
+    headers: { authorization: `Bearer ${apiKey}` },
+  });
+  const body = (await response.json().catch(() => ({}))) as { data?: { id?: unknown }[] };
+  if (!response.ok || !Array.isArray(body.data)) {
+    console.error('paddle subscription lookup failed', response.status);
+    return null;
+  }
+
+  const ids = body.data.map((subscription) => subscription.id);
+  return ids.every((id): id is string => typeof id === 'string' && id.startsWith('sub_')) ? ids : null;
+}
+
+async function isCanceledAtPaddle(apiKey: string, subscriptionId: string): Promise<boolean> {
+  const response = await fetch(`https://api.paddle.com/subscriptions/${subscriptionId}`, {
+    headers: { authorization: `Bearer ${apiKey}` },
+  });
+  const body = (await response.json().catch(() => ({}))) as { data?: { status?: string } };
+  return response.ok && body.data?.status === 'canceled';
 }
 
 function requireApiKey(env: Env): string {

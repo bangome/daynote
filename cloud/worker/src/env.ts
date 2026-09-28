@@ -54,6 +54,20 @@ export interface Env {
   GOOGLE_ANDROID_CLIENT_ID?: string;
 
   /**
+   * Sign in with Apple, for the iPhone app (src/apple.ts). The bundle id is the OAuth client id,
+   * the team and key ids name the signing key, and the key itself — the `.p8` PEM downloaded once
+   * from the Apple Developer console — is a Worker secret that signs the short-lived client secret
+   * Apple wants on every token call. Nothing here ships in the app.
+   *
+   * Any of the four empty means Apple sign-in is refused with a message, the same way an
+   * unconfigured Google phone client is; see DEPLOY.md §2c.
+   */
+  APPLE_BUNDLE_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
+
+  /**
    * Paddle, the merchant of record for subscriptions (docs/CLOUD_SYNC.md §14). The webhook secret
    * signs incoming events; without it the webhook refuses every delivery rather than granting
    * entitlement on an unauthenticated request.

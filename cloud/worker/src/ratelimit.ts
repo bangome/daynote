@@ -75,3 +75,12 @@ export async function sweep(env: Env, now: Date): Promise<void> {
 export const SIGNIN_LIMITS = (ip: string): readonly Limit[] => [
   { action: 'signin', scope: 'ip', value: ip, max: 20 },
 ];
+
+/**
+ * Account deletion calls Paddle and Apple and walks R2, so a loop on it is expensive for us even
+ * though it can only ever delete the caller. Per account, sized so retrying after a partial
+ * failure is never the thing that stops someone.
+ */
+export const ACCOUNT_DELETE_LIMITS = (userId: string): readonly Limit[] => [
+  { action: 'delete', scope: 'user', value: userId, max: 10 },
+];

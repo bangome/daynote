@@ -242,6 +242,11 @@ const PAGES = [
   { slug: 'support', cls: 'page--support',
     ko: { title: '지원', eyebrow: '지원', desc: 'Daynote 문의 방법과 자주 겪는 문제.', meta: '영업일 기준 3일 안에 회신' },
     en: { title: 'Support', eyebrow: 'Support', desc: 'How to reach Daynote, and answers to common problems.', meta: 'Replies within 3 business days' } },
+  // The account-deletion URL Google Play's Data safety form asks for. The Worker also answers the
+  // bare `/delete-account` (src/deleteAccountPage.ts) with one of these two, by Accept-Language.
+  { slug: 'delete-account', cls: 'page--legal',
+    ko: { title: '계정 삭제', eyebrow: '계정', desc: 'Daynote 계정을 삭제하는 방법과, 삭제되는 것과 남는 것.', meta: '즉시 · 영구 삭제' },
+    en: { title: 'Delete your account', eyebrow: 'Account', desc: 'How to delete a Daynote account, and what is and is not deleted.', meta: 'Immediate and permanent' } },
   { slug: 'checkout', cls: 'page--checkout', head: PADDLE_HEAD, noindex: true,
     ko: { title: '결제', eyebrow: '클라우드 동기화', desc: 'Daynote 클라우드 동기화 구독 결제.', meta: 'Paddle이 처리하는 안전한 결제' },
     en: { title: 'Checkout', eyebrow: 'Cloud sync', desc: 'Checkout for the Daynote cloud sync subscription.', meta: 'Secure payment processed by Paddle' } },

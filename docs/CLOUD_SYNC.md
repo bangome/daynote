@@ -158,6 +158,44 @@ The invariant is enforced by a table CHECK, not just by the handler: a `server` 
 and no envelopes, a `passphrase` row has both envelopes and no sealed key. There is no third state in
 which the service keeps a spare.
 
+### 4.1c Sign in with Apple — BUILT 2026-09-28
+
+The iPhone app has to offer Sign in with Apple beside Google (App Store guideline 4.8), so an
+account's identity is now one of two provider subjects. Same shape as §4.1a, deliberately:
+
+```
+iPhone app                                Worker                              Apple
+  native sheet, nonce = sha256hex(raw)
+      ── authorization_code + raw nonce ──►  /v1/auth/apple  ── code + ES256 JWT ──►  /auth/token
+                                                  │                                     │
+                                                  │◄──────── id_token, refresh_token ───┘
+                                           check iss, aud = bundle id, exp,
+                                             nonce == sha256hex(raw)
+                                           upsert user by apple_sub
+  ◄──── the same session response as /v1/auth/google ────
+```
+
+- **The id_token the Worker trusts is the one it fetched itself** from Apple over TLS, not the one
+  the sheet gave the app — the same reasoning as Google's, and why there is no JWKS cache.
+- **The client secret is minted per call**: an ES256 JWT (`kid` = `APPLE_KEY_ID`, `iss` =
+  `APPLE_TEAM_ID`, `sub` = the bundle id, five minutes) signed with the `.p8` key held as the
+  `APPLE_PRIVATE_KEY` secret. Any of the four values missing refuses sign-in with `bad_request`,
+  like an unconfigured Google phone client.
+- **`apple_sub` is the identity**, never the address. Apple sends an address on the first sign-in
+  and not reliably after, and it may be a private relay; the stored one is kept when none arrives,
+  and is `''` for an account that never had one.
+- **Apple's refresh token is stored sealed** (`t1.` envelope under `DEK_WRAP_KEY`, purpose-bound),
+  for one call only: the revoke Apple requires at account deletion (§4.12). It is never used to
+  sign in; the app's sessions are this Worker's own tokens (§4.10), as for Google.
+- **A Google account and an Apple account are two accounts**, even at the same address. There is no
+  linking: joining by address would hand an account to whoever controls the other mailbox.
+- Schema: `users.google_sub` became nullable, with `apple_sub` (UNIQUE) and `apple_refresh_token`
+  added and a CHECK that one of the two subjects is set — migration `0009_apple_and_deletion.sql`.
+  That migration also rebuilds the five child tables, because with D1's always-on foreign keys a
+  bare `DROP TABLE users` cascades into them; its header explains, and `test/migration.test.ts`
+  runs it over populated tables.
+- Server: `src/apple.ts`, `src/auth.ts`. Tests: `cloud/worker/test/apple.test.ts`.
+
 ### 4.1 What the password must do — SUPERSEDED
 
 > Everything from here to §4.9 describes the password-derived hierarchy that 0004 replaced. It is
@@ -397,6 +435,42 @@ refresh token, the access token, and the cached **DEK**. Requires the
 Never put any of this in the `settings` table — that table lands verbatim in the plaintext backup
 `.zip`. `BackupService` must explicitly **exclude `credentials.dat`**, and the backup must not
 become a way to exfiltrate a DEK.
+
+### 4.12 Account deletion — BUILT 2026-09-28
+
+`DELETE /v1/account` (Bearer) deletes the account and everything the service holds for it,
+immediately and permanently, and answers `204`. Both stores require it in the app (App Store
+5.1.1(v), Google Play's account-deletion policy, which also wants the web page at
+`/delete-account`). There is no soft delete and no grace period: the service is a relay, and the
+notes are still on every device that pushed them.
+
+The order is what makes a half-way failure safe and a retry correct:
+
+1. **Billing.** A subscription in any state but `canceled` is cancelled at Paddle, immediately, and
+   the row marked `canceled` before anything else happens. With no `PADDLE_API_KEY` the request is
+   refused with `409 subscription_active` and nothing is deleted: an account that is gone but still
+   renewing is worse than one that was not deleted.
+2. **Apple.** A stored Apple refresh token is revoked at `/auth/revoke`. Best effort — a failure is
+   logged and does not keep the data.
+3. **R2.** Every object under the account's prefix, including uploads whose row never arrived.
+   First, because no transaction covers it: a failure after this leaves an intact, still
+   authenticated account for the retry to finish.
+4. **D1, one batch.** `change_log`, `notes`, `files`, `assets`, `refresh_tokens`, `subscriptions`,
+   the account's `rate_limits` buckets, then `users`. Each table is named explicitly rather than
+   left to ON DELETE CASCADE, so a future table without a cascade cannot quietly survive.
+   `billing_events` keeps its rows as payment records, with `user_id` cleared.
+5. **R2 again**, for anything another signed-in device uploaded while 3 and 4 ran. After 4 the
+   account no longer authenticates, so nothing can land after this pass.
+
+A stored subscription id that is not a `sub_...` (a `txn_...` written by webhooks before the
+2026-09-29 fix) is not trusted: the customer's billable subscriptions are listed from Paddle and
+cancelled instead, and if that lookup fails the deletion is refused with `subscription_active`.
+
+After that the access token fails `authenticate` (no user row) and the refresh tokens no longer
+exist, so a retry after success is `401` — which the client reads as "already deleted". Signing in
+again with the same Google or Apple account afterwards creates a new, empty account with a new key.
+Rate-limited per account (10 per 15 minutes), refusals included. Server: `src/account.ts`,
+`cancelForDeletion` in `src/billing.ts`. Tests: `cloud/worker/test/account.test.ts`.
 
 ## 5. D1 schema
 

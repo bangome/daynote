@@ -16,6 +16,7 @@ export type ErrorCode =
   | 'not_found'
   | 'rate_limited'
   | 'subscription_required'
+  | 'subscription_active'
   | 'payload_too_large'
   | 'server_error';
 
@@ -29,6 +30,9 @@ const STATUS: Record<ErrorCode, number> = {
   // 402, not 403: the request was understood and the caller is who they say they are — what is
   // missing is payment. The app keys its paywall off exactly this.
   subscription_required: 402,
+  // Deleting an account whose subscription this server cannot cancel. 409: the request is fine,
+  // the account's state is what stands in the way, and cancelling billing first resolves it.
+  subscription_active: 409,
   payload_too_large: 413,
   server_error: 500,
 };

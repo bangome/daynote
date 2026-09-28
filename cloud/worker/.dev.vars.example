@@ -11,6 +11,10 @@ DEK_WRAP_KEY=
 # Google OAuth desktop client secret; the client id is a public var in wrangler.toml.
 GOOGLE_CLIENT_SECRET=
 
+# Sign in with Apple: the .p8 key from Apple Developer -> Keys, as one line with \n for line breaks.
+# APPLE_TEAM_ID and APPLE_KEY_ID are vars in wrangler.toml (DEPLOY.md §2c).
+APPLE_PRIVATE_KEY=
+
 # Paddle. Live values come from the live dashboard (Developer tools), sandbox values from the
 # sandbox dashboard; the two accounts are separate and their keys do not work across.
 #   Notifications -> destination -> "secret key" (pdl_ntfset_...)

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { env } from './env';
 
 /**
@@ -63,6 +64,14 @@ export function post(path: string, body: unknown, options: { ip?: string; token?
     headers['authorization'] = `Bearer ${options.token}`;
   }
   return call(path, { method: 'POST', body: JSON.stringify(body), headers, ip: options.ip });
+}
+
+export function del(path: string, options: { ip?: string; token?: string } = {}) {
+  const headers: Record<string, string> = {};
+  if (options.token !== undefined) {
+    headers['authorization'] = `Bearer ${options.token}`;
+  }
+  return call(path, { method: 'DELETE', headers, ip: options.ip });
 }
 
 export function get(path: string, options: { ip?: string; token?: string } = {}) {
@@ -238,5 +247,124 @@ export function signInAgain(account: Account, device = 'Second PC') {
     code_verifier: 'b'.repeat(43),
     redirect_uri: REDIRECT_URI,
     device_name: device,
+  });
+}
+
+/** One outbound request the Worker made, as the mocked `fetch` saw it. */
+export interface OutboundCall {
+  url: string;
+  method: string;
+  headers: Headers;
+  body: string;
+}
+
+/**
+ * Replaces the global `fetch` for the rest of the test (undo with `vi.restoreAllMocks()`), so the
+ * real Paddle and Apple code paths run — URL, form, headers, client secret — against a stand-in.
+ * The Worker is imported into this same isolate, so its `fetch` is this one.
+ */
+export function mockFetch(
+  respond: (call: OutboundCall) => Response | Promise<Response>,
+): OutboundCall[] {
+  const calls: OutboundCall[] = [];
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const request = new Request(input as RequestInfo, init as RequestInit | undefined);
+    const call = {
+      url: request.url,
+      method: request.method,
+      headers: request.headers,
+      // Decoded by hand: workerd warns on .text() for a form body, and a form is text anyway.
+      body: new TextDecoder().decode(await request.arrayBuffer()),
+    };
+    calls.push(call);
+    return respond(call);
+  });
+  return calls;
+}
+
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+export const APPLE_TEAM = 'TEAM123456';
+export const APPLE_KEY = 'KEY1234567';
+
+/**
+ * Configures Sign in with Apple with a freshly generated P-256 key, exported as the PKCS#8 PEM the
+ * developer console would have handed out. Returns the public half, so a test can verify the
+ * client secret the Worker signed with it.
+ */
+export async function configureApple(): Promise<CryptoKey> {
+  const pair = (await crypto.subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    true,
+    ['sign', 'verify'],
+  )) as CryptoKeyPair;
+  const pkcs8 = new Uint8Array((await crypto.subtle.exportKey('pkcs8', pair.privateKey)) as ArrayBuffer);
+  const base64 = btoa(String.fromCharCode(...pkcs8));
+  const pem = `-----BEGIN PRIVATE KEY-----\n${base64.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
+
+  const target = env as { APPLE_TEAM_ID?: string; APPLE_KEY_ID?: string; APPLE_PRIVATE_KEY?: string };
+  target.APPLE_TEAM_ID = APPLE_TEAM;
+  target.APPLE_KEY_ID = APPLE_KEY;
+  target.APPLE_PRIVATE_KEY = pem;
+  return pair.publicKey;
+}
+
+/** Back to the wrangler.toml state: bundle id set, team and key ids empty, no private key. */
+export function unconfigureApple(): void {
+  const target = env as { APPLE_TEAM_ID?: string; APPLE_KEY_ID?: string; APPLE_PRIVATE_KEY?: string };
+  target.APPLE_TEAM_ID = '';
+  target.APPLE_KEY_ID = '';
+  delete target.APPLE_PRIVATE_KEY;
+}
+
+export async function sha256HexOf(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * An id_token as Apple's token endpoint returns it. The signature segment is junk on purpose: the
+ * Worker trusts this token because it fetched it from Apple itself, and must not depend on one.
+ */
+export function appleIdToken(claims: Record<string, unknown>): string {
+  const encode = (value: unknown) => toBase64Url(new TextEncoder().encode(JSON.stringify(value)));
+  return `${encode({ alg: 'RS256', kid: 'apple-key' })}.${encode(claims)}.not-a-signature`;
+}
+
+export function decodeJwtPart(segment: string): Record<string, any> {
+  const padded = segment.replaceAll('-', '+').replaceAll('_', '/');
+  const binary = atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), '='));
+  return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))));
+}
+
+/** Apple's token endpoint, answering every code with one identity. */
+export async function appleTokenResponse(
+  rawNonce: string,
+  overrides: Record<string, unknown> = {},
+  refreshToken: string | null = 'apple-refresh-token-1',
+): Promise<Response> {
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    iss: 'https://appleid.apple.com',
+    aud: 'cc.arachat.daynote',
+    exp: now + 600,
+    iat: now,
+    sub: '001234.abcdef0123456789.0123',
+    nonce: await sha256HexOf(rawNonce),
+    email: 'Relay123@privaterelay.appleid.com',
+    email_verified: 'true',
+    ...overrides,
+  };
+  return jsonResponse({
+    access_token: 'apple-access',
+    token_type: 'Bearer',
+    expires_in: 3600,
+    ...(refreshToken === null ? {} : { refresh_token: refreshToken }),
+    id_token: appleIdToken(claims),
   });
 }

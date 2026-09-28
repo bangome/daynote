@@ -3,8 +3,8 @@
 Daynote is local-first. This document states plainly what it stores, what can leave your PC, and
 exactly how your data is kept.
 
-*Applies to Daynote 1.3.0.0. Last updated 2026-08-28 — this revision covers the AI integration (MCP),
-which is new in 1.3.*
+*Applies to Daynote 1.3.0.0. Last updated 2026-09-28 — this revision adds Sign in with Apple on
+iPhone and deleting your account; the 2026-08-28 revision covered the AI integration (MCP).*
 
 *This page is published at `https://daynote.arachat.cc/privacy`, rendered from this file by the sync
 Worker — the page and this document cannot say different things.*
@@ -55,8 +55,8 @@ See [MCP.md](MCP.md) for the tool list and setup details.
 
 ## Cloud sync — optional, and off until you sign in
 
-Cloud sync is in the app and switched off until you sign in with Google. Signed out there is no
-account, nothing is uploaded, and the app opens no network connection.
+Cloud sync is in the app and switched off until you sign in — with Google, or on iPhone also with
+Apple. Signed out there is no account, nothing is uploaded, and the app opens no network connection.
 
 Once you sign in, it is **not** end-to-end encrypted. Your notes are encrypted in transit and
 encrypted at rest on the service, but the service also holds the key that opens them, so whoever
@@ -81,6 +81,14 @@ already uploaded are kept.
 Either way the service holds your Google account id and email address, and the times each note
 changed.
 
+If you sign in with Apple instead, the service holds the account id Apple gives Daynote — it is
+specific to Daynote and means nothing anywhere else — and the email address Apple shares, if it
+shares one. If you chose **Hide My Email**, that is a relay address Apple forwards to you, and
+Daynote never learns your real one; if Apple sends none, none is stored. The service also keeps the
+sign-in token Apple issues, sealed the same way your data key is, for one purpose only: telling
+Apple to revoke Daynote's access when you delete your account. An Apple account and a Google
+account are always separate Daynote accounts, even if they share an address.
+
 Attached files are stored the same way your notes are — sealed, with the filename and the day they
 belong to inside the sealed part, so the service does not learn what any of them is called. What it
 does hold for each one is its size, because storage has to be counted, and a per-account key derived
@@ -88,6 +96,26 @@ from the file's contents, because the stored object needs a name. That key is de
 account's own key, so the same file in two accounts is stored under two unrelated names and cannot
 be matched up between them — and it cannot be worked backwards to test whether you hold a file
 someone already has.
+
+## Deleting your account
+
+You can delete your account from inside the app at any time: in the account panel on a PC or Mac,
+or under **Settings**, on the account card, on iPhone and Android. It is **immediate and cannot be
+undone**. Everything the service holds for the account is deleted at once — the account itself (the
+Google or Apple account id and the email address), every synced note and file, and every sign-in
+session, so every device is signed out. A Pro subscription is cancelled as part of it, so it does
+not renew; if the service cannot cancel it, the app tells you and nothing is deleted until you have
+cancelled it yourself. If you signed in with Apple, Daynote also asks Apple to revoke its access.
+
+What is **not** deleted: the notes on your own devices, which stay where they are (remove them as
+described under "Where the data is" below), and the invoices and receipts Paddle keeps as the law
+requires. Daynote's own record of a payment keeps its date and type but nothing that ties it to your
+account any more.
+
+If you cannot open the app, email aracube@gmail.com (the address on
+[daynote.arachat.cc/support](https://daynote.arachat.cc/support/)) from the address your account
+uses, and ask for the account to be deleted; it is done, and confirmed, within 3 business days. The steps are also published at
+[daynote.arachat.cc/delete-account](https://daynote.arachat.cc/delete-account).
 
 ## Daynote only stores what you create — no background capture
 
