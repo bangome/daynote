@@ -61,10 +61,10 @@ which on a phone is the last moment either OS guarantees the process runs.
 
 ## Sign-in: what still has to be set up
 
-**Everything is in place except the two client ids.** `GoogleAndroidClientId` and
-`GoogleIosClientId` are empty strings, and while they are, `MobileSyncRegistration` registers no
-account at all — the app runs local-only rather than showing a sign-in button that cannot work.
-Filling them in is the whole remaining step.
+**Done: both client ids are set** (2026-09-27), the Worker exchanges phone codes, and sign-in has
+been exercised on the Android emulator and the iOS Simulator against the deployed service. The steps
+below are kept for re-creating a client. Release builds need one more fingerprint registered; see
+[MOBILE_RELEASE.md](MOBILE_RELEASE.md).
 
 There is no way to automate the first step: Google offers **no API for iOS and Android OAuth
 clients**, and the only programmatic path it does offer issues web clients for IAP. So the console
@@ -262,13 +262,5 @@ before `install` for the same reason.
 
 ## Before TestFlight and Play internal testing
 
-Still to do, none of it code:
-
-- Apple Developer Program membership (USD 99/year) and a Google Play developer account (USD 25 once).
-- The two OAuth clients and the Worker change above, or sign-in will not work for testers.
-- Store listing text, screenshots at the required sizes, and a privacy policy URL. Daynote already
-  publishes one; both stores link to it from the listing.
-- Apple's privacy nutrition labels and Google's Data safety form. Daynote collects an email address
-  and syncs note content, both only with an account, and note bodies are end-to-end encrypted when
-  the note lock is on — say exactly that.
-- An age rating questionnaire on both.
+Moved to [MOBILE_RELEASE.md](MOBILE_RELEASE.md), which lists what the code already covers for review
+(account deletion, Sign in with Apple, the privacy manifest) and the console steps in order.
