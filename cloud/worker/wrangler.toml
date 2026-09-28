@@ -66,8 +66,8 @@ GOOGLE_ANDROID_CLIENT_ID = "298036592294-n5uff4qakgibac545udo1jthfqonvku2.apps.g
 # Developer console. Public, so vars. While either id or the APPLE_PRIVATE_KEY secret is empty,
 # POST /v1/auth/apple is refused with a message the app shows, as for an unconfigured Google client.
 APPLE_BUNDLE_ID = "cc.arachat.daynote"
-APPLE_TEAM_ID = ""
-APPLE_KEY_ID = ""
+APPLE_TEAM_ID = "4T8C76SP99"
+APPLE_KEY_ID = "W2B29H98NT"
 
 # The two prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"). Public,
 # so vars. Monthly ₩2,900 / $2.49, annual ₩24,000 / $19.99; the site's pricing page and the Store
