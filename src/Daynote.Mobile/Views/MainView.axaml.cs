@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
+using Avalonia.Input.TextInput;
 using Avalonia.Markup.Xaml;
 
 namespace Daynote.Mobile.Views;
@@ -15,8 +16,11 @@ public partial class MainView : UserControl
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-    /// <summary>The last safe area the platform reported, in that platform's units.</summary>
+    /// <summary>The last safe area the platform reported, in points.</summary>
     private Thickness _safeArea;
+
+    /// <summary>Where the on-screen keyboard's top edge is, in points from the top, or null when it is down.</summary>
+    private double? _keyboardTop;
     private Action? _detach;
 
     /// <summary>
@@ -58,12 +62,11 @@ public partial class MainView : UserControl
     /// points the design has it do.
     /// </para>
     /// <para>
-    /// The inset arrives in different units on the two platforms. Android reports window insets in
-    /// physical pixels, so on a 3x screen its 72-pixel gesture bar has to be divided by
-    /// <see cref="TopLevel.RenderScaling"/> to become the 24 points a <see cref="Thickness"/> means;
-    /// iOS passes UIKit's safe-area insets through in points already. Neither the inset nor the
-    /// scaling is settled at attach — RenderScaling reads 1 and ClientSize 1x1 until the surface
-    /// exists — which is why this re-applies on both changes and once more after the first layout.
+    /// Both platforms report the inset in points. Android used to report it in physical pixels, and
+    /// this divided it by <see cref="TopLevel.RenderScaling"/>; Avalonia 12.1 converts it itself (a
+    /// Pixel 9 Pro at 3x reports 0,52,0,24, the status bar and the gesture bar in points), and the
+    /// division then pulled the bars down by a third of the strip. The inset is not settled at
+    /// attach, which is why this re-applies on every change and once more after the first layout.
     /// </para>
     /// </remarks>
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -88,11 +91,28 @@ public partial class MainView : UserControl
         insets.SafeAreaChanged += onSafeArea;
         top.ScalingChanged += onScaling;
 
+        // Edge to edge, the window is not resized for the keyboard, so the editor's helper bar would
+        // sit under it: it follows the keyboard's top edge instead.
+        EventHandler<InputPaneStateEventArgs>? onKeyboard = null;
+        if (top.InputPane is { } pane)
+        {
+            onKeyboard = (_, args) =>
+            {
+                _keyboardTop = args.NewState == InputPaneState.Open && args.EndRect.Height > 0 ? args.EndRect.Top : null;
+                Apply(top);
+            };
+            pane.StateChanged += onKeyboard;
+        }
+
         // A profile switch replaces this view while the top level lives on, so the handlers go with it.
         _detach = () =>
         {
             insets.SafeAreaChanged -= onSafeArea;
             top.ScalingChanged -= onScaling;
+            if (onKeyboard is not null && top.InputPane is { } pane)
+            {
+                pane.StateChanged -= onKeyboard;
+            }
         };
 
         Apply(top);
@@ -109,16 +129,15 @@ public partial class MainView : UserControl
 
     private void Apply(TopLevel? top)
     {
-        double bottom;
-        if (_previewSafeArea is { } preview)
-        {
-            bottom = preview.Bottom;
-        }
-        else
-        {
-            double scale = OperatingSystem.IsAndroid() && top is { RenderScaling: > 0 } ? top.RenderScaling : 1;
-            bottom = _safeArea.Bottom / scale;
-        }
+        double bottom = _previewSafeArea is { } preview ? preview.Bottom : _safeArea.Bottom;
+
+        // The keyboard's rectangle is in the window's coordinates and the content stops above the
+        // home indicator, so the part of the keyboard over the content runs from its top edge to
+        // there. (On a Pixel 9 Pro: a window 952 tall, the content ending at 928, the keyboard's top
+        // at 616, so 312 points of it cover the content.)
+        double keyboard = _keyboardTop is { } keyboardTop && top is not null
+            ? Math.Max(0, top.ClientSize.Height - bottom - keyboardTop)
+            : 0;
 
         // The bar sits 30 points off the bottom edge of a 34-point home-indicator strip, so 4 into
         // it; with no strip it keeps clear of the edge instead of touching it.
@@ -129,7 +148,7 @@ public partial class MainView : UserControl
 
         // The sheet's content ends 40 points above the screen edge in the design, 6 above the strip.
         Bleed(this.FindControl<Border>("Sheet"), bottom, extra: 6, fallback: 24);
-        this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom);
+        this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom, keyboard);
     }
 
     /// <summary>
