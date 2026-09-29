@@ -98,6 +98,54 @@ public sealed class SearchBoxTests
         });
     }
 
+    [TestMethod]
+    public void The_arrows_move_the_highlight_and_Enter_runs_that_row()
+    {
+        TestServices.WithInitialisedShell((window, shell) =>
+        {
+            shell.OpenPaletteCommand.Execute(null);
+            Pump();
+            window.UpdateLayout();
+            Pump();
+
+            Assert.AreEqual(0, HighlightedRow(window), "The first quick action is not lit when the palette opens.");
+
+            window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+            window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+            Pump();
+            Assert.AreEqual(2, HighlightedRow(window), "Down did not move the highlight.");
+
+            window.KeyPress(Key.Up, RawInputModifiers.None, PhysicalKey.ArrowUp, null);
+            window.KeyPress(Key.Up, RawInputModifiers.None, PhysicalKey.ArrowUp, null);
+            window.KeyPress(Key.Up, RawInputModifiers.None, PhysicalKey.ArrowUp, null);
+            Pump();
+            Assert.AreEqual(3, HighlightedRow(window), "Up from the first row should wrap to the last.");
+
+            // The last action is "설정 열기".
+            window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+            Pump();
+            Assert.IsFalse(shell.IsPaletteOpen);
+            Assert.IsTrue(shell.IsSettingsOpen, "Enter did not run the highlighted action.");
+        });
+    }
+
+    /// <summary>The index of the lit quick-action row, or -1.</summary>
+    private static int HighlightedRow(Window window)
+    {
+        var list = window.FindControl<ItemsControl>("QuickActionList")!;
+        for (int i = 0; i < list.ItemCount; i++)
+        {
+            Control? container = list.ContainerFromIndex(i);
+            Button? row = container as Button ?? (container as Avalonia.Controls.Presenters.ContentPresenter)?.Child as Button;
+            if (row is not null && row.Classes.Contains("highlighted"))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     private static void Pump()
     {
         for (int i = 0; i < 20; i++)

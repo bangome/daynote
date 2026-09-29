@@ -598,7 +598,8 @@
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="CornerRadius" Value="9" />
   </Style>
-  <Style Selector="Button.row:pointerover">
+  <!-- `highlighted` is the palette's keyboard cursor, drawn exactly as the pointer's hover. -->
+  <Style Selector="Button.row:pointerover, Button.row.highlighted">
     <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
   </Style>
 

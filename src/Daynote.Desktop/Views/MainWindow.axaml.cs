@@ -17,6 +17,8 @@ public partial class MainWindow : Window
         AttachHighlight();
         AttachHeaderWrap();
         AttachFileDrop();
+        // Tunnelling, because the text box takes Up and Down for its caret before a bubbling handler sees them.
+        SearchBox.AddHandler(KeyDownEvent, OnPaletteKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         DataContextChanged += (_, _) =>
         {
             if (_shell is not null)

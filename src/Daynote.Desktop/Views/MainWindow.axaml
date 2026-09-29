@@ -755,7 +755,7 @@
                   StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" Stretch="Uniform" VerticalAlignment="Center" />
             <TextBox x:Name="SearchBox" Grid.Column="1" Classes="bare" FontSize="17" Margin="12,0" VerticalAlignment="Center"
                      VerticalContentAlignment="Center" PlaceholderText="{Binding Strings[DeskPalettePlaceholder]}"
-                     Text="{Binding Search.Query}" KeyDown="OnPaletteKeyDown" />
+                     Text="{Binding Search.Query}" />
             <Border Grid.Column="2" Classes="keycap" VerticalAlignment="Center">
               <TextBlock Classes="faint" FontSize="11" FontWeight="SemiBold" Text="esc" />
             </Border>
@@ -765,7 +765,7 @@
             <StackPanel>
               <StackPanel IsVisible="{Binding !Search.IsOpen}">
                 <TextBlock Classes="faint" FontSize="11.5" FontWeight="SemiBold" Margin="10,8,10,6" Text="{Binding Strings[DeskPaletteShortcuts]}" />
-                <ItemsControl ItemsSource="{Binding QuickActions}">
+                <ItemsControl x:Name="QuickActionList" ItemsSource="{Binding QuickActions}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PaletteActionViewModel">
                       <Button Classes="row" Padding="10" Command="{Binding RunCommand}">
@@ -778,7 +778,7 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
-              <ItemsControl ItemsSource="{Binding Search.Results}" IsVisible="{Binding Search.IsOpen}">
+              <ItemsControl x:Name="ResultList" ItemsSource="{Binding Search.Results}" IsVisible="{Binding Search.IsOpen}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
                     <Button Classes="row" Padding="10" Command="{Binding ActivateCommand}">
