@@ -23,12 +23,21 @@ the iPhone syncs between Apple devices only. Say so in the listing if it matters
 | | |
 | --- | --- |
 | Worker | Deployed with migration 0009; Sign in with Apple configured (team `4T8C76SP99`, key `W2B29H98NT`) |
-| App Store Connect | App "Daynote - 날짜별 노트", Apple ID `6817146422`, bundle `cc.arachat.daynote`; build 1.5.0 (1) uploaded |
+| App Store Connect | App "Daynote - 날짜별 노트", Apple ID `6817146422`, bundle `cc.arachat.daynote`; build 1.5.0 (2) processed and in TestFlight group "Daynote Internal" (all builds, account holder invited). Build 1 failed processing (ITMS-90683, fixed by trimming the SDK) |
 | Signing (iOS) | "Apple Distribution: Jinhwa Jung (4T8C76SP99)" in the login keychain; profile "cc.arachat.daynote AppStore" in `~/.config/daynote/signing` |
 | Google Play | Developer "Bread Jinhwa Jeong", internal testing 1.5.0 (2); opt-in `https://play.google.com/apps/internaltest/4701689771009472592` |
 | Signing (Android) | Upload key `~/.config/daynote/android-upload.jks`, passwords in `android-upload.properties` next to it (source it before `Build-AndroidApp.sh`); upload SHA-1 `40:E1:D7:…:0D:AC`, Play app-signing SHA-1 `99:84:BA:…:25:1C` |
 
-Uploads use the App Store Connect API key in `~/.config/schooling/asc_api_key.json` (same team).
+Uploads use the App Store Connect API key in `~/.config/schooling/asc_api_key.json` (same team):
+`xcrun altool --upload-app -f <ipa> -t ios --apiKey <id> --apiIssuer <issuer> --p8-file-path <p8>`, then
+`xcrun altool --build-status --delivery-id <uuid> …` until VALID — a processing failure arrives only there
+(and by email), never as an upload error. Bump `ApplicationVersion` / `CFBundleVersion` (iOS) or
+`ApplicationVersion` (Android versionCode) for every upload.
+
+**Still to do before anyone outside the team:** the store listing, App Privacy / Data safety forms,
+age rating and screenshots in both consoles (text in mobile-store-listing.md, images in docs/brand);
+TestFlight external testing needs Beta App Review; a personal Play developer account must run a
+closed test with at least 12 testers for 14 days before production.
 
 ## Before anything: deploy the Worker
 
