@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.AccountPage"
+             x:DataType="vm:MobileShellViewModel"
+             Background="{DynamicResource Mobile.Bg}">
+  <!--
+    Everything the account can do, one tap in from the settings card: sign in, the questions a
+    sign-in or a sign-out asks, the note lock, the subscription a subscriber already has, and
+    deleting the account. It covers the tabs the way the editor does, with the same back arrow.
+  -->
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Height="48" Margin="6,0" ColumnDefinitions="44,*,44">
+      <Button Grid.Column="0" Classes="iconbtn" Command="{Binding CloseAccountCommand}"
+              AutomationProperties.Name="{Binding Strings[Back]}">
+        <views:Glyph Kind="Back" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
+      </Button>
+      <TextBlock Grid.Column="1" Classes="muted line" FontSize="14" FontWeight="SemiBold"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Strings[MobileAccountTitle]}" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="20,4,20,40" Spacing="18">
+        <!-- Who is signed in, as on the settings card but on the page's own ground. -->
+        <Grid ColumnDefinitions="50,*">
+          <Border Grid.Column="0" Width="50" Height="50" CornerRadius="25" Background="{DynamicResource Mobile.Sun}">
+            <TextBlock FontSize="19" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{StaticResource Mobile.AvatarInk}" Text="{Binding AccountInitial}" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+            <TextBlock Classes="line" FontSize="17" FontWeight="ExtraBold" Text="{Binding AccountCardTitle}" />
+            <TextBlock Classes="muted line" FontSize="13" Margin="0,3,0,0" Text="{Binding AccountCardSubtitle}" />
+          </StackPanel>
+        </Grid>
+
+        <views:AccountPanel DataContext="{Binding Account}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

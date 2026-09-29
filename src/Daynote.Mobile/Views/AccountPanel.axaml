@@ -29,7 +29,7 @@
     <Style Selector="Button.apple /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AppleButtonBackground}" />
       <Setter Property="Foreground" Value="{DynamicResource AppleButtonForeground}" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="14" />
     </Style>
     <Style Selector="Button.apple:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AppleButtonBackground}" />
@@ -54,10 +54,10 @@
       <StackPanel Spacing="10">
         <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding #Root.Strings[ProfileMoveTitle]}" />
         <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding HandOffMessage}" />
-        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                    Text="{Binding ErrorMessage}"
                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <Button Classes="accent" HorizontalAlignment="Stretch"
+        <Button Classes="solid" HorizontalAlignment="Stretch"
                 Content="{Binding #Root.Strings[ProfileMoveConfirm]}" Command="{Binding MoveLocalNotesCommand}"
                 IsEnabled="{Binding !IsBusy}" />
         <Button Classes="quiet" HorizontalAlignment="Stretch"
@@ -72,23 +72,23 @@
       <StackPanel Spacing="10">
         <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding #Root.Strings[DeletedNotesTitle]}" />
         <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding DeletedNotesMessage}" />
-        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                    Text="{Binding ErrorMessage}"
                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <Button Classes="accent" HorizontalAlignment="Stretch"
+        <Button Classes="solid" HorizontalAlignment="Stretch"
                 Content="{Binding #Root.Strings[DeletedNotesKeep]}" Command="{Binding KeepDeletedNotesCommand}"
                 IsEnabled="{Binding !IsBusy}" />
-        <Button Classes="quiet" HorizontalAlignment="Stretch" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+        <Button Classes="quiet" HorizontalAlignment="Stretch" Foreground="{DynamicResource Mobile.Danger}"
                 IsVisible="{Binding !IsConfirmingRemoveDeletedNotes}"
                 Content="{Binding #Root.Strings[DeletedNotesRemove]}" Command="{Binding RemoveDeletedNotesCommand}"
                 IsEnabled="{Binding !IsBusy}" />
         <!-- After the server delete this device holds the only copy: removing it is asked twice. -->
         <Border Classes="panel" Padding="12,10" IsVisible="{Binding IsConfirmingRemoveDeletedNotes}"
-                Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+                Background="{DynamicResource Mobile.DangerSoft}">
           <StackPanel Spacing="10">
             <TextBlock FontSize="12" TextWrapping="Wrap" Text="{Binding RemoveDeletedNotesMessage}" />
             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
-                    Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                    Background="{DynamicResource Mobile.Danger}" Foreground="White"
                     Content="{Binding #Root.Strings[DeletedNotesRemoveConfirm]}" Command="{Binding RemoveDeletedNotesCommand}"
                     IsEnabled="{Binding !IsBusy}" />
             <Button Classes="quiet" HorizontalAlignment="Stretch"
@@ -104,26 +104,28 @@
     <!-- The switch could not finish (the open note would not save). The next start opens the new
          profile; this is the way to try again now. -->
     <StackPanel Spacing="8" IsVisible="{Binding IsProfileSwitchStalled}">
-      <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+      <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                  Text="{Binding ErrorMessage}"
                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-      <Button Classes="accent" HorizontalAlignment="Stretch"
+      <Button Classes="solid" HorizontalAlignment="Stretch"
               Content="{Binding #Root.Strings[ProfileSwitchRetry]}" Command="{Binding RetryProfileSwitchCommand}" />
     </StackPanel>
 
     <!-- Signed out -->
     <StackPanel Spacing="12" IsVisible="{Binding ShowsSignIn}">
-      <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountSignInLeadMobile]}" />
-      <StackPanel Spacing="10">
-        <StackPanel Spacing="1">
-          <TextBlock Text="{Binding #Root.Strings[AccountPerkSyncTitle]}" FontWeight="SemiBold" FontSize="13" />
-          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDescMobile]}" FontSize="12" />
+      <TextBlock Classes="muted" FontSize="13.5" LineHeight="21" Text="{Binding #Root.Strings[AccountSignInLeadMobile]}" />
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="3">
+            <TextBlock Text="{Binding #Root.Strings[AccountPerkSyncTitle]}" FontWeight="Bold" FontSize="15" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkSyncDescMobile]}" FontSize="13.5" />
+          </StackPanel>
+          <StackPanel Spacing="3">
+            <TextBlock Text="{Binding #Root.Strings[AccountPerkLockTitle]}" FontWeight="Bold" FontSize="15" />
+            <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkLockDesc]}" FontSize="13.5" />
+          </StackPanel>
         </StackPanel>
-        <StackPanel Spacing="1">
-          <TextBlock Text="{Binding #Root.Strings[AccountPerkLockTitle]}" FontWeight="SemiBold" FontSize="13" />
-          <TextBlock Classes="muted" Text="{Binding #Root.Strings[AccountPerkLockDesc]}" FontSize="12" />
-        </StackPanel>
-      </StackPanel>
+      </Border>
       <TextBlock FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap"
                  Text="{Binding NoticeMessage}"
                  IsVisible="{Binding NoticeMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -131,7 +133,7 @@
            beside Google, and Apple's guidelines ask for its logo with an approved title. Only on iOS. -->
       <StackPanel Spacing="6" IsVisible="{Binding CanSignInWithApple}">
         <Button Classes="apple" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                MinHeight="44" Command="{Binding SignInWithAppleCommand}" IsEnabled="{Binding !IsBusy}"
+                MinHeight="48" Command="{Binding SignInWithAppleCommand}" IsEnabled="{Binding !IsBusy}"
                 AutomationProperties.Name="{Binding #Root.Strings[AccountSignInWithApple]}">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Path Width="15" Height="18" Stretch="Uniform" VerticalAlignment="Center"
@@ -146,12 +148,12 @@
         <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
                    Text="{Binding #Root.Strings[AccountAppleOnlyNote]}" />
       </StackPanel>
-      <Button Classes="accent" HorizontalAlignment="Stretch"
+      <Button Classes="solid" HorizontalAlignment="Stretch"
               Content="{Binding #Root.Strings[AccountSignInWithGoogle]}"
               Command="{Binding SignInCommand}" IsEnabled="{Binding !IsBusy}" />
       <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" IsVisible="{Binding IsBrowserSignInRunning}"
                  Text="{Binding #Root.Strings[AccountSignInBrowserHint]}" />
-      <TextBlock FontSize="12" TextAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+      <TextBlock FontSize="12" TextAlignment="Center" Foreground="{DynamicResource Mobile.Danger}"
                  Text="{Binding ErrorMessage}"
                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       <!-- This profile's database names another account (docs/PROFILES.md §4): the way out. -->
@@ -175,7 +177,7 @@
                 Command="{Binding SignOutCommand}" IsEnabled="{Binding !IsBusy}" />
       </StackPanel>
 
-      <TextBlock FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+      <TextBlock FontSize="12" Foreground="{DynamicResource Mobile.Danger}"
                  Text="{Binding ErrorMessage}"
                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
@@ -185,21 +187,21 @@
         <StackPanel Spacing="10">
           <TextBlock Classes="h2" Text="{Binding #Root.Strings[SignOutChoiceTitle]}" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding #Root.Strings[SignOutChoiceBody]}" />
-          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                      Text="{Binding UnsyncedChangesMessage}" IsVisible="{Binding HasUnsyncedChanges}" />
-          <Button Classes="accent" HorizontalAlignment="Stretch"
+          <Button Classes="solid" HorizontalAlignment="Stretch"
                   Content="{Binding #Root.Strings[SignOutKeep]}" Command="{Binding SignOutKeepCommand}"
                   IsEnabled="{Binding !IsBusy}" />
           <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsConfirmingRemoveUnsynced}"
-                  Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                  Foreground="{DynamicResource Mobile.Danger}"
                   Content="{Binding #Root.Strings[SignOutRemove]}" Command="{Binding SignOutRemoveCommand}"
                   IsEnabled="{Binding !IsBusy}" />
           <Border Classes="panel" Padding="12,10" IsVisible="{Binding IsConfirmingRemoveUnsynced}"
-                  Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+                  Background="{DynamicResource Mobile.DangerSoft}">
             <StackPanel Spacing="10">
               <TextBlock FontSize="12" TextWrapping="Wrap" Text="{Binding RemoveUnsyncedMessage}" />
               <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
-                      Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                      Background="{DynamicResource Mobile.Danger}" Foreground="White"
                       Content="{Binding #Root.Strings[SignOutRemoveConfirm]}" Command="{Binding SignOutRemoveCommand}"
                       IsEnabled="{Binding !IsBusy}" />
             </StackPanel>
@@ -211,7 +213,7 @@
 
       <!-- Entitlement banner: text only, as on the desktop. -->
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding HasBanner}"
-              Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+              Background="{DynamicResource Mobile.DangerSoft}">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding BannerTitle}" FontWeight="SemiBold" FontSize="13" />
           <TextBlock Classes="muted" Text="{Binding BannerBody}" FontSize="12" />
@@ -222,7 +224,7 @@
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsKeyMissing}">
         <StackPanel Spacing="10">
           <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountKeyMissingBlurbMobile]}" />
-          <Button Classes="accent" HorizontalAlignment="Stretch"
+          <Button Classes="solid" HorizontalAlignment="Stretch"
                   Content="{Binding #Root.Strings[AccountRestoreKey]}" Command="{Binding RestoreKeyCommand}" />
         </StackPanel>
       </Border>
@@ -236,7 +238,7 @@
                    PlaceholderText="{Binding #Root.Strings[AccountPassphrase]}" />
           <TextBox Text="{Binding RecoveryKeyEntry}" IsVisible="{Binding IsUsingRecoveryKey}"
                    PlaceholderText="{Binding #Root.Strings[AccountRecoveryKeyLabel]}" />
-          <Button Classes="accent" HorizontalAlignment="Stretch"
+          <Button Classes="solid" HorizontalAlignment="Stretch"
                   Content="{Binding #Root.Strings[AccountUnlock]}" Click="OnUnlock" IsEnabled="{Binding !IsBusy}" />
           <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ToggleRecoveryKeyEntryCommand}"
                   Content="{Binding IsUsingRecoveryKey, Converter={x:Static vm:MobileConverters.UnlockMethodLabel}}" />
@@ -258,7 +260,7 @@
             <TextBox x:Name="NewPassphraseBox" PasswordChar="•"
                      PlaceholderText="{Binding #Root.Strings[AccountPassphrase]}" />
             <TextBlock Classes="muted" FontSize="12" Text="{Binding PassphraseHint}" />
-            <Button Classes="accent" HorizontalAlignment="Stretch"
+            <Button Classes="solid" HorizontalAlignment="Stretch"
                     Content="{Binding #Root.Strings[AccountLockConfirm]}" Click="OnEnableLock" IsEnabled="{Binding !IsBusy}" />
             <Button Classes="quiet" HorizontalAlignment="Stretch"
                     Content="{Binding #Root.Strings[AccountLockCancel]}" Command="{Binding ToggleEnableLockCommand}" />
@@ -278,7 +280,7 @@
                   Content="{Binding #Root.Strings[RecoveryKeySaveToFile]}" Command="{Binding SaveRecoveryKeyCommand}" />
           <CheckBox IsChecked="{Binding RecoveryKeyAcknowledged}" FontSize="12.5"
                     Content="{Binding #Root.Strings[RecoveryKeyConfirm]}" />
-          <Button Classes="accent" HorizontalAlignment="Stretch"
+          <Button Classes="solid" HorizontalAlignment="Stretch"
                   Content="{Binding #Root.Strings[RecoveryKeyDone]}" Command="{Binding DismissRecoveryKeyCommand}"
                   IsEnabled="{Binding RecoveryKeyAcknowledged}" />
         </StackPanel>
@@ -310,20 +312,20 @@
 
       <!-- Deleting the account: asked, then done. Last on the page, away from Sign out. -->
       <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsConfirmingDelete}"
-              Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+              Foreground="{DynamicResource Mobile.Danger}"
               Content="{Binding #Root.Strings[AccountDelete]}" Command="{Binding BeginDeleteAccountCommand}"
               IsEnabled="{Binding !IsBusy}" />
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsConfirmingDelete}"
-              Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+              Background="{DynamicResource Mobile.DangerSoft}">
         <StackPanel Spacing="10">
           <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountDeleteTitle]}" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding #Root.Strings[AccountDeleteBody]}" />
           <!-- The failure is said here, next to the button that caused it, not at the top of a long page. -->
-          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                      Text="{Binding ErrorMessage}"
                      IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
-                  Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                  Background="{DynamicResource Mobile.Danger}" Foreground="White"
                   Content="{Binding #Root.Strings[AccountDeleteConfirm]}" Command="{Binding DeleteAccountCommand}"
                   IsEnabled="{Binding !IsBusy}" />
           <Button Classes="quiet" HorizontalAlignment="Stretch"

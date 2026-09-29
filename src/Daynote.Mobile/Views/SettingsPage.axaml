@@ -1,45 +1,96 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:loc="using:Daynote.App.Localization"
              xmlns:views="using:Daynote.Mobile.Views"
              x:Class="Daynote.Mobile.Views.SettingsPage"
              x:DataType="vm:MobileShellViewModel">
   <!--
     Settings. Much shorter than the desktop panel, and not because anything was dropped in a hurry:
     the login item, the global hotkey, the MCP registration, the updater and the backup archive have
-    no phone equivalent, so what is left is the account, the theme and the language.
+    no phone equivalent. What is left is the account (one card here, its own page behind it), the
+    theme, the language and where the notes live.
   -->
   <ScrollViewer>
-    <StackPanel Margin="16,12,16,24" Spacing="14">
+    <StackPanel Margin="20,4,20,120">
+      <TextBlock Classes="pagetitle" Text="{Binding Strings[Settings]}" Margin="0,10,0,18" />
 
-      <TextBlock Classes="h1" Text="{Binding Strings[Settings]}" Margin="2,0,0,4" />
+      <!-- The account card. In a build with no sync endpoint it only says where the notes live. -->
+      <Button Classes="row" CornerRadius="22" Command="{Binding OpenAccountCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileAccountTitle]}">
+        <Border CornerRadius="22" Padding="20" Background="{DynamicResource Mobile.Pri}">
+          <Grid ColumnDefinitions="50,*,Auto">
+            <Border Grid.Column="0" Width="50" Height="50" CornerRadius="25" Background="{DynamicResource Mobile.Sun}">
+              <TextBlock FontSize="19" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Foreground="{StaticResource Mobile.AvatarInk}" Text="{Binding AccountInitial}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
+              <TextBlock Classes="line" FontSize="17" FontWeight="ExtraBold" Foreground="{DynamicResource Mobile.OnPri}"
+                         Text="{Binding AccountCardTitle}" />
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,3,0,0">
+                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Fill="{DynamicResource Mobile.Sun}"
+                         IsVisible="{Binding NeedsAccountAttention}" />
+                <TextBlock Classes="line" FontSize="13" Opacity="0.75" Foreground="{DynamicResource Mobile.OnPri}"
+                           Text="{Binding AccountCardSubtitle}" />
+              </StackPanel>
+            </StackPanel>
+            <views:Glyph Grid.Column="2" Kind="ChevronRightLarge" Width="13" Height="13" Opacity="0.6"
+                         VerticalAlignment="Center" Foreground="{DynamicResource Mobile.OnPri}" IsVisible="{Binding HasAccount}" />
+          </Grid>
+        </Border>
+      </Button>
 
-      <!-- Account -->
-      <Border Classes="card" IsVisible="{Binding HasAccount}">
-        <StackPanel Spacing="12">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="h2" Text="{Binding AccountBarTitle}" />
-            <TextBlock Classes="muted" FontSize="12" Text="{Binding AccountBarSubtitle}"
-                       IsVisible="{Binding AccountBarSubtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-          <views:AccountPanel DataContext="{Binding Account}" />
-        </StackPanel>
-      </Border>
-
-      <!-- A build with no sync endpoint says where the notes actually live rather than nothing. -->
-      <Border Classes="card" IsVisible="{Binding !HasAccount}">
-        <TextBlock Classes="muted" FontSize="12.5" Text="{Binding Strings[AccountBarLocalMobile]}" />
-      </Border>
-
-      <!-- Appearance -->
-      <Border Classes="card">
+      <!-- 화면 -->
+      <TextBlock Classes="subhead" Margin="0,26,0,4" Text="{Binding Strings[MobileSettingsDisplay]}" />
+      <Border Classes="rule" MinHeight="56">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="h2" VerticalAlignment="Center" Text="{Binding Strings[ThemeToggle]}" />
-          <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsDark}" OnContent="" OffContent=""
-                        AutomationProperties.Name="{Binding Strings[ThemeToggle]}" />
+          <TextBlock Grid.Column="0" Classes="line" FontSize="15.5" VerticalAlignment="Center" Text="{Binding Strings[MobileSettingsTheme]}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="pill small" Classes.on="{Binding !IsDark}" Command="{Binding UseLightThemeCommand}">
+              <TextBlock Text="{Binding Strings[MobileThemeLight]}" />
+            </Button>
+            <Button Classes="pill small" Classes.on="{Binding IsDark}" Command="{Binding UseDarkThemeCommand}">
+              <TextBlock Text="{Binding Strings[MobileThemeDark]}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border Classes="rule" MinHeight="56">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="line" FontSize="15.5" VerticalAlignment="Center" Text="{Binding Strings[MobileSettingsLanguage]}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="pill small" Classes.on="{Binding IsKorean}"
+                    Command="{Binding SelectLanguageCommand}" CommandParameter="{x:Static loc:AppLanguage.Korean}">
+              <TextBlock Text="{Binding Strings[MobileLanguageKorean]}" />
+            </Button>
+            <Button Classes="pill small" Classes.on="{Binding IsEnglish}"
+                    Command="{Binding SelectLanguageCommand}" CommandParameter="{x:Static loc:AppLanguage.English}">
+              <TextBlock Text="{Binding Strings[MobileLanguageEnglish]}" />
+            </Button>
+          </StackPanel>
         </Grid>
       </Border>
 
+      <!-- 데이터 -->
+      <TextBlock Classes="subhead" Margin="0,26,0,4" Text="{Binding Strings[MobileSettingsData]}" />
+      <Border Classes="rule" MinHeight="56">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="line" FontSize="15.5" VerticalAlignment="Center" Text="{Binding Strings[MobileStorageLocation]}" />
+          <TextBlock Grid.Column="1" Classes="muted line" FontSize="14" VerticalAlignment="Center" Text="{Binding StorageText}" />
+        </Grid>
+      </Border>
+      <Border Classes="rule" MinHeight="56" IsVisible="{Binding HasAccount}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="line" FontSize="15.5" VerticalAlignment="Center" Text="{Binding Strings[MobileSyncNow]}" />
+          <!-- Signed out, the row still reads "run": it opens the account page, where signing in is. -->
+          <Button Grid.Column="1" Height="44" Command="{Binding SyncNowCommand}" IsEnabled="{Binding !Account.IsBusy, FallbackValue=True}">
+            <TextBlock Classes="line" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
+                       Text="{Binding SyncNowLabel}" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <TextBlock Classes="faint line" FontSize="12" HorizontalAlignment="Center" Margin="0,28,0,0" Text="{Binding VersionText}" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

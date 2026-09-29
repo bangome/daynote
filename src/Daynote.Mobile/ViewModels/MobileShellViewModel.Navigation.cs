@@ -39,6 +39,7 @@ public sealed partial class MobileShellViewModel
 
     private async Task NavigateAsync(SearchNavigation navigation)
     {
+        RememberSearch();
         Search.Query = string.Empty;
         if (!await SelectDateAsync(navigation.Date).ConfigureAwait(true))
         {
@@ -56,13 +57,15 @@ public sealed partial class MobileShellViewModel
         IsEditorOpen = false;
     }
 
-    /// <summary>Selects a note by raw id and brings the editor up on it.</summary>
+    /// <summary>
+    /// Selects a note by raw id and brings the editor up on it, over whichever tab it was opened
+    /// from, so the back arrow returns to the list the note was found in.
+    /// </summary>
     private async Task OpenByIdAsync(Guid rawId)
     {
         DomainResult<NoteId> id = NoteId.Create(rawId);
         if (id.IsSuccess && await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true))
         {
-            Page = MobilePage.Day;
             IsEditorOpen = true;
         }
     }
@@ -105,7 +108,7 @@ public sealed partial class MobileShellViewModel
             await Notes.LoadAsync(SelectedDate).ConfigureAwait(true);
         }
 
-        await Todo.RefreshAsync().ConfigureAwait(true);
-        await TagPanel.RefreshAsync().ConfigureAwait(true);
+        await RefreshTodosAsync().ConfigureAwait(true);
+        await RefreshTagsAsync().ConfigureAwait(true);
     }
 }

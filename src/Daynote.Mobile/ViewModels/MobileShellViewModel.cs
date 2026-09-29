@@ -77,6 +77,9 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;
         Notes.Tabs.CollectionChanged += (_, _) => RefreshHeader();
+        Search.PropertyChanged += OnSearchPropertyChanged;
+        Search.Results.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SearchResultCountText));
+        RecentSearches.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentSearches));
         LocalizationService.Instance.Observe(this);
     }
 
@@ -102,14 +105,26 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
     public bool HasAccount => Account is not null;
 
-    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? value)
+    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? oldValue, Daynote.App.Account.AccountViewModel? newValue)
     {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnAccountPropertyChanged;
+        }
+
         OnPropertyChanged(nameof(HasAccount));
         RefreshAccountBar();
-        if (value is not null)
+        RefreshAccountCard();
+        if (newValue is not null)
         {
-            value.PropertyChanged += (_, _) => RefreshAccountBar();
+            newValue.PropertyChanged += OnAccountPropertyChanged;
         }
+    }
+
+    private void OnAccountPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        RefreshAccountBar();
+        RefreshAccountCard();
     }
 
     private void RefreshAccountBar()
@@ -153,6 +168,41 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
     public bool IsSettingsPage => Page == MobilePage.Settings;
 
+    /// <summary>
+    /// The floating tab bar and the new-note button: on every tab, and gone while something covers
+    /// the tabs - the editor, the account page or the month sheet.
+    /// </summary>
+    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsMonthPickerOpen;
+
+    partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
+
+    partial void OnIsAccountOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
+
+    partial void OnIsMonthPickerOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDock));
+
+        // Closed without a day picked, after browsing another month: the home header reads the
+        // calendar's month, so put it back on the selected day's.
+        if (!value && (Calendar.CursorYear != SelectedDate.Year || Calendar.CursorMonth != SelectedDate.Month))
+        {
+            _ = RunQuietlyAsync(() => Calendar.ShowSelectedAsync(SelectedDate));
+        }
+    }
+
+    /// <summary>A refresh nothing waits on: a failure is traced rather than lost with its task.</summary>
+    private static async Task RunQuietlyAsync(Func<Task> work)
+    {
+        try
+        {
+            await work().ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
+    }
+
     partial void OnPageChanged(MobilePage value)
     {
         OnPropertyChanged(nameof(IsDayPage));
@@ -172,6 +222,8 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             _ = CloseEditorAsync();
         }
 
+        IsAccountOpen = false;
+        IsMonthPickerOpen = false;
         Page = page;
 
         // The settings page carries the account card, and the subscription rows on it are read from
@@ -197,7 +249,28 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         IsEditorOpen = true;
     }
 
-    /// <summary>The system back gesture and the editor's own back arrow, which must flush first.</summary>
+    /// <summary>
+    /// The system back gesture: closes whatever is on top - the month sheet, the account page, then
+    /// the editor - and returns false when there was nothing, so the OS can have the gesture.
+    /// </summary>
+    public async Task<bool> GoBackAsync()
+    {
+        if (IsMonthPickerOpen)
+        {
+            IsMonthPickerOpen = false;
+            return true;
+        }
+
+        if (IsAccountOpen)
+        {
+            IsAccountOpen = false;
+            return true;
+        }
+
+        return await CloseEditorAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>The editor's own back arrow, which must flush first.</summary>
     [RelayCommand]
     public async Task<bool> CloseEditorAsync()
     {
@@ -294,9 +367,11 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         await Notes.LoadAsync(today, cancellationToken).ConfigureAwait(true);
         await Files.LoadForDateAsync(today, cancellationToken).ConfigureAwait(true);
         await Calendar.ShowSelectedAsync(today, cancellationToken).ConfigureAwait(true);
-        await Todo.RefreshAsync(cancellationToken).ConfigureAwait(true);
-        await Favorites.RefreshAsync(cancellationToken).ConfigureAwait(true);
-        await TagPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
+        await RefreshWeekAsync(cancellationToken).ConfigureAwait(true);
+        await RefreshTodosAsync(cancellationToken).ConfigureAwait(true);
+        await RefreshFavoritesAsync(cancellationToken).ConfigureAwait(true);
+        await RefreshTagsAsync(cancellationToken).ConfigureAwait(true);
+        await LoadRecentSearchesAsync(cancellationToken).ConfigureAwait(true);
         RefreshHeader();
     }
 
@@ -327,11 +402,21 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             await Calendar.ShowSelectedAsync(date, cancellationToken).ConfigureAwait(true);
         }
 
+        await RefreshWeekAsync(cancellationToken).ConfigureAwait(true);
+        await RefreshTodosAsync(cancellationToken).ConfigureAwait(true);
         RefreshHeader();
         return true;
     }
 
-    private Task SelectDateFromCalendarAsync(LocalDate date) => SelectDateAsync(date);
+    /// <summary>A day tapped in the week strip or the month sheet; the sheet has done its job.</summary>
+    private async Task SelectDateFromCalendarAsync(LocalDate date)
+    {
+        // Only once the day really changed: a note that will not save keeps the day, and the sheet.
+        if (await SelectDateAsync(date).ConfigureAwait(true))
+        {
+            IsMonthPickerOpen = false;
+        }
+    }
 
     // ── Year and month picker ────────────────────────────────────────────────────────────────────
     // Tapping the month header opens it. Reaching March of last year by the arrows either side of
@@ -373,17 +458,17 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     }
 
     /// <summary>
-    /// Moves the calendar to the chosen month. The selected day is left alone, exactly as the
-    /// arrows either side of the header leave it: this is a way of looking, not of choosing.
+    /// Shows the chosen month in the sheet's calendar. The selected day is left alone and the sheet
+    /// stays up: a month is a way of looking, and the day tapped in it is the choice.
     /// </summary>
     [RelayCommand]
     private async Task PickMonth(int month)
     {
-        IsMonthPickerOpen = false;
         Calendar.CursorYear = PickerYear;
         Calendar.CursorMonth = month;
         await Calendar.LoadAsync().ConfigureAwait(true);
         Calendar.SyncSelection(SelectedDate);
+        MarkCurrentMonth();
     }
 
     private void BuildPickerMonths()
@@ -502,9 +587,9 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             && await Notes.RenameAsync(tab, draft).ConfigureAwait(true))
         {
             RefreshHeader();
-            await Todo.RefreshAsync().ConfigureAwait(true);
-            await Favorites.RefreshAsync().ConfigureAwait(true);
-            await TagPanel.RefreshAsync().ConfigureAwait(true);
+            await RefreshTodosAsync().ConfigureAwait(true);
+            await RefreshFavoritesAsync().ConfigureAwait(true);
+            await RefreshTagsAsync().ConfigureAwait(true);
         }
     }
 
@@ -516,7 +601,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     {
         if (await Notes.ToggleFavoriteAsync(Notes.SelectedTab, CancellationToken.None).ConfigureAwait(true))
         {
-            await Favorites.RefreshAsync().ConfigureAwait(true);
+            await RefreshFavoritesAsync().ConfigureAwait(true);
         }
     }
 
@@ -528,7 +613,8 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (Notes.SelectedTab is { } tab && !string.IsNullOrWhiteSpace(tag)
             && await Notes.AddTagAsync(tab, tag, CancellationToken.None).ConfigureAwait(true))
         {
-            await TagPanel.RefreshAsync().ConfigureAwait(true);
+            await RefreshTagsAsync().ConfigureAwait(true);
+            RebuildCards();
         }
     }
 
@@ -538,20 +624,25 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (Notes.SelectedTab is { } tab && !string.IsNullOrWhiteSpace(tag)
             && await Notes.RemoveTagAsync(tab, tag, CancellationToken.None).ConfigureAwait(true))
         {
-            await TagPanel.RefreshAsync().ConfigureAwait(true);
+            await RefreshTagsAsync().ConfigureAwait(true);
+            RebuildCards();
         }
     }
 
     /// <summary>Flushes the open note. The head calls this when the OS suspends the app.</summary>
     public Task<FlushResult> FlushAsync(FlushReason reason) => Notes.FlushAsync(reason);
 
+    /// <summary>Re-reads every list the pages show: the day, the week, the month, to-dos, favourites and tags.</summary>
+    public Task RefreshAllAsync() => RefreshAfterStructureChangeAsync();
+
     private async Task RefreshAfterStructureChangeAsync()
     {
         RefreshHeader();
         await Calendar.LoadAsync().ConfigureAwait(true);
-        await Todo.RefreshAsync().ConfigureAwait(true);
-        await Favorites.RefreshAsync().ConfigureAwait(true);
-        await TagPanel.RefreshAsync().ConfigureAwait(true);
+        await RefreshWeekAsync().ConfigureAwait(true);
+        await RefreshTodosAsync().ConfigureAwait(true);
+        await RefreshFavoritesAsync().ConfigureAwait(true);
+        await RefreshTagsAsync().ConfigureAwait(true);
     }
 
     private void OnNotesPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -559,6 +650,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (e.PropertyName is nameof(NoteWorkspaceViewModel.SelectedTab) or nameof(NoteWorkspaceViewModel.ProjectionOnly))
         {
             RefreshHeader();
+            OnPropertyChanged(nameof(EditorDateText));
+        }
+        else if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus))
+        {
+            OnPropertyChanged(nameof(EditorSaveText));
+            OnPropertyChanged(nameof(IsEditorSaved));
         }
     }
 
@@ -569,12 +666,36 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         NoteCountText = AppStrings.NoteCount(count);
         IsDayEmpty = count == 0;
         OnPropertyChanged(nameof(HasOpenNote));
+        RebuildCards();
     }
+
+    /// <summary>The editor's save line: "저장됨" until something says otherwise.</summary>
+    public string EditorSaveText => Notes.HasSaveStatus ? Notes.SaveStatusDisplay : AppStrings.SaveSaved;
+
+    /// <summary>Whether the save dot is the green one: nothing is waiting to be written.</summary>
+    public bool IsEditorSaved => Notes.SaveStatus is SaveStatusKind.None or SaveStatusKind.Saved;
 
     void ILanguageAware.OnLanguageChanged()
     {
         RefreshHeader();
         RefreshAccountBar();
+        RefreshAccountCard();
+        OnPropertyChanged(nameof(BigDayText));
+        OnPropertyChanged(nameof(BigWeekdayText));
+        OnPropertyChanged(nameof(EditorDateText));
+        OnPropertyChanged(nameof(EditorSaveText));
+        OnPropertyChanged(nameof(IsKorean));
+        OnPropertyChanged(nameof(IsEnglish));
+        OnPropertyChanged(nameof(VersionText));
+        OnPropertyChanged(nameof(SearchResultCountText));
+
+        // The weekday letters and the to-do band names are baked into their rows.
+        OnPropertyChanged(nameof(PickerYearText));
+        _ = RunQuietlyAsync(async () =>
+        {
+            await RefreshWeekAsync().ConfigureAwait(true);
+            await RefreshTodosAsync().ConfigureAwait(true);
+        });
 
         // The month names came from the culture, so they are wrong the moment it changes.
         PickerMonths.Clear();

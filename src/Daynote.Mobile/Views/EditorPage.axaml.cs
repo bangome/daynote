@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -44,6 +45,38 @@ public partial class EditorPage : UserControl
     }
 
     private void OnTitleRenameStarted(object? sender, EventArgs e) => FocusTitleBox();
+
+    /// <summary>
+    /// Runs the helper toolbar's fill under the home indicator, with its buttons kept above it; on a
+    /// screen with no indicator it keeps 8 points under the buttons, as it does above them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The whole page is extended rather than the toolbar alone: a child drawn past its page's
+    /// bottom edge is clipped there, so the strip came out in the page colour.
+    /// </para>
+    /// <para>
+    /// While the keyboard is up the page stops at its top edge instead, <paramref name="keyboard"/>
+    /// points above the content's bottom, so the helpers stay in reach of the thumb that is typing.
+    /// </para>
+    /// </remarks>
+    public void SetBottomInset(double bottom, double keyboard = 0)
+    {
+        if (keyboard > 0)
+        {
+            Margin = new Thickness(0, 0, 0, keyboard);
+            bottom = 0;
+        }
+        else
+        {
+            Margin = new Thickness(0, 0, 0, -bottom);
+        }
+
+        if (this.FindControl<Border>("Toolbar") is { } toolbar)
+        {
+            toolbar.Padding = new Thickness(0, 0, 0, bottom > 0 ? bottom : 8);
+        }
+    }
 
     /// <summary>
     /// Puts the caret in the title box, with the old name selected so typing replaces it.

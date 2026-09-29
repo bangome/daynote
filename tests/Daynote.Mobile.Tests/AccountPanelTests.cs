@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.LogicalTree;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Daynote.App.Account;
 using Daynote.App.Composition;
@@ -142,6 +144,45 @@ public sealed class AccountPanelTests
         Assert.IsFalse(ButtonReading(panel, AppStrings.AccountSignInWithGoogle).IsEffectivelyVisible, "Sign-in was offered over a half-finished switch.");
     });
 
+    [TestMethod]
+    [DataRow("Light")]
+    [DataRow("Dark")]
+    public void The_account_page_opens_from_the_settings_card_and_back_closes_it(string variantName) =>
+        WithAccountPanel(new NoApple(), (panel, _) =>
+        {
+            var view = (MainView)TopLevel.GetTopLevel(panel)!.Content!;
+            var shell = (MobileShellViewModel)view.DataContext!;
+            Application.Current!.RequestedThemeVariant = variantName == "Dark"
+                ? Avalonia.Styling.ThemeVariant.Dark
+                : Avalonia.Styling.ThemeVariant.Light;
+            view.PreviewSafeArea = new Thickness(0, 56, 0, 34);
+
+            Assert.IsTrue(shell.IsAccountOpen);
+            Assert.IsTrue(view.GetLogicalDescendants().OfType<AccountPage>().Single().IsEffectivelyVisible);
+            Assert.IsFalse(shell.ShowDock, "The tab bar shows over the account page.");
+            Assert.IsTrue(panel.IsEffectivelyVisible, "The account panel is not on the account page.");
+
+            string directory = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "artifacts", "mobile-screens");
+            Directory.CreateDirectory(directory);
+            view.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            using (WriteableBitmap? frame = ((Window)TopLevel.GetTopLevel(view)!).CaptureRenderedFrame())
+            {
+                frame?.Save(Path.Combine(directory, $"account-{variantName.ToLowerInvariant()}.png"), new PngBitmapEncoderOptions());
+            }
+
+            bool handled = false;
+            Task back = shell.GoBackAsync().ContinueWith(t => handled = t.Result, TaskScheduler.FromCurrentSynchronizationContext());
+            while (!back.IsCompleted)
+            {
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            Assert.IsTrue(handled);
+            Assert.IsFalse(shell.IsAccountOpen, "Back did not close the account page.");
+            Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+        });
+
     private static Button VisibleButton(AccountPanel panel, string text) =>
         panel.GetLogicalDescendants().OfType<Button>().Single(button => Equals(button.Content, text) && button.IsEffectivelyVisible);
 
@@ -192,6 +233,7 @@ public sealed class AccountPanelTests
                     }
 
                     shell.GoToPageCommand.Execute(MobilePage.Settings);
+                    shell.OpenAccountCommand.Execute(null);
                     Dispatcher.UIThread.RunJobs();
                     view.UpdateLayout();
 

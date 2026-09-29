@@ -2,47 +2,100 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
              xmlns:pvm="using:Daynote.App.Shell.Product"
+             xmlns:views="using:Daynote.Mobile.Views"
              x:Class="Daynote.Mobile.Views.SearchPage"
              x:DataType="vm:MobileShellViewModel">
   <!--
-    Search, as its own screen rather than the desktop's drop-down under the title bar. A drop-down
-    over a phone keyboard would leave about two rows visible.
+    Search, as its own page rather than the desktop's drop-down under the title bar: a drop-down
+    over a phone keyboard would leave about two rows visible. Before anything is typed it offers what
+    was searched for last and the most used tags, so the common search is a tap.
   -->
-  <Grid RowDefinitions="Auto,*" Margin="16,12,16,0">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-      <TextBox Grid.Column="0" Text="{Binding Search.Query}"
-               PlaceholderText="{Binding Strings[UnifiedSearchHint]}" />
-      <Button Grid.Column="1" Classes="icon" Content="✕" Margin="6,0,0,0"
-              Command="{Binding Search.ClearCommand}" IsVisible="{Binding Search.IsOpen}"
-              AutomationProperties.Name="{Binding Strings[ClearSearch]}" />
-    </Grid>
+  <ScrollViewer>
+    <StackPanel Margin="20,4,20,120">
+      <TextBlock Classes="pagetitle" Text="{Binding Strings[TabSearch]}" Margin="0,10,0,14" />
 
-    <ScrollViewer Grid.Row="1">
-      <StackPanel Margin="0,0,0,24">
+      <Border Height="50" Padding="16,0" CornerRadius="16" Background="{DynamicResource Mobile.Card}"
+              BorderBrush="{DynamicResource Mobile.Pri}" BorderThickness="1.5">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <views:Glyph Grid.Column="0" Kind="Search" Width="17" Height="17" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Mobile.Text}" />
+          <TextBox Grid.Column="1" Classes="bare" Margin="10,0" FontSize="16.5" VerticalAlignment="Center"
+                   Text="{Binding Search.Query}" PlaceholderText="{Binding Strings[MobileSearchPlaceholder]}" />
+          <Button Grid.Column="2" Height="44" IsVisible="{Binding HasSearchQuery}" Command="{Binding Search.ClearCommand}"
+                  AutomationProperties.Name="{Binding Strings[ClearSearch]}">
+            <TextBlock Classes="muted line" FontSize="13.5" FontWeight="SemiBold" Text="{Binding Strings[MobileSearchClear]}" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- Nothing typed yet: recent searches and tags. -->
+      <StackPanel IsVisible="{Binding !HasSearchQuery}">
+        <StackPanel IsVisible="{Binding HasRecentSearches}">
+          <TextBlock Classes="subhead" Margin="0,26,0,10" Text="{Binding Strings[MobileSearchRecent]}" />
+          <ItemsControl ItemsSource="{Binding RecentSearches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Button Classes="pill"
+                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).UseSearchTermCommand}"
+                        CommandParameter="{Binding}">
+                  <TextBlock FontSize="14" Text="{Binding}" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel IsVisible="{Binding !IsTagListEmpty}">
+          <TextBlock Classes="subhead" Margin="0,26,0,10" Text="{Binding Strings[MobileSearchByTag]}" />
+          <ItemsControl ItemsSource="{Binding SearchTags}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TagChipViewModel">
+                <Button Classes="pill sun"
+                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).UseSearchTermCommand}"
+                        CommandParameter="{Binding Name}">
+                  <TextBlock FontSize="14" Text="{Binding Name, StringFormat='#{0}'}" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Results -->
+      <StackPanel IsVisible="{Binding HasSearchQuery}">
+        <TextBlock Classes="muted line" FontSize="13" Margin="0,18,0,6" Text="{Binding SearchResultCountText}"
+                   IsVisible="{Binding !Search.NoResults}" />
         <ItemsControl ItemsSource="{Binding Search.Results}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="pvm:SearchResultRowViewModel">
-              <Button Classes="row" Command="{Binding ActivateCommand}" Margin="0,0,0,8">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <Border Grid.Column="0" Classes="chip" Margin="0,0,10,0" Padding="8,3" VerticalAlignment="Top">
-                    <TextBlock Text="{Binding Kind}" FontSize="11" />
-                  </Border>
-                  <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="12" MaxLines="2" TextTrimming="CharacterEllipsis"
+              <Button Classes="row" Command="{Binding ActivateCommand}">
+                <Border Classes="rule" Padding="0,14">
+                  <StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" Classes="line" FontSize="16" FontWeight="ExtraBold" LetterSpacing="-0.32"
+                                 Text="{Binding Title}" />
+                      <TextBlock Grid.Column="1" Classes="line" FontSize="12.5" FontWeight="Bold" Margin="8,0,0,0"
+                                 VerticalAlignment="Center" Foreground="{DynamicResource Mobile.SunInk}"
+                                 Text="{Binding DateLabel, Converter={x:Static vm:MobileConverters.PaddedDate}}" />
+                    </Grid>
+                    <TextBlock Classes="muted" FontSize="13.5" LineHeight="20.25" Margin="0,4,0,0" MaxLines="2"
+                               TextTrimming="CharacterEllipsis" Text="{Binding Sub}"
                                IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                   </StackPanel>
-                  <TextBlock Grid.Column="2" Classes="muted" Text="{Binding DateLabel}" FontSize="11"
-                             Margin="10,0,0,0" VerticalAlignment="Top" />
-                </Grid>
+                </Border>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
         <TextBlock Classes="empty" Text="{Binding Strings[SearchNoResultsRow]}" IsVisible="{Binding Search.NoResults}" />
         <TextBlock Classes="empty" Text="{Binding Strings[SearchFailedRow]}" IsVisible="{Binding Search.Failed}"
-                   Foreground="{DynamicResource Daynote.Product.Brush.Danger}" />
+                   Foreground="{DynamicResource Mobile.Danger}" />
       </StackPanel>
-    </ScrollViewer>
-  </Grid>
+    </StackPanel>
+  </ScrollViewer>
 </UserControl>

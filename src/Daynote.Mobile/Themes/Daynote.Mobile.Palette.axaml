@@ -1,0 +1,75 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    The phone's palette: the "Daynote Mobile B" design tokens, one brush per CSS variable, under the
+    same names (Mobile.Bg is var(-bg), Mobile.SunInk is var(-sun-ink) and so on) so a value can be
+    checked against the design by reading across.
+
+    The phone keeps its own palette rather than the desktop's Daynote.Product.axaml: the two apps
+    share the brand (navy #1b2356, sun orange #ee7f35, cream ground) but not every surface value,
+    and the desktop palette changes with the desktop's own layout work.
+  -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="Mobile.Bg" Color="#f6f5f1" />
+      <SolidColorBrush x:Key="Mobile.Panel" Color="#fffefb" />
+      <SolidColorBrush x:Key="Mobile.Card" Color="#ffffff" />
+      <SolidColorBrush x:Key="Mobile.Stroke" Color="#e6e3da" />
+      <SolidColorBrush x:Key="Mobile.Stroke2" Color="#efece5" />
+      <SolidColorBrush x:Key="Mobile.Text" Color="#161a36" />
+      <SolidColorBrush x:Key="Mobile.Text2" Color="#62667d" />
+      <SolidColorBrush x:Key="Mobile.Text3" Color="#9a9caa" />
+      <SolidColorBrush x:Key="Mobile.Pri" Color="#1b2356" />
+      <SolidColorBrush x:Key="Mobile.OnPri" Color="#ffffff" />
+      <SolidColorBrush x:Key="Mobile.Sun" Color="#ee7f35" />
+      <SolidColorBrush x:Key="Mobile.SunInk" Color="#b4531a" />
+      <SolidColorBrush x:Key="Mobile.SunSoft" Color="#21ee7f35" />
+      <SolidColorBrush x:Key="Mobile.Sunday" Color="#cf4a3f" />
+      <SolidColorBrush x:Key="Mobile.Danger" Color="#cf4a3f" />
+      <SolidColorBrush x:Key="Mobile.DangerSoft" Color="#1fcf4a3f" />
+      <SolidColorBrush x:Key="Mobile.Hover" Color="#0d161a36" />
+      <SolidColorBrush x:Key="Mobile.Seg" Color="#efede6" />
+      <SolidColorBrush x:Key="Mobile.Scrim" Color="#660e1020" />
+      <SolidColorBrush x:Key="Mobile.Bar" Color="#ebfffefb" />
+      <Color x:Key="SystemAccentColor">#1b2356</Color>
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9a9caa" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#9a9caa" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#9a9caa" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="Mobile.Bg" Color="#0e1020" />
+      <SolidColorBrush x:Key="Mobile.Panel" Color="#141729" />
+      <SolidColorBrush x:Key="Mobile.Card" Color="#171a2e" />
+      <SolidColorBrush x:Key="Mobile.Stroke" Color="#262a42" />
+      <SolidColorBrush x:Key="Mobile.Stroke2" Color="#1f2238" />
+      <SolidColorBrush x:Key="Mobile.Text" Color="#eceaf2" />
+      <SolidColorBrush x:Key="Mobile.Text2" Color="#9a9cb3" />
+      <SolidColorBrush x:Key="Mobile.Text3" Color="#6c6f88" />
+      <SolidColorBrush x:Key="Mobile.Pri" Color="#ff9a52" />
+      <SolidColorBrush x:Key="Mobile.OnPri" Color="#1a1206" />
+      <SolidColorBrush x:Key="Mobile.Sun" Color="#ff9a52" />
+      <SolidColorBrush x:Key="Mobile.SunInk" Color="#ffb27a" />
+      <SolidColorBrush x:Key="Mobile.SunSoft" Color="#24ff9a52" />
+      <SolidColorBrush x:Key="Mobile.Sunday" Color="#ff8076" />
+      <SolidColorBrush x:Key="Mobile.Danger" Color="#ff8076" />
+      <SolidColorBrush x:Key="Mobile.DangerSoft" Color="#24ff8076" />
+      <SolidColorBrush x:Key="Mobile.Hover" Color="#0fffffff" />
+      <SolidColorBrush x:Key="Mobile.Seg" Color="#1c1f35" />
+      <SolidColorBrush x:Key="Mobile.Scrim" Color="#8c000000" />
+      <SolidColorBrush x:Key="Mobile.Bar" Color="#eb171a2e" />
+      <Color x:Key="SystemAccentColor">#ff9a52</Color>
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6c6f88" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#6c6f88" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#6c6f88" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- The saved dot in the editor, the same green in both themes. -->
+  <SolidColorBrush x:Key="Mobile.Saved" Color="#2fb574" />
+  <!-- The avatar letter, dark ink on the sun circle in both themes. -->
+  <SolidColorBrush x:Key="Mobile.AvatarInk" Color="#161a36" />
+
+  <!-- The whole app is set in Pretendard, as the design is: Hangul and Latin from one family. -->
+  <FontFamily x:Key="Mobile.Font">avares://Daynote.Mobile/Assets/Fonts#Pretendard</FontFamily>
+  <FontFamily x:Key="ContentControlThemeFontFamily">avares://Daynote.Mobile/Assets/Fonts#Pretendard</FontFamily>
+</ResourceDictionary>
