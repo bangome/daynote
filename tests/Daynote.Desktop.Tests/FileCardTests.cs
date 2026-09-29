@@ -29,7 +29,9 @@ public sealed class FileCardTests
     {
         TestServices.WithInitialisedShell((window, shell) =>
         {
+            // The files list, where cards carry their state lines; the day panel's rows are compact.
             shell.ActiveTab = RightTab.Files;
+            shell.IsListMode = true;
             shell.Files.Items.Add(Card(available: false));
             Settle(window);
 
@@ -47,6 +49,7 @@ public sealed class FileCardTests
         TestServices.WithInitialisedShell((window, shell) =>
         {
             shell.ActiveTab = RightTab.Files;
+            shell.IsListMode = true;
             shell.Files.Items.Add(Card(available: true));
             Settle(window);
 
@@ -77,6 +80,7 @@ public sealed class FileCardTests
         TestServices.WithInitialisedShell((window, shell) =>
         {
             shell.ActiveTab = RightTab.Tags;
+            shell.IsListMode = true;
             shell.TagPanel.Tags.Add(new TagItemViewModel(
                 new TagSummary("회의", 1, []),
                 static _ => Task.CompletedTask));

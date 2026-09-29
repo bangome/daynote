@@ -26,7 +26,7 @@ namespace Daynote.Desktop.Tests;
 /// <para>
 /// Two earlier versions of this test passed with the fix reverted, and both were the same mistake —
 /// counting a colour somewhere it also occurs innocently. First, counting the glyph colour across
-/// the frame: light's selected-text colour is #FFFFFF, the card, and dark's is #121316, the page.
+/// the frame: light's selected-text colour is #FFFFFF, the card, and dark's is #0E1020, the page.
 /// Both are everywhere. Then, counting inside the bounding box of the selection colour: that colour
 /// *is* the accent, so the box stretched from the sidebar's add button to the right rail and
 /// swallowed the card again.
@@ -40,10 +40,10 @@ namespace Daynote.Desktop.Tests;
 [TestClass]
 public sealed class EditorSelectionTests
 {
-    private static readonly Color LightSelectionBg = Color.Parse("#FF0067C0");
+    private static readonly Color LightSelectionBg = Color.Parse("#FF1B2356");
     private static readonly Color LightSelectionText = Color.Parse("#FFFFFFFF");
-    private static readonly Color DarkSelectionBg = Color.Parse("#FF4CC2FF");
-    private static readonly Color DarkSelectionText = Color.Parse("#FF121316");
+    private static readonly Color DarkSelectionBg = Color.Parse("#FFFFAD72");
+    private static readonly Color DarkSelectionText = Color.Parse("#FF0E1020");
 
     [TestMethod]
     public void Selected_text_is_drawn_over_the_selection_in_light()

@@ -15,6 +15,7 @@ public sealed partial class DesktopShellViewModel
 {
     private async Task OpenFromTimelineAsync(Guid id, LocalDate date)
     {
+        IsListMode = false;
         // SelectDateAsync leaves the timeline for every caller, including this one.
         if (await SelectDateAsync(date).ConfigureAwait(true))
         {
@@ -28,6 +29,8 @@ public sealed partial class DesktopShellViewModel
 
     private async Task JumpToTodoAsync(TodoLine line)
     {
+        // Picking a note from a list is asking to read it: the editor comes back.
+        IsListMode = false;
         if (await SelectDateAsync(line.Date).ConfigureAwait(true))
         {
             DomainResult<NoteId> id = NoteId.Create(line.NoteId);
@@ -40,6 +43,7 @@ public sealed partial class DesktopShellViewModel
 
     private async Task JumpToTagAsync(TagOccurrence occ)
     {
+        IsListMode = false;
         if (await SelectDateAsync(occ.Date).ConfigureAwait(true))
         {
             DomainResult<NoteId> id = NoteId.Create(occ.NoteId);
@@ -53,6 +57,7 @@ public sealed partial class DesktopShellViewModel
 
     private async Task OpenFavoriteAsync(NoteSummary note)
     {
+        IsListMode = false;
         if (await SelectDateAsync(note.LocalDate).ConfigureAwait(true))
         {
             DomainResult<NoteId> id = NoteId.Create(note.Id);
@@ -65,6 +70,7 @@ public sealed partial class DesktopShellViewModel
 
     private async Task NavigateAsync(SearchNavigation navigation)
     {
+        IsPaletteOpen = false;
         Search.Query = string.Empty;
         if (!await SelectDateAsync(navigation.Date).ConfigureAwait(true))
         {
@@ -80,10 +86,17 @@ public sealed partial class DesktopShellViewModel
             }
         }
 
+        // A file result opens the day's files list, where the attachment is; anything else is a note
+        // or a day, which the editor shows.
         if (navigation.Tab is { } tab)
         {
-            RightCollapsed = false;
             ActiveTab = tab;
+            IsTimelineMode = false;
+            IsListMode = true;
+        }
+        else
+        {
+            IsListMode = false;
         }
     }
 

@@ -1,0 +1,238 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Desktop.ViewModels"
+             xmlns:settings="using:Daynote.App.Settings"
+             xmlns:account="using:Daynote.App.Account"
+             x:Class="Daynote.Desktop.Views.SettingsPanel"
+             x:Name="Root"
+             x:DataType="vm:DesktopShellViewModel">
+  <!--
+    The settings dialog (Daynote Desktop B): 일반 · 단축키 · 데이터 · 계정 down the left, one page at a
+    time on the right. Every row the old single-column panel had is here, grouped by the design's four
+    sections - language, the tutorial and "about" under General; the MCP registration and privacy note
+    under Data - so nothing that was settable before has gone.
+
+    Bound to the shell rather than to the settings view model alone, because three rows act on the
+    shell (the theme, the tutorial, the account card).
+  -->
+  <Border Classes="modal" ClipToBounds="True">
+    <Grid ColumnDefinitions="190,*" DataContext="{Binding SettingsViewModel}" x:DataType="vm:DesktopSettingsViewModel">
+
+      <Border Grid.Column="0" Background="{DynamicResource Daynote.Product.Brush.Bg1}" Padding="10,20"
+              BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,1,0">
+        <StackPanel Spacing="2">
+          <TextBlock FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.3" Margin="10,0,10,14" Text="{Binding Title}" />
+          <Button Classes="setsec" Classes.active="{Binding IsGeneralSection}" Command="{Binding SelectSectionCommand}"
+                  CommandParameter="{x:Static vm:SettingsSection.General}" Content="{Binding #Root.Strings[DeskSettingsGeneral]}" />
+          <Button Classes="setsec" Classes.active="{Binding IsShortcutsSection}" Command="{Binding SelectSectionCommand}"
+                  CommandParameter="{x:Static vm:SettingsSection.Shortcuts}" Content="{Binding #Root.Strings[DeskSettingsShortcuts]}" />
+          <Button Classes="setsec" Classes.active="{Binding IsDataSection}" Command="{Binding SelectSectionCommand}"
+                  CommandParameter="{x:Static vm:SettingsSection.Data}" Content="{Binding #Root.Strings[DeskSettingsData]}" />
+          <Button Classes="setsec" Classes.active="{Binding IsAccountSection}" Command="{Binding SelectSectionCommand}"
+                  CommandParameter="{x:Static vm:SettingsSection.Account}" Content="{Binding #Root.Strings[DeskSettingsAccount]}" />
+        </StackPanel>
+      </Border>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+        <Button Grid.Row="0" Classes="ghost small" Width="28" Height="28" HorizontalAlignment="Right" Margin="0,14,14,0"
+                Command="{Binding #Root.((vm:DesktopShellViewModel)DataContext).CloseSettingsCommand}" AutomationProperties.Name="{Binding Close}">
+          <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Close}" />
+        </Button>
+
+        <ScrollViewer Grid.Row="1" Padding="32,0,32,28">
+          <Panel>
+
+            <!-- ── 일반 ─────────────────────────────────────────────────────────────── -->
+            <StackPanel IsVisible="{Binding IsGeneralSection}">
+              <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsGeneral]}" />
+
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Classes="label" Text="{Binding StartupLabel}" />
+                    <TextBlock Classes="desc" Text="{Binding StartupStateText}" />
+                  </StackPanel>
+                  <ToggleButton x:Name="StartupSwitch" Grid.Column="1" Classes="switch" VerticalAlignment="Center"
+                                IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
+                                Command="{Binding ToggleStartupCommand}" AutomationProperties.Name="{Binding StartupLabel}" />
+                </Grid>
+              </Border>
+
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Classes="label" Text="{Binding #Root.Strings[DeskSettingsTheme]}" />
+                    <TextBlock Classes="desc" Text="{Binding #Root.((vm:DesktopShellViewModel)DataContext).ThemeName}" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="quiet" VerticalAlignment="Center" Content="{Binding #Root.((vm:DesktopShellViewModel)DataContext).ThemeSwitchText}"
+                          Command="{Binding #Root.((vm:DesktopShellViewModel)DataContext).ToggleThemeCommand}" />
+                </Grid>
+              </Border>
+
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Classes="label" Text="{Binding LanguageLabel}" />
+                    <TextBlock Classes="desc" Text="{Binding LanguageDesc}" />
+                  </StackPanel>
+                  <Border Grid.Column="1" Classes="seg" Width="180" VerticalAlignment="Center">
+                    <UniformGrid Columns="2">
+                      <Button Classes="tab" Classes.active="{Binding IsKorean}" Content="{Binding KoreanLabel}" Command="{Binding SelectKoreanCommand}" />
+                      <Button Classes="tab" Classes.active="{Binding IsEnglish}" Content="{Binding EnglishLabel}" Command="{Binding SelectEnglishCommand}" />
+                    </UniformGrid>
+                  </Border>
+                </Grid>
+              </Border>
+
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="{Binding TutorialLabel}" />
+                  <Button Grid.Column="1" Classes="quiet" Content="{Binding TutorialButton}" Command="{Binding #Root.((vm:DesktopShellViewModel)DataContext).OpenTutorialCommand}" />
+                </Grid>
+              </Border>
+
+              <!-- About: who makes the app. -->
+              <Border Classes="setrow" BorderThickness="0" AutomationProperties.Name="{Binding AboutLabel}">
+                <StackPanel>
+                  <TextBlock Classes="label" Text="{Binding AboutLabel}" />
+                  <TextBlock Classes="desc" Text="{Binding AuthorName}" />
+                  <TextBlock Classes="desc" Margin="0,1,0,0" Text="{Binding AuthorEmail}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <!-- ── 단축키 ───────────────────────────────────────────────────────────── -->
+            <StackPanel IsVisible="{Binding IsShortcutsSection}">
+              <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsShortcuts]}" />
+
+              <!-- The global summon chord, set apart: it works from anywhere, not only in the window. -->
+              <Border Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" CornerRadius="12" Padding="16" Margin="0,0,0,10">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                      <TextBlock FontSize="13.5" FontWeight="Bold" Text="{Binding SummonHotkeyLabel}" />
+                      <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" Text="{Binding SummonHotkeyDesc}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="combo" Classes.capturing="{Binding IsCapturingHotkey}" FontSize="12" FontWeight="Bold"
+                            Padding="9,4" Background="{DynamicResource Daynote.Product.Brush.Card}" VerticalAlignment="Center"
+                            Content="{Binding SummonHotkeyDisplay}" Command="{Binding StartHotkeyCaptureCommand}"
+                            ToolTip.Tip="{Binding #Root.Strings[DeskShortcutChangeTip]}" />
+                    <Button Grid.Column="2" Classes="link faint" FontSize="11.5" Margin="10,0,0,0" VerticalAlignment="Center"
+                            Content="{Binding HotkeyReset}" Command="{Binding ResetSummonHotkeyCommand}" />
+                  </Grid>
+                  <TextBlock Classes="muted" FontSize="11.5" Text="{Binding HotkeyStatusText}"
+                             IsVisible="{Binding HotkeyStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+
+              <Border Padding="0,11" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" FontSize="13" VerticalAlignment="Center" Text="{Binding QuickStickyLabel}" />
+                  <Border Grid.Column="1" Classes="keycap" CornerRadius="6" Padding="8,3">
+                    <TextBlock Classes="mono" FontSize="11.5" FontWeight="SemiBold" Text="{Binding QuickStickyDisplay}" />
+                  </Border>
+                </Grid>
+              </Border>
+
+              <ItemsControl ItemsSource="{Binding InAppShortcuts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="settings:ShortcutRowViewModel">
+                    <Border Padding="0,11" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+                      <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                          <TextBlock Grid.Column="0" FontSize="13" VerticalAlignment="Center" Text="{Binding Label}" />
+                          <Button Grid.Column="1" Classes="combo" Classes.capturing="{Binding IsCapturing}" Content="{Binding Display}"
+                                  Command="{Binding StartCaptureCommand}" ToolTip.Tip="{Binding #Root.Strings[DeskShortcutChangeTip]}" />
+                          <Button Grid.Column="2" Classes="link faint" FontSize="11.5" Margin="10,0,0,0" VerticalAlignment="Center"
+                                  Content="{Binding #Root.Strings[HotkeyReset]}" Command="{Binding ResetCommand}" />
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="11.5" Text="{Binding StatusText}"
+                                   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- ── 데이터 ───────────────────────────────────────────────────────────── -->
+            <StackPanel IsVisible="{Binding IsDataSection}">
+              <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsData]}" />
+
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Classes="label" Text="{Binding StorageLabel}" />
+                    <TextBlock Classes="desc mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding DataRoot}" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="quiet" VerticalAlignment="Center" Content="{Binding #Root.Strings[DeskOpenFolder]}"
+                          Command="{Binding OpenDataFolderCommand}" />
+                </Grid>
+              </Border>
+
+              <Border Classes="setrow">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                      <TextBlock Classes="label" Text="{Binding BackupLabel}" />
+                      <TextBlock Classes="desc" Text="{Binding BackupDesc}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="quiet" Margin="0,0,8,0" VerticalAlignment="Center" Content="{Binding BackupButton}"
+                            Command="{Binding BackupCommand}" />
+                    <Button Grid.Column="2" Classes="quiet" VerticalAlignment="Center" Content="{Binding RestoreButton}"
+                            Command="{Binding RestoreCommand}" />
+                  </Grid>
+                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding BackupStatusText}"
+                             IsVisible="{Binding BackupStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="setrow">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="label" Text="{Binding McpLabel}" />
+                  <TextBlock Classes="desc" Margin="0" Text="{Binding McpDesc}" />
+                  <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding McpAvailable}">
+                    <Button Classes="quiet" Content="{Binding McpRegister}" Command="{Binding RegisterMcpCommand}" />
+                    <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding McpStatusText}" />
+                  </StackPanel>
+                  <TextBlock Classes="desc" Margin="0" Text="{Binding McpUnavailable}" IsVisible="{Binding !McpAvailable}" />
+                  <TextBlock Classes="desc" Margin="0" Text="{Binding McpCodeHint}" IsVisible="{Binding McpAvailable}" />
+                  <SelectableTextBlock Classes="mono muted" FontSize="11.5" TextWrapping="Wrap" Text="{Binding McpCodeCommand}"
+                                       IsVisible="{Binding McpAvailable}" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="setrow" BorderThickness="0">
+                <StackPanel>
+                  <TextBlock Classes="label" Text="{Binding PrivacyLabel}" />
+                  <TextBlock Classes="desc" Text="{Binding PrivacyText}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <!-- ── 계정 ─────────────────────────────────────────────────────────────── -->
+            <StackPanel IsVisible="{Binding IsAccountSection}">
+              <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsAccount]}" />
+              <Border CornerRadius="14" Padding="18" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0"
+                          Background="{DynamicResource Daynote.Desk.Brush.Sun}">
+                    <TextBlock FontSize="16" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.AvatarInk}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountInitial}" />
+                  </Border>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock FontSize="14.5" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountCardTitle}" />
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" Text="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountCardSubtitle}" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Classes="quiet" VerticalAlignment="Center" Margin="12,0,0,0"
+                          Content="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountCardAction}" Command="{Binding #Root.((vm:DesktopShellViewModel)DataContext).OpenAccountCommand}"
+                          IsVisible="{Binding #Root.((vm:DesktopShellViewModel)DataContext).HasAccount}" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </Panel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

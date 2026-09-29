@@ -64,6 +64,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
         Timeline = new TimelineViewModel(repository, OpenFromTimelineAsync);
+        AttachViews(clock, repository);
 
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;
@@ -149,6 +150,11 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         OnPropertyChanged(nameof(AccountBarShowsAvatar));
         OnPropertyChanged(nameof(AccountBarSubtitle));
         OnPropertyChanged(nameof(AccountBarMenuLabel));
+        OnPropertyChanged(nameof(AccountRowSubtitle));
+        OnPropertyChanged(nameof(AccountInitial));
+        OnPropertyChanged(nameof(AccountCardTitle));
+        OnPropertyChanged(nameof(AccountCardSubtitle));
+        OnPropertyChanged(nameof(AccountCardAction));
     }
 
     [ObservableProperty]
@@ -172,7 +178,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     [ObservableProperty]
     private Daynote.App.Onboarding.TutorialViewModel? _tutorial;
 
-    public bool IsEditorMode => !IsTimelineMode;
+    public bool IsEditorMode => !IsTimelineMode && !IsListMode;
 
     public bool HasOpenNote => Notes.SelectedTab is { IsProjection: false };
 
@@ -228,15 +234,17 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         OnPropertyChanged(nameof(TabIsFavorites));
         OnPropertyChanged(nameof(TabIsTags));
         OnPropertyChanged(nameof(TabIsFiles));
+        RaiseViewState();
     }
 
-    partial void OnIsTimelineModeChanged(bool value) => OnPropertyChanged(nameof(IsEditorMode));
+    partial void OnIsTimelineModeChanged(bool value) => RaiseViewState();
 
     partial void OnIsDarkChanged(bool value)
     {
         _themeApplier.Apply(value);
         OnPropertyChanged(nameof(ThemeGlyph));
         OnPropertyChanged(nameof(BrandLogo));
+        OnPropertyChanged(nameof(ThemeName));
         if (!_loading)
         {
             _ = _settings.SetAsync(ThemeKey, value ? "dark" : "light");
@@ -301,6 +309,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         await Notes.LoadAsync(today, cancellationToken).ConfigureAwait(true);
         await Files.LoadForDateAsync(today, cancellationToken).ConfigureAwait(true);
         await Calendar.ShowSelectedAsync(today, cancellationToken).ConfigureAwait(true);
+        await Week.ShowAsync(today, cancellationToken).ConfigureAwait(true);
         await Todo.RefreshAsync(cancellationToken).ConfigureAwait(true);
         await Favorites.RefreshAsync(cancellationToken).ConfigureAwait(true);
         await TagPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
@@ -344,6 +353,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
             await Calendar.ShowSelectedAsync(date, cancellationToken).ConfigureAwait(true);
         }
 
+        await Week.ShowAsync(date, cancellationToken).ConfigureAwait(true);
         RefreshHeader();
         return true;
     }
@@ -406,10 +416,14 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     [RelayCommand]
     private async Task NewNote()
     {
+        // A new note is something to write in, so it opens in the editor whichever view was up.
+        IsTimelineMode = false;
+        IsListMode = false;
         if (await Notes.AddNoteAsync().ConfigureAwait(true))
         {
             RefreshHeader();
             await Calendar.LoadAsync().ConfigureAwait(true);
+            await Week.RefreshAsync().ConfigureAwait(true);
             await Todo.RefreshAsync().ConfigureAwait(true);
             await TagPanel.RefreshAsync().ConfigureAwait(true);
         }
@@ -446,6 +460,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     {
         RefreshHeader();
         await Calendar.LoadAsync().ConfigureAwait(true);
+        await Week.RefreshAsync().ConfigureAwait(true);
         await Todo.RefreshAsync().ConfigureAwait(true);
         await Favorites.RefreshAsync().ConfigureAwait(true);
         await TagPanel.RefreshAsync().ConfigureAwait(true);
@@ -554,11 +569,17 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         }
 
         await Timeline.LoadAsync().ConfigureAwait(true);
+        IsListMode = false;
         IsTimelineMode = true;
     }
 
     private void OnNotesPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus))
+        {
+            RaiseSaveFooter();
+        }
+
         if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus) && Notes.SaveStatus == SaveStatusKind.Saved)
         {
             _ = Todo.RefreshAsync();
@@ -572,6 +593,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         }
         else if (e.PropertyName == nameof(NoteWorkspaceViewModel.EditorText))
         {
+            OnPropertyChanged(nameof(CharLineText));
             ScheduleTodoRefresh();
         }
     }
@@ -606,12 +628,17 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         NoteCountText = AppStrings.NoteCount(count);
         IsDayEmpty = count == 0;
         OnPropertyChanged(nameof(HasOpenNote));
+        RefreshDayViews();
     }
 
     void ILanguageAware.OnLanguageChanged()
     {
         RefreshHeader();
         RefreshAccountBar();
+        RefreshShortcutHints();
+        RaiseViewState();
+        OnPropertyChanged(nameof(ThemeName));
+        OnPropertyChanged(nameof(CharLineText));
         OnPropertyChanged(nameof(BrandLogo));
     }
 

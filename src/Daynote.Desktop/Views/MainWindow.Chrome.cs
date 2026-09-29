@@ -1,32 +1,28 @@
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Chrome;
 using Avalonia.Input;
+using Daynote.Desktop.ViewModels;
 
 namespace Daynote.Desktop.Views;
 
 /// <summary>
-/// The window's title bar, which is the one part of the shell that cannot be written once for both
+/// The window's own chrome, which is the one part of the shell that cannot be written once for both
 /// platforms.
 /// </summary>
 /// <remarks>
-/// macOS puts its traffic lights at the top LEFT and draws them itself, so the app leaves a gap there
-/// and adds nothing of its own. Windows puts minimize/maximize/close at the top RIGHT — exactly where
-/// this app keeps its own actions — so the two collided, and the theme's drawn title bar printed a
-/// second "Daynote" over the app's brand.
+/// There is no title bar in design B: the sidebar runs to the top of the window and the header is the
+/// first thing in the main column. macOS still draws its traffic lights at the top left, over the
+/// sidebar's brand row, so that row starts clear of them — and when the sidebar is collapsed the
+/// header's first button would sit under them instead, so the header takes the inset then. Both rows
+/// start a window move when pressed on their background (<see cref="MacTitleBarDrag"/>), which is what
+/// the system title bar did.
 /// <para>
-/// On Windows the app draws the caption buttons itself rather than leaving them to the theme, so they
-/// can match the rest of the shell. That costs nothing in behaviour: Avalonia maps the
-/// <see cref="WindowDecorationsElementRole"/> of each button onto the Win32 hit-test codes
-/// (<c>HTMINBUTTON</c>, <c>HTMAXBUTTON</c>, <c>HTCLOSE</c>), so Windows still treats them as real
-/// caption buttons — Snap Layouts appear on hover over maximize, and the system handles the clicks.
-/// The same mechanism marks the strip itself as <see cref="WindowDecorationsElementRole.TitleBar"/>
-/// for drag-to-move and double-click-to-maximize.
-/// </para>
-/// <para>
-/// Everything interactive that sits inside that strip — the search box, the account button, the action
-/// row — has to be marked <see cref="WindowDecorationsElementRole.User"/>, or the non-client hit test
-/// swallows the click before the control sees it.
+/// Windows draws minimize / maximize / close at the top right, where the header keeps its actions, so
+/// there the main column gets a thin strip of its own with the app-drawn caption buttons. Avalonia maps
+/// each button's <see cref="WindowDecorationsElementRole"/> onto the Win32 hit-test codes, so Snap
+/// Layouts still open over maximize, and the strip is the <see cref="WindowDecorationsElementRole.TitleBar"/>.
 /// </para>
 /// </remarks>
 public partial class MainWindow
@@ -34,55 +30,67 @@ public partial class MainWindow
     /// <summary>The gap macOS needs at the left for its traffic lights.</summary>
     private const double TrafficLightInset = 84;
 
-    /// <summary>The app's own inset when nothing of the system's sits in the strip.</summary>
-    private const double PlainInset = 16;
+    /// <summary>The header's own left padding, from the design.</summary>
+    private const double HeaderInset = 28;
 
-    /// <summary>Room the brand lockup takes when it joins the centred search group on macOS.</summary>
-    private const double BrandInset = 140;
+    private DesktopShellViewModel? _chromeShell;
 
     /// <summary>
-    /// Applies the platform's title-bar shape. Called once the window is open, because
+    /// Applies the platform's shape. Called once the window is open, because
     /// <see cref="Window.WindowDecorations"/> is only meaningful after the platform impl exists.
     /// </summary>
     private void ApplyPlatformChrome()
     {
         if (OperatingSystem.IsMacOS())
         {
-            // The traffic lights are the system's; leave room and draw nothing.
-            TitleBarRow.Margin = new Thickness(TrafficLightInset, 0, PlainInset, 0);
-            CaptionButtons.IsVisible = false;
-
-            // The brand goes beside the search box rather than alone next to the traffic lights, so
-            // the strip reads as one centred group. The group widens by the lockup's footprint so the
-            // search box keeps the width it has on Windows.
-            TitleBarRow.Children.Remove(BrandArea);
-            BrandArea.Margin = new Thickness(0, 0, 16, 0);
-            Grid.SetColumn(BrandArea, 0);
-            CenterGroup.Children.Insert(0, BrandArea);
-            CenterGroup.MaxWidth += BrandInset;
-
-            // The TitleBar role below is Win32-only; on macOS the strip has to start the move itself.
-            MacTitleBarDrag.Attach(this, TitleBarRow);
+            BrandRow.Margin = new Thickness(TrafficLightInset, BrandRow.Margin.Top, BrandRow.Margin.Right, BrandRow.Margin.Bottom);
+            TitleBarRow.IsVisible = false;
+            MacTitleBarDrag.Attach(this, BrandRow);
+            MacTitleBarDrag.Attach(this, Header);
+            ApplyHeaderInset();
             return;
         }
 
         // The theme's own title bar would print a second title and a second set of buttons over the
         // app's. BorderOnly drops it and keeps the frame, the shadow and the resize grips.
         WindowDecorations = WindowDecorations.BorderOnly;
-
-        TitleBarRow.Margin = new Thickness(PlainInset, 0, 0, 0);
-        CaptionButtons.IsVisible = true;
+        TitleBarRow.IsVisible = true;
 
         WindowDecorationProperties.SetElementRole(TitleBarRow, WindowDecorationsElementRole.TitleBar);
         WindowDecorationProperties.SetElementRole(MinimizeButton, WindowDecorationsElementRole.MinimizeButton);
         WindowDecorationProperties.SetElementRole(MaximizeButton, WindowDecorationsElementRole.MaximizeButton);
         WindowDecorationProperties.SetElementRole(CloseButton, WindowDecorationsElementRole.CloseButton);
+    }
 
-        // Without this the title-bar hit test eats every click in the strip.
-        foreach (Control control in new Control[] { BrandArea, TutSearch })
+    /// <summary>Follows the sidebar's collapse, which decides whether the header sits under the traffic lights.</summary>
+    private void AttachChrome(DesktopShellViewModel? shell)
+    {
+        if (_chromeShell is not null)
         {
-            WindowDecorationProperties.SetElementRole(control, WindowDecorationsElementRole.User);
+            _chromeShell.PropertyChanged -= OnShellPropertyChangedForChrome;
         }
+
+        _chromeShell = shell;
+        if (_chromeShell is not null)
+        {
+            _chromeShell.PropertyChanged += OnShellPropertyChangedForChrome;
+        }
+
+        ApplyHeaderInset();
+    }
+
+    private void OnShellPropertyChangedForChrome(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesktopShellViewModel.LeftCollapsed))
+        {
+            ApplyHeaderInset();
+        }
+    }
+
+    private void ApplyHeaderInset()
+    {
+        bool underLights = OperatingSystem.IsMacOS() && _chromeShell is { LeftCollapsed: true };
+        Header.Padding = new Thickness(underLights ? TrafficLightInset : HeaderInset, 18, 28, 16);
     }
 
     /// <summary>A single square while the window can grow; two stacked once it has.</summary>

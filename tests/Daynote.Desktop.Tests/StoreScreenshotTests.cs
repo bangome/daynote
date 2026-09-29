@@ -64,12 +64,20 @@ public sealed class StoreScreenshotTests
                 shell.ActiveTab = RightTab.Todo;
                 Shoot(window, directory, $"{prefix}-01-overview");
 
+                // The tags and files lists fill the middle of the window, opened from the sidebar.
                 shell.ActiveTab = RightTab.Tags;
+                shell.IsListMode = true;
+                if (shell.TagPanel.Tags.FirstOrDefault() is { } tag)
+                {
+                    tag.IsExpanded = true;
+                }
+
                 Shoot(window, directory, $"{prefix}-02-tags");
 
                 shell.ActiveTab = RightTab.Files;
                 Shoot(window, directory, $"{prefix}-03-files");
 
+                shell.IsListMode = false;
                 shell.ActiveTab = RightTab.Todo;
                 shell.IsDark = true;
                 Shoot(window, directory, $"{prefix}-04-dark");

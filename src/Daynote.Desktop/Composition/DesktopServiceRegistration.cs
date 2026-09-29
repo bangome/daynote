@@ -140,6 +140,7 @@ public static class DesktopServiceRegistration
                 options.DataRoot,
                 OpenExternal),
             Account = sp.GetService<Daynote.App.Account.AccountViewModel>(),
+            Shortcuts = sp.GetRequiredService<ConfigurableShortcuts>(),
             Tutorial = new Daynote.App.Onboarding.TutorialViewModel(
                 sp.GetRequiredService<ISettingsStore>(),
                 sp.GetRequiredService<ConfigurableShortcuts>(),

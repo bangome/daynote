@@ -59,11 +59,12 @@ public sealed class RenderedFrameTests
         AssertIsAPicture(dark, 1256, 788);
         Assert.AreNotEqual(light.Hash, dark.Hash, "Light and dark rendered identical frames; the variant is not reaching the paint.");
 
-        // The page colours the palette defines, sampled where nothing else is drawn: the frame's
-        // corners. Light Bg1 is #F4F4F5, dark is #121316 (Daynote.Product.*.axaml). A corner that is
-        // not the page means either the palette is not applied or the window is drawing chrome.
-        Assert.AreEqual(Color.Parse("#FFF4F4F5"), light.BottomLeft, "Light frame's bottom-left corner is not the page colour.");
-        Assert.AreEqual(Color.Parse("#FF121316"), dark.BottomLeft, "Dark frame's bottom-left corner is not the page colour.");
+        // The sidebar's navy, sampled where nothing else is drawn: the frame's bottom-left corner,
+        // under the account row. Light is #161B40, dark #0A0C18 (Daynote.Desk.axaml, the design's
+        // --side). A corner of another colour means the palette is not applied or the window is
+        // drawing chrome of its own there.
+        Assert.AreEqual(Color.Parse("#FF161B40"), light.BottomLeft, "Light frame's bottom-left corner is not the sidebar colour.");
+        Assert.AreEqual(Color.Parse("#FF0A0C18"), dark.BottomLeft, "Dark frame's bottom-left corner is not the sidebar colour.");
     }
 
     [TestMethod]
@@ -151,10 +152,10 @@ public sealed class RenderedFrameTests
 
         AssertIsAPicture(frame, 1256, 788);
 
-        // The bottom-left corner is outside the calendar, so it is dimmed rather than the page colour
-        // the un-dimmed shell shows there (#F4F4F5 — see the shell test above).
+        // The bottom-left corner is outside the calendar, so it is dimmed rather than the sidebar
+        // colour the un-dimmed shell shows there (#161B40 — see the shell test above).
         Assert.AreNotEqual(
-            Color.Parse("#FFF4F4F5"),
+            Color.Parse("#FF161B40"),
             frame.BottomLeft,
             "The corner is the undimmed page colour, so the scrim is not covering the shell.");
     }
@@ -162,7 +163,7 @@ public sealed class RenderedFrameTests
     [TestMethod]
     public void The_search_dropdown_opens_over_the_shell()
     {
-        // Reported as "the autocomplete does not expand". The panel is bound to Search.IsOpen and
+        // Reported as "the autocomplete does not expand". The results live in the ⌘K palette, which
         // floats over the body with a ZIndex, so the two ways it can fail are the flag never turning
         // on and the panel being covered; a frame shows both.
         FrameSummary frame = default;
@@ -188,6 +189,9 @@ public sealed class RenderedFrameTests
 
             // Typed, not assigned: this is the path a user takes, and the earlier version of this test
             // skipped it (see SearchBoxTests).
+            shell.OpenPaletteCommand.Execute(null);
+            Pump();
+            window.UpdateLayout();
             var box = window.FindControl<TextBox>("SearchBox")!;
             box.Focus();
             window.KeyTextInput("회의");

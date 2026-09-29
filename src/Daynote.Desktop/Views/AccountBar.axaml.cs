@@ -8,9 +8,10 @@ namespace Daynote.Desktop.Views;
 /// The account strip at the foot of the left column and the menu it opens.
 /// </summary>
 /// <remarks>
-/// The three rows are click handlers rather than bound commands for one reason: each has to close the
-/// flyout first. A light-dismiss menu left standing over the panel it just opened reads as a click
-/// that did nothing.
+/// The rows are click handlers rather than bound commands for one reason: each has to close the
+/// popover first. A light-dismiss menu left standing over the panel it just opened reads as a click
+/// that did nothing. The settings button on the row itself goes the same way, and never opens the
+/// popover: the inner button takes the press before the row sees it.
 /// </remarks>
 public partial class AccountBar : UserControl
 {
@@ -25,8 +26,6 @@ public partial class AccountBar : UserControl
     private void OnOpenAccount(object? sender, RoutedEventArgs e) => Invoke(shell => shell.OpenAccountCommand);
 
     private void OnOpenSettings(object? sender, RoutedEventArgs e) => Invoke(shell => shell.OpenSettingsCommand);
-
-    private void OnToggleTheme(object? sender, RoutedEventArgs e) => Invoke(shell => shell.ToggleThemeCommand);
 
     private void Invoke(Func<DesktopShellViewModel, System.Windows.Input.ICommand> pick)
     {

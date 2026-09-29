@@ -192,6 +192,12 @@ public sealed class EditorHighlightTests
             try
             {
                 window.Show();
+
+                // The body is only on screen for a day with a note on it; an empty day shows the
+                // "nothing written yet" card instead. So: load the day, and write a note on it.
+                Run(shell.InitializeAsync());
+                Run(shell.NewNoteCommand.ExecuteAsync(null));
+
                 window.Measure(new Size(1240, 780));
                 window.Arrange(new Rect(0, 0, 1240, 780));
                 window.UpdateLayout();
@@ -217,6 +223,18 @@ public sealed class EditorHighlightTests
         {
             // A SQLite handle can outlive the test by a moment.
         }
+    }
+
+    /// <summary>Pumps this dispatcher until <paramref name="work"/> is done; its continuations post here.</summary>
+    private static void Run(Task work)
+    {
+        for (int i = 0; i < 400 && !work.IsCompleted; i++)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+
+        work.GetAwaiter().GetResult();
     }
 
     private static T Find<T>(Window window, string name)

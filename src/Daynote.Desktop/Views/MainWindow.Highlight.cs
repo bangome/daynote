@@ -48,6 +48,10 @@ public partial class MainWindow
             }
         };
 
+        // The runs hold a resolved brush, not a resource reference, so a theme switch has to rebuild
+        // them or the marks keep the other theme's accent (navy on the dark page).
+        ActualThemeVariantChanged += (_, _) => RebuildHighlight(Editor.Text);
+
         RebuildHighlight(Editor.Text);
     }
 

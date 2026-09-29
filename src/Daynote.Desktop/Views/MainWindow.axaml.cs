@@ -15,6 +15,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         AttachHighlight();
+        AttachHeaderWrap();
+        AttachFileDrop();
         DataContextChanged += (_, _) =>
         {
             if (_shell is not null)
@@ -38,7 +40,8 @@ public partial class MainWindow : Window
             }
 
             AttachTutorialStickyDemo(_shell);
-            AttachSearchDropdown(_shell);
+            AttachPalette(_shell);
+            AttachChrome(_shell);
 
             RebuildShortcutBindings();
         };
@@ -57,7 +60,17 @@ public partial class MainWindow : Window
     private void RebuildShortcutBindings()
     {
         KeyBindings.Clear();
-        if (_shortcuts is null || _shell is null)
+        if (_shell is null)
+        {
+            return;
+        }
+
+        // The palette's chord is fixed, like the design's: ⌘K on the Mac, Ctrl+K elsewhere. Both are
+        // bound everywhere so a PC keyboard on a Mac (and the reverse) still finds it.
+        KeyBindings.Add(new KeyBinding { Command = _shell.OpenPaletteCommand, Gesture = new KeyGesture(Key.K, KeyModifiers.Meta) });
+        KeyBindings.Add(new KeyBinding { Command = _shell.OpenPaletteCommand, Gesture = new KeyGesture(Key.K, KeyModifiers.Control) });
+
+        if (_shortcuts is null)
         {
             return;
         }
@@ -98,6 +111,7 @@ public partial class MainWindow : Window
     {
         if (_shell?.SettingsViewModel is not { IsCapturing: true } settings)
         {
+            DismissOverlayOnEscape(e);
             return;
         }
 
@@ -115,6 +129,37 @@ public partial class MainWindow : Window
         }
 
         _ = settings.HandleCapturedChordAsync((HotkeyModifiers)e.KeyModifiers, (HotkeyKey)e.Key);
+    }
+
+    /// <summary>
+    /// Escape closes whatever is on top: the palette, then the account card, then settings — the
+    /// order the design checks them in. The palette's own query box handles it first when focused.
+    /// </summary>
+    private void DismissOverlayOnEscape(KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || _shell is not { } shell)
+        {
+            return;
+        }
+
+        if (shell.IsPaletteOpen)
+        {
+            shell.ClosePaletteCommand.Execute(null);
+        }
+        else if (shell.IsAccountOpen)
+        {
+            shell.CloseAccountCommand.Execute(null);
+        }
+        else if (shell.IsSettingsOpen)
+        {
+            shell.CloseSettingsCommand.Execute(null);
+        }
+        else
+        {
+            return;
+        }
+
+        e.Handled = true;
     }
 
     private void OnStickyNoteRequested(object? sender, EventArgs e)
@@ -138,13 +183,13 @@ public partial class MainWindow : Window
         base.OnOpened(e);
         ApplyPlatformChrome();
         UpdateMaximizeGlyph();
-        PlaceSearchDropdown();
+        PlacePalette();
     }
 
     protected override void OnSizeChanged(Avalonia.Controls.SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        PlaceSearchDropdown();
+        PlacePalette();
     }
 
     protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
@@ -173,6 +218,9 @@ public partial class MainWindow : Window
 
         base.OnClosed(e);
     }
+
+    /// <summary>The heading reads as the field it is in the design: one click puts the caret in it.</summary>
+    private void OnTitleTapped(object? sender, Avalonia.Input.TappedEventArgs e) => OnTitleDoubleTapped(sender, e);
 
     private void OnTitleDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {

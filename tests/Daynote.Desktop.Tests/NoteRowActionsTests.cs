@@ -133,7 +133,7 @@ public sealed class NoteRowActionsTests
         });
     }
 
-    /// <summary>A fresh day has only the projection, which is not listed; make one real note and return its row.</summary>
+    /// <summary>A fresh day has only the projection, which gets no tab; make one real note and return its tab.</summary>
     private static Button MaterialiseARow(MainWindow window, DesktopShellViewModel shell)
     {
         shell.NewNoteCommand.Execute(null);
@@ -142,7 +142,7 @@ public sealed class NoteRowActionsTests
 
         return window.GetVisualDescendants()
             .OfType<Button>()
-            .First(static button => button.Classes.Contains("noterow") && button.IsVisible);
+            .First(static button => button.Classes.Contains("notetab") && button.IsVisible);
     }
 
     /// <summary>Lets the async commands' continuations run on this dispatcher.</summary>
