@@ -91,7 +91,7 @@ public sealed class ScreenshotTests
     }
 
     /// <summary>The prototype's six notes, on the same days around today.</summary>
-    private static void Seed(MobileShellViewModel shell, LocalDate today)
+    internal static void Seed(MobileShellViewModel shell, LocalDate today)
     {
         string Md(int offset)
         {
@@ -135,7 +135,7 @@ public sealed class ScreenshotTests
     }
 
     /// <summary>Runs an async command to completion on the dispatcher the UI is on.</summary>
-    private static void Pump(Func<Task> work)
+    internal static void Pump(Func<Task> work)
     {
         Task task = work();
         DateTime deadline = DateTime.UtcNow.AddSeconds(20);

@@ -47,7 +47,11 @@ internal static class TestServices
     /// that fits here fits the Android field too.
     /// </para>
     /// </remarks>
-    internal static void WithInitialisedShell(Action<Views.MainView, MobileShellViewModel> body)
+    internal static void WithInitialisedShell(Action<Views.MainView, MobileShellViewModel> body) =>
+        WithInitialisedShell(390, 844, body);
+
+    /// <summary>The same, at another handset's logical size.</summary>
+    internal static void WithInitialisedShell(double width, double height, Action<Views.MainView, MobileShellViewModel> body)
     {
         ArgumentNullException.ThrowIfNull(body);
         using var data = new TempDataRoot();
@@ -63,7 +67,7 @@ internal static class TestServices
             // tree rooted at a TopLevel; a detached UserControl measures to nothing. On a device the
             // single-view lifetime is that root, and headless has no single-view host, so this
             // stands in for it at handset size.
-            var host = new Window { Content = view, Width = 390, Height = 844 };
+            var host = new Window { Content = view, Width = width, Height = height };
             host.Show();
 
             Task initialising = shell.InitializeAsync();

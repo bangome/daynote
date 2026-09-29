@@ -89,6 +89,10 @@
       <Button Classes="scrim" Command="{Binding CloseMonthPickerCommand}"
               AutomationProperties.Name="{Binding Strings[WindowClose]}" />
       <Border x:Name="Sheet" Classes="sheet" VerticalAlignment="Bottom">
+        <!-- Scrolls only when the screen is shorter than the sheet: a phone on its side, or a
+             split-screen window, would otherwise push the year header off the top and the last
+             week into the home indicator. -->
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16,10,16,0">
           <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,12" />
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="4,0,4,10">
@@ -149,6 +153,7 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </StackPanel>
+        </ScrollViewer>
       </Border>
     </Panel>
   </Panel>

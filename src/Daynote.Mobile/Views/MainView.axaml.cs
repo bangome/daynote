@@ -37,7 +37,7 @@ public partial class MainView : UserControl
         set
         {
             _previewSafeArea = value;
-            Padding = value is { } inset ? new Thickness(0, inset.Top, 0, inset.Bottom) : default;
+            Padding = value ?? default;
             Apply(TopLevel.GetTopLevel(this));
         }
     }
@@ -148,6 +148,13 @@ public partial class MainView : UserControl
 
         // The sheet's content ends 40 points above the screen edge in the design, 6 above the strip.
         Bleed(this.FindControl<Border>("Sheet"), bottom, extra: 6, fallback: 24);
+        if (this.FindControl<Border>("Sheet") is { } sheet)
+        {
+            // When the sheet is taller than the screen it scrolls; this keeps a sliver of scrim above
+            // it, so it still reads as a sheet and the tap-to-close area never vanishes.
+            sheet.Margin = new Thickness(0, 24, 0, sheet.Margin.Bottom);
+        }
+
         this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom, keyboard);
     }
 
