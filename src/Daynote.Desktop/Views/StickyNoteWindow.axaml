@@ -5,7 +5,7 @@
         x:Class="Daynote.Desktop.Views.StickyNoteWindow"
         x:DataType="vm:DesktopShellViewModel"
         Title="{Binding Notes.SelectedTab.Title, FallbackValue=Daynote}"
-        Width="320" Height="260" MinWidth="220" MinHeight="160"
+        Width="272" Height="260" MinWidth="220" MinHeight="160"
         Topmost="True"
         CanMaximize="False"
         ShowInTaskbar="False"
@@ -16,11 +16,14 @@
     <Style Selector="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.StickyText}" />
     </Style>
+    <!-- The design's post-it: #FFE99A paper, dark-olive ink, 13px at a 1.7 line height. -->
     <Style Selector="TextBox.sticky">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.StickyText}" />
-      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Product.Brush.StickyText}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="LineHeight" Value="22.1" />
       <Setter Property="AcceptsReturn" Value="True" />
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="Padding" Value="0" />
@@ -33,19 +36,18 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
+    <!-- 22px squares at 60% until hovered, as the design's close cross is. -->
     <Style Selector="Button.stickybtn">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
       <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.StickyText}" />
-      <Setter Property="Padding" Value="6,2" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
       <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Opacity" Value="0.6" />
     </Style>
-    <Style Selector="Button.stickybtn /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-    <Style Selector="Button.stickybtn:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+    <Style Selector="Button.stickybtn:pointerover">
+      <Setter Property="Background" Value="#0F000000" />
+      <Setter Property="Opacity" Value="1" />
     </Style>
     <!-- The shared line marks, not the 📌 and ✕ this row used to carry: a colour emoji that ignored
          the note's ink and a maths character that sat off the button's centre. Both are stroked in
@@ -57,8 +59,8 @@
       <Setter Property="StrokeJoin" Value="Round" />
       <Setter Property="Fill" Value="{x:Null}" />
       <Setter Property="Stretch" Value="Uniform" />
-      <Setter Property="Width" Value="13" />
-      <Setter Property="Height" Value="13" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="12" />
     </Style>
     <!-- Pinned is the note's one piece of state, so the pin is filled when it is on rather than
          merely less faded, which is what the opacity swap used to say. -->
@@ -69,20 +71,20 @@
   <!-- The left inset clears the macOS traffic lights drawn over the extended client area, and is
        applied from the code-behind because Windows has nothing there — the same split as
        MainWindow.Chrome.cs. Hard-coding the macOS value left a 70px hole in the Windows sticky. -->
-  <Grid x:Name="Layout" RowDefinitions="34,*" Margin="12,0,12,12">
+  <Grid x:Name="Layout" RowDefinitions="34,*" Margin="16,0,12,16">
     <!-- Background="Transparent" is load-bearing, as in MainWindow: a Grid with no brush takes no
          part in hit testing, so the strip would report client area and the note could not be dragged
          by it. -->
     <Grid x:Name="TitleBarRow" Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Background="Transparent">
-      <TextBlock Grid.Column="0" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" FontWeight="SemiBold" FontSize="12.5"
+      <TextBlock Grid.Column="0" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" FontWeight="ExtraBold" FontSize="13"
                  VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-      <Button Grid.Column="1" x:Name="PinButton" Classes="stickybtn" Click="OnTogglePin" Padding="6,3">
+      <Button Grid.Column="1" x:Name="PinButton" Classes="stickybtn" Click="OnTogglePin" Margin="0,0,2,0">
         <Path Data="{StaticResource Daynote.Geo.Pin}" />
       </Button>
-      <Button Grid.Column="2" x:Name="CloseButton" Classes="stickybtn" Click="OnClose" Padding="6,3">
-        <Path Data="{StaticResource Daynote.Geo.Close}" Width="11" Height="11" />
+      <Button Grid.Column="2" x:Name="CloseButton" Classes="stickybtn" Click="OnClose">
+        <Path Data="{StaticResource Daynote.Desk.Geo.Close}" Width="10" Height="10" StrokeThickness="1.5" />
       </Button>
     </Grid>
-    <TextBox Grid.Row="1" x:Name="Body" Classes="sticky" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top" />
+    <TextBox Grid.Row="1" x:Name="Body" Classes="sticky" Margin="0,6,4,0" Text="{Binding Notes.EditorText}" VerticalContentAlignment="Top" />
   </Grid>
 </Window>

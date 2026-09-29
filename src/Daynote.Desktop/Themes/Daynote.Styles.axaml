@@ -62,6 +62,14 @@
     <Setter Property="FontFamily" Value="{StaticResource Daynote.Desk.Font.Sans}" />
   </Style>
 
+  <!-- The design's scrollbar thumb: a faint neutral grey in either theme, not Fluent's ink. -->
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="#38808080" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb:pointerover, ScrollBar /template/ Thumb:pressed">
+    <Setter Property="Background" Value="#66808080" />
+  </Style>
+
   <Style Selector="TextBlock.muted, SelectableTextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
   </Style>

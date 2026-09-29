@@ -526,7 +526,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:FavoriteItemViewModel">
-                    <Button Classes="card" Padding="18,16" MinHeight="96" Command="{Binding OpenCommand}">
+                    <!-- MinHeight is the design's 96px content box plus its padding and border. -->
+                    <Button Classes="card" Padding="18,16" MinHeight="130" Command="{Binding OpenCommand}">
                       <StackPanel>
                         <TextBlock Classes="faint" FontSize="12" Text="{Binding DateLabel}" />
                         <TextBlock FontSize="15" FontWeight="Bold" LetterSpacing="-0.3" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"
@@ -584,7 +585,8 @@
 
             <!-- Files on the selected day: a drop zone, then the cards. -->
             <StackPanel IsVisible="{Binding TabIsFiles}">
-              <Button x:Name="FileDropZone" Theme="{StaticResource Daynote.Bare}" HorizontalAlignment="Stretch" Margin="0,0,0,12"
+              <Button x:Name="FileDropZone" Theme="{StaticResource Daynote.Bare}" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch" Margin="0,0,0,12"
                       Command="{Binding Files.AddFilesCommand}" DragDrop.AllowDrop="True">
                 <Panel>
                   <Rectangle RadiusX="14" RadiusY="14" Stroke="{DynamicResource Daynote.Product.Brush.Stroke}" StrokeThickness="1.5"
@@ -663,10 +665,12 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Classes="empty" Margin="20,6,20,10" LineHeight="21.25" IsVisible="{Binding IsDayTodoEmpty}">
+              <!-- No fixed LineHeight: the code chip is an inline box taller than the text, and a fixed
+                   line height clips the words beside it. -->
+              <TextBlock Classes="empty" Margin="20,6,20,10" LineHeight="NaN" IsVisible="{Binding IsDayTodoEmpty}">
                 <Run Text="{Binding Strings[TodoEmptyPrefix]}" /><InlineUIContainer BaselineAlignment="Center"><Border
-                    Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="4" Padding="5,1"><TextBlock
-                    Classes="mono muted" FontSize="12" Text="{Binding Strings[TodoEmptyCode]}" /></Border></InlineUIContainer><Run
+                    Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="4" Padding="5,1" Margin="0,2"><TextBlock
+                    Classes="mono muted" FontSize="11.5" Text="{Binding Strings[TodoEmptyCode]}" /></Border></InlineUIContainer><Run
                     Text="{Binding Strings[DeskDayTodoEmptySuffix]}" />
               </TextBlock>
 

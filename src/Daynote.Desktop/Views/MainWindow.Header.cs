@@ -14,6 +14,13 @@ public partial class MainWindow
     /// <summary>The strip's horizontal margin while it shares the line with the date and the actions.</summary>
     private const double WeekStripGap = 24;
 
+    /// <summary>
+    /// The strip's own width: seven 48px pills four apart, and the two 28px steps four from them. A
+    /// constant rather than its DesiredSize, because the star column measures it against whatever room
+    /// is left, so its desired width shrinks to fit and would never report that it does not.
+    /// </summary>
+    private const double WeekStripWidth = (7 * 48) + (6 * 4) + (2 * 28) + (2 * 4);
+
     private void AttachHeaderWrap() => Header.SizeChanged += (_, _) => UpdateHeaderWrap();
 
     private void UpdateHeaderWrap()
@@ -24,14 +31,13 @@ public partial class MainWindow
             return;
         }
 
-        // Desired widths do not depend on where the strip sits, so the decision is stable: moving it
-        // cannot make it fit or not fit on the next pass.
+        // The date and the actions sit in Auto columns, so their desired widths are their natural ones
+        // wherever the strip is; the decision is stable and moving the strip cannot flip it back.
         double lead = HeaderGrid.Children
             .OfType<Control>()
-            .Where(static child => Grid.GetColumn(child) < 2 && child.IsVisible)
+            .Where(static child => Grid.GetColumn(child) < 2 && Grid.GetRow(child) == 0 && child.IsVisible)
             .Sum(static child => child.DesiredSize.Width);
-        double needed = lead + WeekStrip.DesiredSize.Width - WeekStrip.Margin.Left - WeekStrip.Margin.Right
-            + (2 * WeekStripGap) + HeaderActions.DesiredSize.Width;
+        double needed = lead + WeekStripWidth + (2 * WeekStripGap) + HeaderActions.DesiredSize.Width;
         bool wrap = needed > available;
 
         int row = wrap ? 1 : 0;

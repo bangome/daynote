@@ -15,14 +15,14 @@
     <Path x:Name="Scrim" Fill="{DynamicResource Daynote.Product.Brush.Scrim}" />
 
     <Border x:Name="HighlightRing" IsVisible="False" IsHitTestVisible="False"
-            BorderBrush="{DynamicResource Daynote.Product.Brush.Accent}" BorderThickness="2" />
+            BorderBrush="{DynamicResource Daynote.Desk.Brush.Sun}" BorderThickness="2" />
 
-    <Border x:Name="Callout" Classes="panel" Width="360" Padding="22,20"
+    <Border x:Name="Callout" Classes="modal" Width="360" Padding="22,20" CornerRadius="16"
             Background="{DynamicResource Daynote.Product.Brush.Card}">
       <StackPanel Spacing="0">
-        <TextBlock Text="{Binding ProgressText}" FontSize="11" FontWeight="SemiBold"
-                   Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
-        <TextBlock Text="{Binding CurrentStep.Title}" FontSize="15" FontWeight="Bold" Margin="0,4,0,0"
+        <TextBlock Text="{Binding ProgressText}" FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" />
+        <TextBlock Text="{Binding CurrentStep.Title}" FontSize="16" FontWeight="ExtraBold" LetterSpacing="-0.3" Margin="0,4,0,0"
                    TextWrapping="Wrap" />
         <TextBlock Classes="muted" Text="{Binding CurrentStep.Body}" FontSize="12.5" Margin="0,8,0,0"
                    TextWrapping="Wrap" LineHeight="19" />
@@ -44,8 +44,8 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,16,0,0" IsVisible="{Binding IsLast}">
-          <ToggleSwitch IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
-                        Command="{Binding ToggleStartupCommand}" OnContent="" OffContent="" />
+          <ToggleButton Classes="switch" IsChecked="{Binding StartupIsOn, Mode=OneWay}" IsEnabled="{Binding StartupToggleEnabled}"
+                        Command="{Binding ToggleStartupCommand}" VerticalAlignment="Center" />
           <TextBlock Classes="muted" FontSize="12.5" VerticalAlignment="Center"
                      Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SettingsStartupRow]}" />
         </StackPanel>

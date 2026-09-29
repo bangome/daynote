@@ -22,7 +22,7 @@ public partial class StickyNoteWindow : Window
         // clear of them. Windows draws nothing there and the same inset is just a hole.
         if (OperatingSystem.IsMacOS())
         {
-            Layout.Margin = new Thickness(70, 0, 12, 12);
+            Layout.Margin = new Thickness(70, 0, 12, 16);
         }
     }
 

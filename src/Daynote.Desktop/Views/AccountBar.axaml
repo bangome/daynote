@@ -51,7 +51,7 @@
     </Grid>
 
     <Button.Flyout>
-      <Flyout Placement="TopEdgeAlignedLeft" HorizontalOffset="-4" VerticalOffset="8" FlyoutPresenterClasses="bare">
+      <Flyout Placement="TopEdgeAlignedLeft" HorizontalOffset="-8" VerticalOffset="8" FlyoutPresenterClasses="bare">
         <!-- The margin is room for the shadow inside the popup's own bounds. -->
         <Border Width="280" Margin="16" CornerRadius="14" ClipToBounds="True"
                 Background="{DynamicResource Daynote.Product.Brush.Card}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
@@ -89,10 +89,15 @@
               </ContentControl.ContentTemplate>
             </ContentControl>
 
-            <!-- Signed out, or no account: what is true about where the notes are. -->
-            <TextBlock Margin="16" FontSize="14" FontWeight="Bold" Text="{Binding AccountBarTitle}"
-                       IsVisible="{Binding !AccountBarShowsAvatar}" />
+            <!-- Signed out, or no account: what is true about where the notes are, and (with an
+                 account to sign in to) what signing in is for. -->
+            <StackPanel Margin="16" IsVisible="{Binding !AccountBarShowsAvatar}">
+              <TextBlock FontSize="14" FontWeight="Bold" Text="{Binding Strings[AccountBarLocal]}" />
+              <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding Strings[AccountSignInLead]}"
+                         IsVisible="{Binding HasAccount}" />
+            </StackPanel>
 
+            <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0">
             <StackPanel Margin="6">
               <!-- The account card. Signed out it says sign in; absent when the build has no endpoint. -->
               <Button Classes="row" CornerRadius="8" Padding="10,9" Click="OnOpenAccount" IsVisible="{Binding HasAccount}"
@@ -104,6 +109,7 @@
                 <TextBlock FontSize="13" Text="{Binding Strings.Settings}" />
               </Button>
             </StackPanel>
+            </Border>
           </StackPanel>
         </Border>
       </Flyout>

@@ -2,7 +2,9 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.App.Shell.Product;
@@ -109,6 +111,41 @@ public sealed class DesignFrameTests
                 }
 
                 shell.IsDark = false;
+
+                // The account popover, opened as the row's click does.
+                AccountBar bar = window.GetVisualDescendants().OfType<AccountBar>().Single();
+                var toggle = (Button)bar.GetLogicalChildren().Single();
+                toggle.Flyout!.ShowAt(toggle);
+                Pump(window);
+                Shoot(window, "design-account-popover-light");
+                toggle.Flyout.Hide();
+
+                shell.OpenAccountCommand.Execute(null);
+                Pump(window);
+                Shoot(window, "design-account-card-light");
+                shell.CloseAccountCommand.Execute(null);
+
+                // A tutorial step that points at the sidebar.
+                var tutorial = shell.Tutorial!;
+                tutorial.Open();
+                tutorial.Index = tutorial.Steps
+                    .Select(static (step, index) => (step, index))
+                    .First(static pair => pair.step.TargetName == Daynote.App.Onboarding.TutorialTargets.TabTodo)
+                    .index;
+                Pump(window);
+                Shoot(window, "design-tutorial-light");
+                tutorial.SkipCommand.Execute(null);
+
+                LocalizationService.Instance.SetLanguage(AppLanguage.English);
+                Pump(window);
+                Shoot(window, "design-editor-en-light");
+                LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+
+                // The narrowest window the shell allows: the week strip drops to its own line.
+                window.Width = 900;
+                window.Height = 600;
+                Pump(window);
+                ShootAt(window, "design-narrow-light", 900, 600);
             });
         }
         finally
@@ -190,7 +227,9 @@ public sealed class DesignFrameTests
         Pump();
     }
 
-    private static void Shoot(Window window, string name)
+    private static void Shoot(Window window, string name) => ShootAt(window, name, Width, Height);
+
+    private static void ShootAt(Window window, string name, int width, int height)
     {
         Pump(window);
         window.UpdateLayout();
@@ -200,8 +239,8 @@ public sealed class DesignFrameTests
 
         using WriteableBitmap? bitmap = window.CaptureRenderedFrame();
         Assert.IsNotNull(bitmap, $"{name}: nothing rendered.");
-        Assert.AreEqual(Width, bitmap.PixelSize.Width, $"{name}: wrong width.");
-        Assert.AreEqual(Height, bitmap.PixelSize.Height, $"{name}: wrong height.");
+        Assert.AreEqual(width, bitmap.PixelSize.Width, $"{name}: wrong width.");
+        Assert.AreEqual(height, bitmap.PixelSize.Height, $"{name}: wrong height.");
 
         Directory.CreateDirectory(FramesDirectory);
         bitmap.Save(Path.Combine(FramesDirectory, name + ".png"), new PngBitmapEncoderOptions());
