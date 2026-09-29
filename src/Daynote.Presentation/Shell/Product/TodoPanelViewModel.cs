@@ -56,6 +56,12 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
 
     partial void OnOpenCountChanged(int value) => OnPropertyChanged(nameof(TabLabel));
 
+    /// <summary>
+    /// Raised once a refresh has rebuilt both lists. Views that derive from them (the desktop's
+    /// per-day list) read the settled lists here instead of reacting to every row as it is added.
+    /// </summary>
+    public event EventHandler? Refreshed;
+
     /// <summary>Re-parses todos across all notes. Called on load and after any note-body change.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
@@ -82,5 +88,6 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
         OpenCount = open;
         HasToday = TodayItems.Count > 0;
         IsEmpty = TodayItems.Count == 0 && Items.Count == 0;
+        Refreshed?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -25,6 +25,9 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public bool Checked => _line.Checked;
 
+    /// <summary>The date of the note the line lives in, so a view can keep only one day's rows.</summary>
+    public Core.Domain.LocalDate Date => _line.Date;
+
     public string Text => _line.Text;
 
     public bool HasDue => _line.DueLabel.Length > 0;

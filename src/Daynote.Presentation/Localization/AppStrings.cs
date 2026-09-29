@@ -238,6 +238,56 @@ public static class AppStrings
 
     // Timeline view mode
     public static string TimelineToggle => LocalizationService.Instance[nameof(TimelineToggle)];
+
+    // Desktop (design B)
+    public static string DeskSearch => LocalizationService.Instance[nameof(DeskSearch)];
+    public static string DeskNavToday => LocalizationService.Instance[nameof(DeskNavToday)];
+    public static string DeskNavTimeline => LocalizationService.Instance[nameof(DeskNavTimeline)];
+    public static string DeskNavTodo => LocalizationService.Instance[nameof(DeskNavTodo)];
+    public static string DeskNavFavorites => LocalizationService.Instance[nameof(DeskNavFavorites)];
+    public static string DeskNavTags => LocalizationService.Instance[nameof(DeskNavTags)];
+    public static string DeskNavFiles => LocalizationService.Instance[nameof(DeskNavFiles)];
+    public static string DeskHeaderMonthWeekdayFormat => LocalizationService.Instance[nameof(DeskHeaderMonthWeekdayFormat)];
+    public static string DeskHeaderYearFormat => LocalizationService.Instance[nameof(DeskHeaderYearFormat)];
+    public static string DeskGoTodayTipFormat => LocalizationService.Instance[nameof(DeskGoTodayTipFormat)];
+    public static string DeskTimelineButton => LocalizationService.Instance[nameof(DeskTimelineButton)];
+    public static string DeskDayPanelTipFormat => LocalizationService.Instance[nameof(DeskDayPanelTipFormat)];
+    public static string DeskThemeTipFormat => LocalizationService.Instance[nameof(DeskThemeTipFormat)];
+    public static string DeskNewNoteTipFormat => LocalizationService.Instance[nameof(DeskNewNoteTipFormat)];
+    public static string DeskSidebarCollapseTipFormat => LocalizationService.Instance[nameof(DeskSidebarCollapseTipFormat)];
+    public static string DeskTitlePlaceholder => LocalizationService.Instance[nameof(DeskTitlePlaceholder)];
+    public static string DeskPostItTipFormat => LocalizationService.Instance[nameof(DeskPostItTipFormat)];
+    public static string DeskCharLineFormat => LocalizationService.Instance[nameof(DeskCharLineFormat)];
+    public static string DeskEmptyDayTitle => LocalizationService.Instance[nameof(DeskEmptyDayTitle)];
+    public static string DeskEmptyDayBody => LocalizationService.Instance[nameof(DeskEmptyDayBody)];
+    public static string DeskEmptyDayButtonFormat => LocalizationService.Instance[nameof(DeskEmptyDayButtonFormat)];
+    public static string DeskLoadMore => LocalizationService.Instance[nameof(DeskLoadMore)];
+    public static string DeskTodoOpenFormat => LocalizationService.Instance[nameof(DeskTodoOpenFormat)];
+    public static string DeskCountFormat => LocalizationService.Instance[nameof(DeskCountFormat)];
+    public static string DeskFilesDropFormat => LocalizationService.Instance[nameof(DeskFilesDropFormat)];
+    public static string DeskFileDelete => LocalizationService.Instance[nameof(DeskFileDelete)];
+    public static string DeskDayTodoTitle => LocalizationService.Instance[nameof(DeskDayTodoTitle)];
+    public static string DeskDayTodoEmptySuffix => LocalizationService.Instance[nameof(DeskDayTodoEmptySuffix)];
+    public static string DeskFilesAdd => LocalizationService.Instance[nameof(DeskFilesAdd)];
+    public static string DeskFilesEmpty => LocalizationService.Instance[nameof(DeskFilesEmpty)];
+    public static string DeskPalettePlaceholder => LocalizationService.Instance[nameof(DeskPalettePlaceholder)];
+    public static string DeskPaletteShortcuts => LocalizationService.Instance[nameof(DeskPaletteShortcuts)];
+    public static string DeskPaletteNewNote => LocalizationService.Instance[nameof(DeskPaletteNewNote)];
+    public static string DeskSettingsGeneral => LocalizationService.Instance[nameof(DeskSettingsGeneral)];
+    public static string DeskSettingsShortcuts => LocalizationService.Instance[nameof(DeskSettingsShortcuts)];
+    public static string DeskSettingsData => LocalizationService.Instance[nameof(DeskSettingsData)];
+    public static string DeskSettingsAccount => LocalizationService.Instance[nameof(DeskSettingsAccount)];
+    public static string DeskSettingsTheme => LocalizationService.Instance[nameof(DeskSettingsTheme)];
+    public static string DeskThemeLight => LocalizationService.Instance[nameof(DeskThemeLight)];
+    public static string DeskThemeDark => LocalizationService.Instance[nameof(DeskThemeDark)];
+    public static string DeskThemeSwitchFormat => LocalizationService.Instance[nameof(DeskThemeSwitchFormat)];
+    public static string DeskOpenFolder => LocalizationService.Instance[nameof(DeskOpenFolder)];
+    public static string DeskAccountManageShort => LocalizationService.Instance[nameof(DeskAccountManageShort)];
+    public static string DeskShortcutChangeTip => LocalizationService.Instance[nameof(DeskShortcutChangeTip)];
+    public static string DeskAccountMenu => LocalizationService.Instance[nameof(DeskAccountMenu)];
+    public static string DeskBrandName => LocalizationService.Instance[nameof(DeskBrandName)];
+    public static string DeskPreviousWeek => LocalizationService.Instance[nameof(DeskPreviousWeek)];
+    public static string DeskNextWeek => LocalizationService.Instance[nameof(DeskNextWeek)];
     public static string TimelineExpand => LocalizationService.Instance[nameof(TimelineExpand)];
     public static string TimelineCollapse => LocalizationService.Instance[nameof(TimelineCollapse)];
     public static string TimelineEmpty => LocalizationService.Instance[nameof(TimelineEmpty)];

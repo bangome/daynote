@@ -30,6 +30,9 @@ public sealed partial class TagItemViewModel : ObservableObject
 
     public string CountText { get; }
 
+    /// <summary>The count as a phrase ("노트 3개"), for layouts that print it beside the tag.</summary>
+    public string NoteCountText => Localization.AppStrings.NoteCount(Count);
+
     public ObservableCollection<TagOccurrenceViewModel> Occurrences { get; } = [];
 
     [ObservableProperty]
