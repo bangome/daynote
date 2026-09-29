@@ -25,6 +25,9 @@ public partial class MainWindow
     private DesktopShellViewModel? _paletteShell;
     private int _paletteIndex;
 
+    /// <summary>What had the keyboard before the palette took it, so closing hands it back.</summary>
+    private IInputElement? _focusBeforePalette;
+
     private void AttachPalette(DesktopShellViewModel? shell)
     {
         if (_paletteShell is not null)
@@ -45,13 +48,22 @@ public partial class MainWindow
 
     private void OnShellPropertyChangedForPalette(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(DesktopShellViewModel.IsPaletteOpen) && _paletteShell is { IsPaletteOpen: true })
+        if (e.PropertyName != nameof(DesktopShellViewModel.IsPaletteOpen) || _paletteShell is not { } shell)
         {
-            PlacePalette();
-            ResetPaletteCursor();
-            // The IsVisible binding lands on the next layout pass; focusing now would hit a collapsed box.
-            Dispatcher.UIThread.Post(() => SearchBox.Focus(), DispatcherPriority.Loaded);
+            return;
         }
+
+        if (!shell.IsPaletteOpen)
+        {
+            RestoreFocusAfterPalette(shell);
+            return;
+        }
+
+        _focusBeforePalette = FocusManager?.GetFocusedElement();
+        PlacePalette();
+        ResetPaletteCursor();
+        // The IsVisible binding lands on the next layout pass; focusing now would hit a collapsed box.
+        Dispatcher.UIThread.Post(() => SearchBox.Focus(), DispatcherPriority.Loaded);
     }
 
     /// <summary>Typing switches between the quick actions and the results: the cursor starts over.</summary>
@@ -64,6 +76,35 @@ public partial class MainWindow
     }
 
     private void OnPaletteResultsChanged(object? sender, NotifyCollectionChangedEventArgs e) => ResetPaletteCursor();
+
+    /// <summary>
+    /// The hidden query box must not keep the keyboard: typing would go on searching out of sight.
+    /// Focus goes back to where it was, or to the note body when that is gone (an action may have
+    /// opened another view); after the new layout, since what was picked may have changed the view.
+    /// </summary>
+    private void RestoreFocusAfterPalette(DesktopShellViewModel shell)
+    {
+        IInputElement? previous = _focusBeforePalette;
+        _focusBeforePalette = null;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (previous is Control { IsEffectivelyVisible: true, IsEffectivelyEnabled: true } control
+                    && !ReferenceEquals(control, SearchBox) && control.Focus())
+                {
+                    return;
+                }
+
+                if (shell.IsEditorMode && Editor.IsEffectivelyVisible && Editor.Focus())
+                {
+                    return;
+                }
+
+                // Nothing to give it to: at least take it off the hidden box.
+                Focus();
+            },
+            DispatcherPriority.Loaded);
+    }
 
     private void PlacePalette() =>
         Palette.Margin = new Thickness(24, Math.Round(Bounds.Height * 0.14), 24, 0);

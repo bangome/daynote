@@ -64,6 +64,14 @@ public partial class MainWindow
         WindowDecorationProperties.SetElementRole(MinimizeButton, WindowDecorationsElementRole.MinimizeButton);
         WindowDecorationProperties.SetElementRole(MaximizeButton, WindowDecorationsElementRole.MaximizeButton);
         WindowDecorationProperties.SetElementRole(CloseButton, WindowDecorationsElementRole.CloseButton);
+
+        // The sidebar runs to the top of the window, so its first row sits inside the caption band.
+        // Without the User role the non-client hit test takes the press there and drags the window
+        // instead of clicking the control.
+        foreach (Control control in new Control[] { SidebarCollapse, TutSearch })
+        {
+            WindowDecorationProperties.SetElementRole(control, WindowDecorationsElementRole.User);
+        }
     }
 
     /// <summary>Follows the sidebar's collapse, which decides whether the header sits under the traffic lights.</summary>

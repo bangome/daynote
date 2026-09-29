@@ -187,19 +187,28 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     /// sidebar expanded, the editor in the middle. A step whose target is hidden would dim everything
     /// and point at nothing.
     /// </summary>
-    partial void OnTutorialChanged(Daynote.App.Onboarding.TutorialViewModel? value)
+    partial void OnTutorialChanged(
+        Daynote.App.Onboarding.TutorialViewModel? oldValue, Daynote.App.Onboarding.TutorialViewModel? newValue)
     {
-        if (value is not null)
+        if (oldValue is not null)
         {
-            value.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(Daynote.App.Onboarding.TutorialViewModel.IsOpen) && value.IsOpen)
-                {
-                    LeftCollapsed = false;
-                    IsTimelineMode = false;
-                    IsListMode = false;
-                }
-            };
+            oldValue.PropertyChanged -= OnTutorialPropertyChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.PropertyChanged += OnTutorialPropertyChanged;
+        }
+    }
+
+    private void OnTutorialPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Daynote.App.Onboarding.TutorialViewModel.IsOpen)
+            && sender is Daynote.App.Onboarding.TutorialViewModel { IsOpen: true })
+        {
+            LeftCollapsed = false;
+            IsTimelineMode = false;
+            IsListMode = false;
         }
     }
 

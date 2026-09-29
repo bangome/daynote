@@ -39,7 +39,7 @@
           <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
                      LetterSpacing="-0.3" Foreground="{DynamicResource Daynote.Desk.Brush.SideText}"
                      Text="{Binding Strings[DeskBrandName]}" />
-          <Button Grid.Column="2" Classes="sideicon" Width="26" Height="26" Command="{Binding ToggleLeftCommand}"
+          <Button x:Name="SidebarCollapse" Grid.Column="2" Classes="sideicon" Width="26" Height="26" Command="{Binding ToggleLeftCommand}"
                   ToolTip.Tip="{Binding SidebarCollapseTip}" AutomationProperties.Name="{Binding Strings[SidebarsCollapse]}">
             <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
           </Button>
@@ -697,7 +697,14 @@
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                           <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
-                          <TextBlock Classes="faint" FontSize="11" Text="{Binding SizeLabel}" />
+                          <TextBlock Classes="faint" FontSize="11" Text="{Binding SizeLabel}" IsVisible="{Binding !WasSaved}" />
+                          <!-- The same state lines as the files list, so a double-tap here says what happened. -->
+                          <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Ok}" TextTrimming="CharacterEllipsis"
+                                     Text="{Binding SavedTo}" IsVisible="{Binding WasSaved}" />
+                          <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" IsVisible="{Binding SaveFailed}"
+                                     Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileFailed]}" />
+                          <TextBlock Classes="faint" FontSize="11" IsVisible="{Binding IsAwaitingDownload}"
+                                     Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[FileAwaitingDownload]}" />
                         </StackPanel>
                       </Grid>
                     </Border>
