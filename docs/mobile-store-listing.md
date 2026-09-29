@@ -59,10 +59,10 @@ Daynote는 날짜별로 정리되는 노트 앱입니다. 캘린더에서 하루
 
 ■ 라이트·다크, 한국어·영어
 
-── 계정 없이도 전부 ──
+■ 계정 없이도 전부
 로그인하지 않으면 노트는 이 기기에만 저장되고, 앱은 인터넷에 연결하지 않습니다.
 
-── 동기화 (선택) ──
+■ 동기화 (선택)
 Google 또는 Apple 계정으로 로그인하면 노트, 할 일, 태그, 즐겨찾기가 휴대폰과 PC의 Daynote에서 같은 상태로 유지됩니다. 앱을 열 때와 저장한 뒤 자동으로 동기화됩니다.
 
 동기화된 노트는 전송 중과 저장 시 암호화되지만, 기본 설정에서는 서비스가 암호화 키를 보관합니다. 운영자도 내용을 볼 수 없게 하려면 '노트 잠금'을 켜세요. 잠금 암호는 기기에서만 쓰이며 서버로 보내지지 않습니다.
@@ -88,10 +88,10 @@ Tag a note, or just write #hashtags in the body. Search looks through titles, te
 
 ■ Light and dark, Korean and English
 
-── Everything works without an account ──
+■ Everything works without an account
 Signed out, your notes stay on this device and the app does not go online at all.
 
-── Sync (optional) ──
+■ Sync (optional)
 Sign in with Google or Apple and your notes, to-dos, tags and favourites stay the same on your phone and in Daynote on your computer. It syncs on its own when you open the app and after you save.
 
 Synced notes are encrypted in transit and at rest, but by default the service holds the key. Turn on the note lock and not even the people running the service can read them; the passphrase is used on your device and never sent.

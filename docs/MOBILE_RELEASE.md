@@ -34,10 +34,18 @@ Uploads use the App Store Connect API key in `~/.config/schooling/asc_api_key.js
 (and by email), never as an upload error. Bump `ApplicationVersion` / `CFBundleVersion` (iOS) or
 `ApplicationVersion` (Android versionCode) for every upload.
 
-**Still to do before anyone outside the team:** the store listing, App Privacy / Data safety forms,
-age rating and screenshots in both consoles (text in mobile-store-listing.md, images in docs/brand);
-TestFlight external testing needs Beta App Review; a personal Play developer account must run a
-closed test with at least 12 testers for 14 days before production.
+**Store listings (2026-09-29).** App Store Connect: version 1.5.0 with build 2 attached, ko and en-US
+name, subtitle, description, keywords, promotional text, URLs, Productivity, age rating (all none),
+10 screenshots, review notes, App Privacy published (email + other user content, linked, not
+tracking), free in all 175 regions, TestFlight test information. Google Play: ko and en-US listing,
+icon, feature graphic (`docs/brand/google-play/`), phone screenshots, Productivity, contact email,
+and every App content declaration complete (IARC rating obtained, 18+, no ads or advertising ID,
+data safety with the deletion URL).
+
+**Still to do:** the App Review contact (name, phone, email) in App Store Connect before submitting;
+check the Play screenshot order (the console may have reordered them); TestFlight external testing
+needs Beta App Review; a personal Play developer account must run a closed test with at least 12
+testers for 14 days before production.
 
 ## Before anything: deploy the Worker
 
