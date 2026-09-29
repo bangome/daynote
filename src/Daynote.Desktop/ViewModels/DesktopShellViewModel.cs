@@ -639,6 +639,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         RaiseViewState();
         OnPropertyChanged(nameof(ThemeName));
         OnPropertyChanged(nameof(CharLineText));
+        RaiseSaveFooter();
         OnPropertyChanged(nameof(BrandLogo));
     }
 
