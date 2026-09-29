@@ -25,6 +25,7 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
     private readonly IClock _clock;
     private readonly INoteRepository _repository;
     private readonly Func<LocalDate, Task> _onSelectDate;
+    private int _sequence;
 
     public WeekStripViewModel(IClock clock, INoteRepository repository, Func<LocalDate, Task> onSelectDate)
     {
@@ -48,8 +49,14 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
     }
 
     /// <summary>Rebuilds the strip around <paramref name="selected"/>, reading which days have notes.</summary>
+    /// <remarks>
+    /// Stale-guarded like the search: two quick steps can finish out of order, and the one that
+    /// started last is the one that draws. Otherwise the strip could end up on the older week while
+    /// the header and the editor show the newer day.
+    /// </remarks>
     public async Task ShowAsync(LocalDate selected, CancellationToken cancellationToken = default)
     {
+        int sequence = ++_sequence;
         SelectedDate = selected;
         LocalDate start = WeekStart(selected);
         LocalDate end = LocalDates.AddDays(start, 6);
@@ -66,6 +73,11 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
                     withNotes.Add(summary.Date);
                 }
             }
+        }
+
+        if (sequence != _sequence)
+        {
+            return; // A newer call superseded this one.
         }
 
         LocalDate today = LocalDates.Today(_clock);
