@@ -13,7 +13,7 @@
     <!-- The same bundle id as the Mac app, which is allowed and is what lets one App Store listing
          carry both. The Mac build is not distributed through the store today, so nothing collides. -->
     <ApplicationId>cc.arachat.daynote</ApplicationId>
-    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationVersion>3</ApplicationVersion>
     <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
     <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
@@ -44,6 +44,11 @@
          trimmed publish otherwise turns it off by default and the first sync would throw. -->
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- Everything stays AOT-compiled; the interpreter is only there for code that could not be
+         compiled ahead of time (generic instantiations the AOT compiler never saw, reflection-emitted
+         serialisers). Without it a device running AOT-only aborts the moment it meets one, which a
+         simulator, running on the JIT, never shows. -->
+    <MtouchInterpreter>-all</MtouchInterpreter>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!--
       Clears the repo-wide RuntimeIdentifiers (Directory.Build.props), which exists only to keep the
