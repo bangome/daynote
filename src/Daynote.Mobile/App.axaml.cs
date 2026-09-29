@@ -47,11 +47,9 @@ public partial class App : Application
         MobilePlatformServices platform = Platform
             ?? throw new InvalidOperationException("App.Platform must be set by the head before the app starts.");
 
-        var options = new DaynoteAppOptions(platform.DataRoot)
-        {
-            SyncEndpoint = DaynoteAppOptions.ResolveSyncEndpoint(
-                Environment.GetEnvironmentVariable(DaynoteAppOptions.SyncEndpointEnvironmentVariable)),
-        };
+        // The sandbox folder is the base root; the app runs over the active profile inside it, after
+        // the one-time profile migration (docs/PROFILES.md §5.1).
+        var options = DaynoteAppOptions.ForBaseRoot(platform.DataRoot);
 
         var view = new MainView();
 

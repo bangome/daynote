@@ -47,6 +47,8 @@ public partial class App : Application
         // Closing the window hides it; only an explicit Quit ends the process.
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // Migrates to the per-account layout on first run and resolves the active profile
+        // (docs/PROFILES.md); everything below, restore included, acts on that profile's folder.
         var options = DaynoteAppOptions.ForCurrentUser();
 
         // A staged restore is applied before the database opens; we are the primary instance here.

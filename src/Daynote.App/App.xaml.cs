@@ -60,6 +60,9 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        // Migrates to the per-account layout on first run and resolves the active profile
+        // (docs/PROFILES.md); everything below, restore included, acts on that profile's folder. After
+        // the single-instance check on purpose: only the primary may move files.
         var appOptions = DaynoteAppOptions.ForCurrentUser();
 
         // Apply a staged restore BEFORE the database opens (the live writer connection can't be reopened

@@ -4,6 +4,7 @@ using Daynote.Core.Time;
 using Daynote.Infrastructure.Mcp;
 using Daynote.Infrastructure.Notes;
 using Daynote.Infrastructure.Persistence;
+using Daynote.Infrastructure.Persistence.Profiles;
 using Daynote.Infrastructure.Search;
 using Daynote.Mcp;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,9 +16,14 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 // The stdout stream carries the MCP JSON-RPC messages, so every log record must go to stderr.
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
-// Resolve the same per-user data root the desktop apps use (DaynoteAppOptions.ForCurrentUser).
-string root = DaynoteDataRoot.Resolve();
-string dbPath = Path.Combine(root, "daynote.db");
+// Resolve the same per-user data root the desktop apps use (DaynoteAppOptions.ForCurrentUser), then
+// the profile active in it (docs/PROFILES.md §8): the server reads and writes the notes the app shows.
+// Resolve only, never migrate: the app owns the one-time migration, and two processes moving the same
+// files would race. Until the app has run it the pointer resolves to the base root, which is where the
+// legacy data still is. A profile switch while a client holds the server open takes effect the next
+// time the client starts it.
+string root = new ProfileStore(DaynoteDataRoot.Resolve()).ResolveActiveFolder();
+string dbPath = Path.Combine(root, ProfileStore.DatabaseFileName);
 
 // Say which database this is and whether the process has a package identity. Both are invisible
 // otherwise, and both decide whether a client is talking to the notes the user can see: an MSIX

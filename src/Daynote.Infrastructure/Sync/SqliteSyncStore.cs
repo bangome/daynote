@@ -303,148 +303,193 @@ public sealed partial class SqliteSyncStore : ISyncStore
             (connection, transaction, token) =>
             {
                 token.ThrowIfCancellationRequested();
-
-                var displaced = new List<DisplacedNote>();
-                var affectedDates = new HashSet<string>(StringComparer.Ordinal);
-                var mergedIds = new HashSet<string>(StringComparer.Ordinal);
-                var incomingByDate = new Dictionary<string, List<SyncNote>>(StringComparer.Ordinal);
-                int applied = 0;
-                int ignored = 0;
-                int removed = 0;
-
-                foreach (SyncTombstone tombstone in tombstones)
-                {
-                    if (tombstone.Kind != SyncEntityKind.Note)
-                    {
-                        continue;
-                    }
-
-                    LocalNoteRow? local = ReadNoteRow(connection, transaction, tombstone.Id);
-                    if (local is null)
-                    {
-                        // Already gone here too. Drop our own tombstone: both sides agree, and
-                        // keeping it would push a delete the server has already recorded.
-                        DeleteTombstone(connection, transaction, SyncEntityKind.Note, tombstone.Id);
-                        continue;
-                    }
-
-                    if (local.Value.UpdatedUtc > tombstone.DeletedUtc)
-                    {
-                        // A local edit outlives the remote delete. The outbox still holds it, so the
-                        // next push re-creates the note on the server.
-                        ignored += 1;
-                        continue;
-                    }
-
-                    displaced.Add(ToDisplaced(local.Value));
-                    DeleteNote(connection, transaction, tombstone.Id, tombstone.DeletedUtc);
-                    // The AFTER DELETE trigger just wrote a tombstone of its own. Remove it: this
-                    // delete came *from* the server and must not be pushed back to it.
-                    DeleteTombstone(connection, transaction, SyncEntityKind.Note, tombstone.Id);
-                    affectedDates.Add(local.Value.LocalDate);
-                    removed += 1;
-                }
-
-                foreach (SyncNote incoming in notes)
-                {
-                    DateTimeOffset? localDelete =
-                        ReadTombstone(connection, transaction, SyncEntityKind.Note, incoming.Id);
-                    if (localDelete is { } deletedAt && deletedAt > incoming.UpdatedUtc)
-                    {
-                        // We deleted it after this version was written. Keep the tombstone queued.
-                        ignored += 1;
-                        continue;
-                    }
-
-                    LocalNoteRow? local = ReadNoteRow(connection, transaction, incoming.Id);
-                    if (local is { } current && current.UpdatedUtc >= incoming.UpdatedUtc)
-                    {
-                        // Equal timestamps mean the same version of the same id, so there is nothing
-                        // to choose between: keeping local is the deterministic answer.
-                        ignored += 1;
-                        continue;
-                    }
-
-                    if (local is { } losing)
-                    {
-                        // Only a real content difference is worth preserving; a sort-order-only
-                        // change would otherwise fill the conflicts folder with noise.
-                        if (!string.Equals(losing.Body, incoming.Body, StringComparison.Ordinal) ||
-                            !string.Equals(losing.EffectiveTitle, incoming.Title, StringComparison.Ordinal))
-                        {
-                            displaced.Add(ToDisplaced(losing));
-                        }
-
-                        if (!string.Equals(losing.LocalDate, incoming.LocalDate.ToString(), StringComparison.Ordinal))
-                        {
-                            affectedDates.Add(losing.LocalDate);
-                        }
-                    }
-
-                    if (localDelete is not null)
-                    {
-                        DeleteTombstone(connection, transaction, SyncEntityKind.Note, incoming.Id);
-                    }
-
-                    string date = incoming.LocalDate.ToString();
-                    affectedDates.Add(date);
-                    mergedIds.Add(incoming.Id);
-                    if (!incomingByDate.TryGetValue(date, out List<SyncNote>? bucket))
-                    {
-                        bucket = [];
-                        incomingByDate[date] = bucket;
-                    }
-
-                    bucket.Add(incoming);
-                    applied += 1;
-                }
-
-                // Snapshot the queue before touching anything. Re-ordering a date rewrites every note
-                // on it, which fires the outbox trigger for notes the merge did not really change; the
-                // cleanup in Resequence undoes that, and needs to know which entries were already
-                // there. Without this, merging one note would discard a sibling note's pending local
-                // edit and that edit would never reach the cloud.
-                HashSet<string> alreadyQueued = ReadQueuedNoteIds(connection, transaction);
-
-                // Park, write, then re-order: the UNIQUE (local_date, sort_order) constraint cannot be
-                // deferred in SQLite, so two devices both adding a note at slot 0 would collide on a
-                // naive insert. See docs/CLOUD_SYNC.md §6.1.
-                foreach (string date in affectedDates)
-                {
-                    ParkDate(connection, transaction, date);
-                }
-
-                foreach (List<SyncNote> bucket in incomingByDate.Values)
-                {
-                    int parkedSlot = ParkingOffset * 2;
-                    foreach (SyncNote incoming in bucket)
-                    {
-                        WriteMergedNote(connection, transaction, incoming, parkedSlot);
-                        parkedSlot += 1;
-                    }
-                }
-
-                foreach (string date in affectedDates)
-                {
-                    Resequence(
-                        connection,
-                        transaction,
-                        date,
-                        mergedIds,
-                        alreadyQueued,
-                        incomingByDate,
-                        mergeInstant);
-                }
-
-                // Never queue what we just received: the triggers fired on every write above.
-                foreach (string id in mergedIds)
-                {
-                    DeleteOutbox(connection, transaction, SyncEntityKind.Note, id);
-                }
-
-                return new MergeOutcome(applied, ignored, removed, displaced);
+                return ApplyNotes(connection, transaction, notes, tombstones, mergeInstant, fromServer: true);
             },
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Brings notes over from another profile on this device (docs/PROFILES.md §5.2, §5.5) under the
+    /// same last-write-wins and re-ordering rules as a pull, with one difference: the imported notes
+    /// stay in the outbox the triggers put them in, because to this profile they are new local content
+    /// that its account has never seen. Custom titles, tags, favourites and timestamps travel with
+    /// each note exactly as a pulled note carries them.
+    /// </summary>
+    public ValueTask<MergeOutcome> ImportNotesAsync(
+        IReadOnlyList<SyncNote> notes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notes);
+        if (notes.Count == 0)
+        {
+            return ValueTask.FromResult(MergeOutcome.Empty);
+        }
+
+        DateTimeOffset mergeInstant = utcNow();
+
+        return database.WriteAsync(
+            (connection, transaction, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                return ApplyNotes(connection, transaction, notes, [], mergeInstant, fromServer: false);
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// The note merge itself. <paramref name="fromServer"/> decides only the outbox: a pulled note must
+    /// not be pushed back (an echo), an imported one must be pushed (it is new to this account).
+    /// </summary>
+    private static MergeOutcome ApplyNotes(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        IReadOnlyList<SyncNote> notes,
+        IReadOnlyList<SyncTombstone> tombstones,
+        DateTimeOffset mergeInstant,
+        bool fromServer)
+    {
+        var displaced = new List<DisplacedNote>();
+        var affectedDates = new HashSet<string>(StringComparer.Ordinal);
+        var mergedIds = new HashSet<string>(StringComparer.Ordinal);
+        var incomingByDate = new Dictionary<string, List<SyncNote>>(StringComparer.Ordinal);
+        int applied = 0;
+        int ignored = 0;
+        int removed = 0;
+
+        foreach (SyncTombstone tombstone in tombstones)
+        {
+            if (tombstone.Kind != SyncEntityKind.Note)
+            {
+                continue;
+            }
+
+            LocalNoteRow? local = ReadNoteRow(connection, transaction, tombstone.Id);
+            if (local is null)
+            {
+                // Already gone here too. Drop our own tombstone: both sides agree, and
+                // keeping it would push a delete the server has already recorded.
+                DeleteTombstone(connection, transaction, SyncEntityKind.Note, tombstone.Id);
+                continue;
+            }
+
+            if (local.Value.UpdatedUtc > tombstone.DeletedUtc)
+            {
+                // A local edit outlives the remote delete. The outbox still holds it, so the
+                // next push re-creates the note on the server.
+                ignored += 1;
+                continue;
+            }
+
+            displaced.Add(ToDisplaced(local.Value));
+            DeleteNote(connection, transaction, tombstone.Id, tombstone.DeletedUtc);
+            // The AFTER DELETE trigger just wrote a tombstone of its own. Remove it: this
+            // delete came *from* the server and must not be pushed back to it.
+            DeleteTombstone(connection, transaction, SyncEntityKind.Note, tombstone.Id);
+            affectedDates.Add(local.Value.LocalDate);
+            removed += 1;
+        }
+
+        foreach (SyncNote incoming in notes)
+        {
+            DateTimeOffset? localDelete =
+                ReadTombstone(connection, transaction, SyncEntityKind.Note, incoming.Id);
+            if (localDelete is { } deletedAt && deletedAt > incoming.UpdatedUtc)
+            {
+                // We deleted it after this version was written. Keep the tombstone queued.
+                ignored += 1;
+                continue;
+            }
+
+            LocalNoteRow? local = ReadNoteRow(connection, transaction, incoming.Id);
+            if (local is { } current && current.UpdatedUtc >= incoming.UpdatedUtc)
+            {
+                // Equal timestamps mean the same version of the same id, so there is nothing
+                // to choose between: keeping local is the deterministic answer.
+                ignored += 1;
+                continue;
+            }
+
+            if (local is { } losing)
+            {
+                // Only a real content difference is worth preserving; a sort-order-only
+                // change would otherwise fill the conflicts folder with noise.
+                if (!string.Equals(losing.Body, incoming.Body, StringComparison.Ordinal) ||
+                    !string.Equals(losing.EffectiveTitle, incoming.Title, StringComparison.Ordinal))
+                {
+                    displaced.Add(ToDisplaced(losing));
+                }
+
+                if (!string.Equals(losing.LocalDate, incoming.LocalDate.ToString(), StringComparison.Ordinal))
+                {
+                    affectedDates.Add(losing.LocalDate);
+                }
+            }
+
+            if (localDelete is not null)
+            {
+                DeleteTombstone(connection, transaction, SyncEntityKind.Note, incoming.Id);
+            }
+
+            string date = incoming.LocalDate.ToString();
+            affectedDates.Add(date);
+            mergedIds.Add(incoming.Id);
+            if (!incomingByDate.TryGetValue(date, out List<SyncNote>? bucket))
+            {
+                bucket = [];
+                incomingByDate[date] = bucket;
+            }
+
+            bucket.Add(incoming);
+            applied += 1;
+        }
+
+        // Snapshot the queue before touching anything. Re-ordering a date rewrites every note
+        // on it, which fires the outbox trigger for notes the merge did not really change; the
+        // cleanup in Resequence undoes that, and needs to know which entries were already
+        // there. Without this, merging one note would discard a sibling note's pending local
+        // edit and that edit would never reach the cloud.
+        HashSet<string> alreadyQueued = ReadQueuedNoteIds(connection, transaction);
+
+        // Park, write, then re-order: the UNIQUE (local_date, sort_order) constraint cannot be
+        // deferred in SQLite, so two devices both adding a note at slot 0 would collide on a
+        // naive insert. See docs/CLOUD_SYNC.md §6.1.
+        foreach (string date in affectedDates)
+        {
+            ParkDate(connection, transaction, date);
+        }
+
+        foreach (List<SyncNote> bucket in incomingByDate.Values)
+        {
+            int parkedSlot = ParkingOffset * 2;
+            foreach (SyncNote incoming in bucket)
+            {
+                WriteMergedNote(connection, transaction, incoming, parkedSlot);
+                parkedSlot += 1;
+            }
+        }
+
+        foreach (string date in affectedDates)
+        {
+            Resequence(
+                connection,
+                transaction,
+                date,
+                mergedIds,
+                alreadyQueued,
+                incomingByDate,
+                mergeInstant);
+        }
+
+        if (fromServer)
+        {
+            // Never queue what we just received: the triggers fired on every write above.
+            foreach (string id in mergedIds)
+            {
+                DeleteOutbox(connection, transaction, SyncEntityKind.Note, id);
+            }
+        }
+
+        return new MergeOutcome(applied, ignored, removed, displaced);
     }
 
     public async ValueTask<SyncStateSnapshot> ReadStateAsync(CancellationToken cancellationToken = default)

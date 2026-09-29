@@ -6,15 +6,33 @@ namespace Daynote.App.Composition;
 /// Composition options. Defaults to the per-user data root under <c>%LocalAppData%\Daynote</c> for a
 /// real run; tests inject a disposable root.
 /// </summary>
+/// <remarks>
+/// <see cref="DataRoot"/> is the <i>active profile's</i> folder (docs/PROFILES.md §3): the base root for
+/// the local profile, <c>accounts/&lt;userId&gt;</c> for an account. Every service built from it — database,
+/// attachments, backup, conflict copies, session store — is therefore scoped to one profile without
+/// knowing profiles exist.
+/// </remarks>
 public sealed class DaynoteAppOptions
 {
+    /// <summary>A single-profile root: base and active folder are the same. What tests use.</summary>
     public DaynoteAppOptions(string dataRoot)
+        : this(dataRoot, dataRoot)
     {
+    }
+
+    public DaynoteAppOptions(string baseRoot, string dataRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataRoot);
+        BaseRoot = Path.GetFullPath(baseRoot);
         DataRoot = Path.GetFullPath(dataRoot);
         DatabasePath = Path.Combine(DataRoot, "daynote.db");
     }
 
+    /// <summary>The root every process resolves; holds <c>profile.json</c> and <c>accounts/</c>.</summary>
+    public string BaseRoot { get; }
+
+    /// <summary>The active profile's folder.</summary>
     public string DataRoot { get; }
 
     public string DatabasePath { get; }
@@ -94,9 +112,25 @@ public sealed class DaynoteAppOptions
     public const string DataRootEnvironmentVariable =
         Daynote.Infrastructure.Persistence.DaynoteDataRoot.EnvironmentVariable;
 
-    public static DaynoteAppOptions ForCurrentUser()
+    public static DaynoteAppOptions ForCurrentUser() =>
+        ForBaseRoot(Daynote.Infrastructure.Persistence.DaynoteDataRoot.Resolve());
+
+    /// <summary>
+    /// Runs the one-time profile migration under <paramref name="baseRoot"/>, then builds options over
+    /// the active profile (docs/PROFILES.md §5.1). The phone heads call this with their sandbox folder;
+    /// the desktop apps reach it through <see cref="ForCurrentUser"/>.
+    /// </summary>
+    /// <remarks>
+    /// Must run before any database under the root is opened, which is why it is here and not in the
+    /// composition. A failed migration is not fatal: it leaves the root as it was, the pointer then
+    /// resolves to the base, and the app runs on the legacy layout exactly as the previous version did
+    /// until a later start succeeds.
+    /// </remarks>
+    public static DaynoteAppOptions ForBaseRoot(string baseRoot)
     {
-        return new DaynoteAppOptions(Daynote.Infrastructure.Persistence.DaynoteDataRoot.Resolve())
+        var profiles = new Daynote.Infrastructure.Persistence.Profiles.ProfileStore(baseRoot);
+        profiles.MigrateLegacyLayout();
+        return new DaynoteAppOptions(profiles.BaseRoot, profiles.ResolveActiveFolder())
         {
             SyncEndpoint = ResolveSyncEndpoint(
                 Environment.GetEnvironmentVariable(SyncEndpointEnvironmentVariable)),
