@@ -48,8 +48,71 @@
   -->
   <StackPanel Spacing="14">
 
+    <!-- After a sign-in from this device's own notes: bring them along, or leave them here
+         (docs/PROFILES.md §5.2). Asked once, and only when there is something to move. -->
+    <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsChoosingHandOff}">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding #Root.Strings[ProfileMoveTitle]}" />
+        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding HandOffMessage}" />
+        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Classes="accent" HorizontalAlignment="Stretch"
+                Content="{Binding #Root.Strings[ProfileMoveConfirm]}" Command="{Binding MoveLocalNotesCommand}"
+                IsEnabled="{Binding !IsBusy}" />
+        <Button Classes="quiet" HorizontalAlignment="Stretch"
+                Content="{Binding #Root.Strings[ProfileMoveKeep]}" Command="{Binding KeepLocalNotesCommand}"
+                IsEnabled="{Binding !IsBusy}" />
+      </StackPanel>
+    </Border>
+
+    <!-- The account is gone on the server: keep its notes here as local notes, or remove them
+         (docs/PROFILES.md §5.5). -->
+    <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsChoosingDeletedNotes}">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding #Root.Strings[DeletedNotesTitle]}" />
+        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding DeletedNotesMessage}" />
+        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Classes="accent" HorizontalAlignment="Stretch"
+                Content="{Binding #Root.Strings[DeletedNotesKeep]}" Command="{Binding KeepDeletedNotesCommand}"
+                IsEnabled="{Binding !IsBusy}" />
+        <Button Classes="quiet" HorizontalAlignment="Stretch" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                IsVisible="{Binding !IsConfirmingRemoveDeletedNotes}"
+                Content="{Binding #Root.Strings[DeletedNotesRemove]}" Command="{Binding RemoveDeletedNotesCommand}"
+                IsEnabled="{Binding !IsBusy}" />
+        <!-- After the server delete this device holds the only copy: removing it is asked twice. -->
+        <Border Classes="panel" Padding="12,10" IsVisible="{Binding IsConfirmingRemoveDeletedNotes}"
+                Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+          <StackPanel Spacing="10">
+            <TextBlock FontSize="12" TextWrapping="Wrap" Text="{Binding RemoveDeletedNotesMessage}" />
+            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
+                    Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                    Content="{Binding #Root.Strings[DeletedNotesRemoveConfirm]}" Command="{Binding RemoveDeletedNotesCommand}"
+                    IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="quiet" HorizontalAlignment="Stretch"
+                    Content="{Binding #Root.Strings[DeletedNotesRemoveCancel]}" Command="{Binding CancelRemoveDeletedNotesCommand}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+
+    <TextBlock Classes="muted" FontSize="12.5" TextAlignment="Center" IsVisible="{Binding IsSwitchingProfile}"
+               Text="{Binding #Root.Strings[ProfileSwitching]}" />
+
+    <!-- The switch could not finish (the open note would not save). The next start opens the new
+         profile; this is the way to try again now. -->
+    <StackPanel Spacing="8" IsVisible="{Binding IsProfileSwitchStalled}">
+      <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                 Text="{Binding ErrorMessage}"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <Button Classes="accent" HorizontalAlignment="Stretch"
+              Content="{Binding #Root.Strings[ProfileSwitchRetry]}" Command="{Binding RetryProfileSwitchCommand}" />
+    </StackPanel>
+
     <!-- Signed out -->
-    <StackPanel Spacing="12" IsVisible="{Binding IsSignedOut}">
+    <StackPanel Spacing="12" IsVisible="{Binding ShowsSignIn}">
       <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[AccountSignInLeadMobile]}" />
       <StackPanel Spacing="10">
         <StackPanel Spacing="1">
@@ -91,6 +154,10 @@
       <TextBlock FontSize="12" TextAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
                  Text="{Binding ErrorMessage}"
                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <!-- This profile's database names another account (docs/PROFILES.md §4): the way out. -->
+      <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding IsOwnerMismatch}"
+              Content="{Binding #Root.Strings[ProfileLeaveMismatched]}" Command="{Binding LeaveMismatchedProfileCommand}"
+              IsEnabled="{Binding !IsBusy}" />
       <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
         <Button Classes="quiet" FontSize="12" MinHeight="36" Content="{Binding #Root.Strings[AccountTerms]}"
                 Command="{Binding OpenTermsCommand}" />
@@ -111,6 +178,36 @@
       <TextBlock FontSize="12" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
                  Text="{Binding ErrorMessage}"
                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <!-- Signing out: keep this account's notes on the device, or remove them (docs/PROFILES.md
+           §5.4). Removing with changes that never synced asks a second time. -->
+      <Border Classes="panel" Padding="14,12" IsVisible="{Binding IsChoosingSignOut}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{Binding #Root.Strings[SignOutChoiceTitle]}" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding #Root.Strings[SignOutChoiceBody]}" />
+          <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                     Text="{Binding UnsyncedChangesMessage}" IsVisible="{Binding HasUnsyncedChanges}" />
+          <Button Classes="accent" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[SignOutKeep]}" Command="{Binding SignOutKeepCommand}"
+                  IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding !IsConfirmingRemoveUnsynced}"
+                  Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                  Content="{Binding #Root.Strings[SignOutRemove]}" Command="{Binding SignOutRemoveCommand}"
+                  IsEnabled="{Binding !IsBusy}" />
+          <Border Classes="panel" Padding="12,10" IsVisible="{Binding IsConfirmingRemoveUnsynced}"
+                  Background="{DynamicResource Daynote.Product.Brush.DangerSoft}">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="12" TextWrapping="Wrap" Text="{Binding RemoveUnsyncedMessage}" />
+              <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"
+                      Background="{DynamicResource Daynote.Product.Brush.Danger}" Foreground="White"
+                      Content="{Binding #Root.Strings[SignOutRemoveConfirm]}" Command="{Binding SignOutRemoveCommand}"
+                      IsEnabled="{Binding !IsBusy}" />
+            </StackPanel>
+          </Border>
+          <Button Classes="quiet" HorizontalAlignment="Stretch"
+                  Content="{Binding #Root.Strings[SignOutCancel]}" Command="{Binding CancelSignOutCommand}" />
+        </StackPanel>
+      </Border>
 
       <!-- Entitlement banner: text only, as on the desktop. -->
       <Border Classes="panel" Padding="14,12" IsVisible="{Binding HasBanner}"

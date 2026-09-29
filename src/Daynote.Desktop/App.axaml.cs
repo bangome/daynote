@@ -34,6 +34,26 @@ public partial class App : Application
         _ = _lifecycle?.QuitAsync();
     }
 
+    /// <summary>
+    /// The account panel moved the device to another profile (docs/PROFILES.md §8). Every service
+    /// holds the old profile's database, so the app relaunches over the new one, exactly the way a
+    /// staged restore does: Quit flushes the editor first, and the next start reads the pointer.
+    /// </summary>
+    /// <remarks>
+    /// The panel already saved the editor before it moved the pointer, so Quit's own flush should
+    /// find nothing to do. If it is refused anyway, the relaunch is disarmed and the panel is told,
+    /// rather than leaving a process that believes it is quitting over a pointer that has moved.
+    /// </remarks>
+    private async void OnProfileSwitchRequested(object? sender, EventArgs e)
+    {
+        RelaunchAfterExit = true;
+        if (_lifecycle is { } lifecycle && !await lifecycle.QuitAsync().ConfigureAwait(true))
+        {
+            RelaunchAfterExit = false;
+            (sender as Daynote.App.Account.AccountViewModel)?.NotifyProfileSwitchFailed();
+        }
+    }
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -65,6 +85,15 @@ public partial class App : Application
         DesktopShellViewModel shell = _provider.GetRequiredService<DesktopShellViewModel>();
         var window = new MainWindow { DataContext = shell };
         desktop.MainWindow = window;
+
+        // Wired before anything in start-up can fail, so a profile switch is always carried out. The
+        // panel saves the editor through this before it leaves a profile (docs/PROFILES.md §8).
+        if (shell.Account is { } account)
+        {
+            account.FlushEditor = async () =>
+                (await shell.Notes.FlushAsync(FlushReason.Quit).ConfigureAwait(true)).CanProceed;
+            account.ProfileSwitchRequested += OnProfileSwitchRequested;
+        }
 
         _lifecycle = new ResidentLifecycle(
             this,
@@ -113,6 +142,13 @@ public partial class App : Application
             string body = string.Format(
                 System.Globalization.CultureInfo.CurrentCulture, AppStrings.SampleNoteBodyFormat, today.Month, today.Day);
             await seed.ExecuteAsync(today, AppStrings.SampleNoteTitle, body).ConfigureAwait(true);
+
+            // An account profile's first start imports the notes a Move brought along; before the
+            // day is read, so they are on screen from the first frame (docs/PROFILES.md §5.2).
+            if (shell.Account is { } profileAccount)
+            {
+                await profileAccount.PrepareProfileAsync().ConfigureAwait(true);
+            }
 
             await shell.InitializeAsync().ConfigureAwait(true);
             await _provider.GetRequiredService<Daynote.App.Input.ConfigurableShortcuts>().LoadAsync().ConfigureAwait(true);

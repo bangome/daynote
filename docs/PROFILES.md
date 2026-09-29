@@ -1,7 +1,9 @@
 # Profiles: one local store per account
 
-Status: design, 2026-09-29. Implementation follows this document; change the document first when
-the design changes.
+Status: phase 1 (layout, migration, importer) and phase 2 (hand-off, sign-out and deletion choices,
+owner check, host switching) implemented, 2026-09-29. Implementation follows this document; change the
+document first when the design changes. §11 records where the implementation had to decide something
+this design left open.
 
 ## 1. The problem
 
@@ -149,6 +151,7 @@ re-pointing live objects:
 | Piece | Where |
 | --- | --- |
 | `ProfileStore` — base/active/account roots, `profile.json`, migration, import, removal | `Daynote.Infrastructure/Persistence/Profiles/` |
+| `ProfileHost` — `IProfileHost` over `ProfileStore` + `ProfileImporter`, with a per-host session-store factory | `Daynote.Infrastructure/Persistence/Profiles/` |
 | `DaynoteAppOptions.ForCurrentUser` over the active profile; `BaseRoot` | `Daynote.Presentation/Composition` |
 | `IProfileHost` port (Core): current profile id, hand-off to an account, return to local (keep/remove), import requests | `Daynote.Core/Sync` |
 | `AccountService`: sign-in hands off instead of enrolling; owner check in `ResumeAsync` | `Daynote.Core/Sync` |
@@ -169,3 +172,75 @@ re-pointing live objects:
 - Owner mismatch refuses to sync.
 - Device settings follow the user into a new profile.
 - Headless UI: the *Move/Keep* question and the sign-out choice render and bind on every shell.
+
+## 11. Decisions made while implementing
+
+- **Removal waits for the database to close.** The running app holds the account's database open
+  when the user picks *Remove* (§5.4) or deletes the account (§5.5), and Windows will not rename a
+  folder with an open file. So the folder gets a `remove-pending` marker instead: from that moment
+  `ReadActiveProfileId` and `ListAccounts` treat it as gone, and `ProfileStore.RemoveMarkedAccounts`
+  deletes it at the next start (it runs inside `MigrateLegacyLayout`, before any database opens) —
+  which on the desktop is the relaunch, and on a phone the rebuild after the old provider is disposed.
+  A sign-in that finds its own folder still marked removes it first and starts over.
+- **Sign-out (*Keep*) leaves the account's database alone.** Only `credentials.dat` is cleared; the
+  database keeps its `sync_state` owner, cursor and outbox, so signing back in carries on without a
+  re-download and still passes the owner check. The pre-profile `SqliteSyncStore.SignOutAsync` (which
+  clears owner and cursor) now runs only for a single-root composition and after a server-side delete.
+- **Delete → *Keep* imports right away.** The account's notes are imported into the local database by
+  the running app (opening the local database briefly; nothing else has it open) before the switch,
+  rather than through a pending import on the local side. Either way the folder is then marked for
+  removal.
+- **A *Move* removes exactly what it imported, and leaves no tombstones.** `ProfileImporter.MoveFromAsync`
+  deletes from the local profile only the note versions it read (one edited in the meantime, e.g. by the
+  MCP server, stays for the next import), their attachments, and then the tombstones and outbox rows
+  those deletes create. A tombstone left in the local profile would make a later import back into it
+  (§5.5 *Keep*) read those notes as deleted.
+- **The first start runs before the notes are read.** Hosts call `AccountViewModel.PrepareProfileAsync`
+  ahead of loading the day, so moved notes are on screen from the first frame; `AccountService.ResumeAsync`
+  runs the same preparation (idempotent) before every sync run, together with the owner check. A
+  pending import that fails (a bad row, the local database busy under the MCP server) is logged and
+  swallowed: the marker stays for the next start, the notes stay in the local profile, and the account
+  starts and syncs what it already has.
+- **The editor is saved before a profile is left, not after.** Hosts give the account view model a
+  `FlushEditor` delegate, and the Move/Keep answer, both sign-out choices and both deletion choices
+  call it before touching any profile; a save that fails stops the step with a message and nothing
+  moves. The host's own flush on switch still runs, but by then it should find nothing to save — a
+  delete → *Keep* would otherwise copy the notes out first and save the open note into the folder
+  being removed.
+- **Sign-out *Remove* recounts at the moment it is pressed.** The editor stays usable beside the card,
+  so the count shown when the choice opened is not trusted: the press saves the editor, counts the
+  outbox again, and asks (again) if anything is waiting that the user has not agreed to lose.
+- **Delete → *Remove* is always asked twice**, and the second question says it cannot be undone: after
+  the server delete this device holds the only copy, and with `SessionAlreadyGone` the account may still
+  exist without this device's unsynced changes.
+- **A *Move* clears only what the account received.** Notes the importer read, and attachments the
+  destination now holds (imported, or already there). An attachment skipped because its bytes were
+  never on this device stays in the local profile.
+- **A relaunch that is refused leaves a visible state.** If the host's quit is refused (its flush
+  failed) after the pointer moved, the relaunch is disarmed and the panel shows "the switch did not
+  finish; the next start opens the new profile" with a *Switch now* button that asks again. On a
+  phone, a new profile that will not open after the old provider was disposed makes the host point
+  `profile.json` back at the profile that was running and compose that again; if even that fails, the
+  view shows a plain "close and reopen" message instead of a dead screen.
+- **Failures in profile steps become messages.** `RunAsync` and the profile steps catch everything but
+  cancellation and out-of-memory (a locked database, a keystore that refuses, a platform without a
+  sealed store) and show a localized sentence, instead of faulting the command or, on a phone, the app.
+- **Hand-off work is off the UI thread**: creating the account database (every migration) and
+  initializing the local database for a kept import run on the thread pool.
+- **The owner check in the local profile** compares only the database and the session (the local
+  profile has no folder name). That keeps a base root a failed migration left signed in syncing as the
+  previous version did; a local profile created by this version never holds a session at all.
+- **A mismatch reports `ResumeState.SignInRequired`** (mapped to `SyncOutcome.SignInRequired`). The
+  panel shows the account as signed out, says why, and offers *Go back to local notes*, which drops
+  the session and switches to the local profile while keeping the folder (whose notes they are is not
+  guessed). Signing in again as the folder's account is refused while the database names someone
+  else, rather than re-labelling it; signing in as another account hands off as usual.
+- **An account folder with no owner** and no readable session is one of two things. With a
+  `credentials.dat` that will not open (a lost keystore key) the panel says "sign in again". With no
+  session file at all it is an account deleted before the user chose *Keep*/*Remove* (the app closed
+  in between), and the panel asks that question again.
+- **The question counts attachments too.** It asks when the local profile holds notes *or* files the
+  user added, and says how many of each.
+- **Without a profile host** (`AccountService` built with `profiles: null`, as the single-root tests do)
+  sign-in, sign-out and deletion behave exactly as before this design, enrolment included: that root is
+  taken to be the account's own folder.

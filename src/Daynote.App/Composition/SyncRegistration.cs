@@ -4,6 +4,7 @@ using Daynote.App.Account;
 using Daynote.Core.Files;
 using Daynote.Core.Sync;
 using Daynote.Infrastructure.Persistence;
+using Daynote.Infrastructure.Persistence.Profiles;
 using Daynote.Infrastructure.Sync;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -57,12 +58,21 @@ public static class SyncRegistration
 
         services.AddSingleton<IIdentityProvider>(_ =>
             new GoogleIdentityProvider(DaynoteAppOptions.GoogleClientId));
+
+        // One store per account (docs/PROFILES.md): a sign-in is handed to its own folder, whose
+        // session is sealed with DPAPI exactly like the folder the app runs on.
+        services.AddSingleton<IProfileHost>(sp => new ProfileHost(
+            new ProfileStore(options.BaseRoot),
+            options.DataRoot,
+            sp.GetRequiredService<SqliteDatabase>(),
+            static folder => new DpapiSyncSessionStore(folder)));
         services.AddSingleton(sp => new AccountService(
             sp.GetRequiredService<IAuthApiClient>(),
             sp.GetRequiredService<IIdentityProvider>(),
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
-            sp.GetRequiredService<ISyncStore>()));
+            sp.GetRequiredService<ISyncStore>(),
+            profiles: sp.GetRequiredService<IProfileHost>()));
         // The attachment bytes, which turn the engine's file phase on (SyncEngine.Files.cs). An
         // engine built without this syncs text only.
         services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(
@@ -102,10 +112,13 @@ public static class SyncRegistration
         {
             // A session without its key is not a signed-out one: the tokens still work. Locked means
             // the passphrase is needed; KeyMissing means the key is simply re-fetched.
-            return SyncReport.For(
-                resumed.State is ResumeState.KeyMissing or ResumeState.Locked
-                    ? SyncOutcome.Locked
-                    : SyncOutcome.SignedOut);
+            return SyncReport.For(resumed.State switch
+            {
+                ResumeState.KeyMissing or ResumeState.Locked => SyncOutcome.Locked,
+                // Another account's database under this session (docs/PROFILES.md §4): refuse.
+                ResumeState.SignInRequired => SyncOutcome.SignInRequired,
+                _ => SyncOutcome.SignedOut,
+            });
         }
 
         using (session.DataKey)

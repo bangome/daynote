@@ -3,6 +3,7 @@ using Daynote.App.Composition;
 using Daynote.Core.Files;
 using Daynote.Core.Sync;
 using Daynote.Infrastructure.Persistence;
+using Daynote.Infrastructure.Persistence.Profiles;
 using Daynote.Infrastructure.Sync;
 using Daynote.Mobile.Platform;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,13 +48,21 @@ public static class MobileSyncRegistration
         services.AddSingleton<ISyncApiClient>(sp => new HttpSyncApiClient(
             sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISyncTokenProvider>()));
         services.AddSingleton(_ => platform.Identity);
+        // One store per account (docs/PROFILES.md): a sign-in is handed to its own folder, sealed by
+        // the same keystore as the folder the app runs on.
+        services.AddSingleton<IProfileHost>(sp => new ProfileHost(
+            new ProfileStore(options.BaseRoot),
+            options.DataRoot,
+            sp.GetRequiredService<SqliteDatabase>(),
+            MobileServiceRegistration.SessionStoreFactory(platform)));
         services.AddSingleton(sp => new AccountService(
             sp.GetRequiredService<IAuthApiClient>(),
             sp.GetRequiredService<IIdentityProvider>(),
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
             sp.GetRequiredService<ISyncStore>(),
-            apple: platform.AppleIdentity));
+            apple: platform.AppleIdentity,
+            profiles: sp.GetRequiredService<IProfileHost>()));
         services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(
             sp.GetRequiredService<SqliteDatabase>(),
             sp.GetRequiredService<IFileAssetStore>()));
@@ -85,8 +94,12 @@ public static class MobileSyncRegistration
         ResumedSession resumed = await provider.GetRequiredService<AccountService>().ResumeAsync().ConfigureAwait(false);
         if (resumed.Session is not { } session)
         {
-            return SyncReport.For(
-                resumed.State is ResumeState.KeyMissing or ResumeState.Locked ? SyncOutcome.Locked : SyncOutcome.SignedOut);
+            return SyncReport.For(resumed.State switch
+            {
+                ResumeState.KeyMissing or ResumeState.Locked => SyncOutcome.Locked,
+                ResumeState.SignInRequired => SyncOutcome.SignInRequired,
+                _ => SyncOutcome.SignedOut,
+            });
         }
 
         using (session.DataKey)

@@ -516,6 +516,17 @@ public sealed partial class SqliteSyncStore : ISyncStore
             lastSync);
     }
 
+    public async ValueTask<int> CountPendingChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using SqliteConnection connection = database.OpenReadConnection();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT (SELECT COUNT(*) FROM sync_outbox) + (SELECT COUNT(*) FROM sync_tombstones);";
+        return Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     public ValueTask SignInAsync(
         string userId,
         int dekGeneration,

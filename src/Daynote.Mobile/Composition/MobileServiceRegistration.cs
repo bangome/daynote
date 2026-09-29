@@ -86,9 +86,7 @@ public static class MobileServiceRegistration
 
         // The session store is sealed by the platform's keystore. Without one the app behaves as
         // permanently signed out rather than writing a refresh token in the clear.
-        services.AddSingleton<ISyncSessionStore>(_ => platform.SecretProtector is { } protector
-            ? new ProtectedFileSyncSessionStore(options.DataRoot, protector)
-            : new NullSyncSessionStore());
+        services.AddSingleton<ISyncSessionStore>(_ => SessionStoreFactory(platform)(options.DataRoot));
 
         services.AddSingleton(sp => new GetDayWorkspace(sp.GetRequiredService<INoteRepository>()));
         services.AddSingleton(sp => new CreateNote(sp.GetRequiredService<INoteRepository>(), sp.GetRequiredService<Func<NoteId>>()));
@@ -133,6 +131,15 @@ public static class MobileServiceRegistration
 
         return services;
     }
+
+    /// <summary>
+    /// The keystore-sealed session store for a profile folder: the one the app runs on, and the one a
+    /// sign-in hands off to (docs/PROFILES.md §5.2).
+    /// </summary>
+    internal static Func<string, ISyncSessionStore> SessionStoreFactory(MobilePlatformServices platform) =>
+        folder => platform.SecretProtector is { } protector
+            ? new ProtectedFileSyncSessionStore(folder, protector)
+            : new NullSyncSessionStore();
 
     /// <summary>Stands in for a sealed store the platform has not supplied: always signed out.</summary>
     private sealed class NullSyncSessionStore : ISyncSessionStore

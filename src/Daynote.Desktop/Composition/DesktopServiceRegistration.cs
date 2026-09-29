@@ -217,7 +217,11 @@ public static class DesktopServiceRegistration
         return new UnavailableStartupTaskGateway();
     }
 
-    private static ISyncSessionStore CreateSessionStore(string dataRoot)
+    /// <summary>
+    /// The platform-sealed session store for a profile folder. Also what a sign-in writes into when it
+    /// hands off to an account folder this process is not running on (docs/PROFILES.md §5.2).
+    /// </summary>
+    internal static ISyncSessionStore CreateSessionStore(string dataRoot)
     {
         if (OperatingSystem.IsMacOS())
         {

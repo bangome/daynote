@@ -82,6 +82,16 @@ public sealed partial class AccountViewModel
             AccountDeletion outcome = await accounts.DeleteAccountAsync().ConfigureAwait(true);
             IsConfirmingDelete = false;
             ResetToSignedOut();
+            if (accounts.IsAccountProfile)
+            {
+                // The account's notes live in its own folder, which is about to be left. Whether they
+                // stay on as local notes is asked next (docs/PROFILES.md §5.5), for a session the server
+                // had already forgotten as much as for a delete that just went through.
+                WasSessionAlreadyGone = outcome == AccountDeletion.SessionAlreadyGone;
+                IsChoosingDeletedNotes = true;
+                return;
+            }
+
             Notice = outcome == AccountDeletion.Deleted ? AccountNotice.Deleted : AccountNotice.SessionAlreadyGone;
         }).ConfigureAwait(true);
     }
@@ -92,7 +102,13 @@ public sealed partial class AccountViewModel
         await RunAsync(async () =>
         {
             Notice = AccountNotice.None;
-            SignedInEmail = NameFor(await accounts.SignInWithAppleAsync().ConfigureAwait(true));
+            SignInResult result = await accounts.SignInWithAppleAsync().ConfigureAwait(true);
+            if (await HandOffIfNeededAsync(result).ConfigureAwait(true))
+            {
+                return;
+            }
+
+            SignedInEmail = NameFor(result.Email);
             IsKeyMissing = false;
             IsLocked = false;
             IsLockEnabled = false;

@@ -65,6 +65,89 @@ public sealed class AccountPanelTests
         Assert.IsFalse(ButtonReading(panel, AppStrings.AccountDeleteConfirm).IsEffectivelyVisible, "Cancel left the delete button armed.");
     });
 
+    [TestMethod]
+    public void The_move_question_replaces_the_sign_in_buttons() => WithAccountPanel(null, (panel, account) =>
+    {
+        account.IsChoosingHandOff = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.MoveLocalNotesCommand, VisibleButton(panel, AppStrings.ProfileMoveConfirm).Command);
+        Assert.AreSame(account.KeepLocalNotesCommand, VisibleButton(panel, AppStrings.ProfileMoveKeep).Command);
+        Assert.IsTrue(TextShown(panel, account.HandOffMessage), "The question does not say what would move.");
+        Assert.IsFalse(ButtonReading(panel, AppStrings.AccountSignInWithGoogle).IsEffectivelyVisible, "Sign-in stayed up beside the question.");
+    });
+
+    [TestMethod]
+    public void Signing_out_offers_keep_or_remove_and_asks_twice_before_losing_changes() => WithAccountPanel(null, (panel, account) =>
+    {
+        account.SignedInEmail = "someone@example.com";
+        account.UnsyncedChangeCount = 2;
+        account.IsChoosingSignOut = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.SignOutKeepCommand, VisibleButton(panel, AppStrings.SignOutKeep).Command);
+        Assert.AreSame(account.SignOutRemoveCommand, VisibleButton(panel, AppStrings.SignOutRemove).Command);
+        Assert.AreSame(account.CancelSignOutCommand, VisibleButton(panel, AppStrings.SignOutCancel).Command);
+        Assert.IsTrue(TextShown(panel, account.UnsyncedChangesMessage), "The unsynced changes are not mentioned.");
+        Assert.IsFalse(ButtonReading(panel, AppStrings.SignOutRemoveConfirm).IsEffectivelyVisible);
+
+        account.IsConfirmingRemoveUnsynced = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.SignOutRemoveCommand, VisibleButton(panel, AppStrings.SignOutRemoveConfirm).Command);
+        Assert.IsTrue(TextShown(panel, account.RemoveUnsyncedMessage));
+        Assert.IsFalse(ButtonReading(panel, AppStrings.SignOutRemove).IsEffectivelyVisible, "The first Remove is still armed.");
+    });
+
+    [TestMethod]
+    public void A_deleted_accounts_notes_are_asked_about() => WithAccountPanel(null, (panel, account) =>
+    {
+        account.IsChoosingDeletedNotes = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.KeepDeletedNotesCommand, VisibleButton(panel, AppStrings.DeletedNotesKeep).Command);
+        Assert.AreSame(account.RemoveDeletedNotesCommand, VisibleButton(panel, AppStrings.DeletedNotesRemove).Command);
+        Assert.IsTrue(TextShown(panel, account.DeletedNotesMessage));
+        Assert.IsFalse(ButtonReading(panel, AppStrings.AccountSignInWithGoogle).IsEffectivelyVisible);
+        Assert.IsFalse(ButtonReading(panel, AppStrings.DeletedNotesRemoveConfirm).IsEffectivelyVisible);
+
+        // After the server delete this device holds the only copy: Remove is asked twice.
+        account.IsConfirmingRemoveDeletedNotes = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.RemoveDeletedNotesCommand, VisibleButton(panel, AppStrings.DeletedNotesRemoveConfirm).Command);
+        Assert.AreSame(account.CancelRemoveDeletedNotesCommand, VisibleButton(panel, AppStrings.DeletedNotesRemoveCancel).Command);
+        Assert.IsTrue(TextShown(panel, account.RemoveDeletedNotesMessage), "The confirmation does not say it cannot be undone.");
+        Assert.IsFalse(ButtonReading(panel, AppStrings.DeletedNotesRemove).IsEffectivelyVisible, "The first Remove is still armed beside the confirmation.");
+    });
+
+    [TestMethod]
+    public void A_database_owned_by_another_account_offers_the_way_back_to_local_notes() => WithAccountPanel(null, (panel, account) =>
+    {
+        Assert.IsFalse(ButtonReading(panel, AppStrings.ProfileLeaveMismatched).IsEffectivelyVisible);
+
+        account.IsOwnerMismatch = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.LeaveMismatchedProfileCommand, VisibleButton(panel, AppStrings.ProfileLeaveMismatched).Command);
+    });
+
+    [TestMethod]
+    public void A_stalled_switch_offers_to_try_again() => WithAccountPanel(null, (panel, account) =>
+    {
+        account.NotifyProfileSwitchFailed();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreSame(account.RetryProfileSwitchCommand, VisibleButton(panel, AppStrings.ProfileSwitchRetry).Command);
+        Assert.IsFalse(ButtonReading(panel, AppStrings.AccountSignInWithGoogle).IsEffectivelyVisible, "Sign-in was offered over a half-finished switch.");
+    });
+
+    private static Button VisibleButton(AccountPanel panel, string text) =>
+        panel.GetLogicalDescendants().OfType<Button>().Single(button => Equals(button.Content, text) && button.IsEffectivelyVisible);
+
+    private static bool TextShown(AccountPanel panel, string text) =>
+        panel.GetLogicalDescendants().OfType<TextBlock>().Any(block => block.Text == text && block.IsEffectivelyVisible);
+
     /// <summary>The Apple button carries a logo beside its title, so it is found by its class.</summary>
     private static Button AppleButton(AccountPanel panel) =>
         panel.GetLogicalDescendants().OfType<Button>().Single(button => button.Classes.Contains("apple"));

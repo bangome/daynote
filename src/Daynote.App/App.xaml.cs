@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
     private GlobalHotkeyService? _hotkeys;
     private bool _relaunchAfterExit;
     private Task _accountReady = Task.CompletedTask;
+    private Task _profileReady = Task.CompletedTask;
 
     /// <summary>
     /// A restore was staged; quit (flushing) and mark for relaunch so the staged data is applied on the
@@ -39,6 +40,26 @@ public partial class App : System.Windows.Application
     {
         _relaunchAfterExit = true;
         _ = _coordinator?.QuitAsync();
+    }
+
+    /// <summary>
+    /// The account window moved the device to another profile (docs/PROFILES.md §8). Every service
+    /// holds the old profile's database, so the app relaunches over the new one the same way a staged
+    /// restore does: Quit flushes the editor, and the next start reads the pointer.
+    /// </summary>
+    /// <remarks>
+    /// The account window already saved the editor before it moved the pointer. If Quit's flush is
+    /// refused anyway, the relaunch is disarmed and the window is told, rather than leaving a process
+    /// that believes it is quitting over a pointer that has moved.
+    /// </remarks>
+    private async void OnProfileSwitchRequested(object? sender, EventArgs e)
+    {
+        _relaunchAfterExit = true;
+        if (_coordinator is { } coordinator && !await coordinator.QuitAsync().ConfigureAwait(true))
+        {
+            _relaunchAfterExit = false;
+            (sender as Account.AccountViewModel)?.NotifyProfileSwitchFailed();
+        }
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -139,7 +160,13 @@ public partial class App : System.Windows.Application
         };
         if (window.ViewModel.SettingsViewModel.Account is { } account)
         {
-            _accountReady = account.InitializeAsync();
+            account.FlushEditor = async () =>
+                (await window.ViewModel.Notes.FlushAsync(Daynote.Core.Notes.FlushReason.Quit).ConfigureAwait(true)).CanProceed;
+            account.ProfileSwitchRequested += OnProfileSwitchRequested;
+            // An account profile's first start imports what a Move brought along; the notes are read
+            // only after it, so the moved notes are there from the first frame (docs/PROFILES.md §5.2).
+            _profileReady = account.PrepareProfileAsync();
+            _accountReady = InitializeAccountAsync(account);
         }
 
         // Back from the tray or another app: pick up what other devices wrote meanwhile.
@@ -170,6 +197,13 @@ public partial class App : System.Windows.Application
         }
 
         window.ViewModel.StartAutoSync();
+    }
+
+    /// <summary>Reads the stored sign-in once the profile is ready (it may have just been marked signed in).</summary>
+    private async Task InitializeAccountAsync(Account.AccountViewModel account)
+    {
+        await _profileReady.ConfigureAwait(true);
+        await account.InitializeAsync().ConfigureAwait(true);
     }
 
     /// <summary>Re-localizes the untouched sample note on a language switch and reloads it if it's onscreen.</summary>
@@ -227,6 +261,7 @@ public partial class App : System.Windows.Application
             await seed.ExecuteAsync(today, Localization.AppStrings.SampleNoteTitle, body).ConfigureAwait(true);
         }
 
+        await _profileReady.ConfigureAwait(true);
         await window.ViewModel.InitializeAsync().ConfigureAwait(true);
         _ = StartAutoSyncWhenReadyAsync(window);
 

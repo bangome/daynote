@@ -391,6 +391,68 @@ public static class AppStrings
 
     public static string AccountDeleted => LocalizationService.Instance[nameof(AccountDeleted)];
 
+    public static string ProfileMoveBodyFormat => LocalizationService.Instance[nameof(ProfileMoveBodyFormat)];
+
+    public static string ProfileMoveFilesFormat => LocalizationService.Instance[nameof(ProfileMoveFilesFormat)];
+
+    public static string SignOutUnsyncedFormat => LocalizationService.Instance[nameof(SignOutUnsyncedFormat)];
+
+    public static string SignOutRemoveUnsyncedFormat => LocalizationService.Instance[nameof(SignOutRemoveUnsyncedFormat)];
+
+    public static string ProfileMoveTitle => LocalizationService.Instance[nameof(ProfileMoveTitle)];
+
+    public static string ProfileMoveConfirm => LocalizationService.Instance[nameof(ProfileMoveConfirm)];
+
+    public static string ProfileMoveKeep => LocalizationService.Instance[nameof(ProfileMoveKeep)];
+
+    public static string ProfileSwitching => LocalizationService.Instance[nameof(ProfileSwitching)];
+
+    public static string SignOutChoiceTitle => LocalizationService.Instance[nameof(SignOutChoiceTitle)];
+
+    public static string SignOutChoiceBody => LocalizationService.Instance[nameof(SignOutChoiceBody)];
+
+    public static string SignOutKeep => LocalizationService.Instance[nameof(SignOutKeep)];
+
+    public static string SignOutRemove => LocalizationService.Instance[nameof(SignOutRemove)];
+
+    public static string SignOutCancel => LocalizationService.Instance[nameof(SignOutCancel)];
+
+    public static string SignOutRemoveConfirm => LocalizationService.Instance[nameof(SignOutRemoveConfirm)];
+
+    public static string DeletedNotesTitle => LocalizationService.Instance[nameof(DeletedNotesTitle)];
+
+    public static string DeletedNotesBody => LocalizationService.Instance[nameof(DeletedNotesBody)];
+
+    public static string DeletedNotesBodySessionGone => LocalizationService.Instance[nameof(DeletedNotesBodySessionGone)];
+
+    public static string DeletedNotesKeep => LocalizationService.Instance[nameof(DeletedNotesKeep)];
+
+    public static string DeletedNotesRemove => LocalizationService.Instance[nameof(DeletedNotesRemove)];
+
+    public static string DeletedNotesRemoveBody => LocalizationService.Instance[nameof(DeletedNotesRemoveBody)];
+
+    public static string DeletedNotesRemoveBodySessionGone => LocalizationService.Instance[nameof(DeletedNotesRemoveBodySessionGone)];
+
+    public static string DeletedNotesRemoveConfirm => LocalizationService.Instance[nameof(DeletedNotesRemoveConfirm)];
+
+    public static string DeletedNotesRemoveCancel => LocalizationService.Instance[nameof(DeletedNotesRemoveCancel)];
+
+    public static string ProfileErrorUnsaved => LocalizationService.Instance[nameof(ProfileErrorUnsaved)];
+
+    public static string ProfileErrorOwnerMismatch => LocalizationService.Instance[nameof(ProfileErrorOwnerMismatch)];
+
+    public static string ProfileLeaveMismatched => LocalizationService.Instance[nameof(ProfileLeaveMismatched)];
+
+    public static string ProfileSwitchStalled => LocalizationService.Instance[nameof(ProfileSwitchStalled)];
+
+    public static string ProfileSwitchRetry => LocalizationService.Instance[nameof(ProfileSwitchRetry)];
+
+    public static string ProfileSwitchFailedScreen => LocalizationService.Instance[nameof(ProfileSwitchFailedScreen)];
+
+    public static string AccountErrorUnexpected => LocalizationService.Instance[nameof(AccountErrorUnexpected)];
+
+    public static string AccountErrorProfile => LocalizationService.Instance[nameof(AccountErrorProfile)];
+
     public static string AccountErrorSubscriptionActive => LocalizationService.Instance[nameof(AccountErrorSubscriptionActive)];
     public static string AccountSignInBrowserHint => LocalizationService.Instance[nameof(AccountSignInBrowserHint)];
     public static string AccountKeyMissingBlurb => LocalizationService.Instance[nameof(AccountKeyMissingBlurb)];
@@ -570,6 +632,16 @@ public static class AppStrings
     /// whole second sentence rather than a plural suffix.
     /// </summary>
     public static string AccountConflicts(int count) => Counted(nameof(AccountConflictsFormat), count);
+
+    /// <summary>The Move/Keep question after a sign-in (docs/PROFILES.md §5.2). {0} = notes.</summary>
+    public static string ProfileMoveBody(int count) => Counted(nameof(ProfileMoveBodyFormat), count);
+
+    public static string ProfileMoveFiles(int count) => Counted(nameof(ProfileMoveFilesFormat), count);
+
+    /// <summary>Changes still waiting to be pushed when the sign-out choice opens (§5.4).</summary>
+    public static string SignOutUnsynced(int count) => Counted(nameof(SignOutUnsyncedFormat), count);
+
+    public static string SignOutRemoveUnsynced(int count) => Counted(nameof(SignOutRemoveUnsyncedFormat), count);
 
     private static string Counted(string pluralKey, int count) =>
         string.Format(

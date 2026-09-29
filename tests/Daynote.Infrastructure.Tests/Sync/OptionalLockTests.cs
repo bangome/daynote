@@ -283,6 +283,9 @@ public sealed class OptionalLockTests
         public ValueTask<int> EnrollExistingContentAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(0);
 
+        public ValueTask<int> CountPendingChangesAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(0);
+
         public ValueTask<IReadOnlyList<PendingNote>> ReadPendingNotesAsync(
             int limit,
             CancellationToken cancellationToken = default) =>

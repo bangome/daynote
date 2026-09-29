@@ -48,6 +48,15 @@ public sealed class ProfileStore
     public const string PendingImportFileName = "pending-import.json";
 
     /// <summary>
+    /// Marker in an account folder saying "remove me" (docs/PROFILES.md §5.4 <i>Remove</i>, §5.5). The
+    /// running app still has that folder's database open when the user asks, and Windows will not
+    /// rename a folder holding an open file, so the removal waits for the next start — or, on a
+    /// phone, for the composition to be disposed. A marked folder is treated as gone from the moment
+    /// the marker is written.
+    /// </summary>
+    public const string RemovalPendingFileName = "remove-pending";
+
+    /// <summary>
     /// Where the migration assembles <c>accounts/</c> before renaming it into place. A sibling of the
     /// real folder, so the final rename stays on one volume and is atomic: <c>accounts/</c> either does
     /// not exist or is complete, and its existence is what marks the migration as done.
@@ -108,7 +117,7 @@ public sealed class ProfileStore
     public string ReadActiveProfileId()
     {
         string? named = ReadJsonString(PointerPath, "active");
-        return IsValidUserId(named) && Directory.Exists(Path.Combine(AccountsRoot, named))
+        return IsValidUserId(named) && Directory.Exists(Path.Combine(AccountsRoot, named)) && !IsMarkedForRemoval(named)
             ? named
             : LocalProfileId;
     }
@@ -173,7 +182,7 @@ public sealed class ProfileStore
         {
             // Skips the half-made and half-removed folders below, which are never valid user ids.
             string name = Path.GetFileName(directory);
-            if (IsValidUserId(name))
+            if (IsValidUserId(name) && !IsMarkedForRemoval(name))
             {
                 accounts.Add(name);
             }
@@ -197,6 +206,18 @@ public sealed class ProfileStore
     {
         string folder = AccountFolder(userId);
         string seedDatabase = DatabasePathFor(seedSettingsFromProfileId);
+        if (Directory.Exists(folder) && IsMarkedForRemoval(userId))
+        {
+            // The user asked for this copy to go and it has not gone yet. Signing in again must not
+            // bring back what they removed, so it goes now; if something still holds it open, the
+            // account starts over under its own name once that is released (the marker stays).
+            RemoveAccount(userId);
+            if (Directory.Exists(folder))
+            {
+                throw new IOException("The account's previous folder is still waiting to be removed.");
+            }
+        }
+
         if (Directory.Exists(folder))
         {
             return folder;
@@ -252,6 +273,61 @@ public sealed class ProfileStore
         Directory.Move(folder, doomed);
         TryDeleteDirectory(doomed);
         return true;
+    }
+
+    /// <summary>
+    /// Marks an account's folder for removal and, if <c>profile.json</c> named it, points it at local.
+    /// The folder is deleted by <see cref="RemoveMarkedAccounts"/> once nothing has it open; until then
+    /// it is invisible to <see cref="ReadActiveProfileId"/> and <see cref="ListAccounts"/>.
+    /// </summary>
+    public void MarkForRemoval(string userId)
+    {
+        string folder = AccountFolder(userId);
+        if (string.Equals(ReadJsonString(PointerPath, "active"), userId, StringComparison.Ordinal))
+        {
+            WritePointer(LocalProfileId);
+        }
+
+        if (Directory.Exists(folder))
+        {
+            WriteBytesAtomically(Path.Combine(folder, RemovalPendingFileName), []);
+        }
+    }
+
+    public bool IsMarkedForRemoval(string userId) =>
+        File.Exists(Path.Combine(AccountFolder(userId), RemovalPendingFileName));
+
+    /// <summary>
+    /// Deletes every account folder marked for removal. Runs at start-up, before any database is
+    /// opened, and on a phone after the old composition is disposed. A folder something still holds
+    /// open stays marked for the next attempt. Returns how many went.
+    /// </summary>
+    public int RemoveMarkedAccounts()
+    {
+        if (!Directory.Exists(AccountsRoot))
+        {
+            return 0;
+        }
+
+        int removed = 0;
+        foreach (string directory in Directory.EnumerateDirectories(AccountsRoot))
+        {
+            string name = Path.GetFileName(directory);
+            if (!IsValidUserId(name) || !IsMarkedForRemoval(name))
+            {
+                continue;
+            }
+
+            try
+            {
+                removed += RemoveAccount(name) ? 1 : 0;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return removed;
     }
 
     /// <summary>
@@ -316,6 +392,7 @@ public sealed class ProfileStore
     public ProfileMigrationResult MigrateLegacyLayout()
     {
         SweepLeftovers();
+        RemoveMarkedAccounts();
         if (Directory.Exists(AccountsRoot))
         {
             return new ProfileMigrationResult(ProfileMigrationOutcome.AlreadyMigrated);

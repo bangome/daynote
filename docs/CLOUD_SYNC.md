@@ -704,10 +704,19 @@ trigger's `INSERT OR IGNORE` leaves it alone. This matters because last-write-wi
 delete against an edit: with only the SQL clock, any test using a fake clock becomes flaky against
 real wall-clock time, which is exactly how this was found.
 
-**Enrolment is explicit.** Because the outbox is trigger-maintained, content written before migration
-004 has no queue entry. `SqliteSyncStore.EnrollExistingContentAsync` queues it at first sign-in
-rather than a column default doing it implicitly, so a user who never signs in gets no bookkeeping
-churn at all. It is idempotent.
+**Enrolment is explicit, and only ever into the account's own store.** Because the outbox is
+trigger-maintained, content written before migration 004 has no queue entry.
+`SqliteSyncStore.EnrollExistingContentAsync` queues it rather than a column default doing it
+implicitly, so a user who never signs in gets no bookkeeping churn at all. It is idempotent.
+
+Since docs/PROFILES.md (2026-09-29) every account has its own database under `accounts/<userId>/`,
+and a sign-in never enrols the notes the device already holds. A sign-in from the local profile (or
+as another account) hands the session to that account's folder instead; the notes written without
+an account go along only when the user answers *Move* to "move N notes to this account?", and then
+through the account's normal writers, so its outbox queues them. `EnrollExistingContentAsync` runs
+only when an account re-authenticates inside its own folder — its own content, never anyone else's.
+That is what ended the 2026-09-29 incident where signing out of Google and into Apple pushed every
+Google note into the Apple account.
 
 ### 6.1 The `UNIQUE (local_date, sort_order)` hazard
 

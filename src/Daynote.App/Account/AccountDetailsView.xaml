@@ -214,6 +214,49 @@
         <!-- ── The lock, the notices, and the privacy footnote, unchanged from the settings panel ── -->
         <account:AccountLockSection />
 
+        <!-- ── Signing out: keep this account's notes on the PC, or remove them (docs/PROFILES.md
+             §5.4). Removing with changes that never synced asks a second time. ── -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" Padding="16,14"
+                Visibility="{Binding IsChoosingSignOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Text="{loc:Tr SignOutChoiceTitle}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr SignOutChoiceBody}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,8,0,0" Text="{Binding UnsyncedChangesMessage}"
+                           Visibility="{Binding HasUnsyncedChanges, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,8,0,0" Text="{Binding ErrorMessage}"
+                           Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                            Visibility="{Binding IsConfirmingRemoveUnsynced, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+                    <Button Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Command="{Binding SignOutKeepCommand}" Content="{loc:Tr SignOutKeep}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr SignOutKeep}" />
+                    <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                            Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                            Command="{Binding SignOutRemoveCommand}" Content="{loc:Tr SignOutRemove}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                            AutomationProperties.Name="{loc:Tr SignOutRemove}" />
+                    <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                            Command="{Binding CancelSignOutCommand}" Content="{loc:Tr SignOutCancel}"
+                            AutomationProperties.Name="{loc:Tr SignOutCancel}" />
+                </StackPanel>
+                <StackPanel Margin="0,10,0,0"
+                            Visibility="{Binding IsConfirmingRemoveUnsynced, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding RemoveUnsyncedMessage}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                Background="{DynamicResource Daynote.Product.Brush.Danger}"
+                                Command="{Binding SignOutRemoveCommand}" Content="{loc:Tr SignOutRemoveConfirm}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                                AutomationProperties.Name="{loc:Tr SignOutRemoveConfirm}" />
+                        <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                                Command="{Binding CancelSignOutCommand}" Content="{loc:Tr SignOutCancel}"
+                                AutomationProperties.Name="{loc:Tr SignOutCancel}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- ── Deleting the account: asked, then done (App Store 5.1.1(v), Google Play policy) ── -->
         <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}" Padding="16,14"
                 Visibility="{Binding IsConfirmingDelete, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">

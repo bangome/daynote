@@ -99,16 +99,43 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     /// </summary>
     public async Task InitializeAsync()
     {
-        SyncStateSnapshot state = await store.ReadStateAsync().ConfigureAwait(true);
+        // The session first: in an account profile's first start, resuming is what marks the database
+        // signed in, so the state read after it is the one to show.
         ResumedSession resumed = await accounts.ResumeAsync().ConfigureAwait(true);
         resumed.Session?.DataKey.Dispose();
+        SyncStateSnapshot state = await store.ReadStateAsync().ConfigureAwait(true);
 
         IsKeyMissing = resumed.State == ResumeState.KeyMissing;
         IsLocked = resumed.State == ResumeState.Locked;
         IsLockEnabled = IsLocked;
-        SignedInEmail = state.IsSignedIn && resumed.State != ResumeState.SignedOut ? NameFor(resumed.Email) : null;
+        bool signedIn = state.IsSignedIn && resumed.State is not (ResumeState.SignedOut or ResumeState.SignInRequired);
+        SignedInEmail = signedIn ? NameFor(resumed.Email) : null;
+        IsOwnerMismatch = resumed.State == ResumeState.SignInRequired;
+        if (IsOwnerMismatch)
+        {
+            // This database belongs to another account than the session or the folder
+            // (docs/PROFILES.md §4). It does not sync, and signing in as the folder's account will not
+            // re-label it, so the panel also offers the way back to the local profile.
+            ErrorMessage = AppStrings.ProfileErrorOwnerMismatch;
+        }
+        else if (resumed.State == ResumeState.SignedOut && accounts.IsAccountProfile && !state.IsSignedIn)
+        {
+            if (accounts.HoldsStoredSession)
+            {
+                // A session file this device can no longer open (its keystore key is gone): the account
+                // is fine, only this device's copy of the sign-in is not.
+                ErrorMessage = AppStrings.AccountErrorInvalidCredentials;
+            }
+            else
+            {
+                // No session and no owner: an account deleted before the user said what to do with its
+                // notes; the app closed in between. Ask again.
+                IsChoosingDeletedNotes = true;
+            }
+        }
+
         ApplyLastSync(state.LastSyncUtc);
-        RefreshStatus(state);
+        RefreshStatus(signedIn ? state : state with { UserId = null });
     }
 
     /// <summary>
@@ -122,15 +149,22 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         {
             Notice = AccountNotice.None;
             IsBrowserSignInRunning = true;
+            SignInResult result;
             try
             {
-                SignedInEmail = await accounts.SignInAsync().ConfigureAwait(true);
+                result = await accounts.SignInAsync().ConfigureAwait(true);
             }
             finally
             {
                 IsBrowserSignInRunning = false;
             }
 
+            if (await HandOffIfNeededAsync(result).ConfigureAwait(true))
+            {
+                return;
+            }
+
+            SignedInEmail = result.Email;
             IsKeyMissing = false;
             IsLocked = false;
             IsLockEnabled = false;
@@ -149,19 +183,6 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             IsKeyMissing = false;
             await store.SetLockedAsync(false).ConfigureAwait(true);
             await SyncAsync().ConfigureAwait(true);
-        }).ConfigureAwait(true);
-    }
-
-    [RelayCommand]
-    private async Task SignOutAsync()
-    {
-        await RunAsync(async () =>
-        {
-            // A run still on the wire would write the old account's cursor back after sign-out
-            // cleared it, and the next account's first pull would start from there.
-            await syncInFlight.ConfigureAwait(true);
-            await accounts.SignOutAsync().ConfigureAwait(true);
-            ResetToSignedOut();
         }).ConfigureAwait(true);
     }
 
@@ -287,6 +308,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         OnPropertyChanged(nameof(PriceUnit));
         OnPropertyChanged(nameof(PriceSub));
         OnPropertyChanged(nameof(SubscriptionPlanText));
+        RefreshProfileMessages();
         RefreshPresentation();
     }
 
@@ -352,6 +374,14 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
                 SignedInEmail ??= AppStrings.AccountLockedTitle;
             }
         }
+        catch (Exception unexpected) when (unexpected is not (OperationCanceledException or OutOfMemoryException))
+        {
+            // A locked database, a keystore that refused, a platform without a sealed store: none of
+            // these is an account failure, and a command has nowhere else to put a fault. Left to
+            // escape, it takes down the command — and on a phone, the app.
+            System.Diagnostics.Debug.WriteLine($"Account command failed: {unexpected}");
+            ErrorMessage = AppStrings.AccountErrorUnexpected;
+        }
         finally
         {
             IsBusy = false;
@@ -385,6 +415,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         _ = value;
         OnPropertyChanged(nameof(IsSignedIn));
         OnPropertyChanged(nameof(IsSignedOut));
+        OnPropertyChanged(nameof(ShowsSignIn));
         RefreshPresentation();
     }
 

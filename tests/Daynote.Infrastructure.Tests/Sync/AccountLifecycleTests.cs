@@ -12,6 +12,12 @@ namespace Daynote.Infrastructure.Tests.Sync;
 /// The account acceptance test: sign in with Google, sync, sign out, then sign in again on a data
 /// root that has never seen this account and get the notes back.
 /// </summary>
+/// <remarks>
+/// A single-root composition (no profile host): each simulated PC's root is taken to be the account's
+/// own folder, which is how the service behaved before docs/PROFILES.md and still behaves without a
+/// host. What changes with profiles — sign-in handing off instead of enrolling, sign-out choices,
+/// deletion keeping or removing the notes — is <see cref="ProfileLifecycleTests"/>.
+/// </remarks>
 [TestClass]
 public sealed class AccountLifecycleTests
 {
@@ -52,7 +58,7 @@ public sealed class AccountLifecycleTests
     {
         await using Pc pc = NewPc();
 
-        string email = await pc.Accounts.SignInAsync();
+        string email = (await pc.Accounts.SignInAsync()).Email;
 
         Assert.AreEqual(Email, email);
         Assert.AreEqual(1, authServer.AccountCount);
@@ -387,7 +393,7 @@ public sealed class AccountLifecycleTests
         await using Pc pc = NewPc();
         Assert.IsTrue(pc.Accounts.CanSignInWithApple);
 
-        string email = await pc.Accounts.SignInWithAppleAsync();
+        string email = (await pc.Accounts.SignInWithAppleAsync()).Email;
 
         Assert.AreEqual("relay@privaterelay.appleid.com", email);
         string raw = authServer.AppleNonces.Single();

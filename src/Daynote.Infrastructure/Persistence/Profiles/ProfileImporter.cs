@@ -7,6 +7,7 @@ using Daynote.Core.Sync;
 using Daynote.Infrastructure.Assets;
 using Daynote.Infrastructure.Backup;
 using Daynote.Infrastructure.Files;
+using Daynote.Infrastructure.Notes;
 using Daynote.Infrastructure.Sync;
 using Microsoft.Data.Sqlite;
 
@@ -85,7 +86,80 @@ public sealed class ProfileImporter
     /// </summary>
     public async ValueTask<ProfileImportResult> ImportFromAsync(
         string sourceRoot,
+        CancellationToken cancellationToken = default) =>
+        (await ImportCoreAsync(sourceRoot, cancellationToken).ConfigureAwait(false)).Result;
+
+    /// <summary>
+    /// Imports everything the profile in <paramref name="sourceRoot"/> holds, then removes from the
+    /// source exactly what was imported (docs/PROFILES.md §5.2 step 4, <i>Move</i>), so the notes are
+    /// not in two places.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A note is removed only if the source still holds the version that was read: one edited in the
+    /// meantime (the MCP server shares that database) stays, and the next import takes it. The
+    /// untouched first-run sample was never imported and so is never removed, and neither is an
+    /// attachment the destination did not end up holding (its bytes were never on this device).
+    /// </para>
+    /// <para>
+    /// The removal leaves no tombstones and no outbox entries behind. The source is the local profile,
+    /// which never syncs, and a tombstone there would make a later import in the other direction —
+    /// a deleted account's notes kept as local notes (§5.5) — read these notes as deleted since.
+    /// </para>
+    /// </remarks>
+    public async ValueTask<ProfileImportResult> MoveFromAsync(
+        string sourceRoot,
         CancellationToken cancellationToken = default)
+    {
+        (ProfileImportResult result, List<SyncNote> notes, List<SourceFile> files) =
+            await ImportCoreAsync(sourceRoot, cancellationToken).ConfigureAwait(false);
+
+        // Only what the destination now holds: an attachment skipped because its bytes were never on
+        // this device (or deleted there later) did not move, so it must not be cleared here either.
+        files = [.. files.Where(static file => file.Arrived)];
+        if (notes.Count == 0 && files.Count == 0)
+        {
+            return result;
+        }
+
+        string source = Path.GetFullPath(sourceRoot);
+        var sourceDatabase = new SqliteDatabase(
+            new SqliteDatabaseOptions(Path.Combine(source, ProfileStore.DatabaseFileName)));
+        IReadOnlyList<string> released;
+        try
+        {
+            sourceDatabase.Initialize();
+            released = await sourceDatabase.WriteAsync(
+                (connection, transaction, token) => RemoveMoved(connection, transaction, notes, files, token),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await sourceDatabase.DisposeAsync().ConfigureAwait(false);
+        }
+
+        string sourceFiles = Path.Combine(source, BackupService.FilesDirName);
+        foreach (string relative in released)
+        {
+            // After the commit: a blob deleted before it would be missing if the transaction rolled back.
+            if (Inside(sourceFiles, relative) is { } blob)
+            {
+                try
+                {
+                    File.Delete(blob);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private async ValueTask<(ProfileImportResult Result, List<SyncNote> Notes, List<SourceFile> Files)> ImportCoreAsync(
+        string sourceRoot,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
         string source = Path.GetFullPath(sourceRoot);
@@ -100,7 +174,7 @@ public sealed class ProfileImporter
         string sourceDatabasePath = Path.Combine(source, ProfileStore.DatabaseFileName);
         if (!File.Exists(sourceDatabasePath))
         {
-            return ProfileImportResult.Empty;
+            return (ProfileImportResult.Empty, [], []);
         }
 
         List<SyncNote> notes;
@@ -132,14 +206,77 @@ public sealed class ProfileImporter
         (int imported, int present, int skipped, int copied) =
             await ImportFilesAsync(source, files, cancellationToken).ConfigureAwait(false);
 
-        return new ProfileImportResult(
-            merged.Applied,
-            merged.Ignored,
-            imported,
-            present,
-            skipped,
-            copied,
-            merged.Displaced.Count);
+        return (
+            new ProfileImportResult(
+                merged.Applied,
+                merged.Ignored,
+                imported,
+                present,
+                skipped,
+                copied,
+                merged.Displaced.Count),
+            notes,
+            files);
+    }
+
+    /// <summary>
+    /// Deletes the moved notes and attachments from the source through the ordinary delete statements
+    /// (search rows, tags, custom titles, unreferenced assets), then drops the tombstones and outbox
+    /// entries those deletes leave. Returns the blob paths no row references any more.
+    /// </summary>
+    private static List<string> RemoveMoved(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        List<SyncNote> notes,
+        List<SourceFile> files,
+        CancellationToken cancellationToken)
+    {
+        string now = SyncTimestamps.ToLocal(DateTimeOffset.UtcNow);
+        foreach (SyncNote note in notes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using (SqliteCommand unchanged = connection.CreateCommand())
+            {
+                unchanged.Transaction = transaction;
+                unchanged.CommandText = "SELECT updated_utc FROM notes WHERE id=$id;";
+                unchanged.Parameters.AddWithValue("$id", note.Id);
+                if (unchanged.ExecuteScalar() is not string stored
+                    || !SyncTimestamps.TryParseLocal(stored, out DateTimeOffset updated)
+                    || updated != note.UpdatedUtc)
+                {
+                    continue;
+                }
+            }
+
+            SqliteNoteStatements.Delete(connection, transaction, NoteId.Create(Guid.Parse(note.Id)).Value, now);
+            Forget(connection, transaction, "note", note.Id);
+        }
+
+        var released = new List<string>();
+        foreach (SourceFile file in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DayFileDeleteResult deleted = SqliteDayFileStatements.Delete(connection, transaction, Guid.Parse(file.Id), now);
+            Forget(connection, transaction, "file", file.Id);
+            if (deleted.ReleasedAssetPath is { } path)
+            {
+                released.Add(path);
+            }
+        }
+
+        return released;
+    }
+
+    private static void Forget(SqliteConnection connection, SqliteTransaction transaction, string entity, string id)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            "DELETE FROM sync_tombstones WHERE entity=$entity AND entity_id=$id; " +
+            "DELETE FROM sync_outbox WHERE entity=$entity AND entity_id=$id;";
+        command.Parameters.AddWithValue("$entity", entity);
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
     }
 
     /// <summary>
@@ -199,6 +336,7 @@ public sealed class ProfileImporter
             if (state.RowExists)
             {
                 present += 1;
+                file.Arrived = true;
                 continue;
             }
 
@@ -281,6 +419,8 @@ public sealed class ProfileImporter
             {
                 present += 1;
             }
+
+            file.Arrived = true;
         }
 
         return (imported, present, skipped, copied);
@@ -468,7 +608,11 @@ public sealed class ProfileImporter
         string AssetHash,
         string CreatedUtcText,
         DateTimeOffset CreatedUtc,
-        string RelativePath);
+        string RelativePath)
+    {
+        /// <summary>Set once the destination holds this attachment, imported now or already there.</summary>
+        public bool Arrived { get; set; }
+    }
 
     private readonly record struct DestinationState(
         bool RowExists,

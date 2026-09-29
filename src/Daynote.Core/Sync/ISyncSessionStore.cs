@@ -67,6 +67,13 @@ public enum ResumeState
     /// </summary>
     Locked,
 
+    /// <summary>
+    /// A session is stored, but this profile's database belongs to another account than the session
+    /// or the folder names (docs/PROFILES.md §4). Nothing syncs until the account signs in again; the
+    /// database is never "fixed" by adopting the other id.
+    /// </summary>
+    SignInRequired,
+
     Ready,
 }
 

@@ -26,7 +26,13 @@ public sealed partial class AccountService
     private readonly ISyncStore store;
     private readonly Func<string> deviceName;
     private readonly IAppleIdentityProvider? apple;
+    private readonly IProfileHost? profiles;
 
+    /// <param name="profiles">
+    /// The per-account stores (docs/PROFILES.md). Null composes a single-root service whose data root
+    /// is taken to be the signed-in account's own folder, which is what the pre-profile layout and
+    /// the tests that exercise one root are.
+    /// </param>
     public AccountService(
         IAuthApiClient auth,
         IIdentityProvider identity,
@@ -34,9 +40,11 @@ public sealed partial class AccountService
         ISyncSessionStore sessions,
         ISyncStore store,
         Func<string>? deviceName = null,
-        IAppleIdentityProvider? apple = null)
+        IAppleIdentityProvider? apple = null,
+        IProfileHost? profiles = null)
     {
         this.apple = apple;
+        this.profiles = profiles;
         this.auth = auth ?? throw new ArgumentNullException(nameof(auth));
         this.crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
         this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -46,11 +54,12 @@ public sealed partial class AccountService
     }
 
     /// <summary>
-    /// Runs the browser sign-in, redeems the code, and enrols existing local content for its first
-    /// push. Returns the signed-in address. Throws <see cref="AccountException"/> for every
-    /// user-facing outcome, including the user simply closing the browser.
+    /// Runs the browser sign-in and redeems the code. The session is saved here when this is the
+    /// account's own profile; otherwise the result carries a hand-off for the caller to complete
+    /// (docs/PROFILES.md §5.2). Throws <see cref="AccountException"/> for every user-facing outcome,
+    /// including the user simply closing the browser.
     /// </summary>
-    public async ValueTask<string> SignInAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<SignInResult> SignInAsync(CancellationToken cancellationToken = default)
     {
         IdentityGrant grant = await identity.AuthorizeAsync(cancellationToken).ConfigureAwait(false);
 
@@ -70,11 +79,11 @@ public sealed partial class AccountService
     public bool CanSignInWithApple => apple is not null;
 
     /// <summary>
-    /// Sign in with Apple, then the same key custody and enrolment as a Google sign-in. The nonce is
+    /// Sign in with Apple, then the same key custody and hand-off as a Google sign-in. The nonce is
     /// minted here, per attempt, so a code intercepted from one attempt cannot be replayed with a
     /// token from another.
     /// </summary>
-    public async ValueTask<string> SignInWithAppleAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<SignInResult> SignInWithAppleAsync(CancellationToken cancellationToken = default)
     {
         if (apple is null)
         {
@@ -96,6 +105,8 @@ public sealed partial class AccountService
     /// <summary>
     /// Deletes the account on the server, then signs this device out. The notes on this device are
     /// left exactly where they are: deleting a cloud account is not a request to lose local work.
+    /// With profiles, what then happens to them — kept as local notes, or removed — is the user's
+    /// choice, made afterwards through <see cref="FinishDeletionAsync"/> (docs/PROFILES.md §5.5).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -146,7 +157,7 @@ public sealed partial class AccountService
         await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async ValueTask<string> AdoptSessionAsync(SessionResponse session, CancellationToken cancellationToken)
+    private async ValueTask<SignInResult> AdoptSessionAsync(SessionResponse session, CancellationToken cancellationToken)
     {
         if (session.Keys is not { } material)
         {
@@ -168,6 +179,19 @@ public sealed partial class AccountService
             material.Protection == KeyProtection.Server ? DecodeDataKey(material) : null,
             material.Protection);
 
+        if (profiles is not null && !string.Equals(session.UserId, profiles.CurrentProfileId, StringComparison.Ordinal))
+        {
+            // Another account's session — or any session, from the local profile. It goes to that
+            // account's own folder, never into this database, and nothing here is enrolled: whether
+            // the local notes come along is the user's question to answer (docs/PROFILES.md §5.2).
+            return await BeginHandOffAsync(credentials, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (profiles is not null)
+        {
+            await RefuseAnotherOwnerAsync(session.UserId, cancellationToken).ConfigureAwait(false);
+        }
+
         await sessions.SaveAsync(credentials, cancellationToken).ConfigureAwait(false);
         await store.SignInAsync(session.UserId, DataKeyGeneration, cancellationToken).ConfigureAwait(false);
 
@@ -180,16 +204,24 @@ public sealed partial class AccountService
         }
 
         // Content written before this PC ever signed in has no outbox entry, because the outbox is
-        // trigger-fed. Without this, months of local notes would simply never reach the cloud.
+        // trigger-fed. Without this, months of local notes would simply never reach the cloud. Only
+        // ever this account's own content: this is its folder (or, without profiles, its only root).
         await store.EnrollExistingContentAsync(cancellationToken).ConfigureAwait(false);
-        return session.Email;
+        return new SignInResult(session.Email);
     }
 
     /// <summary>
     /// Signs out. Revoking the refresh token server-side is best effort: a network failure must not
     /// leave the user stuck signed in on their own machine.
     /// </summary>
-    public async ValueTask SignOutAsync(CancellationToken cancellationToken = default)
+    /// <param name="removeFromDevice">
+    /// In an account profile, also removes that account's folder from this device (docs/PROFILES.md
+    /// §5.4, <i>Remove</i>); otherwise it is kept, so signing back in finds its notes and cursor.
+    /// </param>
+    /// <returns>True when the app has to switch to the local profile, which the caller asks the host for.</returns>
+    public async ValueTask<bool> SignOutAsync(
+        bool removeFromDevice = false,
+        CancellationToken cancellationToken = default)
     {
         SyncCredentials? current = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (current is not null)
@@ -209,7 +241,18 @@ public sealed partial class AccountService
 
         // This is the one path that discards the cached data key.
         await sessions.ClearAsync(cancellationToken).ConfigureAwait(false);
-        await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!IsAccountProfile)
+        {
+            await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
+            return false;
+        }
+
+        // The account's database keeps its owner, cursor and outbox: it is that account's folder, and
+        // it never syncs without the credentials just cleared. Signing back in carries on from here.
+        await profiles!.ReturnToLocalAsync(
+            profiles.CurrentProfileId, removeFromDevice, keepNotesAsLocal: false, cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     /// <summary>
@@ -219,6 +262,10 @@ public sealed partial class AccountService
     /// A stored session whose data key is missing is reported as <see cref="ResumeState.KeyMissing"/>
     /// rather than as signed out: the tokens are still good, so the key can be re-fetched with
     /// <see cref="RestoreDataKeyAsync"/> instead of sending the user back through the browser.
+    /// <para>
+    /// With profiles, this is also where the owner check runs, before every sync run (docs/PROFILES.md
+    /// §4), and where an account profile's first start marks its database signed in.
+    /// </para>
     /// </remarks>
     public async ValueTask<ResumedSession> ResumeAsync(CancellationToken cancellationToken = default)
     {
@@ -226,6 +273,12 @@ public sealed partial class AccountService
         if (credentials is null)
         {
             return ResumedSession.SignedOut;
+        }
+
+        if (profiles is not null && !await IsOwnedByAsync(credentials, cancellationToken).ConfigureAwait(false))
+        {
+            credentials.Dispose();
+            return new ResumedSession(ResumeState.SignInRequired, null, credentials.Email);
         }
 
         if (credentials.DataKey is not { } dataKey)

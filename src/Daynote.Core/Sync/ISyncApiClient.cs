@@ -140,6 +140,12 @@ public interface ISyncStore
 {
     ValueTask<int> EnrollExistingContentAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Changes still waiting to be pushed: queued notes and files plus unsent deletes. What sign-out
+    /// warns about when it would leave them behind (docs/PROFILES.md §5.4).
+    /// </summary>
+    ValueTask<int> CountPendingChangesAsync(CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<PendingNote>> ReadPendingNotesAsync(
         int limit,
         CancellationToken cancellationToken = default);
