@@ -63,8 +63,8 @@ which on a phone is the last moment either OS guarantees the process runs.
 
 **Done: both client ids are set** (2026-09-27), the Worker exchanges phone codes, and sign-in has
 been exercised on the Android emulator and the iOS Simulator against the deployed service. The steps
-below are kept for re-creating a client. Release builds need one more fingerprint registered; see
-[MOBILE_RELEASE.md](MOBILE_RELEASE.md).
+below are kept for re-creating a client. Release and Play-signed builds sign in with the same
+client; the fingerprint turned out not to matter for this flow (see [MOBILE_RELEASE.md](MOBILE_RELEASE.md)).
 
 There is no way to automate the first step: Google offers **no API for iOS and Android OAuth
 clients**, and the only programmatic path it does offer issues web clients for IAP. So the console
@@ -95,9 +95,9 @@ step is by hand, and everything after it is one script.
    `keytool -printcert -jarfile` does not work here: it only understands the v1 JAR signature and
    an APK signed with scheme v2/v3 comes back as "not a signed jar file".
 
-   This is a debug key and is only good for local runs. A release build is signed with the
-   `DAYNOTE_ANDROID_*` keystore, and its SHA-1 - plus, once Play re-signs, the Play app-signing
-   key's - has to be registered too before sign-in works outside this machine.
+   The console insists on a fingerprint when the client is created, but the browser flow never
+   shows Google the app's certificate: a build signed with an unregistered key signs in just the
+   same (tested 2026-09-29), so release and Play-signed builds need nothing extra.
 
    Neither client type has a client secret, so, as on the desktop, nothing secret ships in the app.
 

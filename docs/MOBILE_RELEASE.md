@@ -18,6 +18,18 @@ An Apple account is a separate account from a Google one, even with the same add
 the provider's subject, never the email. Desktop has no Apple sign-in, so someone who picks Apple on
 the iPhone syncs between Apple devices only. Say so in the listing if it matters.
 
+## Where things stand (2026-09-29)
+
+| | |
+| --- | --- |
+| Worker | Deployed with migration 0009; Sign in with Apple configured (team `4T8C76SP99`, key `W2B29H98NT`) |
+| App Store Connect | App "Daynote - 날짜별 노트", Apple ID `6817146422`, bundle `cc.arachat.daynote`; build 1.5.0 (1) uploaded |
+| Signing (iOS) | "Apple Distribution: Jinhwa Jung (4T8C76SP99)" in the login keychain; profile "cc.arachat.daynote AppStore" in `~/.config/daynote/signing` |
+| Google Play | Developer "Bread Jinhwa Jeong", internal testing 1.5.0 (2); opt-in `https://play.google.com/apps/internaltest/4701689771009472592` |
+| Signing (Android) | Upload key `~/.config/daynote/android-upload.jks`, passwords in `android-upload.properties` next to it (source it before `Build-AndroidApp.sh`); upload SHA-1 `40:E1:D7:…:0D:AC`, Play app-signing SHA-1 `99:84:BA:…:25:1C` |
+
+Uploads use the App Store Connect API key in `~/.config/schooling/asc_api_key.json` (same team).
+
 ## Before anything: deploy the Worker
 
 The phones call endpoints that are not deployed yet. **Back up D1 first** — migration 0009 rebuilds
@@ -82,11 +94,11 @@ work unchanged.
    DAYNOTE_ANDROID_KEY_PASS=… DAYNOTE_ANDROID_STORE_PASS=… scripts/Build-AndroidApp.sh
    ```
 3. **Play Console**: create the app, opt into Play App Signing, upload the `.aab` to *Internal testing*.
-4. **Google sign-in will fail for testers until this step.** Play re-signs the app with its own key.
-   Copy the **app signing key SHA-1** (Play Console → Test and release → App integrity) *and* the
-   upload key's SHA-1 into the Android OAuth client in Google Cloud Console (one client per
-   fingerprint if it will not take two). The debug fingerprint registered today only works for local
-   builds.
+4. **No OAuth change is needed for the Play build.** Verified 2026-09-29: an APK signed with the
+   upload key, whose SHA-1 is registered nowhere in Google Cloud, completed Google sign-in on the
+   emulator. This flow (Custom Tab, PKCE, custom-scheme redirect, code redeemed by the Worker) never
+   presents the app's certificate to Google, so Play's re-signing changes nothing. The fingerprint
+   on the Android OAuth client matters only to Google Play services sign-in, which Daynote does not use.
 5. App content: privacy policy URL as above; **account deletion URL**
    `https://daynote.arachat.cc/delete-account`; Data safety — email address and "other in-app
    content" (notes), collected only with an account, encrypted in transit, user can request deletion,

@@ -47,6 +47,10 @@
     -->
     <AvaloniaResource Include="..\Daynote.Desktop\Themes\Daynote.Product.axaml" Link="Themes\Daynote.Product.axaml" />
     <AvaloniaResource Include="..\Daynote.Desktop\Themes\Daynote.Icons.axaml" Link="Themes\Daynote.Icons.axaml" />
+    <!-- Hangul for Android, whose system CJK font does not render at regular weight; see
+         MainApplication. OFL-licensed; the licence travels with the files. -->
+    <AvaloniaResource Include="Assets\Fonts\*.otf" />
+    <None Include="Assets\Fonts\LICENSE-Pretendard.txt" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.png" Link="Assets\daynote-favicon-v1.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
