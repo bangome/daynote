@@ -41,5 +41,8 @@
     <!-- The English wordmark, so an English build does not show a Korean logo (BrandLogos). -->
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-trimmed.png" Link="Assets\daynote-logo-en-trimmed.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-en-dark-trimmed.png" Link="Assets\daynote-logo-en-dark-trimmed.png" />
+    <!-- Pretendard, the face the desktop design is set in. OFL-licensed; the licence travels with it. -->
+    <AvaloniaResource Include="Assets\Fonts\*.otf" />
+    <None Include="Assets\Fonts\LICENSE-Pretendard.txt" />
   </ItemGroup>
 </Project>

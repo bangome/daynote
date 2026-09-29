@@ -8,6 +8,8 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Daynote.Desktop/Themes/Daynote.Product.axaml" />
         <ResourceInclude Source="avares://Daynote.Desktop/Themes/Daynote.Icons.axaml" />
+        <!-- Last, so its design-B colours win over the shared palette's (see the file's header). -->
+        <ResourceInclude Source="avares://Daynote.Desktop/Themes/Daynote.Desk.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>
