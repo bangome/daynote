@@ -140,10 +140,12 @@ public partial class MainView : UserControl
             : 0;
 
         // The bar sits 30 points off the bottom edge of a 34-point home-indicator strip, so 4 into
-        // it; with no strip it keeps clear of the edge instead of touching it.
+        // it. Anything taller is a bar of buttons (Android's three-button navigation reports 48),
+        // which the bar keeps clear of instead of sitting on; with no strip at all it keeps clear of
+        // the edge.
         if (this.FindControl<Grid>("Dock") is { } dock)
         {
-            dock.Margin = new Thickness(16, 0, 16, bottom > 0 ? -Math.Min(4, bottom) : 16);
+            dock.Margin = new Thickness(16, 0, 16, DockBottomMargin(bottom));
         }
 
         // The sheet's content ends 40 points above the screen edge in the design, 6 above the strip.
@@ -157,6 +159,17 @@ public partial class MainView : UserControl
 
         this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom, keyboard);
     }
+
+    /// <summary>The floating tab bar's bottom margin over a bottom inset of <paramref name="bottom"/> points.</summary>
+    public static double DockBottomMargin(double bottom) => bottom switch
+    {
+        <= 0 => 16,
+        <= HomeIndicatorStrip => -Math.Min(4, bottom),
+        _ => 8,
+    };
+
+    /// <summary>The tallest bottom inset that is a home-indicator strip rather than a bar of buttons.</summary>
+    public const double HomeIndicatorStrip = 34;
 
     /// <summary>
     /// Runs a bottom surface's fill under the home indicator and keeps its content above it, by

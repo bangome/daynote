@@ -31,8 +31,6 @@ namespace Daynote.Mobile.Tests;
 [TestClass]
 public sealed class DeviceSafeAreaTests
 {
-    private const double DockDip = 4;
-
     private static readonly string OutputDirectory =
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "artifacts", "mobile-screens", "devices");
 
@@ -114,7 +112,7 @@ public sealed class DeviceSafeAreaTests
             }
 
             bool inDock = dock is not null && button.GetVisualAncestors().Contains(dock);
-            double bottomLimit = size.Height - safe.Bottom + (inDock && safe.Bottom > 0 ? DockDip : 0);
+            double bottomLimit = size.Height - safe.Bottom - (inDock ? Math.Min(0, Views.MainView.DockBottomMargin(safe.Bottom)) : 0);
 
             if (rect.Top < safe.Top - 0.5 || rect.Left < safe.Left - 0.5 ||
                 rect.Right > size.Width - safe.Right + 0.5 || rect.Bottom > bottomLimit + 0.5)
