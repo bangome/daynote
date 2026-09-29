@@ -120,6 +120,9 @@ public static class HighContrastPalette
             ["OnAccent"] = HighContrastRole.HighlightText,
             ["SwitchKnob"] = HighContrastRole.HighlightText,
             ["OnClose"] = HighContrastRole.HighlightText,
+            // Selected body text: the system's own selection pair, which is what these two are.
+            ["SelectionBg"] = HighContrastRole.Highlight,
+            ["SelectionText"] = HighContrastRole.HighlightText,
 
             // A tint of the accent is not expressible: there is no alpha in a system colour and no
             // second background. AccentSoft falls back to the page, and the accent still reads
