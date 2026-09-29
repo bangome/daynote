@@ -28,7 +28,11 @@ public partial class App : Application
 {
     private ServiceProvider? _provider;
     private MobileShellViewModel? _shell;
-    private ISingleViewApplicationLifetime? _singleView;
+    /// <summary>
+    /// The lifetime's one main view, set once. A switch swaps what is inside it: on Android a later
+    /// <c>MainView</c> assignment does not reach the screen, which kept the old shell up after a switch.
+    /// </summary>
+    private readonly ContentControl _host = new();
 
     /// <summary>The profile folder the current composition runs on, to fall back to if a switch cannot open its target.</summary>
     private string? _activeFolder;
@@ -51,7 +55,7 @@ public partial class App : Application
         MobilePlatformServices platform = Platform
             ?? throw new InvalidOperationException("App.Platform must be set by the head before the app starts.");
 
-        _singleView = singleView;
+        singleView.MainView = _host;
         Compose(platform);
 
         base.OnFrameworkInitializationCompleted();
@@ -82,7 +86,7 @@ public partial class App : Application
 
         _shell = _provider.GetRequiredService<MobileShellViewModel>();
         view.DataContext = _shell;
-        _singleView!.MainView = view;
+        _host.Content = view;
 
         if (_shell.Account is { } account)
         {
@@ -150,7 +154,7 @@ public partial class App : Application
             return;
         }
 
-        _singleView!.MainView = new TextBlock
+        _host.Content = new TextBlock
         {
             Text = AppStrings.ProfileSwitchFailedScreen,
             TextWrapping = Avalonia.Media.TextWrapping.Wrap,

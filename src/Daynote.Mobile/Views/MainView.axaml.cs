@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Platform;
 using Avalonia.Markup.Xaml;
 
 namespace Daynote.Mobile.Views;
@@ -16,6 +17,7 @@ public partial class MainView : UserControl
 
     /// <summary>The last safe area the platform reported, in that platform's units.</summary>
     private Thickness _safeArea;
+    private Action? _detach;
 
     /// <summary>
     /// Goes edge to edge and lets the bottom bar's fill run under the home indicator.
@@ -54,15 +56,32 @@ public partial class MainView : UserControl
         insets.DisplayEdgeToEdgePreference = true;
 
         _safeArea = insets.SafeAreaPadding;
-        insets.SafeAreaChanged += (_, args) =>
+        EventHandler<SafeAreaChangedArgs> onSafeArea = (_, args) =>
         {
             _safeArea = args.SafeAreaPadding;
             Apply(top);
         };
-        top.ScalingChanged += (_, _) => Apply(top);
+        EventHandler onScaling = (_, _) => Apply(top);
+        insets.SafeAreaChanged += onSafeArea;
+        top.ScalingChanged += onScaling;
+
+        // A profile switch replaces this view while the top level lives on, so the handlers go with it.
+        _detach = () =>
+        {
+            insets.SafeAreaChanged -= onSafeArea;
+            top.ScalingChanged -= onScaling;
+        };
+
         Apply(top);
         Avalonia.Threading.Dispatcher.UIThread.Post(
             () => Apply(top), Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _detach?.Invoke();
+        _detach = null;
+        base.OnDetachedFromVisualTree(e);
     }
 
     private void Apply(TopLevel top)
