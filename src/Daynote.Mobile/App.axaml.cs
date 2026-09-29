@@ -246,6 +246,6 @@ public partial class App : Application
     /// </summary>
     public Task FlushAsync() => _shell?.FlushAsync(FlushReason.Hide) ?? Task.CompletedTask;
 
-    /// <summary>The system back gesture: closes the editor if it is up, else lets the OS have it.</summary>
-    public Task<bool> TryGoBackAsync() => _shell?.CloseEditorAsync() ?? Task.FromResult(false);
+    /// <summary>The system back gesture: closes the sheet, page or editor on top, else lets the OS have it.</summary>
+    public Task<bool> TryGoBackAsync() => _shell?.GoBackAsync() ?? Task.FromResult(false);
 }

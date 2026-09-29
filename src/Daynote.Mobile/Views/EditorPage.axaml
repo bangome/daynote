@@ -1,105 +1,173 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:views="using:Daynote.Mobile.Views"
              x:Class="Daynote.Mobile.Views.EditorPage"
              x:DataType="vm:MobileShellViewModel"
-             Background="{DynamicResource Daynote.Product.Brush.Bg1}">
+             Background="{DynamicResource Mobile.Bg}">
   <!--
-    The note, full screen. The desktop keeps the editor in the middle column with the note list and
-    the right rail flanking it; here it covers them, because a 390-point-wide screen has room for the
-    text and nothing else.
+    The note, full screen: the date it belongs to, its title and tags, its text, and the three
+    helpers that put the body's small syntax within reach of a thumb. It covers the tabs, because a
+    390-point screen has room for the text and nothing else.
   -->
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-    <!-- Header: back, title, and the two actions worth a permanent place. -->
-    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="4,4,8,0">
-      <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="22"
-              Command="{Binding CloseEditorCommand}"
-              AutomationProperties.Name="{Binding Strings[Back]}" />
-      <!-- The title is a label until it is tapped, then a text box over a draft. A tap rather than
-           the desktop's double-click: a phone has no second click, and a note whose name cannot be
-           changed from the only screen that shows it is a note stuck with "노트 1". -->
-      <Button Grid.Column="1" Classes="titletap" Command="{Binding BeginRenameTitleCommand}"
-              IsVisible="{Binding !IsRenamingTitle}"
-              AutomationProperties.Name="{Binding Strings[NoteMenuRename]}">
-        <TextBlock Classes="h2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                   Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" />
+    <!-- Back, the note's date, and the two actions worth a permanent place. -->
+    <Grid Grid.Row="0" Height="48" Margin="6,0" ColumnDefinitions="44,*,44,44">
+      <Button Grid.Column="0" Classes="iconbtn" Command="{Binding CloseEditorCommand}"
+              AutomationProperties.Name="{Binding Strings[Back]}">
+        <views:Glyph Kind="Back" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
       </Button>
-      <TextBox Grid.Column="1" x:Name="TitleBox" Classes="titleedit" Text="{Binding TitleDraft}"
-               IsVisible="{Binding IsRenamingTitle}" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
-      <Button Grid.Column="2" Classes="icon" Command="{Binding ToggleFavoriteCommand}"
+      <TextBlock Grid.Column="1" Classes="muted line" FontSize="14" FontWeight="SemiBold"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding EditorDateText}" />
+      <Button Grid.Column="2" Classes="iconbtn" Command="{Binding ToggleFavoriteCommand}"
               AutomationProperties.Name="{Binding Strings[Favorite]}">
-        <Path Data="{StaticResource Daynote.Geo.Star}"
-              Fill="{Binding Notes.SelectedTab.IsFavorite, FallbackValue=False, Converter={x:Static vm:MobileConverters.FavoriteFill}}" />
+        <views:Glyph Kind="Star" Width="21" Height="21"
+                     Classes.on="{Binding Notes.SelectedTab.IsFavorite, FallbackValue=False}" Classes="star" />
       </Button>
-      <Button Grid.Column="3" Classes="icon" Command="{Binding DeleteNoteCommand}"
+      <Button Grid.Column="3" Classes="iconbtn" Command="{Binding DeleteNoteCommand}"
               CommandParameter="{Binding Notes.SelectedTab}"
               AutomationProperties.Name="{Binding Strings[NoteMenuDelete]}">
-        <Path Data="{StaticResource Daynote.Geo.Trash}" />
+        <views:Glyph Kind="Trash" Width="19" Height="19" Foreground="{DynamicResource Mobile.Text2}" />
       </Button>
     </Grid>
 
-    <!-- Save state and tags. The save line is the phone's only feedback that a note is safe, so it
-         is not hidden behind a menu the way a desktop status bar can be. -->
-    <StackPanel Grid.Row="1" Margin="16,2,16,6" Spacing="8">
-      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Notes.HasSaveStatus}">
-        <TextBlock Classes="muted" FontSize="11.5" VerticalAlignment="Center" Text="{Binding Notes.SaveStatusDisplay}" />
-        <Button Classes="quiet" FontSize="11.5" MinHeight="32" Padding="10,4"
-                Content="{Binding Strings[RetrySave]}" Command="{Binding Notes.RetryCommand}"
-                IsVisible="{Binding Notes.HasSaveError}" />
-      </StackPanel>
+    <!-- The title, then the save state and the tags on one wrapping line. -->
+    <StackPanel Grid.Row="1" Margin="22,10,22,0">
+      <!-- The title is text until it is tapped, then a box over a draft, at the same size and on
+           the same line so nothing moves. A tap rather than the desktop's double-click: a phone has
+           no second click, and a note that cannot be renamed here is stuck with "노트 1". -->
+      <Button Classes="row" HorizontalContentAlignment="Left" Command="{Binding BeginRenameTitleCommand}"
+              IsVisible="{Binding !IsRenamingTitle}"
+              AutomationProperties.Name="{Binding Strings[NoteMenuRename]}">
+        <TextBlock Classes="title" Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" />
+      </Button>
+      <TextBox x:Name="TitleBox" Classes="bare title" Text="{Binding TitleDraft}"
+               PlaceholderText="{Binding Strings[MobileTitlePlaceholder]}"
+               IsVisible="{Binding IsRenamingTitle}" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
 
-      <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="x:String">
-            <Border Classes="chip" Margin="0,0,6,6">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="{Binding StringFormat='#{0}'}" FontSize="12" VerticalAlignment="Center" />
-                <Button Classes="icon" MinWidth="24" MinHeight="24" Width="24" Height="24" Padding="0" Content="✕" FontSize="10"
-                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).RemoveTagCommand}"
-                        CommandParameter="{Binding}" />
-              </StackPanel>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
-      <TextBox Text="{Binding TagInput}" MinHeight="38" FontSize="13"
-               PlaceholderText="{Binding Strings[TagAddPlaceholder]}">
-        <TextBox.KeyBindings>
-          <KeyBinding Gesture="Enter" Command="{Binding CommitTagCommand}" />
-        </TextBox.KeyBindings>
-      </TextBox>
+      <!-- 22-point rows for the tap, so 9 and 3 around them make the design's 12 and 6 around 16. -->
+      <WrapPanel Margin="0,9,0,3">
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0" Height="22">
+          <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="savedot"
+                   Classes.saved="{Binding IsEditorSaved}" Classes.error="{Binding Notes.HasSaveError}" />
+          <TextBlock Classes="faint line" FontSize="13.5" VerticalAlignment="Center" Text="{Binding EditorSaveText}" />
+        </StackPanel>
+        <Button Height="22" Margin="0,0,12,0" IsVisible="{Binding Notes.HasSaveError}" Command="{Binding Notes.RetryCommand}">
+          <TextBlock FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource Mobile.Danger}"
+                     Text="{Binding Strings[RetrySave]}" />
+        </Button>
+        <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags, FallbackValue={x:Null}}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <!-- A tap takes the tag off, as in the design. -->
+              <Button Height="22" Margin="0,0,12,0"
+                      Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).RemoveTagCommand}"
+                      CommandParameter="{Binding}">
+                <TextBlock Classes="line" FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
+                           Text="{Binding StringFormat='#{0}'}" />
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBox Classes="bare" Width="70" Height="22" FontSize="13.5" Foreground="{DynamicResource Mobile.Text2}"
+                 Text="{Binding TagInput}" PlaceholderText="{Binding Strings[TagAddPlaceholder]}">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding CommitTagCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+      </WrapPanel>
     </StackPanel>
 
-    <Panel Grid.Row="2">
-      <TextBox x:Name="Body" Classes="editor" Text="{Binding Notes.EditorText}" />
+    <TextBox Grid.Row="2" x:Name="Body" Classes="bare body" Text="{Binding Notes.EditorText}"
+             PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}" />
 
-      <!--
-        The writing helpers, floating over the text rather than pinned to a toolbar. The note body
-        carries a small syntax - a checkbox opens a line, a (M/D) or (M/D H:mm) at the end of one
-        gives it a due time - and on a desktop you simply type it. On a phone those brackets are two
-        keyboard layers away, which is enough friction to stop people using the feature at all.
+    <!--
+      The writing helpers. The note body carries a small syntax - a checkbox opens a line, a (M/D) or
+      (M/D H:mm) at the end of one gives it a due time - and on a desktop you simply type it. On a
+      phone those brackets are two keyboard layers away, which is enough to stop people using it.
 
-        Shown only while the body has focus, so it is out of the way when reading. The buttons are
-        not focusable on purpose: taking focus would close the keyboard and move the caret, which is
-        the opposite of what a helper should do.
-      -->
-      <Border Classes="floatbar" IsVisible="{Binding #Body.IsFocused}"
-              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16">
-        <StackPanel Orientation="Horizontal" Spacing="2">
-          <Button Classes="floataction" Focusable="False" Click="OnInsertTodo"
-                  Content="{Binding Strings[InsertTodo]}" />
-          <Border Width="1" Margin="2,8" Background="{DynamicResource Daynote.Product.Brush.Stroke}" />
-          <Button Classes="floataction" Focusable="False" Click="OnInsertDate"
-                  Content="{Binding Strings[InsertDate]}" />
-          <Button Classes="floataction" Focusable="False" Click="OnInsertTime"
-                  Content="{Binding Strings[InsertTime]}" />
-        </StackPanel>
-      </Border>
-    </Panel>
+      The buttons are not focusable on purpose: taking focus would close the keyboard and move the
+      caret, which is the opposite of what a helper should do.
+    -->
+    <Border Grid.Row="3" x:Name="Toolbar" Background="{DynamicResource Mobile.Panel}"
+            BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,4,*,4,*" Margin="12,8,12,0">
+        <Button Grid.Column="0" Classes="tool primary" Focusable="False" Click="OnInsertTodo">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <views:Glyph Kind="TodoBox" Width="15" Height="15" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.OnPri}" />
+            <TextBlock Text="{Binding Strings[InsertTodo]}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertDate">
+          <TextBlock Text="{Binding Strings[InsertDate]}" />
+        </Button>
+        <Button Grid.Column="4" Classes="tool" Focusable="False" Click="OnInsertTime">
+          <TextBlock Text="{Binding Strings[MobileInsertTime]}" />
+        </Button>
+      </Grid>
+    </Border>
   </Grid>
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="30" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="LetterSpacing" Value="-1.2" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBox.title">
+      <Setter Property="FontSize" Value="30" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="LetterSpacing" Value="-1.2" />
+    </Style>
+    <Style Selector="TextBox.body">
+      <Setter Property="FontSize" Value="16.5" />
+      <Setter Property="LineHeight" Value="29.7" />
+      <Setter Property="Padding" Value="22,12,22,24" />
+      <Setter Property="AcceptsReturn" Value="True" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+    </Style>
+    <Style Selector="views|Glyph.star">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+      <Setter Property="Fill" Value="{x:Null}" />
+    </Style>
+    <Style Selector="views|Glyph.star.on">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Sun}" />
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Sun}" />
+    </Style>
+    <Style Selector="Ellipse.savedot">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Ellipse.savedot.saved">
+      <Setter Property="Fill" Value="{StaticResource Mobile.Saved}" />
+    </Style>
+    <Style Selector="Ellipse.savedot.error">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Danger}" />
+    </Style>
+    <Style Selector="Button.tool">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+    </Style>
+    <Style Selector="Button.tool TextBlock">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tool.primary">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <Style Selector="Button.tool.primary TextBlock">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+    </Style>
+  </UserControl.Styles>
 </UserControl>

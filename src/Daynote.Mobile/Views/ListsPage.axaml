@@ -2,112 +2,180 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
              xmlns:pvm="using:Daynote.App.Shell.Product"
+             xmlns:views="using:Daynote.Mobile.Views"
              x:Class="Daynote.Mobile.Views.ListsPage"
              x:DataType="vm:MobileShellViewModel">
   <!--
-    The desktop's right rail: to-dos, favourites and tags. There it is a column of tabs beside the
-    editor; here the three share one screen behind a segmented control, because they are read one at
-    a time and a phone cannot spare a permanent column for them.
+    The desktop's right rail: to-dos, favourites and tags. There it is a column beside the editor;
+    here the three share one page behind underlined tabs, because they are read one at a time and a
+    phone cannot spare a permanent column for them.
   -->
-  <Grid RowDefinitions="Auto,*" Margin="16,12,16,0">
+  <ScrollViewer>
+    <StackPanel Margin="20,4,20,120">
+      <TextBlock Classes="pagetitle" Text="{Binding Strings[TabLists]}" Margin="0,10,0,14" />
 
-    <Border Grid.Row="0" Classes="seg" Margin="0,0,0,12">
-      <UniformGrid Columns="3">
-        <Button Classes="segtab" Classes.active="{Binding IsTodoList}" Content="{Binding Strings[SegmentTodo]}"
-                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}" />
-        <Button Classes="segtab" Classes.active="{Binding IsFavoritesList}" Content="{Binding Strings[SegmentFavorites]}"
-                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}" />
-        <Button Classes="segtab" Classes.active="{Binding IsTagsList}" Content="{Binding Strings[SegmentTags]}"
-                Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}" />
-      </UniformGrid>
-    </Border>
-
-    <ScrollViewer Grid.Row="1">
-      <StackPanel Margin="0,0,0,24">
-
-        <!-- To-do -->
-        <StackPanel IsVisible="{Binding IsTodoList}">
-          <StackPanel.Resources>
-            <DataTemplate x:Key="TodoRow" x:DataType="pvm:TodoItemViewModel">
-              <Border Classes="card" Margin="0,0,0,8">
-                <Grid ColumnDefinitions="Auto,*">
-                  <Button Grid.Column="0" Classes="check" Classes.checked="{Binding Checked}"
-                          Command="{Binding ToggleCommand}" Margin="0,1,12,0"
-                          Content="{Binding Checked, Converter={x:Static vm:MobileConverters.CheckGlyph}}" />
-                  <Button Grid.Column="1" Classes="row" Background="Transparent" Padding="0"
-                          Command="{Binding JumpCommand}">
-                    <StackPanel Spacing="4">
-                      <TextBlock Text="{Binding Text}" FontSize="14" Classes.done="{Binding Checked}" />
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Classes="muted" Text="{Binding NoteLabel}" FontSize="11.5" />
-                        <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" Text="{Binding DueLabel}"
-                                   FontSize="11.5" IsVisible="{Binding HasDue}" />
-                      </StackPanel>
-                    </StackPanel>
-                  </Button>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </StackPanel.Resources>
-
-          <TextBlock Classes="h2" Text="{Binding Strings[Today]}" Margin="2,0,2,8" IsVisible="{Binding Todo.HasToday}" />
-          <ItemsControl ItemsSource="{Binding Todo.TodayItems}" ItemTemplate="{StaticResource TodoRow}"
-                        IsVisible="{Binding Todo.HasToday}" />
-          <Border Height="1" Margin="2,4,2,12" Background="{DynamicResource Daynote.Product.Brush.Stroke}"
-                  IsVisible="{Binding Todo.HasToday}" />
-          <ItemsControl ItemsSource="{Binding Todo.Items}" ItemTemplate="{StaticResource TodoRow}" />
-          <TextBlock Classes="empty" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding Todo.IsEmpty}" />
+      <Border BorderBrush="{DynamicResource Mobile.Stroke}" BorderThickness="0,0,0,1" Margin="0,0,0,18">
+        <StackPanel Orientation="Horizontal" Spacing="20">
+          <Button Classes="listtab" Classes.active="{Binding IsTodoList}"
+                  Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}">
+            <TextBlock Text="{Binding Strings[SegmentTodo]}" />
+          </Button>
+          <Button Classes="listtab" Classes.active="{Binding IsFavoritesList}"
+                  Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">
+            <TextBlock Text="{Binding Strings[SegmentFavorites]}" />
+          </Button>
+          <Button Classes="listtab" Classes.active="{Binding IsTagsList}"
+                  Command="{Binding SelectListCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}">
+            <TextBlock Text="{Binding Strings[SegmentTags]}" />
+          </Button>
         </StackPanel>
+      </Border>
 
-        <!-- Favourites -->
-        <StackPanel IsVisible="{Binding IsFavoritesList}">
-          <ItemsControl ItemsSource="{Binding Favorites.Items}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="pvm:FavoriteItemViewModel">
-                <Button Classes="row" Command="{Binding OpenCommand}" Margin="0,0,0,8">
-                  <StackPanel Spacing="3">
-                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" Text="{Binding DateLabel}" FontSize="11.5" />
-                  </StackPanel>
-                </Button>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Classes="empty" Text="{Binding Strings[FavoritesPanelEmpty]}" IsVisible="{Binding Favorites.IsEmpty}" />
-        </StackPanel>
-
-        <!-- Tags -->
-        <StackPanel IsVisible="{Binding IsTagsList}">
-          <ItemsControl ItemsSource="{Binding TagPanel.Tags}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="pvm:TagItemViewModel">
-                <Border Classes="card" Margin="0,0,0,8">
-                  <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <TextBlock Text="{Binding Tag, StringFormat='#{0}'}" FontSize="14" FontWeight="SemiBold" />
-                      <TextBlock Classes="muted" Text="{Binding CountText}" FontSize="11.5" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding Occurrences}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="pvm:TagOccurrenceViewModel">
-                          <Button Classes="row" Background="Transparent" Padding="0,8" Command="{Binding JumpCommand}">
-                            <Grid ColumnDefinitions="*,Auto">
-                              <TextBlock Grid.Column="0" Text="{Binding NoteTitle}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Grid.Column="1" Classes="muted" Text="{Binding DateLabel}" FontSize="11" Margin="8,0,0,0" />
-                            </Grid>
+      <!-- To-do: 지남, 오늘, 예정, 날짜 없음, 완료, each with its colour. -->
+      <StackPanel IsVisible="{Binding IsTodoList}">
+        <ItemsControl ItemsSource="{Binding TodoGroups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TodoGroupViewModel">
+              <StackPanel Margin="0,0,0,22">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+                  <Ellipse Width="8" Height="8" VerticalAlignment="Center" Classes="band"
+                           Classes.overdue="{Binding IsOverdue}" Classes.today="{Binding IsToday}"
+                           Classes.upcoming="{Binding IsUpcoming}" Classes.nodate="{Binding IsNoDate}"
+                           Classes.done="{Binding IsDone}" />
+                  <TextBlock Classes="line" FontSize="13.5" FontWeight="ExtraBold" VerticalAlignment="Center" Text="{Binding Label}" />
+                  <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding CountText}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Items}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TodoRowViewModel">
+                      <Border Classes="rule" Padding="0,11">
+                        <Grid ColumnDefinitions="22,*,Auto">
+                          <Button Grid.Column="0" Classes="check" VerticalAlignment="Top" Margin="-11,-10,-11,-12"
+                                  Command="{Binding Item.ToggleCommand}">
+                            <Border Classes="checkbox" Classes.checked="{Binding Item.Checked}">
+                              <views:Glyph Kind="Check" Width="11" Height="11" Foreground="{DynamicResource Mobile.OnPri}"
+                                           IsVisible="{Binding Item.Checked}" />
+                            </Border>
                           </Button>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                          <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" HorizontalContentAlignment="Left"
+                                  Command="{Binding Item.JumpCommand}">
+                            <StackPanel>
+                              <TextBlock Classes="todo" Classes.done="{Binding Item.Checked}" FontSize="15.5" LineHeight="21.7"
+                                         Text="{Binding Item.Text}" />
+                              <TextBlock Classes="faint line" FontSize="12.5" Margin="0,3,0,0" Text="{Binding NoteCaption}" />
+                            </StackPanel>
+                          </Button>
+                          <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,2,0,0"
+                                     VerticalAlignment="Top" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="empty" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding IsTodoListEmpty}" />
+      </StackPanel>
+
+      <!-- Favourites -->
+      <StackPanel IsVisible="{Binding IsFavoritesList}">
+        <ItemsControl ItemsSource="{Binding FavoriteCards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FavoriteCardViewModel">
+              <Button Classes="row" CornerRadius="18" Command="{Binding OpenCommand}">
+                <Border Classes="card" CornerRadius="18" Padding="18,16">
+                  <StackPanel>
+                    <TextBlock Classes="line" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
+                               Text="{Binding DateLabel}" />
+                    <TextBlock Classes="line" FontSize="16.5" FontWeight="ExtraBold" LetterSpacing="-0.33" Margin="0,4,0,0"
+                               Text="{Binding Title}" />
+                    <TextBlock Classes="muted line" FontSize="13.5" Margin="0,4,0,0" Text="{Binding Preview}" />
                   </StackPanel>
                 </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Classes="empty" Text="{Binding Strings[TagPanelEmpty]}" IsVisible="{Binding TagPanel.IsEmpty}" />
-        </StackPanel>
-
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="empty" Text="{Binding Strings[FavoritesPanelEmpty]}" IsVisible="{Binding IsFavoritesListEmpty}" />
       </StackPanel>
-    </ScrollViewer>
-  </Grid>
+
+      <!-- Tags: every tag as a chip, and the notes under the chosen one. -->
+      <StackPanel IsVisible="{Binding IsTagsList}">
+        <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,0,0,18">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TagChipViewModel">
+              <Button Classes="pill" Classes.on="{Binding IsSelected}" Command="{Binding SelectCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding Name, StringFormat='#{0}'}" />
+                  <TextBlock FontSize="12" FontWeight="Medium" Opacity="0.75" VerticalAlignment="Center" Text="{Binding CountText}" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding SelectedTag.Notes, FallbackValue={x:Null}}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TagNoteRowViewModel">
+              <Button Classes="row" Command="{Binding OpenCommand}">
+                <Border Classes="rule" Padding="0,14">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Classes="line" FontSize="15.5" FontWeight="Bold" Text="{Binding Title}" />
+                    <TextBlock Grid.Column="1" Classes="faint line" FontSize="12.5" Margin="8,0,0,0" VerticalAlignment="Center"
+                               Text="{Binding DateLabel}" />
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="empty" Text="{Binding Strings[TagPanelEmpty]}" IsVisible="{Binding IsTagListEmpty}" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+
+  <UserControl.Styles>
+    <!-- A tab under the page title: dim, then full ink with a sun underline when chosen. -->
+    <Style Selector="Button.listtab">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,2.5" />
+    </Style>
+    <Style Selector="Button.listtab.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
+    </Style>
+    <Style Selector="Button.listtab TextBlock">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+      <Setter Property="Margin" Value="0,2.5,0,0" />
+    </Style>
+    <Style Selector="Button.listtab.active TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text}" />
+    </Style>
+    <Style Selector="Ellipse.band.overdue">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Danger}" />
+    </Style>
+    <Style Selector="Ellipse.band.today">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Sun}" />
+    </Style>
+    <Style Selector="Ellipse.band.upcoming">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <Style Selector="Ellipse.band.nodate">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Ellipse.band.done">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Stroke}" />
+    </Style>
+  </UserControl.Styles>
 </UserControl>

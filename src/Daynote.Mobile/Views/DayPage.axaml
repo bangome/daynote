@@ -1,173 +1,220 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
-             xmlns:pvm="using:Daynote.App.Shell.Product"
-             xmlns:notes="using:Daynote.App.Notes"
+             xmlns:views="using:Daynote.Mobile.Views"
              x:Class="Daynote.Mobile.Views.DayPage"
              x:DataType="vm:MobileShellViewModel">
   <!--
-    The day: a month grid over the notes of the selected date. This is the phone's home, and it is
-    the desktop's left column - the calendar and the day's note list - promoted to a whole screen,
-    because on a phone that column is the app.
+    The home screen: the day, large, over the week it sits in, and what was written on it. The full
+    month is one tap away in the sheet the month button opens; the home screen gives its room to the
+    notes instead, because on a phone the day is what gets opened, not the calendar.
   -->
-  <Panel>
-    <ScrollViewer>
-      <StackPanel Margin="16,12,16,96" Spacing="14">
+  <ScrollViewer>
+    <StackPanel Margin="20,4,20,120">
 
-        <!-- Month header -->
-        <!-- Month, and the two arrows that move it. "Today" used to sit at the right of this row
-             and is now the first tab in the bottom bar. -->
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="20"
-                  Command="{Binding Calendar.PreviousMonthCommand}"
-                  AutomationProperties.Name="{Binding Strings[PreviousMonth]}" />
-          <Button Grid.Column="1" Classes="monthtap" Command="{Binding OpenMonthPickerCommand}"
-                  AutomationProperties.Name="{Binding Strings[CalendarMonth]}">
-            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-              <TextBlock Classes="h2" Text="{Binding Calendar.MonthLabel}" VerticalAlignment="Center" />
-              <!-- A chevron, so the label reads as something to press rather than a caption. -->
-              <Path Data="{StaticResource Daynote.Geo.ChevronUp}" Width="10" Height="10" Stretch="Uniform"
-                    VerticalAlignment="Center" RenderTransform="rotate(180deg)"
-                    Stroke="{DynamicResource Daynote.Product.Brush.Text2}" StrokeThickness="1.6" />
-            </StackPanel>
-          </Button>
-          <Button Grid.Column="2" Classes="icon" Content="›" FontSize="20"
-                  Command="{Binding Calendar.NextMonthCommand}"
-                  AutomationProperties.Name="{Binding Strings[NextMonth]}" />
-        </Grid>
-
-        <!-- Month grid -->
-        <Border Classes="card" Padding="8,10">
-          <StackPanel Spacing="4">
-            <UniformGrid Columns="7">
-              <TextBlock Text="{Binding Strings[WeekdaySun]}" FontSize="11" TextAlignment="Center"
-                         Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sun}" />
-              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayMon]}" FontSize="11" TextAlignment="Center" />
-              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayTue]}" FontSize="11" TextAlignment="Center" />
-              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayWed]}" FontSize="11" TextAlignment="Center" />
-              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayThu]}" FontSize="11" TextAlignment="Center" />
-              <TextBlock Classes="muted" Text="{Binding Strings[WeekdayFri]}" FontSize="11" TextAlignment="Center" />
-              <TextBlock Text="{Binding Strings[WeekdaySat]}" FontSize="11" TextAlignment="Center"
-                         Foreground="{DynamicResource Daynote.Product.Brush.Weekend.Sat}" />
-            </UniformGrid>
-            <ItemsControl ItemsSource="{Binding Calendar.Cells}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
-                  <Button Classes="day" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
-                          Classes.saturday="{Binding IsSaturday}" Classes.today="{Binding IsToday}"
-                          Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}">
-                    <StackPanel Spacing="1">
-                      <TextBlock Text="{Binding DayText}" TextAlignment="Center"
-                                 Foreground="{Binding $parent[Button].Foreground}" />
-                      <!-- The activity dot always occupies its row, transparent on an empty day, so
-                           the numbers do not shift by a pixel between days with and without notes. -->
-                      <Ellipse Width="4" Height="4" HorizontalAlignment="Center"
-                               Fill="{Binding $parent[Button].Foreground}"
-                               Opacity="{Binding HasActivity, Converter={x:Static vm:MobileConverters.DotOpacity}}" />
-                    </StackPanel>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+      <!-- The month, which opens the sheet, and the way back to today when the day is another. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" Height="44">
+        <Button Grid.Column="0" Height="44" CornerRadius="0" Command="{Binding OpenMonthPickerCommand}"
+                AutomationProperties.Name="{Binding Strings[CalendarMonth]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Classes="muted line" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                       Text="{Binding Calendar.MonthLabel}" />
+            <views:Glyph Kind="ChevronDown" Width="11" Height="11" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.Text2}" />
           </StackPanel>
-        </Border>
+        </Button>
+        <Button Grid.Column="2" Classes="pill sun" Height="30" Padding="12,0" FontSize="13"
+                IsVisible="{Binding !IsTodaySelected}" Command="{Binding GoToTodayCommand}">
+          <TextBlock Text="{Binding Strings[MobileBackToToday]}" FontWeight="Bold" />
+        </Button>
+      </Grid>
 
-        <!-- The selected day -->
-        <Grid ColumnDefinitions="*,Auto" Margin="2,4,2,0">
-          <StackPanel Grid.Column="0" Spacing="1">
-            <TextBlock Classes="h2" Text="{Binding DayLabel}" />
-            <TextBlock Classes="muted" Text="{Binding NoteCountText}" FontSize="11.5" />
-          </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
-            <Button Classes="icon" Content="‹" FontSize="18" Command="{Binding PreviousDayCommand}"
-                    AutomationProperties.Name="{Binding Strings[PreviousDay]}" />
-            <Button Classes="icon" Content="›" FontSize="18" Command="{Binding NextDayCommand}"
-                    AutomationProperties.Name="{Binding Strings[NextDay]}" />
-          </StackPanel>
-        </Grid>
+      <!--
+        "30일 수요일" on one baseline, and the sun dot when it is today. Two text blocks rather than
+        two runs, because the design tracks the two sizes differently (-2 and -0.6), and a run takes
+        its block's spacing. The row is the 40 points the design's line gives it; Avalonia hangs a
+        line's glyphs from the font's full ascent where CSS centres them in the line, so the numbers
+        sit 5 points up and the weekday is placed on the same baseline by hand.
+      -->
+      <StackPanel Orientation="Horizontal" Height="40" Margin="0,2,0,16">
+        <TextBlock Classes="line" FontSize="40" FontWeight="ExtraBold" LetterSpacing="-2" LineHeight="40"
+                   VerticalAlignment="Top" Margin="0,-5,0,0" Text="{Binding BigDayText}" />
+        <TextBlock Classes="line" FontSize="20" FontWeight="Bold" LetterSpacing="-0.6"
+                   VerticalAlignment="Top" Margin="10,14,0,0" Text="{Binding BigWeekdayText}" />
+        <Ellipse Width="8" Height="8" Margin="12,16,0,0" VerticalAlignment="Top"
+                 Fill="{DynamicResource Mobile.Sun}" IsVisible="{Binding IsTodaySelected}" />
+      </StackPanel>
 
-        <ItemsControl ItemsSource="{Binding Notes.Tabs}">
+      <!-- The week strip. -->
+      <Grid ColumnDefinitions="24,*,24" Margin="-8,0,-8,22">
+        <Button Grid.Column="0" Height="60" CornerRadius="0" Command="{Binding PreviousWeekCommand}"
+                AutomationProperties.Name="{Binding Strings[MobilePreviousWeek]}">
+          <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text3}" />
+        </Button>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Week}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="notes:NoteTabViewModel">
-              <!-- A projection is the editor's blank note for a day with nothing on it yet. It is not
-                   a note until something is typed, so the row stays hidden, as on the desktop. -->
-              <Button Classes="row" IsVisible="{Binding !IsProjection}" Margin="0,0,0,8"
-                      Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).OpenNoteCommand}"
-                      CommandParameter="{Binding}">
-                <StackPanel Spacing="4">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="★" FontSize="12" IsVisible="{Binding IsFavorite}"
-                               Foreground="{DynamicResource Daynote.Product.Brush.Extras}" />
-                    <TextBlock Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                  <TextBlock Classes="muted" Text="{Binding Preview}" FontSize="12.5" MaxLines="2"
-                             TextTrimming="CharacterEllipsis"
-                             IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                  <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,2,0,0">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="x:String">
-                        <Border Classes="chip" Padding="8,2" Margin="0,0,5,4">
-                          <TextBlock Text="{Binding StringFormat='#{0}'}" FontSize="11" />
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
+            <DataTemplate x:DataType="vm:WeekDayViewModel">
+              <Button Classes="weekday" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsTodayRing}"
+                      Classes.sunday="{Binding IsSunday}" Command="{Binding SelectCommand}">
+                <StackPanel Spacing="4" VerticalAlignment="Center">
+                  <TextBlock Classes="wd" Text="{Binding WeekdayLabel}" />
+                  <TextBlock Classes="num" Text="{Binding DayText}" />
+                  <Ellipse Classes="dot" Classes.has="{Binding HasNotes}" Width="4" Height="4" HorizontalAlignment="Center" />
                 </StackPanel>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        <Button Grid.Column="2" Height="60" CornerRadius="0" Command="{Binding NextWeekCommand}"
+                AutomationProperties.Name="{Binding Strings[MobileNextWeek]}">
+          <views:Glyph Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text3}" />
+        </Button>
+      </Grid>
 
-        <TextBlock Classes="empty" Text="{Binding Strings[DayNotesEmpty]}" IsVisible="{Binding IsDayEmpty}" />
+      <!-- 노트 n -->
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+        <TextBlock Classes="section" Text="{Binding Strings[MobileNotesHeader]}" VerticalAlignment="Bottom" />
+        <TextBlock Classes="count" Text="{Binding DayCards.Count}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
       </StackPanel>
-    </ScrollViewer>
 
-    <!-- One primary action, always reachable with the thumb. -->
-    <Button Classes="fab" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20"
-            Command="{Binding NewNoteCommand}" AutomationProperties.Name="{Binding Strings[AddNote]}"
-            IsVisible="{Binding !IsMonthPickerOpen}">
-      <Path Data="{StaticResource Daynote.Geo.Plus}" />
-    </Button>
+      <ItemsControl ItemsSource="{Binding DayCards}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:DayNoteCardViewModel">
+            <Button Classes="row" CornerRadius="20"
+                    Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).OpenNoteCommand}"
+                    CommandParameter="{Binding Tab}">
+              <Border Classes="card" Padding="18">
+                <StackPanel>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Classes="line" FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.43"
+                               Text="{Binding Tab.Title}" />
+                    <views:Glyph Grid.Column="1" Kind="Star" Width="13" Height="13" Margin="6,0,0,0" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource Mobile.Sun}" Fill="{DynamicResource Mobile.Sun}"
+                                 IsVisible="{Binding Tab.IsFavorite}" />
+                  </Grid>
+                  <TextBlock Classes="muted" FontSize="14" LineHeight="22.4" Margin="0,6,0,0" MaxLines="3"
+                             TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,14,0,0"
+                        IsVisible="{Binding HasFooter}">
+                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Tab.Tags}" VerticalAlignment="Center">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <TextBlock Classes="line" FontSize="12.5" FontWeight="SemiBold"
+                                     Foreground="{DynamicResource Mobile.SunInk}" Text="{Binding StringFormat='#{0}'}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" IsVisible="{Binding HasTodos}">
+                      <Border Width="44" Height="4" CornerRadius="2" VerticalAlignment="Center" ClipToBounds="True"
+                              Background="{DynamicResource Mobile.Seg}">
+                        <Border Width="{Binding TodoFillWidth}" HorizontalAlignment="Left" Background="{DynamicResource Mobile.Sun}" />
+                      </Border>
+                      <TextBlock Classes="muted line" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                 Text="{Binding TodoText}" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
 
-    <!--
-      The year and month picker, over the day. A scrim that closes on a tap rather than a modal with
-      a cancel button: there is nothing to confirm here, and the nearest way out of a sheet on a
-      phone is a tap beside it.
-    -->
-    <Panel IsVisible="{Binding IsMonthPickerOpen}">
-      <Button Classes="scrim" Command="{Binding CloseMonthPickerCommand}"
-              AutomationProperties.Name="{Binding Strings[WindowClose]}" />
-      <Border Classes="sheet" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-        <StackPanel Spacing="14">
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <Button Grid.Column="0" Classes="icon" Content="‹" FontSize="20"
-                    Command="{Binding PickerPreviousYearCommand}" />
-            <TextBlock Grid.Column="1" Classes="h2" TextAlignment="Center" VerticalAlignment="Center"
-                       Text="{Binding PickerYear}" />
-            <Button Grid.Column="2" Classes="icon" Content="›" FontSize="20"
-                    Command="{Binding PickerNextYearCommand}" />
-          </Grid>
-          <ItemsControl ItemsSource="{Binding PickerMonths}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:MonthOption">
-                <Button Classes="monthcell" Classes.current="{Binding IsCurrent}" Margin="3"
-                        Content="{Binding Label}"
-                        Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).PickMonthCommand}"
-                        CommandParameter="{Binding Number}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+      <!-- A day with nothing on it: the dashed card that starts the first note. -->
+      <Button Classes="row" CornerRadius="20" IsVisible="{Binding IsDayEmpty}" Command="{Binding NewNoteCommand}">
+        <Panel>
+          <Rectangle RadiusX="20" RadiusY="20" StrokeThickness="1.5" StrokeDashArray="3,2"
+                     Stroke="{DynamicResource Mobile.Stroke}" />
+          <StackPanel Margin="18,30" Spacing="4">
+            <TextBlock FontSize="15" FontWeight="Bold" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyTitle]}" />
+            <TextBlock Classes="muted" FontSize="13" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyHint]}" />
+          </StackPanel>
+        </Panel>
+      </Button>
+
+      <!-- 이 날의 할 일: the to-dos written on this day, ticked off here without opening the note. -->
+      <StackPanel IsVisible="{Binding HasDayTodos}">
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,26,0,10">
+          <TextBlock Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
+          <TextBlock Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
         </StackPanel>
-      </Border>
-    </Panel>
-  </Panel>
+        <ItemsControl ItemsSource="{Binding DayTodos}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TodoRowViewModel">
+              <Grid ColumnDefinitions="22,*,Auto" MinHeight="44">
+                <Button Grid.Column="0" Classes="check" Command="{Binding Item.ToggleCommand}">
+                  <Border Classes="checkbox" Classes.checked="{Binding Item.Checked}">
+                    <views:Glyph Kind="Check" Width="11" Height="11" Foreground="{DynamicResource Mobile.OnPri}"
+                                 IsVisible="{Binding Item.Checked}" />
+                  </Border>
+                </Button>
+                <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
+                        Command="{Binding Item.JumpCommand}">
+                  <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
+                </Button>
+                <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
+                           VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+
+  <UserControl.Styles>
+    <Style Selector="Button.weekday">
+      <Setter Property="Height" Value="62" />
+      <Setter Property="Margin" Value="1.5,0" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.weekday TextBlock">
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+    <Style Selector="Button.weekday TextBlock.wd">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Button.weekday.sunday TextBlock.wd">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Sunday}" />
+    </Style>
+    <Style Selector="Button.weekday TextBlock.num">
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Button.weekday Ellipse.dot">
+      <Setter Property="Fill" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.weekday Ellipse.dot.has">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.Sun}" />
+    </Style>
+    <Style Selector="Button.weekday.today">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="Button.weekday.selected">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <Style Selector="Button.weekday.selected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+    </Style>
+    <Style Selector="Button.weekday.selected Ellipse.dot.has">
+      <Setter Property="Fill" Value="{DynamicResource Mobile.OnPri}" />
+    </Style>
+  </UserControl.Styles>
 </UserControl>

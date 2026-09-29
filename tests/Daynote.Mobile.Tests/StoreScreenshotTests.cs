@@ -172,9 +172,7 @@ public sealed class StoreScreenshotTests
             Wait(shell.CommitTagCommand.ExecuteAsync(null));
         }
 
-        Wait(shell.Todo.RefreshAsync());
-        Wait(shell.TagPanel.RefreshAsync());
-        Wait(shell.Calendar.LoadAsync());
+        Wait(shell.RefreshAllAsync());
         Pump();
     }
 

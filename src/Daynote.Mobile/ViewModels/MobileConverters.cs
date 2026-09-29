@@ -1,5 +1,4 @@
 using Avalonia.Data.Converters;
-using Avalonia.Media;
 using Daynote.App.Localization;
 
 namespace Daynote.Mobile.ViewModels;
@@ -7,20 +6,12 @@ namespace Daynote.Mobile.ViewModels;
 /// <summary>Small value converters the phone views need, the counterpart of the desktop's AccountGlyphs.</summary>
 public static class MobileConverters
 {
-    /// <summary>The tick inside a to-do's round checkbox, or nothing when it is open.</summary>
-    public static readonly IValueConverter CheckGlyph =
-        new FuncValueConverter<bool, string>(checkedOff => checkedOff ? "✓" : string.Empty);
-
-    /// <summary>
-    /// The activity dot under a calendar day. It is always laid out and only its opacity changes, so
-    /// the day numbers never shift between a day with notes and one without.
-    /// </summary>
-    public static readonly IValueConverter DotOpacity =
-        new FuncValueConverter<bool, double>(hasActivity => hasActivity ? 0.75 : 0);
-
-    /// <summary>A filled star for a favourite, an outline for anything else.</summary>
-    public static readonly IValueConverter FavoriteFill =
-        new FuncValueConverter<bool, IBrush?>(favorite => favorite ? Brushes.Goldenrod : null);
+    /// <summary>"9/30" as "09/30", the way every date label on the phone reads.</summary>
+    public static readonly IValueConverter PaddedDate =
+        new FuncValueConverter<string?, string>(label =>
+            label?.Split('/') is [{ } month, { } day] && int.TryParse(month, out int m) && int.TryParse(day, out int d)
+                ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{m:00}/{d:00}")
+                : label ?? string.Empty);
 
     public static readonly IValueConverter UnlockMethodLabel =
         new FuncValueConverter<bool, string>(usingKey => usingKey ? AppStrings.AccountUsePassphrase : AppStrings.AccountUseRecoveryKey);

@@ -83,7 +83,7 @@ public sealed class EditorHelperTests
             Assert.AreEqual($"-[] 보고서 보내기 {expected}", body.Text, "The due date was not appended.");
 
             // A line that already ends in one gets a replacement, not a second suffix.
-            Tap(view, "InsertTime");
+            Tap(view, "MobileInsertTime");
             Assert.AreEqual(
                 1,
                 System.Text.RegularExpressions.Regex.Matches(body.Text!, @"\(\d{1,2}/\d{1,2}").Count,
@@ -104,7 +104,8 @@ public sealed class EditorHelperTests
         string label = ViewModels.MobileStrings.Instance[key];
         Button button = page.GetLogicalDescendants()
             .OfType<Button>()
-            .First(b => b.Classes.Contains("floataction") && (b.Content as string) == label);
+            .First(b => b.Classes.Contains("tool")
+                && b.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == label));
 
         // The helpers are Click handlers on a non-focusable button; raising the event is what a tap
         // does, and it keeps the caret and the keyboard where they were.
