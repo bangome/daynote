@@ -142,7 +142,9 @@ re-pointing live objects:
 - **Desktop (Avalonia) and WPF:** relaunch the process, the same path backup-restore already takes
   (`RequestRestartForRestore`), after flushing the editor.
 - **Phones:** flush, dispose the service provider, build a new one over the new root and give the
-  main view a new shell. The OS gives no clean way for an app to relaunch itself.
+  main view a new shell. The OS gives no clean way for an app to relaunch itself. The lifetime's
+  `MainView` is a host control set once and the new shell goes inside it: on Android a second
+  `MainView` assignment never reaches the screen, which left the old shell up mid-switch.
 - **MCP server:** resolves the active profile when it starts. A switch while a client holds it open
   takes effect on the client's next launch of the server; documented, not engineered around.
 
