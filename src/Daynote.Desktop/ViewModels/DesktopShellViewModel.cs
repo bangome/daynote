@@ -182,6 +182,27 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     public bool HasOpenNote => Notes.SelectedTab is { IsProjection: false };
 
+    /// <summary>
+    /// The tour points at the sidebar and the editor, so while it is open both are on screen: the
+    /// sidebar expanded, the editor in the middle. A step whose target is hidden would dim everything
+    /// and point at nothing.
+    /// </summary>
+    partial void OnTutorialChanged(Daynote.App.Onboarding.TutorialViewModel? value)
+    {
+        if (value is not null)
+        {
+            value.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(Daynote.App.Onboarding.TutorialViewModel.IsOpen) && value.IsOpen)
+                {
+                    LeftCollapsed = false;
+                    IsTimelineMode = false;
+                    IsListMode = false;
+                }
+            };
+        }
+    }
+
     public bool TabIsTodo => ActiveTab == RightTab.Todo;
 
     public bool TabIsFavorites => ActiveTab == RightTab.Favorites;
@@ -406,6 +427,12 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         if (value)
         {
             _ = SettingsViewModel?.RefreshAsync();
+        }
+        else
+        {
+            // However the dialog closed - Escape, the cross, a click on the scrim - a chord capture
+            // left running would swallow every key the user types next and rebind on the first chord.
+            SettingsViewModel?.CancelCapture();
         }
     }
 

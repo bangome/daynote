@@ -56,6 +56,10 @@ public partial class MainWindow
         WindowDecorations = WindowDecorations.BorderOnly;
         TitleBarRow.IsVisible = true;
 
+        // The macOS height centres the traffic lights on the brand row; on Windows the caption strip
+        // is 32px, and a taller hint would claim the top of the header as non-client area.
+        ExtendClientAreaTitleBarHeightHint = TitleBarRow.Height;
+
         WindowDecorationProperties.SetElementRole(TitleBarRow, WindowDecorationsElementRole.TitleBar);
         WindowDecorationProperties.SetElementRole(MinimizeButton, WindowDecorationsElementRole.MinimizeButton);
         WindowDecorationProperties.SetElementRole(MaximizeButton, WindowDecorationsElementRole.MaximizeButton);
@@ -91,6 +95,7 @@ public partial class MainWindow
     {
         bool underLights = OperatingSystem.IsMacOS() && _chromeShell is { LeftCollapsed: true };
         Header.Padding = new Thickness(underLights ? TrafficLightInset : HeaderInset, 18, 28, 16);
+        UpdateHeaderWrap();
     }
 
     /// <summary>A single square while the window can grow; two stacked once it has.</summary>

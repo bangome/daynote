@@ -52,7 +52,7 @@ public sealed class AutoFillGrid : Panel
         double height = 0;
         double rowHeight = 0;
         int index = 0;
-        foreach (Control child in Children)
+        foreach (Control child in Children.Where(static c => c.IsVisible))
         {
             child.Measure(new Size(columnWidth, double.PositiveInfinity));
             rowHeight = Math.Max(rowHeight, child.DesiredSize.Height);
@@ -79,7 +79,8 @@ public sealed class AutoFillGrid : Panel
     {
         int columns = ColumnsFor(finalSize.Width);
         double columnWidth = ColumnWidth(finalSize.Width, columns);
-        var children = Children.ToList();
+        // A hidden card takes no slot, so the visible ones close up rather than leaving a hole.
+        var children = Children.Where(static c => c.IsVisible).ToList();
         double y = 0;
         for (int start = 0; start < children.Count; start += columns)
         {

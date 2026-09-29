@@ -26,6 +26,10 @@ public partial class MainWindow
         e.Handled = true;
     }
 
+    /// <remarks>
+    /// An event handler has to be <c>async void</c>, so nothing awaits it and anything that escapes
+    /// ends the process. Every failure stops at the file it happened on.
+    /// </remarks>
     private async void OnFileDrop(object? sender, DragEventArgs e)
     {
         e.Handled = true;
@@ -41,9 +45,10 @@ public partial class MainWindow
                 await using Stream stream = await file.OpenReadAsync().ConfigureAwait(true);
                 await shell.Files.AddFromStreamAsync(file.Name, stream).ConfigureAwait(true);
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception)
             {
                 // One unreadable file does not stop the rest; AddFromStreamAsync already skips oversized ones.
+                System.Diagnostics.Trace.TraceWarning($"Dropped file '{file.Name}' was not kept: {exception.Message}");
             }
         }
     }

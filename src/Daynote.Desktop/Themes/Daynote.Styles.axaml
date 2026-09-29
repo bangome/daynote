@@ -81,7 +81,7 @@
     <Setter Property="FontWeight" Value="ExtraBold" />
     <Setter Property="LetterSpacing" Value="-0.4" />
   </Style>
-  <Style Selector="TextBlock.mono">
+  <Style Selector="TextBlock.mono, SelectableTextBlock.mono">
     <Setter Property="FontFamily" Value="{StaticResource Daynote.Desk.Font.Mono}" />
   </Style>
 

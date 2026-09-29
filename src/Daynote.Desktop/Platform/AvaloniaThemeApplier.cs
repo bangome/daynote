@@ -92,9 +92,9 @@ public sealed class AvaloniaThemeApplier : IThemeApplier
         bool key = _source == HighContrastSource.Derived && dark;
         if (!_dictionaries.TryGetValue(key, out ResourceDictionary? dictionary))
         {
-            dictionary = _source == HighContrastSource.SystemColors && OperatingSystem.IsWindows()
+            dictionary = DeskHighContrastAliases.AddTo(_source == HighContrastSource.SystemColors && OperatingSystem.IsWindows()
                 ? WindowsHighContrastPalette.Build()
-                : DerivedHighContrastBrushes.Build(dark);
+                : DerivedHighContrastBrushes.Build(dark));
             _dictionaries[key] = dictionary;
         }
 

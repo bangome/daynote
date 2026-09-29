@@ -34,6 +34,8 @@ public sealed partial class DesktopSettingsViewModel
 
     partial void OnSectionChanged(SettingsSection value)
     {
+        // A capture belongs to a row on the page being left; it must not outlive it.
+        CancelCapture();
         OnPropertyChanged(nameof(IsGeneralSection));
         OnPropertyChanged(nameof(IsShortcutsSection));
         OnPropertyChanged(nameof(IsDataSection));

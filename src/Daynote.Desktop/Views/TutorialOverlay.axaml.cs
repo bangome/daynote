@@ -135,7 +135,7 @@ public partial class TutorialOverlay : UserControl
             return null;
         }
 
-        if (window.FindControl<Control>(name) is not { IsVisible: true } element
+        if (window.FindControl<Control>(name) is not { IsEffectivelyVisible: true } element
             || element.Bounds.Width <= 0 || element.Bounds.Height <= 0
             || element.TranslatePoint(default, OverlayCanvas) is not { } origin)
         {

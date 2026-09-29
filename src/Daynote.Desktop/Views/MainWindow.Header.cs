@@ -21,7 +21,16 @@ public partial class MainWindow
     /// </summary>
     private const double WeekStripWidth = (7 * 48) + (6 * 4) + (2 * 28) + (2 * 4);
 
-    private void AttachHeaderWrap() => Header.SizeChanged += (_, _) => UpdateHeaderWrap();
+    /// <remarks>
+    /// Re-checked when the actions change width too (a language switch relabels them) and when the
+    /// header's padding moves with the sidebar (ApplyHeaderInset), neither of which resizes the header.
+    /// </remarks>
+    private void AttachHeaderWrap()
+    {
+        Header.SizeChanged += (_, _) => UpdateHeaderWrap();
+        HeaderActions.SizeChanged += (_, _) => UpdateHeaderWrap();
+        BigDate.SizeChanged += (_, _) => UpdateHeaderWrap();
+    }
 
     private void UpdateHeaderWrap()
     {
