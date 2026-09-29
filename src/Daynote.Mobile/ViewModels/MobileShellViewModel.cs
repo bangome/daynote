@@ -105,19 +105,26 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
     public bool HasAccount => Account is not null;
 
-    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? value)
+    partial void OnAccountChanged(Daynote.App.Account.AccountViewModel? oldValue, Daynote.App.Account.AccountViewModel? newValue)
     {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnAccountPropertyChanged;
+        }
+
         OnPropertyChanged(nameof(HasAccount));
         RefreshAccountBar();
         RefreshAccountCard();
-        if (value is not null)
+        if (newValue is not null)
         {
-            value.PropertyChanged += (_, _) =>
-            {
-                RefreshAccountBar();
-                RefreshAccountCard();
-            };
+            newValue.PropertyChanged += OnAccountPropertyChanged;
         }
+    }
+
+    private void OnAccountPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        RefreshAccountBar();
+        RefreshAccountCard();
     }
 
     private void RefreshAccountBar()
@@ -171,7 +178,30 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
     partial void OnIsAccountOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
-    partial void OnIsMonthPickerOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
+    partial void OnIsMonthPickerOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDock));
+
+        // Closed without a day picked, after browsing another month: the home header reads the
+        // calendar's month, so put it back on the selected day's.
+        if (!value && (Calendar.CursorYear != SelectedDate.Year || Calendar.CursorMonth != SelectedDate.Month))
+        {
+            _ = RunQuietlyAsync(() => Calendar.ShowSelectedAsync(SelectedDate));
+        }
+    }
+
+    /// <summary>A refresh nothing waits on: a failure is traced rather than lost with its task.</summary>
+    private static async Task RunQuietlyAsync(Func<Task> work)
+    {
+        try
+        {
+            await work().ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
+    }
 
     partial void OnPageChanged(MobilePage value)
     {
@@ -379,10 +409,13 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     }
 
     /// <summary>A day tapped in the week strip or the month sheet; the sheet has done its job.</summary>
-    private Task SelectDateFromCalendarAsync(LocalDate date)
+    private async Task SelectDateFromCalendarAsync(LocalDate date)
     {
-        IsMonthPickerOpen = false;
-        return SelectDateAsync(date);
+        // Only once the day really changed: a note that will not save keeps the day, and the sheet.
+        if (await SelectDateAsync(date).ConfigureAwait(true))
+        {
+            IsMonthPickerOpen = false;
+        }
     }
 
     // ── Year and month picker ────────────────────────────────────────────────────────────────────
@@ -657,8 +690,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(SearchResultCountText));
 
         // The weekday letters and the to-do band names are baked into their rows.
-        _ = RefreshWeekAsync();
-        _ = RefreshTodosAsync();
+        OnPropertyChanged(nameof(PickerYearText));
+        _ = RunQuietlyAsync(async () =>
+        {
+            await RefreshWeekAsync().ConfigureAwait(true);
+            await RefreshTodosAsync().ConfigureAwait(true);
+        });
 
         // The month names came from the culture, so they are wrong the moment it changes.
         PickerMonths.Clear();

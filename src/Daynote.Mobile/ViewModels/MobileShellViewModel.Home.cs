@@ -108,6 +108,12 @@ public sealed partial class MobileShellViewModel
             }
         }
 
+        // Another date was chosen while this one was reading; that call builds the strip.
+        if (LocalDates.ToDateOnly(SelectedDate) != selected)
+        {
+            return;
+        }
+
         LocalDate today = LocalDates.Today(_clock);
         string[] labels = WeekdayLabels();
         Week.Clear();

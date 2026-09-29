@@ -78,6 +78,28 @@ public sealed class MonthPickerTests
     }
 
     [TestMethod]
+    public void Closing_the_sheet_without_a_day_puts_the_header_back_on_the_selected_month()
+    {
+        TestServices.WithInitialisedShell((_, shell) =>
+        {
+            shell.OpenMonthPickerCommand.Execute(null);
+            shell.PickerPreviousYearCommand.Execute(null);
+            Pump(() => shell.PickMonthCommand.ExecuteAsync(3));
+
+            shell.CloseMonthPickerCommand.Execute(null);
+            DateTime deadline = DateTime.UtcNow.AddSeconds(20);
+            while (shell.Calendar.CursorYear != shell.SelectedDate.Year && DateTime.UtcNow < deadline)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+
+            Assert.AreEqual(shell.SelectedDate.Year, shell.Calendar.CursorYear, "The header kept the browsed year.");
+            Assert.AreEqual(shell.SelectedDate.Month, shell.Calendar.CursorMonth, "The header kept the browsed month.");
+        });
+    }
+
+    [TestMethod]
     public void The_scrim_closes_it()
     {
         TestServices.WithInitialisedShell((view, shell) =>
