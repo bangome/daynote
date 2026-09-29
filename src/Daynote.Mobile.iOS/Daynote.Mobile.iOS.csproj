@@ -13,7 +13,7 @@
     <!-- The same bundle id as the Mac app, which is allowed and is what lets one App Store listing
          carry both. The Mac build is not distributed through the store today, so nothing collides. -->
     <ApplicationId>cc.arachat.daynote</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationVersion>2</ApplicationVersion>
     <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
     <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
@@ -28,17 +28,22 @@
     -->
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
     <!--
-      Trimming off. It is not a size preference: Core and Infrastructure serialize the sync payloads,
-      the auth DTOs and the backup manifest with reflection-based System.Text.Json, and the trimmer
-      cannot see those types, so a trimmed build would compile and then fail at runtime the first
-      time a note synced. The proper fix is a JsonSerializerContext over those payloads, which is
-      shared code the desktop also uses and so is its own change; until then the phone app ships
-      untrimmed, exactly as every other Daynote does.
+      Partial trimming, as on Android: only assemblies that opt in with IsTrimmable are trimmed. The
+      framework does, this app's do not, so the sync payloads that Core and Infrastructure serialize
+      with reflection-based System.Text.Json survive whole.
 
-      The iOS SDK refuses PublishTrimmed=false outright (it needs the trimmer in the pipeline for
-      AOT), so the switch here is MtouchLink=None: the trimmer runs and keeps every assembly whole.
+      It used to be MtouchLink=None, which kept every framework binding - and App Store Connect then
+      refused the build (ITMS-90683) for missing purpose strings for the microphone, contacts,
+      calendars, location, Bluetooth, Siri and Apple Music, none of which Daynote touches. Trimming
+      the SDK removes those references instead of papering over them with descriptions of features
+      the app does not have. The real fix for the payloads is still a JsonSerializerContext.
     -->
-    <MtouchLink>None</MtouchLink>
+    <TrimMode>partial</TrimMode>
+    <!-- The analyzer flags exactly the reflection-based JSON that partial mode leaves untrimmed, and
+         the repo builds with warnings as errors; keep reflection serialization switched on, since a
+         trimmed publish otherwise turns it off by default and the first sync would throw. -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!--
       Clears the repo-wide RuntimeIdentifiers (Directory.Build.props), which exists only to keep the
