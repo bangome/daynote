@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:account="clr-namespace:Daynote.App.Account"
+    xmlns:pacct="clr-namespace:Daynote.App.Account;assembly=Daynote.Presentation"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -175,6 +176,108 @@
                         AutomationProperties.Name="{Binding CheckoutLabel}" />
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,10,0,0"
                            TextAlignment="Center" Text="{loc:Tr BillingProviderNote}" />
+            </StackPanel>
+        </Border>
+
+        <!--
+          The plan table: what the two plans are, side by side, as the design draws it. Only one row
+          differs, and that is the honest shape of this product — signing in syncs notes for nothing
+          and the subscription is for images and files. Shown to a paid account too, where the Pro
+          column says "current plan" instead of offering to sell it.
+
+          Each of the header, the rows and the footer is its own grid — an ItemsControl cannot lay its
+          items out as one table — so the two plan columns are a fixed width and the label column
+          takes the rest. That is what makes the three line up.
+        -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Margin="0,0,0,12"
+                           Text="{loc:Tr PlanTableTitle}" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="1" Padding="12,10">
+                        <StackPanel>
+                            <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center" Text="{loc:Tr PlanFreeName}" />
+                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0"
+                                       Text="{loc:Tr PlanFreePrice}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" FontSize="11"
+                                       TextAlignment="Center" Margin="0,2,0,0" Text="{loc:Tr PlanFreeNote}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Padding="12,10" CornerRadius="12,12,0,0"
+                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
+                        <StackPanel>
+                            <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{loc:Tr PlanProName}" />
+                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0"
+                                       Text="{Binding PriceMain}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" FontSize="11"
+                                       TextAlignment="Center" Margin="0,2,0,0" Text="{loc:Tr PlanProNote}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding PlanRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pacct:PlanComparisonRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="120" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" FontSize="12.5" TextWrapping="Wrap" Margin="0,11" VerticalAlignment="Center"
+                                           Text="{Binding Label}" />
+                                <Border Grid.Column="1" BorderThickness="0,1,0,0"
+                                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
+                                    <Grid>
+                                        <Path Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Data="{DynamicResource Daynote.Desk.Geo.Check}" Fill="{x:Null}"
+                                              Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                              Visibility="{Binding InFree, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        <Border Width="10" Height="1.5" CornerRadius="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Background="{DynamicResource Daynote.Desk.Brush.Text3}"
+                                                Visibility="{Binding NotInFree, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    </Grid>
+                                </Border>
+                                <Border Grid.Column="2" BorderThickness="0,1,0,0"
+                                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
+                                        Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
+                                    <Path Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Data="{DynamicResource Daynote.Desk.Geo.Check}" Fill="{x:Null}"
+                                          Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="2" Padding="10,10,10,12" CornerRadius="0,0,12,12"
+                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
+                        <Grid>
+                            <Button HorizontalAlignment="Center" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                    Command="{Binding CheckoutSelectedCommand}" Content="{loc:Tr BillingSubscribe}"
+                                    AutomationProperties.Name="{loc:Tr BillingSubscribe}"
+                                    Visibility="{Binding ShowUpgrade, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                            <TextBlock FontSize="11.5" FontWeight="ExtraBold" TextAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{loc:Tr PlanCurrent}"
+                                       Visibility="{Binding IsPlanPaid, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </StackPanel>
         </Border>
 

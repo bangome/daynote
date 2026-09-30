@@ -101,6 +101,11 @@ public sealed partial class StringCatalogTests
             nameof(AppStrings.AccountPlanPro),
             nameof(AppStrings.AccountAvatarTooltipFormat),
             nameof(AppStrings.AccountPrivacyUrl),
+
+            // The plan table prices in won in both languages, because the subscription is sold in
+            // won in both; and the paid plan is called Pro wherever it is named.
+            nameof(AppStrings.PlanFreePrice),
+            nameof(AppStrings.PlanProName),
         };
 
         string[] untranslated = [.. korean

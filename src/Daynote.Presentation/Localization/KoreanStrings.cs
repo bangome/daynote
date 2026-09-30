@@ -583,6 +583,23 @@ internal static class KoreanStrings
         ["BillingPriceUnitAnnual"] = "/ 년",
         ["BillingPriceSubMonthly"] = "매월 자동 결제 · 언제든 해지",
         ["BillingPriceSubAnnual"] = "월 2,000원 상당 · 연 1회 결제",
+        // The plan table (Daynote Desktop B): what the two plans are, side by side. Every row
+        // is something stated elsewhere already — the sync blurb, what signing in buys, the
+        // server's own attachment quota — because a comparison that promises what the product
+        // does not do is worse than no comparison.
+        ["PlanTableTitle"] = "요금제",
+        ["PlanFreeName"] = "무료",
+        ["PlanFreePrice"] = "₩0",
+        ["PlanFreeNote"] = "계속 무료",
+        ["PlanProName"] = "Pro",
+        ["PlanProNote"] = "연간",
+        ["PlanCurrent"] = "현재 플랜",
+        ["PlanCompare"] = "요금제 비교",
+        ["PlanRowNotes"] = "노트·할 일 동기화",
+        ["PlanRowDevices"] = "기기 간 동기화",
+        ["PlanRowLock"] = "노트 잠금",
+        ["PlanRowExport"] = "언제든 내보내기",
+        ["PlanRowFiles"] = "이미지·파일 동기화 (2GB)",
         ["BillingAnnualSaving"] = "31% 절약",
         ["BillingFeatureSync"] = "이미지·파일까지 모든 기기 간 동기화",
         ["BillingFeatureQuota"] = "첨부 파일 클라우드 보관",

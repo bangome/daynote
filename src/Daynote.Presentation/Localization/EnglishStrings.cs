@@ -594,6 +594,23 @@ internal static class EnglishStrings
         ["BillingPriceUnitAnnual"] = "/ year",
         ["BillingPriceSubMonthly"] = "Billed monthly · cancel anytime",
         ["BillingPriceSubAnnual"] = "About $1.67 a month · billed once a year",
+        // The plan table (Daynote Desktop B): what the two plans are, side by side. Every row
+        // is something stated elsewhere already — the sync blurb, what signing in buys, the
+        // server's own attachment quota — because a comparison that promises what the product
+        // does not do is worse than no comparison.
+        ["PlanTableTitle"] = "Plans",
+        ["PlanFreeName"] = "Free",
+        ["PlanFreePrice"] = "₩0",
+        ["PlanFreeNote"] = "Always free",
+        ["PlanProName"] = "Pro",
+        ["PlanProNote"] = "Annual",
+        ["PlanCurrent"] = "Current plan",
+        ["PlanCompare"] = "Compare plans",
+        ["PlanRowNotes"] = "Note and to-do sync",
+        ["PlanRowDevices"] = "Sync across devices",
+        ["PlanRowLock"] = "Note lock",
+        ["PlanRowExport"] = "Export any time",
+        ["PlanRowFiles"] = "Image and file sync (2GB)",
         ["BillingAnnualSaving"] = "Save 33%",
         ["BillingFeatureSync"] = "Images and files synced across all your devices",
         ["BillingFeatureQuota"] = "Attachments kept in the cloud",

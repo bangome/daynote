@@ -79,6 +79,9 @@ public sealed partial class AccountViewModel
     /// <summary>True only for a paid, healthy subscription — the one state whose pill is filled.</summary>
     public bool IsPlanPaid => Entitlement.State == EntitlementState.Active;
 
+    /// <summary>The plan table's rows. Fixed copy, so the list itself never changes.</summary>
+    public static IReadOnlyList<PlanComparisonRow> PlanRows => PlanComparison.Rows;
+
     /// <summary>True when the pill should read as something to look at rather than a plain fact.</summary>
     public bool IsPlanAttention => Entitlement.State == EntitlementState.Grace;
 

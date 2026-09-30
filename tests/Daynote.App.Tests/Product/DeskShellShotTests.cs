@@ -148,6 +148,18 @@ public sealed class DeskShellShotTests
         settings.Section = section;
 
         Render(new SettingsView { DataContext = settings }, 900, 660, Path.Combine(directory, $"settings-{name}.png"));
+
+        // The account view on its own and tall enough to reach the plan table, which the dialog
+        // only shows a scrollbar's worth of.
+        if (section == SettingsSection.Account)
+        {
+            Render(
+                new Daynote.App.Account.AccountDetailsView { DataContext = account },
+                620,
+                1500,
+                Path.Combine(directory, "account-detail.png"));
+        }
+
         application.Resources.MergedDictionaries.Clear();
     }
 
