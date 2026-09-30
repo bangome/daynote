@@ -331,8 +331,12 @@
                             <!-- ═ 계정 ═ -->
                             <StackPanel Visibility="{Binding IsAccountSection, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
                                 <TextBlock Style="{DynamicResource Daynote.Desk.Text.H1}" Margin="0,0,0,18" Text="{loc:Tr DeskSettingsAccount}" />
-                                <account:AccountSection DataContext="{Binding Account}"
-                                                        Visibility="{Binding Account, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+                                <Grid DataContext="{Binding Account}">
+                                    <account:AccountSignInView
+                                        Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    <account:AccountDetailsView
+                                        Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                </Grid>
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>

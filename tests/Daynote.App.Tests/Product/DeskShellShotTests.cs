@@ -99,6 +99,7 @@ public sealed class DeskShellShotTests
     [DataRow(false, SettingsSection.General, "general-light", DisplayName = "settings, general")]
     [DataRow(false, SettingsSection.Shortcuts, "shortcuts-light", DisplayName = "settings, shortcuts")]
     [DataRow(true, SettingsSection.Data, "data-dark", DisplayName = "settings, data")]
+    [DataRow(false, SettingsSection.Account, "account-light", DisplayName = "settings, account")]
     public void Settings_renders(bool dark, SettingsSection section, string name)
     {
         if (Environment.GetEnvironmentVariable("DAYNOTE_SHELL_SHOTS") != "1")
@@ -110,6 +111,18 @@ public sealed class DeskShellShotTests
         Application application = ProductWindowCompositionTests.EnsureApplicationResources(dark);
         var store = new Lifecycle.InMemorySettingsStore();
         var shortcuts = new Daynote.App.Input.ConfigurableShortcuts(store);
+
+        // The account page is the one that needs a signed-in account to show anything.
+        var accounts = new Tests.Account.FakeAccounts { Email = "jiwon@example.test" };
+        var account = new Daynote.App.Account.AccountViewModel(
+            accounts.Service,
+            accounts.Store,
+            () => ValueTask.FromResult(Daynote.Core.Sync.SyncReport.For(Daynote.Core.Sync.SyncOutcome.Completed)),
+            new Tests.Account.AccountViewModelTests.FakeExporter(),
+            _ => { },
+            @"C:\conflicts");
+        Run(account.SignInCommand.ExecuteAsync(null));
+
         var settings = new SettingsViewModel(
             new Lifecycle.FakeStartupTaskService(Daynote.Core.Startup.StartupTaskState.Disabled),
             new Lifecycle.RecordingHotkeyService(),
@@ -120,7 +133,10 @@ public sealed class DeskShellShotTests
             () => Task.FromResult(true),
             () => { },
             () => { },
-            @"C:\\Users\\Test\\AppData\\Local\\Daynote");
+            @"C:\\Users\\Test\\AppData\\Local\\Daynote")
+        {
+            Account = account,
+        };
         Run(settings.LoadAsync());
         settings.Section = section;
 

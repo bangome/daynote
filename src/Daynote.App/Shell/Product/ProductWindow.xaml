@@ -229,13 +229,28 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Desk.Text.H1}" Text="{loc:Tr AccountWindowTitle}" />
+                        <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Desk.Text.H1}" Text="{loc:Tr AccountSignInTitle}"
+                                   Visibility="{Binding Account.IsSignedOut, FallbackValue=Collapsed,
+                                                        Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                        <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Desk.Text.H1}" Text="{loc:Tr AccountWindowTitle}"
+                                   Visibility="{Binding Account.IsSignedIn, FallbackValue=Collapsed,
+                                                        Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                         <Button Grid.Column="1" Style="{DynamicResource Daynote.Desk.Button.GhostSmall}"
                                 Command="{Binding CloseAccountCommand}" AutomationProperties.Name="{loc:Tr CloseSettings}">
                             <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Close}" />
                         </Button>
                     </Grid>
-                    <account:AccountSection Grid.Row="1" DataContext="{Binding Account}" />
+                    <!-- The account itself: signing in, the subscription, the note lock. It used to be
+                         a summary row with a button that opened another window; the card is the place
+                         for it now, so the window is only what the titlebar menu still opens. -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" DataContext="{Binding Account}">
+                        <Grid>
+                            <account:AccountSignInView
+                                Visibility="{Binding IsSignedOut, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                            <account:AccountDetailsView
+                                Visibility="{Binding IsSignedIn, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                        </Grid>
+                    </ScrollViewer>
                 </Grid>
             </Border>
         </Border>
