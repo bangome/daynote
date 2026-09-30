@@ -92,6 +92,12 @@ public sealed class EditorHighlightScrollTests
         Application application = Application.Current ?? new Application();
         application.Resources.MergedDictionaries.Clear();
         ShowcaseResources.Load(application, highContrast: false);
+
+        // The aggregate above is the pre-v3 foundation; the editor's own metrics — its face, its
+        // padding, its zero border — live in the product and design-B layers the applier merges.
+        // Without them the box falls back to the system TextBox, whose 1px border makes its
+        // viewport two pixels shorter than the glyph layer's and the two scroll apart.
+        new Daynote.App.Shell.Product.WpfProductThemeApplier(application, highContrast: false).Apply(dark: false);
         application.Resources["Daynote.Convert.BoolToVisibility"] = new BooleanToVisibilityConverter();
         application.Resources["Daynote.Convert.InverseBool"] = new Daynote.App.Shell.InverseBooleanConverter();
         application.Resources["Daynote.Convert.InverseBoolToVisibility"] = new Daynote.App.Shell.InverseBoolToVisibilityConverter();

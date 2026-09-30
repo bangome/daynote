@@ -106,16 +106,11 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
 
     private ProductShellViewModel? Shell => DataContext as ProductShellViewModel;
 
-    private void OnBodyTextChanged(object sender, TextChangedEventArgs e)
-    {
-        string text = BodyBox.Text;
-        RebuildHighlight(text);
-        MetaLeft.Text = string.Format(
-            CultureInfo.CurrentCulture,
-            Localization.AppStrings.NoteMetaFormat,
-            text.Length,
-            text.Length == 0 ? 1 : text.Count(c => c == '\n') + 1);
-    }
+    /// <summary>
+    /// The highlight layer redraws with the body. The character and line count beside it is the
+    /// shell's CharLineText, bound in the markup, so it is counted once for both Windows shells.
+    /// </summary>
+    private void OnBodyTextChanged(object sender, TextChangedEventArgs e) => RebuildHighlight(BodyBox.Text);
 
     private void RebuildHighlight(string text)
     {

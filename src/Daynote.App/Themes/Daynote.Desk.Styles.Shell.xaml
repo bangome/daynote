@@ -341,7 +341,20 @@
       stated here once for both, because the editor draws its text in nothing and the caret has to
       land on the layer's glyphs. 15.5px at a 1.9 line height, as the design sets it.
     -->
-    <Style x:Key="Daynote.Desk.TextBox.Editor" TargetType="TextBox" BasedOn="{StaticResource Daynote.Desk.TextBox.Bare}">
+    <!--
+      The editor keeps WPF's own TextBox template rather than the bare one above. The highlight layer
+      is aligned to the inner TextBoxView's margin (EditorCardView.TextViewGutter), and a replacement
+      template moves that view: the two layers then wrap and scroll a couple of pixels apart, which
+      reads as typing landing on the wrong line. EditorHighlightScrollTests measures it.
+    -->
+    <Style x:Key="Daynote.Desk.TextBox.Editor" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionBg}" />
+        <Setter Property="SelectionOpacity" Value="1" />
         <Setter Property="FontSize" Value="15.5" />
         <Setter Property="AcceptsReturn" Value="True" />
         <Setter Property="TextWrapping" Value="Wrap" />
@@ -353,6 +366,10 @@
     </Style>
 
     <Style x:Key="Daynote.Desk.Text.EditorHighlight" TargetType="TextBlock">
+        <!-- The face is stated here rather than inherited. The caret belongs to the box above and
+             the glyphs to this layer, so a face that differs by one metric drifts the two apart;
+             inheritance would make that depend on whatever happens to be above them. -->
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
         <Setter Property="FontSize" Value="15.5" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Padding" Value="0" />

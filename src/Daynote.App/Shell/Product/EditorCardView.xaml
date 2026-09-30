@@ -2,51 +2,92 @@
     x:Class="Daynote.App.Shell.Product.EditorCardView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:notes="clr-namespace:Daynote.App.Notes;assembly=Daynote.Presentation"
+    xmlns:product="clr-namespace:Daynote.App.Shell.Product"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
-    <Border Style="{DynamicResource Daynote.Product.Style.Card}">
-        <Grid>
-            <!-- Panel collapse/expand lives in the titlebar's right icon cluster (ProductWindow) as a
-                 single both-sidebars toggle; the card carries no toggle affordance of its own. -->
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance product:ProductShellViewModel}">
 
-            <!-- Empty state: no note selected -->
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Vertical"
-                        Visibility="{Binding HasOpenNote, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
-                <Path Data="{DynamicResource Daynote.Product.Geo.DocGlyph}" Width="44" Height="44" Stretch="Uniform"
-                      Stroke="{DynamicResource Daynote.Product.Brush.Text2}" StrokeThickness="1.3" Opacity="0.5"
-                      HorizontalAlignment="Center" Margin="0,0,0,10" />
-                <TextBlock Text="{loc:Tr NoNoteSelected}" FontSize="13"
-                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" HorizontalAlignment="Center" />
-                <Button HorizontalAlignment="Center" Margin="0,14,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
-                        Command="{Binding NewNoteCommand}" AutomationProperties.Name="{loc:Tr NewNote}">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Width="10" Height="10" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Plus}"
-                              Stroke="{DynamicResource Daynote.Product.Brush.OnAccent}" StrokeThickness="1.6" VerticalAlignment="Center" />
-                        <TextBlock Text="{loc:Tr NewNote}" Margin="5,0,0,0" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+    <!--
+      The note, as design B draws it: the day's notes as tabs along the top, then a 760px column
+      holding the heading, the date and tags, the body, and the save footer. No card of its own any
+      more — the page is the surface, and the header above supplies the frame.
+    -->
 
-            <!-- Editor: a note is selected -->
-            <Grid Visibility="{Binding HasOpenNote, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-                <!-- Selected date, small and centered above the note -->
-                <TextBlock Grid.Row="0" Text="{Binding DayLabel}" FontSize="11" HorizontalAlignment="Center"
-                           Margin="22,12,22,0" Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
-                           AutomationProperties.Name="{Binding DayLabel}" />
+        <!-- The day's notes as tabs, the selected one underlined in sun. Right-click a tab to
+             rename, copy or delete it; Delete on a focused tab deletes it. -->
+        <Border Grid.Row="0" Padding="28,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal">
+                    <ItemsControl ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type notes:NoteTabViewModel}">
+                                <!-- A projection (the blank note of an empty day) is not a note yet, so it
+                                     gets no tab; the empty-day state stands in for it. -->
+                                <Button Style="{DynamicResource Daynote.Desk.Button.NoteTab}" Margin="0,0,2,0"
+                                        Visibility="{Binding IsProjection, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}"
+                                        Command="{Binding DataContext.SelectDayNoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.InputBindings>
+                                        <KeyBinding Key="Delete" CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.DeleteDayNoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                    </Button.InputBindings>
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{loc:Tr NoteMenuRename}"
+                                                      Command="{Binding PlacementTarget.DataContext.RenameDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="{loc:Tr NoteMenuDuplicate}"
+                                                      Command="{Binding PlacementTarget.DataContext.DuplicateDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                            <Separator />
+                                            <MenuItem Header="{loc:Tr NoteMenuDelete}"
+                                                      Command="{Binding PlacementTarget.DataContext.DeleteDayNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"
+                                              Data="{DynamicResource Daynote.Desk.Geo.Star}"
+                                              Fill="{DynamicResource Daynote.Desk.Brush.Sun}" Stroke="{x:Null}"
+                                              Visibility="{Binding IsFavorite, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Style="{DynamicResource Daynote.Desk.Button.GhostSmall}" Margin="4,0,0,6" VerticalAlignment="Bottom"
+                            Command="{Binding NewNoteCommand}" ToolTip="{loc:Tr NewNote}"
+                            AutomationProperties.Name="{loc:Tr NewNote}">
+                        <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Plus}" />
+                    </Button>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
 
-                <!-- Title + new note + favorite + post-it + delete -->
-                <Grid Grid.Row="1" Margin="22,4,22,0">
+        <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->
+        <Grid Grid.Row="1" MaxWidth="760"
+              Visibility="{Binding IsDayEmpty, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="48,35,48,0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -54,93 +95,75 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+
                     <!--
                       A heading until it is double-clicked. It was always editable, so a stray click
-                      in the heading put a caret there; editing is now a deliberate gesture — double
-                      click, or Rename on a row's context menu — and the same one the Avalonia shell
-                      uses. The control does not change, only its read-only state, so nothing shifts.
+                      in the heading put a caret there; editing is a deliberate gesture — double
+                      click, or Rename on a tab's context menu. The control does not change, only
+                      its read-only state, so nothing shifts.
                     -->
-                    <TextBox x:Name="TitleBox" Grid.Column="0" IsReadOnly="True"
-                             Style="{DynamicResource Daynote.Product.Style.PlainTextBox}"
-                             FontSize="{DynamicResource Daynote.Product.Type.Title}" FontWeight="SemiBold"
+                    <TextBox x:Name="TitleBox" Grid.Column="0" IsReadOnly="True" Margin="0,0,8,0"
+                             Style="{DynamicResource Daynote.Desk.TextBox.Title}" VerticalAlignment="Center"
                              Text="{Binding Notes.SelectedTab.Title, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                             MouseDoubleClick="OnTitleDoubleClick"
-                             LostFocus="OnTitleLostFocus"
-                             AutomationProperties.Name="{loc:Tr TitlePlaceholder}" />
-                    <Button Grid.Column="1" Width="30" Height="30" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                            Command="{Binding NewNoteCommand}" ToolTip="{loc:Tr NewNote}"
-                            AutomationProperties.Name="{loc:Tr NewNote}">
-                        <Path Width="12" Height="12" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Plus}"
-                              Style="{DynamicResource Daynote.Product.Style.Icon.Stroked}" StrokeThickness="1.4" />
+                             MouseDoubleClick="OnTitleDoubleClick" LostFocus="OnTitleLostFocus"
+                             AutomationProperties.Name="{loc:Tr DeskTitlePlaceholder}" />
+
+                    <Button Grid.Column="1" Style="{DynamicResource Daynote.Desk.Button.Quiet}" Margin="0,0,6,0"
+                            VerticalAlignment="Center" Content="{loc:Tr RetrySave}" Command="{Binding Notes.RetryCommand}"
+                            Visibility="{Binding Notes.HasSaveError, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <Button Grid.Column="2" Style="{DynamicResource Daynote.Desk.Button.Ghost}"
+                            Command="{Binding ToggleFavoriteCommand}" IsEnabled="{Binding HasOpenNote}"
+                            ToolTip="{loc:Tr Favorite}" AutomationProperties.Name="{loc:Tr Favorite}">
+                        <Path Width="17" Height="17" Style="{DynamicResource Daynote.Desk.Style.Star}"
+                              product:DeskVisual.IsActive="{Binding Notes.SelectedTab.IsFavorite, FallbackValue=False}"
+                              Data="{DynamicResource Daynote.Desk.Geo.Star}" />
                     </Button>
-                    <Button Grid.Column="2" Width="30" Height="30" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                            Command="{Binding ToggleFavoriteCommand}" ToolTip="{loc:Tr Favorite}"
-                            AutomationProperties.Name="{loc:Tr Favorite}">
-                        <Path Width="15" Height="15" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Star}"
-                              StrokeThickness="1">
-                            <Path.Style>
-                                <Style TargetType="Path">
-                                    <Setter Property="Fill" Value="{x:Null}" />
-                                    <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Notes.SelectedTab.IsFavorite}" Value="True">
-                                            <Setter Property="Fill" Value="{DynamicResource Daynote.Product.Brush.Extras}" />
-                                            <Setter Property="Stroke" Value="{DynamicResource Daynote.Product.Brush.Extras}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Path.Style>
-                        </Path>
+                    <Button Grid.Column="3" Style="{DynamicResource Daynote.Desk.Button.Ghost}"
+                            Click="OnOpenStickyNote" IsEnabled="{Binding HasOpenNote}"
+                            ToolTip="{Binding StickyTip}" AutomationProperties.Name="{loc:Tr OpenStickyNote}">
+                        <Path Width="15" Height="15" Stretch="Uniform" Style="{DynamicResource Daynote.Desk.Style.Icon}"
+                              StrokeThickness="1.3" Data="{DynamicResource Daynote.Desk.Geo.PostIt}" />
                     </Button>
-                    <Button Grid.Column="3" Width="30" Height="30" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                            Click="OnOpenStickyNote" ToolTip="{loc:Tr OpenStickyNote}"
-                            AutomationProperties.Name="{loc:Tr OpenStickyNote}">
-                        <Path Width="16" Height="16" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.StickyNote}"
-                              Style="{DynamicResource Daynote.Product.Style.Icon.Stroked}" StrokeThickness="1.2" />
-                    </Button>
-                    <Button Grid.Column="4" Width="30" Height="30" Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                            Command="{Binding DeleteSelectedNoteCommand}" ToolTip="{loc:Tr DeleteNoteTip}"
-                            AutomationProperties.Name="{loc:Tr DeleteNoteTip}">
-                        <Path Width="14" Height="14" Stretch="Uniform" Data="{DynamicResource Daynote.Product.Geo.Trash}"
-                              Style="{DynamicResource Daynote.Product.Style.Icon.Stroked}" StrokeThickness="1.2" />
+                    <Button Grid.Column="4" Style="{DynamicResource Daynote.Desk.Button.GhostDanger}"
+                            Command="{Binding DeleteSelectedNoteCommand}" IsEnabled="{Binding HasOpenNote}"
+                            ToolTip="{loc:Tr DeleteNoteTip}" AutomationProperties.Name="{loc:Tr DeleteNoteTip}">
+                        <Path Width="15" Height="15" Stretch="Uniform" Style="{DynamicResource Daynote.Desk.Style.Icon}"
+                              StrokeThickness="1.2" Data="{DynamicResource Daynote.Desk.Geo.Trash}" />
                     </Button>
                 </Grid>
 
-                <!-- Tag chips + inline add: the "+ 태그" input flows right after the last chip (design row) -->
-                <WrapPanel Grid.Row="2" Margin="22,8,22,10" Orientation="Horizontal">
-                    <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags}">
+                <!-- Meta: the date, the tags (sun ink, a cross to remove), the entry for another. -->
+                <WrapPanel Orientation="Horizontal" Margin="0,12,0,20">
+                    <TextBlock Style="{DynamicResource Daynote.Desk.Text.Muted}" FontSize="12.5" Margin="0,0,14,0"
+                               VerticalAlignment="Center" Text="{Binding NoteDateText}" />
+                    <ItemsControl ItemsSource="{Binding Notes.SelectedTab.Tags}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource Daynote.Product.Brush.AccentSoft}"
-                                        CornerRadius="{DynamicResource Daynote.Product.Radius.Chip}" Padding="9,2" Margin="0,0,6,0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Accent}">
-                                            <Run Text="#" /><Run Text="{Binding Mode=OneWay}" />
-                                        </TextBlock>
-                                        <Button Margin="5,0,0,0" Padding="0" Content="✕" FontSize="12"
-                                                Foreground="{DynamicResource Daynote.Product.Brush.Accent}"
-                                                Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                                                Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding Mode=OneWay}" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                                    <TextBlock FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}">
+                                        <Run Text="#" /><Run Text="{Binding Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Button Style="{DynamicResource Daynote.Desk.Button.TagX}" Margin="4,0,0,0" VerticalAlignment="Center"
+                                            Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Mode=OneWay}">
+                                        <Path Width="8" Height="8" Stretch="Uniform"
+                                              Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Close}" />
+                                    </Button>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Grid VerticalAlignment="Center">
-                        <TextBox x:Name="TagInputBox" Width="80"
-                                 Style="{DynamicResource Daynote.Product.Style.PlainTextBox}" FontSize="11"
-                                 Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                        <TextBox x:Name="TagInputBox" Style="{DynamicResource Daynote.Desk.TextBox.TagEntry}"
                                  Text="{Binding TagInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 KeyDown="OnTagKeyDown"
-                                 AutomationProperties.Name="{loc:Tr TagAddPlaceholder}" />
-                        <!-- Watermark: WPF TextBox renders no placeholder, so without this the tag entry is invisible -->
-                        <TextBlock Text="{loc:Tr TagAddPlaceholder}" FontSize="11"
-                                   Foreground="{DynamicResource Daynote.Product.Brush.Text2}" Margin="2,0,0,0"
-                                   VerticalAlignment="Center" IsHitTestVisible="False">
+                                 KeyDown="OnTagKeyDown" AutomationProperties.Name="{loc:Tr TagAddPlaceholder}" />
+                        <!-- WPF renders no placeholder, so without this the tag entry is invisible. -->
+                        <TextBlock Text="{loc:Tr TagAddPlaceholder}" FontSize="12.5" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Daynote.Desk.Brush.Text3}" IsHitTestVisible="False">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -158,49 +181,51 @@
                         </TextBlock>
                     </Grid>
                 </WrapPanel>
+            </StackPanel>
 
-                <!-- Divider -->
-                <Border Grid.Row="3" Height="1" Margin="22,0" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
-
-                <!-- Body: highlight layer under a transparent-foreground editor -->
-                <Grid Grid.Row="4">
-                    <ScrollViewer x:Name="HighlightScroll" VerticalScrollBarVisibility="Hidden"
-                                  HorizontalScrollBarVisibility="Disabled" IsHitTestVisible="False" Focusable="False">
-                        <!-- Padding is overwritten on load with the editor's padding plus the
-                             TextBoxView gutter; see EditorCardView.OnEditorLoaded. This value only
-                             covers the frames before then and the design-time preview. -->
-                        <TextBlock x:Name="Highlight" TextWrapping="Wrap" Padding="18,12"
-                                   FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                                   FontSize="{DynamicResource Daynote.Product.Type.Editor}"
-                                   Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
-                    </ScrollViewer>
-                    <!-- SelectionOpacity 1 with a SelectionTextBrush, for the reason given in the
-                         Avalonia styles: the glyphs under the selection belong to the layer below,
-                         so the selection has to draw its own or the text vanishes beneath it. The
-                         default 0.4 wash leaves the coloured text showing through muddily instead. -->
-                    <TextBox x:Name="BodyBox" Background="Transparent" Foreground="Transparent" BorderThickness="0"
-                             SelectionBrush="{DynamicResource Daynote.Product.Brush.SelectionBg}"
-                             SelectionTextBrush="{DynamicResource Daynote.Product.Brush.SelectionText}"
-                             SelectionOpacity="1"
-                             CaretBrush="{DynamicResource Daynote.Product.Brush.Text}" Padding="22,14"
-                             FontFamily="{DynamicResource Daynote.Product.Font.Mono}"
-                             FontSize="{DynamicResource Daynote.Product.Type.Editor}"
-                             TextWrapping="Wrap" AcceptsReturn="True" AcceptsTab="True" SpellCheck.IsEnabled="False"
-                             VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
-                             VerticalContentAlignment="Top"
-                             Text="{Binding Notes.EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             TextChanged="OnBodyTextChanged"
-                             AutomationProperties.Name="{loc:Tr MarkdownEditor}" />
-                </Grid>
-
-                <!-- Footer meta (v3: hairline top border) -->
-                <Border Grid.Row="5" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
-                    <Grid Margin="22,8">
-                        <TextBlock x:Name="MetaLeft" HorizontalAlignment="Left" FontSize="11"
-                                   Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
-                    </Grid>
-                </Border>
+            <!--
+              The body: a highlight layer with the editor over it, the editor's own text drawn in
+              nothing so the caret sits over the coloured glyphs. WPF's TextBox has no inline
+              formatting, so marking up what the app understood — checkboxes, due dates, #tags,
+              links — means a second layer drawing the same string with the same metrics.
+            -->
+            <Grid Grid.Row="1" Margin="48,0">
+                <ScrollViewer x:Name="HighlightScroll" VerticalScrollBarVisibility="Hidden"
+                              HorizontalScrollBarVisibility="Disabled" IsHitTestVisible="False" Focusable="False">
+                    <!-- Padding is overwritten on load with the editor's padding plus the TextBoxView
+                         gutter; see EditorCardView.OnEditorLoaded. This value only covers the frames
+                         before then and the design-time preview. -->
+                    <TextBlock x:Name="Highlight" Style="{DynamicResource Daynote.Desk.Text.EditorHighlight}"
+                               Padding="0,0,0,40" Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
+                </ScrollViewer>
+                <TextBox x:Name="BodyBox" Style="{DynamicResource Daynote.Desk.TextBox.Editor}" Padding="0,0,0,40"
+                         AcceptsTab="True" SpellCheck.IsEnabled="False"
+                         VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
+                         Text="{Binding Notes.EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         TextChanged="OnBodyTextChanged" AutomationProperties.Name="{loc:Tr MarkdownEditor}" />
             </Grid>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="48,10,48,14">
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Fill="{DynamicResource Daynote.Desk.Brush.Saved}"
+                         Visibility="{Binding IsSaveSettled, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Fill="{DynamicResource Daynote.Desk.Brush.Text3}"
+                         Visibility="{Binding IsSaveSettled, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11.5" Margin="6,0,12,0"
+                           VerticalAlignment="Center" Text="{Binding SaveFooterText}" />
+                <TextBlock x:Name="MetaLeft" Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11.5"
+                           VerticalAlignment="Center" Text="{Binding CharLineText}" />
+            </StackPanel>
         </Grid>
-    </Border>
+
+        <!-- An empty day: say so, and offer the one thing to do about it. -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding IsDayEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <TextBlock FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Text="{loc:Tr DeskEmptyDayTitle}" />
+            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Muted}" FontSize="13" Margin="0,10,0,0"
+                       HorizontalAlignment="Center" Text="{loc:Tr DeskEmptyDayBody}" />
+            <Button Style="{DynamicResource Daynote.Desk.Button.Accent}" Height="38" Padding="18,0" Margin="0,18,0,0"
+                    product:DeskVisual.CornerRadius="10" HorizontalAlignment="Center"
+                    Command="{Binding NewNoteCommand}" Content="{Binding EmptyDayButtonText}" />
+        </StackPanel>
+    </Grid>
 </UserControl>
