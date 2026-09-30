@@ -1,0 +1,76 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Daynote.App.Shell.Product;
+using Daynote.App.Tests.Workspace;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Application = System.Windows.Application;
+
+namespace Daynote.App.Tests.Product;
+
+/// <summary>
+/// Renders the product window to a PNG, light and dark, so the design can be looked at.
+/// </summary>
+/// <remarks>
+/// Off by default: it writes files and is here to be read by a person, not to assert. Run it with
+/// <c>DAYNOTE_SHELL_SHOTS=1</c>, and <c>DAYNOTE_SHELL_SHOTS_DIR</c> to say where.
+/// </remarks>
+[TestClass]
+public sealed class DeskShellShotTests
+{
+    [STATestMethod]
+    [DataRow(false, "light", DisplayName = "light")]
+    [DataRow(true, "dark", DisplayName = "dark")]
+    public void Shell_renders(bool dark, string name)
+    {
+        if (Environment.GetEnvironmentVariable("DAYNOTE_SHELL_SHOTS") != "1")
+        {
+            Assert.Inconclusive("Shell shots are rendered on request: set DAYNOTE_SHELL_SHOTS=1.");
+        }
+
+        string directory = Environment.GetEnvironmentVariable("DAYNOTE_SHELL_SHOTS_DIR")
+            ?? Path.Combine(Path.GetTempPath(), "daynote-shell-shots");
+        Directory.CreateDirectory(directory);
+
+        Application application = ProductWindowCompositionTests.EnsureApplicationResources(dark);
+        WorkspaceTestContext context = WorkspaceTestContext.Create();
+        WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
+        try
+        {
+            harness.Shell.InitializeAsync().GetAwaiter().GetResult();
+            harness.Shell.IsDark = dark;
+
+            var window = new ProductWindow(harness.Shell);
+            var content = (System.Windows.Controls.Grid)window.Content;
+
+            // RenderTargetBitmap draws the content, not the window behind it, and the design's page
+            // colour lives on the window. Without this the page comes out transparent and every
+            // unbacked surface reads as washed-out in the file.
+            content.SetResourceReference(
+                System.Windows.Controls.Panel.BackgroundProperty, "Daynote.Product.Brush.Bg1");
+            content.Measure(new Size(1240, 800));
+            content.Arrange(new Rect(0, 0, 1240, 800));
+            content.UpdateLayout();
+
+            var target = new RenderTargetBitmap(1240, 800, 96, 96, PixelFormats.Pbgra32);
+            target.Render(content);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(target));
+            string path = Path.Combine(directory, $"shell-{name}.png");
+            using (FileStream file = File.Create(path))
+            {
+                encoder.Save(file);
+            }
+
+            Assert.IsTrue(new FileInfo(path).Length > 0, path);
+        }
+        finally
+        {
+            harness.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            context.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            application.Resources.MergedDictionaries.Clear();
+        }
+    }
+}

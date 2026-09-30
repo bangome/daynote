@@ -123,7 +123,7 @@ public sealed class ProductWindowCompositionTests
         }
     }
 
-    private static Application EnsureApplicationResources(bool dark)
+    internal static Application EnsureApplicationResources(bool dark)
     {
         Application application = Application.Current ?? new Application();
         application.Resources.MergedDictionaries.Clear();

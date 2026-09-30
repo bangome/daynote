@@ -50,6 +50,7 @@ public sealed partial class ProductShellViewModel
     {
         RefreshHeader();
         await Calendar.LoadAsync().ConfigureAwait(true);
+        await Week.RefreshAsync().ConfigureAwait(true);
         await Todo.RefreshAsync().ConfigureAwait(true);
         await Favorites.RefreshAsync().ConfigureAwait(true);
         await TagPanel.RefreshAsync().ConfigureAwait(true);

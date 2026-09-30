@@ -177,6 +177,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         await Notes.LoadAsync(today, cancellationToken).ConfigureAwait(true);
         await Files.LoadForDateAsync(today, cancellationToken).ConfigureAwait(true);
         await Calendar.ShowSelectedAsync(today, cancellationToken).ConfigureAwait(true);
+        await Week.ShowAsync(today, cancellationToken).ConfigureAwait(true);
         await Todo.RefreshAsync(cancellationToken).ConfigureAwait(true);
         await Favorites.RefreshAsync(cancellationToken).ConfigureAwait(true);
         await TagPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
@@ -219,6 +220,8 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         {
             await Calendar.ShowSelectedAsync(date, cancellationToken).ConfigureAwait(true);
         }
+
+        await Week.ShowAsync(date, cancellationToken).ConfigureAwait(true);
 
         RefreshHeader();
         return true;
@@ -311,6 +314,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         {
             RefreshHeader();
             await Calendar.LoadAsync().ConfigureAwait(true);
+            await Week.RefreshAsync().ConfigureAwait(true);
             await Todo.RefreshAsync().ConfigureAwait(true);
             await TagPanel.RefreshAsync().ConfigureAwait(true);
         }
