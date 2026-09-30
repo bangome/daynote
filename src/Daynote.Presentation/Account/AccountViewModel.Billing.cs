@@ -102,6 +102,15 @@ public sealed partial class AccountViewModel
     [RelayCommand]
     private Task CheckoutMonthlyAsync() => CheckoutAsync(BillingTier.Pro, BillingPlan.Monthly);
 
+    /// <summary>
+    /// How long a checkout page is reused rather than minted again. Every mint is a new Paddle
+    /// transaction, and two of them paid in two tabs are two subscriptions; within this window the
+    /// same page opens instead. Long enough for someone to fetch a card, short of Paddle's expiry.
+    /// </summary>
+    private static readonly TimeSpan CheckoutReuseWindow = TimeSpan.FromMinutes(30);
+
+    private (BillingTier Tier, BillingPlan Plan, string Url, DateTimeOffset At)? lastCheckout;
+
     private async Task CheckoutAsync(BillingTier tier, BillingPlan plan)
     {
         if (Billing.Find(tier, plan) is null)
@@ -109,9 +118,17 @@ public sealed partial class AccountViewModel
             return;
         }
 
+        if (lastCheckout is { } last && last.Tier == tier && last.Plan == plan
+            && DateTimeOffset.UtcNow - last.At < CheckoutReuseWindow)
+        {
+            openExternal(last.Url);
+            return;
+        }
+
         await RunAsync(async () =>
         {
             string url = await accounts.CreateCheckoutSessionAsync(tier, plan).ConfigureAwait(true);
+            lastCheckout = (tier, plan, url, DateTimeOffset.UtcNow);
             openExternal(url);
         }).ConfigureAwait(true);
     }

@@ -489,6 +489,8 @@
                         Visibility="{Binding CanManageSubscription, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
                         Content="{loc:Tr BillingManage}"
                         AutomationProperties.Name="{loc:Tr BillingManage}" />
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,8,0,0" Text="{loc:Tr BillingDuplicateNote}"
+                           Visibility="{Binding HasDuplicateSubscription, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr BillingPortalNote}" />
             </StackPanel>
         </Border>

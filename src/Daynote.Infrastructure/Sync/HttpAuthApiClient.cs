@@ -408,7 +408,8 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 OffersAnnual: plans.Contains("annual", StringComparer.Ordinal),
                 // Absent before Premium; the Pro intervals above then stand for the whole menu.
                 Offers: body.Offers is null ? null : ToOffers(body.Offers),
-                CanChange: body.CanChange));
+                CanChange: body.CanChange,
+                DuplicateSubscription: body.DuplicateSubscription));
     }
 
     /// <summary>
@@ -615,6 +616,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         bool CanCheckout,
         bool CanManage,
         bool CanChange,
+        bool DuplicateSubscription,
         string[]? Plans,
         OfferBody[]? Offers) : IEntitlementBody;
 

@@ -1107,8 +1107,10 @@ interval and price follow the event that *occurred* last (`occurred_at`, kept in
 **The quota decision.** The quota used to be `users.quota_bytes`, NOT NULL with a 2 GiB default on
 every row. With tiers the quota is the tier's (`TIER_QUOTA_BYTES`), and a column that every account
 fills with the same default cannot also mean "an operator chose this". So the operator's figure
-moved to a new nullable `users.quota_override_bytes`: NULL follows the tier, a number wins in either
-direction (raise one account, or hold a misbehaving one to less). 0010 copies any non-default
+moved to a new nullable `users.quota_override_bytes`: NULL follows the tier, a number is a grant
+that **raises** it — the effective quota is `max(override, tier quota)`. It never lowers what a paid
+tier includes, so a 10 GB grant made years ago cannot cap an account that later buys Premium; holding
+an account to less than its tier is a support conversation, not a column. 0010 copies any non-default
 `quota_bytes` into it so no hand-made grant is lost; `quota_bytes` is left in place, unread, because
 dropping a column from `users` is a table rebuild under ON DELETE CASCADE (0009 showed the cost).
 
@@ -1130,6 +1132,27 @@ subscription, which is applied through the same code as a webhook, so the app sh
 once; the `subscription.updated` that follows is idempotent with it. Cancelling stays in the portal.
 The app offers Pro → Premium; Premium → Pro is not offered from the table (the design leaves it out),
 though the endpoint accepts it.
+
+**Failed payments.** `transaction.payment_failed` marks the account `past_due` (grace) only for a
+subscription's own renewal: `origin: subscription_recurring` with a `sub_...` id. A card declined on
+the checkout page is the same event with the account id and no subscription behind it; treating it
+as past due once handed out free grace and, with the checkout's live-subscription guard, blocked
+every later purchase. A declined proration charge from `/v1/billing/change` is not a renewal either
+(`prevent_change` leaves the paid subscription as it was). The checkout guard itself counts only a
+row with a real `sub_...` id.
+
+**Two subscriptions.** Two checkouts paid close together (a second tab, a page reopened before the
+first webhook) make two Paddle subscriptions. The webhook keeps the live one on the row, logs the
+other and stores it in `subscriptions.duplicate_subscription_id`; status reports
+`duplicate_subscription: true` and the app says a second subscription was paid for and will be
+refunded. It is not cancelled automatically — it was paid for, and cancelling without a refund is an
+operator's decision (refund it in the Paddle dashboard). Once the first is cancelled and over, events
+for the other take the row. The app also reuses its last checkout page for 30 minutes for the same
+tier and interval instead of minting a new transaction on every click.
+
+**Webhook ordering.** The idempotency row and the change are written in one D1 batch, after a check
+for a delivery already seen. If applying fails (a Worker deployed ahead of its migration, say) the
+event is not marked seen, the 500 makes Paddle retry, and the retry applies it.
 
 **The wire.** `/v1/auth/me` (its `entitlement`) and `/v1/billing/status` gained `tier`
 (`"pro" | "premium" | null` — Pro during the trial, null once nothing is in force), `plan`,

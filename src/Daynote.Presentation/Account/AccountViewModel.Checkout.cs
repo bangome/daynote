@@ -378,9 +378,15 @@ public sealed partial class AccountViewModel
         }
     }
 
-    /// <summary>Opens a fresh checkout page: the first may have been closed, and links are per click.</summary>
+    /// <summary>
+    /// Opens the checkout page again — the same one, while it is recent, not a new transaction: two
+    /// transactions paid in two tabs would be two subscriptions.
+    /// </summary>
     [RelayCommand]
     private Task ReopenCheckoutAsync() => CheckoutAsync(CheckoutTier, SelectedPlan);
+
+    /// <summary>A second subscription was paid for beside the live one; the server set it aside.</summary>
+    public bool HasDuplicateSubscription => !IsPhone && Billing.DuplicateSubscription;
 
     [RelayCommand]
     private void CloseCheckout()
@@ -422,7 +428,16 @@ public sealed partial class AccountViewModel
             while (!cancellation.IsCancellationRequested && CheckoutStage == CheckoutStage.Waiting)
             {
                 await Task.Delay(CheckoutPollInterval, cancellation).ConfigureAwait(true);
-                await RefreshBillingAsync().ConfigureAwait(true);
+                try
+                {
+                    await RefreshBillingAsync().ConfigureAwait(true);
+                }
+                catch (Exception failure) when (failure is not (OperationCanceledException or OutOfMemoryException))
+                {
+                    // One bad answer (a 5xx, an expired session mid-refresh) must not end the wait:
+                    // the payment may still be going through. The next tick asks again.
+                    System.Diagnostics.Debug.WriteLine($"Checkout poll: {failure.Message}");
+                }
             }
         }
         catch (OperationCanceledException)
@@ -442,6 +457,7 @@ public sealed partial class AccountViewModel
             && Entitlement.PaidTier == CheckoutTier)
         {
             StopCheckoutPoll();
+            lastCheckout = null;
             CheckoutStage = CheckoutStage.Done;
         }
     }
@@ -576,7 +592,7 @@ public sealed partial class AccountViewModel
             nameof(CanConfirmCheckout), nameof(CheckoutDoneTitle), nameof(PlanSubline), nameof(ShowSubscribedCard),
             nameof(SubscribedTitle), nameof(SubscribedDetail), nameof(CanUpgradeToPremium), nameof(ShowTrialUpgrade),
             nameof(ShowLapsedUpgrade), nameof(TrialUpgradeTitle), nameof(HasStorage), nameof(StorageText),
-            nameof(PlanColumns),
+            nameof(PlanColumns), nameof(HasDuplicateSubscription),
         })
         {
             OnPropertyChanged(name);

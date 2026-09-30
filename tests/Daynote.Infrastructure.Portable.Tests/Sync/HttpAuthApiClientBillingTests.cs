@@ -18,7 +18,7 @@ public sealed class HttpAuthApiClientBillingTests
           "state": "active", "until": "2027-09-30T00:00:00.0000000Z", "can_sync_files": true,
           "has_subscribed": true, "tier": "premium", "plan": "annual",
           "quota_bytes": 214748364800, "used_bytes": 1288490188,
-          "can_checkout": true, "can_manage": true, "can_change": true,
+          "can_checkout": true, "can_manage": true, "can_change": true, "duplicate_subscription": true,
           "plans": ["monthly", "annual"],
           "offers": [
             { "tier": "pro", "plan": "monthly", "prices": [{ "currency": "KRW", "amount": "2900" }, { "currency": "USD", "amount": "249" }] },
@@ -50,6 +50,7 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.AreEqual(214748364800L, entitlement.QuotaBytes);
         Assert.AreEqual(1288490188L, entitlement.UsedBytes);
         Assert.IsTrue(links.CanChange);
+        Assert.IsTrue(links.DuplicateSubscription);
 
         // The unknown tier is skipped, and so is the price that is not a number.
         Assert.AreEqual(2, links.AvailableOffers.Count);
@@ -70,6 +71,7 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.IsNull(entitlement.Tier);
         Assert.IsNull(entitlement.QuotaBytes);
         Assert.IsFalse(links.CanChange);
+        Assert.IsFalse(links.DuplicateSubscription);
         Assert.IsNull(links.Offers);
         Assert.AreEqual(BillingPlan.Annual, links.AvailableOffers.Single().Plan);
         Assert.AreEqual(BillingTier.Pro, links.AvailableOffers.Single().Tier);

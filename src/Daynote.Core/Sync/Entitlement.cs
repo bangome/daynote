@@ -95,6 +95,11 @@ public sealed record Entitlement(
 /// <see cref="CanChange"/> says the running subscription can move to another offer in place — the
 /// only way an existing subscriber changes tier, because a second checkout would bill twice.
 /// </para>
+/// <para>
+/// <see cref="DuplicateSubscription"/> says a second subscription was paid for beside the live one
+/// (two checkouts completed close together). The server keeps the first and sets the other aside
+/// for a refund; the app says so rather than letting it bill unseen.
+/// </para>
 /// </remarks>
 public sealed record BillingLinks(
     bool CanCheckout,
@@ -102,7 +107,8 @@ public sealed record BillingLinks(
     bool OffersMonthly = true,
     bool OffersAnnual = true,
     IReadOnlyList<BillingOffer>? Offers = null,
-    bool CanChange = false)
+    bool CanChange = false,
+    bool DuplicateSubscription = false)
 {
     public static BillingLinks None { get; } = new(false, false, false, false);
 

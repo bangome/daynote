@@ -21,10 +21,16 @@ ALTER TABLE subscriptions ADD COLUMN price_id TEXT;
 -- arrived last. (The period end has its own rule: it never moves backwards.)
 ALTER TABLE subscriptions ADD COLUMN price_occurred_utc TEXT;
 
+-- A second Paddle subscription seen for an account that already has a live one: two checkouts paid
+-- close together. The live one stays on the row; this one is kept here, and logged, for the operator
+-- to refund. NULL for every account where that never happened.
+ALTER TABLE subscriptions ADD COLUMN duplicate_subscription_id TEXT;
+
 -- The quota used to be `users.quota_bytes`, NOT NULL with a 2 GiB default on every account. With
 -- tiers, the quota comes from the tier, and a column that every row fills with the same default
 -- cannot also say "an operator set this on purpose". So the override is its own, nullable column:
--- NULL follows the tier, a number wins over it in either direction.
+-- NULL follows the tier, a number is a grant that raises the quota above the tier's (it never lowers
+-- what a paid tier includes; see entitlement.ts `storage`).
 --
 -- `quota_bytes` is left in place and no longer read (dropping a column from `users` means a table
 -- rebuild under ON DELETE CASCADE, as 0009 showed). Any value an operator had changed by hand is

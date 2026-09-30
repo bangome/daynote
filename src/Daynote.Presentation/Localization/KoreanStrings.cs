@@ -645,6 +645,7 @@ internal static class KoreanStrings
         ["CheckoutChangedTitleFormat"] = "{0} 플랜으로 변경되었습니다",
         ["CheckoutDoneBody"] = "이미지·파일 동기화가 계속 유지됩니다.\n영수증은 결제할 때 입력한 이메일로 발송됩니다.",
         ["CheckoutDoneOk"] = "확인",
+        ["BillingDuplicateNote"] = "결제가 두 번 된 구독이 있습니다. 먼저 시작된 구독만 사용되며, 나머지는 환불해 드립니다. 구독 관리나 지원 메일로 알려 주세요.",
         ["BillingAnnualSaving"] = "31% 절약",
         ["BillingFeatureSync"] = "이미지·파일까지 모든 기기 간 동기화",
         ["BillingFeatureQuota"] = "첨부 파일 클라우드 보관",

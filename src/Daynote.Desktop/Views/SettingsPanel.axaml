@@ -310,6 +310,11 @@
                         </Grid>
                       </Border>
 
+                      <!-- Two subscriptions paid for: the server keeps the first; say so plainly. -->
+                      <Border CornerRadius="14" Padding="16,12" Background="{DynamicResource Daynote.Product.Brush.DangerSoft}" IsVisible="{Binding HasDuplicateSubscription}">
+                        <TextBlock FontSize="12.5" TextWrapping="Wrap" Text="{Binding #Root.Strings[BillingDuplicateNote]}" />
+                      </Border>
+
                       <!--
                         요금제: the cycle toggle, then 무료 / Pro / Premium side by side. The column
                         tint sits behind the header, rows and footer as one rounded block per column,

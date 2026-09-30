@@ -51,6 +51,8 @@ interface PaddleSubscriptionData {
   subscription_id?: string;
   items?: { price?: { id?: string } | null }[];
   updated_at?: string;
+  /** On a transaction: what raised it — `subscription_recurring` for a renewal, `web` for a checkout. */
+  origin?: string;
 }
 
 interface PaddleEvent {
@@ -195,28 +197,58 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
   const subscriptionId = subscriptionIdOf(eventType, data);
   const userId = await resolveUser(env, data, subscriptionId);
 
-  // Idempotency first: a retried delivery must not be applied twice. INSERT OR IGNORE returns no
-  // rows when the event has been seen, which is the whole check.
-  const inserted = await env.DB.prepare(
-    `INSERT OR IGNORE INTO billing_events (event_id, event_type, user_id, received_utc)
-     VALUES (?1, ?2, ?3, ?4) RETURNING event_id`,
-  )
-    .bind(eventId, eventType, userId, canonicalUtc(now))
-    .first<{ event_id: string }>();
-
-  if (inserted === null) {
+  // Idempotency: a retried delivery must not be applied twice. A delivery already recorded is done.
+  const seen = await env.DB.prepare('SELECT 1 AS seen FROM billing_events WHERE event_id = ?1')
+    .bind(eventId)
+    .first<{ seen: number }>();
+  if (seen !== null) {
     return noContent();
   }
 
-  if (userId === null || !HANDLED.has(eventType)) {
-    // Recorded, not acted on. An event for an account we cannot identify is kept so it can be
-    // reconciled by hand rather than vanishing.
-    return noContent();
-  }
+  const record = env.DB.prepare(
+    `INSERT INTO billing_events (event_id, event_type, user_id, received_utc) VALUES (?1, ?2, ?3, ?4)`,
+  ).bind(eventId, eventType, userId, canonicalUtc(now));
 
-  await apply(env, userId, eventType, data, subscriptionId, event.occurred_at, now);
+  // Recorded, not acted on: an event for an account we cannot identify is kept so it can be
+  // reconciled by hand rather than vanishing. So is one that changes nothing (see `acts`).
+  const change = userId !== null && acts(eventType, data, subscriptionId)
+    ? await applyStatement(env, userId, eventType, data, subscriptionId, event.occurred_at, now)
+    : null;
+
+  // The record and the change commit together (a D1 batch is one transaction). If applying fails —
+  // a schema the deploy got ahead of, say — the event is not marked seen, the 500 makes Paddle
+  // retry, and the retry applies it. Recording first would have swallowed it for good.
+  try {
+    await env.DB.batch(change === null ? [record] : [record, change]);
+  } catch (error) {
+    // A concurrent delivery of the same event won the insert: that one applied it.
+    if (error instanceof Error && /UNIQUE/i.test(error.message)) {
+      return noContent();
+    }
+    throw error;
+  }
 
   return noContent();
+}
+
+/**
+ * Whether an event changes the account's row.
+ *
+ * A failed transaction counts only when it is a subscription's own renewal. A declined card on the
+ * checkout page is a `transaction.payment_failed` too — it carries the account id, and no
+ * subscription exists behind it — and treating it as `past_due` handed out a free grace period and
+ * then, with the live-subscription guard on the checkout, blocked every later attempt to buy. A
+ * declined proration charge from `/v1/billing/change` is also not a renewal: `prevent_change` leaves
+ * the paid subscription exactly as it was, so marking it past due would have cut off a paid period.
+ */
+function acts(eventType: string, data: PaddleSubscriptionData, subscriptionId: string | null): boolean {
+  if (!HANDLED.has(eventType)) {
+    return false;
+  }
+  if (eventType === 'transaction.payment_failed') {
+    return data.origin === 'subscription_recurring' && subscriptionId?.startsWith('sub_') === true;
+  }
+  return true;
 }
 
 /**
@@ -227,7 +259,7 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
  * that *occurred* last (`occurred_at`), not the one delivered last: an upgrade and a quick
  * downgrade can arrive in either order, and the account must end up on the one chosen second.
  */
-async function apply(
+async function applyStatement(
   env: Env,
   userId: string,
   eventType: string,
@@ -235,7 +267,30 @@ async function apply(
   subscriptionId: string | null,
   occurredAt: string | undefined,
   now: Date,
-): Promise<void> {
+): Promise<D1PreparedStatement> {
+  // One account, one subscription. Two checkouts paid close together (a second tab, a reopened
+  // page before the first webhook landed) make two Paddle subscriptions, and letting the second
+  // overwrite the first would hide one that keeps billing. So an event for a different `sub_...`
+  // than the live one on record leaves the row alone and is set aside for the operator: the id goes
+  // to `duplicate_subscription_id`, the log says so, and status reports it. It is not cancelled
+  // here — that subscription was paid for, and cancelling without a refund is not ours to decide.
+  if (subscriptionId?.startsWith('sub_')) {
+    const stored = await env.DB.prepare('SELECT subscription_id, status FROM subscriptions WHERE user_id = ?1')
+      .bind(userId)
+      .first<{ subscription_id: string | null; status: string }>();
+    if (
+      stored !== null
+      && stored.subscription_id?.startsWith('sub_')
+      && stored.subscription_id !== subscriptionId
+      && LIVE.has(stored.status)
+    ) {
+      console.error('second paddle subscription for one account', userId, stored.subscription_id, subscriptionId);
+      return env.DB.prepare(
+        'UPDATE subscriptions SET duplicate_subscription_id = ?2, updated_utc = ?3 WHERE user_id = ?1',
+      ).bind(userId, subscriptionId, canonicalUtc(now));
+    }
+  }
+
   const status = eventType === 'transaction.payment_failed' ? 'past_due' : data.status ?? 'unknown';
   const periodEnd = data.current_billing_period?.ends_at ?? data.next_billed_at ?? null;
   const grace = status === 'past_due' ? graceEnd(now) : null;
@@ -244,7 +299,7 @@ async function apply(
   const price = eventType.startsWith('subscription.') ? priceOf(env, data) : null;
   const occurred = price === null ? null : canonicalUtc(parseOr(occurredAt, now));
 
-  await env.DB.prepare(
+  return env.DB.prepare(
     `INSERT INTO subscriptions
        (user_id, provider, customer_id, subscription_id, status, current_period_end_utc,
         grace_ends_utc, updated_utc, tier, plan, price_id, price_occurred_utc)
@@ -290,8 +345,7 @@ async function apply(
       price?.plan ?? null,
       price?.priceId ?? null,
       occurred,
-    )
-    .run();
+    );
 }
 
 function parseOr(value: string | undefined, fallback: Date): Date {
@@ -444,10 +498,13 @@ interface OwnSubscription {
   customer_id: string | null;
   subscription_id: string | null;
   status: string;
+  duplicate_subscription_id: string | null;
 }
 
 async function findSubscription(env: Env, userId: string): Promise<OwnSubscription | null> {
-  return env.DB.prepare('SELECT customer_id, subscription_id, status FROM subscriptions WHERE user_id = ?1')
+  return env.DB.prepare(
+    'SELECT customer_id, subscription_id, status, duplicate_subscription_id FROM subscriptions WHERE user_id = ?1',
+  )
     .bind(userId)
     .first<OwnSubscription>();
 }
@@ -483,6 +540,9 @@ async function statusBody(env: Env, userId: string, now: Date): Promise<Record<s
     // True when the running subscription can move to another offer through `/v1/billing/change`,
     // which is how an existing subscriber upgrades — never through a second checkout.
     can_change: canChange(subscription) && offers.length > 0,
+    // A second subscription was paid for beside the live one (see `applyStatement`). The app says
+    // so and points at the portal; the operator refunds it.
+    duplicate_subscription: subscription?.duplicate_subscription_id != null,
     server_utc: canonicalUtc(now),
   };
 }
@@ -502,7 +562,8 @@ export async function checkout(request: Request, env: Env, now: Date): Promise<R
   // A second checkout would be a second subscription, billed alongside the first. Moving between
   // tiers or intervals is `change`; a subscription being retried or paused is fixed in the portal.
   const existing = await findSubscription(env, user.id);
-  if (existing !== null && LIVE.has(existing.status)) {
+  // Only a real subscription counts: a row without a `sub_...` id is no subscription to bill twice.
+  if (existing !== null && LIVE.has(existing.status) && existing.subscription_id?.startsWith('sub_')) {
     throw new ApiError(
       'subscription_active',
       'This account already has a subscription. Change its plan, or manage it in the portal, instead.',
@@ -592,7 +653,7 @@ export async function change(request: Request, env: Env, now: Date): Promise<Res
     ? await env.PADDLE_CHANGE_SUBSCRIPTION(row.subscription_id, priceId)
     : await patchSubscription(requireApiKey(env), row.subscription_id, priceId);
 
-  await apply(env, user.id, 'subscription.updated', updated, row.subscription_id, updated.updated_at, now);
+  await (await applyStatement(env, user.id, 'subscription.updated', updated, row.subscription_id, updated.updated_at, now)).run();
 
   return json(await statusBody(env, user.id, now));
 }

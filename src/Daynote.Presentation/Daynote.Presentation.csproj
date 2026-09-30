@@ -38,6 +38,7 @@
     <InternalsVisibleTo Include="Daynote.App" />
     <InternalsVisibleTo Include="Daynote.App.Tests" />
     <InternalsVisibleTo Include="Daynote.Desktop" />
+    <InternalsVisibleTo Include="Daynote.Desktop.Tests" />
     <InternalsVisibleTo Include="Daynote.Presentation.Tests" />
   </ItemGroup>
 </Project>

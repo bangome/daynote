@@ -34,6 +34,10 @@ public sealed class SubscriptionTiersTests
     [TestInitialize]
     public void Setup()
     {
+        // The headless UI tests leave Avalonia's dispatcher context on the worker thread. The view
+        // model resumes on whatever context it was called from, and nothing pumps that dispatcher
+        // here, so an await inside it (the checkout poll's delay) would never come back.
+        SynchronizationContext.SetSynchronizationContext(null);
         previousLanguage = LocalizationService.Instance.Language;
         LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
         store = new FakeSyncStore();
@@ -278,6 +282,68 @@ public sealed class SubscriptionTiersTests
         Assert.IsFalse(vm.PlanColumns[2].CanBuy);
         Assert.IsFalse(vm.CanChoosePremium);
         Assert.IsFalse(vm.HasStorage);
+    }
+
+    [TestMethod]
+    public async Task Reopening_the_checkout_opens_the_same_page_rather_than_a_second_transaction()
+    {
+        AccountViewModel vm = await SignedIn(Trial());
+
+        vm.OpenCheckoutProCommand.Execute(null);
+        await vm.ConfirmCheckoutCommand.ExecuteAsync(null);
+        await vm.ReopenCheckoutCommand.ExecuteAsync(null);
+        vm.CloseCheckoutCommand.Execute(null);
+        vm.OpenCheckoutProCommand.Execute(null);
+        await vm.ConfirmCheckoutCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(1, accounts.CheckoutSessionsMinted, "Each click minted a transaction that could be paid.");
+        CollectionAssert.AreEqual(new[] { accounts.CheckoutUrl, accounts.CheckoutUrl, accounts.CheckoutUrl }, opened);
+
+        // A different offer is a different transaction.
+        vm.SelectCheckoutPremiumCommand.Execute(null);
+        await vm.ReopenCheckoutCommand.ExecuteAsync(null);
+        Assert.AreEqual(2, accounts.CheckoutSessionsMinted);
+        vm.CloseCheckoutCommand.Execute(null);
+    }
+
+    [TestMethod]
+    public async Task The_wait_survives_a_failed_refresh_and_still_sees_the_payment()
+    {
+        TimeSpan interval = AccountViewModel.CheckoutPollInterval;
+        AccountViewModel.CheckoutPollInterval = TimeSpan.FromMilliseconds(20);
+        try
+        {
+            AccountViewModel vm = await SignedIn(Trial());
+            vm.OpenCheckoutProCommand.Execute(null);
+            await vm.ConfirmCheckoutCommand.ExecuteAsync(null);
+            Assert.IsTrue(vm.IsCheckoutWaiting);
+
+            accounts.NextFailure = new AccountException(AccountFailure.ServerError, "503");
+            await Task.Delay(150);
+            Assert.IsNull(accounts.NextFailure, "The poll never asked the server.");
+            Assert.IsTrue(vm.IsCheckoutWaiting);
+
+            accounts.Entitlement = Paying(BillingTier.Pro);
+            for (int i = 0; i < 100 && !vm.IsCheckoutDone; i++)
+            {
+                await Task.Delay(20);
+            }
+
+            Assert.IsTrue(vm.IsCheckoutDone, "The poll stopped after one failed refresh.");
+        }
+        finally
+        {
+            AccountViewModel.CheckoutPollInterval = interval;
+        }
+    }
+
+    [TestMethod]
+    public async Task A_second_paid_subscription_is_said_out_loud()
+    {
+        accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true, DuplicateSubscription: true);
+        AccountViewModel vm = await SignedIn(Paying(BillingTier.Pro));
+
+        Assert.IsTrue(vm.HasDuplicateSubscription);
     }
 
     private sealed class NoExport : IRecoveryKeyExporter

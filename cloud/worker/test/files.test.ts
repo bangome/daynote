@@ -207,7 +207,7 @@ describe('asset bytes', () => {
 
   it('refuses an upload that would exceed the quota', async () => {
     const { account, token } = await subscriber();
-    await env.DB.prepare('UPDATE users SET quota_override_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
+    await occupy(account.userId, 2 * GIB - 4096);
 
     expect((await putAsset(blinded(1), new Uint8Array(3000), token)).status).toBe(200);
     expect((await putAsset(blinded(2), new Uint8Array(3000), token)).status).toBe(413);
@@ -215,7 +215,7 @@ describe('asset bytes', () => {
 
   it('lets the same key be re-uploaded without counting twice', async () => {
     const { account, token } = await subscriber();
-    await env.DB.prepare('UPDATE users SET quota_override_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
+    await occupy(account.userId, 2 * GIB - 4096);
 
     expect((await putAsset(blinded(1), new Uint8Array(3000), token)).status).toBe(200);
     // A retry after a dropped connection is the reason this must not fail.
@@ -293,16 +293,21 @@ describe('quota by tier', () => {
     expect(await assetRow(account.userId, 'f'.repeat(64))).toMatchObject({ stored_bytes: 5 * GIB });
   });
 
-  it('lets an operator override win over the tier, either way', async () => {
-    const account = await signIn();
-    await grantSubscription(account.userId, 30, 'pro');
-    await env.DB.prepare('UPDATE users SET quota_override_bytes = ?2 WHERE id = ?1')
-      .bind(account.userId, 10 * GIB)
-      .run();
-    await occupy(account.userId, 5 * GIB);
+  it('lets an operator grant raise the quota, but never lower what a paid tier includes', async () => {
+    const pro = await signIn();
+    await grantSubscription(pro.userId, 30, 'pro');
+    await env.DB.prepare('UPDATE users SET quota_override_bytes = ?2 WHERE id = ?1').bind(pro.userId, 10 * GIB).run();
+    await occupy(pro.userId, 5 * GIB);
+    expect((await putAsset(blinded(1), new Uint8Array(3000), pro.accessToken)).status).toBe(200);
+    expect((await get('/v1/auth/me', { token: pro.accessToken })).body.entitlement.quota_bytes).toBe(10 * GIB);
 
-    expect((await putAsset(blinded(1), new Uint8Array(3000), account.accessToken)).status).toBe(200);
-    expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.quota_bytes).toBe(10 * GIB);
+    // A 10 GB grant carried over by 0010 does not cap an account that then buys Premium.
+    const premium = await signIn();
+    await grantSubscription(premium.userId, 30, 'premium');
+    await env.DB.prepare('UPDATE users SET quota_override_bytes = ?2 WHERE id = ?1').bind(premium.userId, 10 * GIB).run();
+    await occupy(premium.userId, 50 * GIB);
+    expect((await putAsset(blinded(1), new Uint8Array(3000), premium.accessToken)).status).toBe(200);
+    expect((await get('/v1/auth/me', { token: premium.accessToken })).body.entitlement.quota_bytes).toBe(200 * GIB);
   });
 });
 

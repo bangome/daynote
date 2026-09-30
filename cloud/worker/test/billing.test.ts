@@ -326,7 +326,7 @@ describe('webhook', () => {
     await deliver({
       event_id: `evt_${crypto.randomUUID()}`,
       event_type: 'transaction.payment_failed',
-      data: { subscription_id: 'sub_abc', customer_id: 'ctm_abc' },
+      data: { subscription_id: 'sub_abc', customer_id: 'ctm_abc', origin: 'subscription_recurring' },
     });
 
     const me = await get('/v1/auth/me', { token: account.accessToken });
@@ -363,7 +363,7 @@ describe('webhook', () => {
     await deliver({
       event_id: `evt_${crypto.randomUUID()}`,
       event_type: 'transaction.payment_failed',
-      data: { id: 'txn_01failed', subscription_id: 'sub_real', customer_id: 'ctm_abc', status: 'past_due' },
+      data: { id: 'txn_01failed', subscription_id: 'sub_real', customer_id: 'ctm_abc', status: 'past_due', origin: 'subscription_recurring' },
     });
 
     const row = await env.DB.prepare('SELECT subscription_id, status FROM subscriptions WHERE user_id = ?1')
@@ -572,7 +572,7 @@ describe('tiers', () => {
     await deliver({
       event_id: `evt_${crypto.randomUUID()}`,
       event_type: 'transaction.payment_failed',
-      data: { id: 'txn_1', subscription_id: 'sub_abc', customer_id: 'ctm_abc', items: [{ price: { id: 'pri_test_monthly' } }] },
+      data: { id: 'txn_1', subscription_id: 'sub_abc', customer_id: 'ctm_abc', origin: 'subscription_recurring', items: [{ price: { id: 'pri_test_monthly' } }] },
     });
     await deliver(subscriptionEvent(account.userId, { type: 'subscription.past_due', status: 'past_due' }));
 
@@ -724,5 +724,99 @@ describe('tiers', () => {
     const changed = await post('/v1/billing/change', { tier: 'premium', plan: 'annual' }, { token: account.accessToken });
 
     expect(changed.status).toBe(404);
+  });
+});
+
+describe('review fixes', () => {
+  beforeEach(() => {
+    (env as { PADDLE_CHECKOUT_SESSION?: unknown }).PADDLE_CHECKOUT_SESSION =
+      async (userId: string, _email: string, plan: string, tier: string) =>
+        `https://pay.paddle.test/checkout?user=${userId}&tier=${tier}&plan=${plan}`;
+  });
+
+  it('does not treat a card declined at checkout as a subscription, so the next checkout works', async () => {
+    const account = await signIn();
+    await expireEntitlement(account.userId);
+
+    await deliver({
+      event_id: `evt_${crypto.randomUUID()}`,
+      event_type: 'transaction.payment_failed',
+      data: { id: 'txn_declined', customer_id: 'ctm_new', origin: 'web', custom_data: { user_id: account.userId } },
+    });
+
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.state).toBe('expired');
+    expect(me.body.entitlement.can_sync_files).toBe(false);
+    const again = await post('/v1/billing/checkout', { plan: 'annual' }, { token: account.accessToken });
+    expect(again.status).toBe(200);
+  });
+
+  it('does not let a row without a real subscription block a checkout', async () => {
+    const account = await signIn();
+    // What the old handling left behind for a declined checkout: past_due, and no sub_ id.
+    await env.DB.prepare(
+      `INSERT INTO subscriptions (user_id, customer_id, subscription_id, status, grace_ends_utc, updated_utc)
+       VALUES (?1, 'ctm_x', NULL, 'past_due', '2030-01-01T00:00:00.0000000Z', '2026-09-30T00:00:00.0000000Z')`,
+    ).bind(account.userId).run();
+
+    expect((await post('/v1/billing/checkout', {}, { token: account.accessToken })).status).toBe(200);
+  });
+
+  it('leaves a paid subscription active when a proration charge is declined', async () => {
+    const account = await signIn();
+    await deliver(subscriptionEvent(account.userId, { type: 'subscription.activated', subscriptionId: 'sub_paid' }));
+
+    await deliver({
+      event_id: `evt_${crypto.randomUUID()}`,
+      event_type: 'transaction.payment_failed',
+      data: { id: 'txn_prorate', subscription_id: 'sub_paid', customer_id: 'ctm_abc', origin: 'subscription_update' },
+    });
+
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.state).toBe('active');
+  });
+
+  it('keeps the live subscription when a second one is paid, and says so', async () => {
+    const account = await signIn();
+    await deliver(subscriptionEvent(account.userId, { type: 'subscription.activated', subscriptionId: 'sub_first' }));
+    await deliver(subscriptionEvent(account.userId, { type: 'subscription.activated', subscriptionId: 'sub_second' }));
+
+    const row = await env.DB.prepare('SELECT subscription_id, duplicate_subscription_id FROM subscriptions WHERE user_id = ?1')
+      .bind(account.userId)
+      .first<{ subscription_id: string; duplicate_subscription_id: string | null }>();
+    expect(row).toEqual({ subscription_id: 'sub_first', duplicate_subscription_id: 'sub_second' });
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+    expect(status.body.duplicate_subscription).toBe(true);
+
+    // Once the first is cancelled and over, the other is the one to follow.
+    await deliver(subscriptionEvent(account.userId, {
+      type: 'subscription.canceled', status: 'canceled', subscriptionId: 'sub_first',
+      endsAt: new Date(Date.now() - 1000).toISOString(),
+    }));
+    await deliver(subscriptionEvent(account.userId, { type: 'subscription.updated', subscriptionId: 'sub_second' }));
+    const after = await env.DB.prepare('SELECT subscription_id, status FROM subscriptions WHERE user_id = ?1')
+      .bind(account.userId)
+      .first<{ subscription_id: string; status: string }>();
+    expect(after).toEqual({ subscription_id: 'sub_second', status: 'active' });
+  });
+
+  it('does not mark an event seen when applying it fails, so the retry applies it', async () => {
+    const account = await signIn();
+    await expireEntitlement(account.userId);
+    const event = subscriptionEvent(account.userId, { eventId: 'evt_retry_me' });
+
+    // A Worker deployed ahead of its migration: the table it writes to is not there.
+    await env.DB.prepare('ALTER TABLE subscriptions RENAME TO subscriptions_away').run();
+    try {
+      expect((await deliver(event)).status).toBe(500);
+    } finally {
+      await env.DB.prepare('ALTER TABLE subscriptions_away RENAME TO subscriptions').run();
+    }
+    const recorded = await env.DB.prepare('SELECT COUNT(*) AS n FROM billing_events WHERE event_id = ?1')
+      .bind('evt_retry_me').first<{ n: number }>();
+    expect(recorded?.n).toBe(0);
+
+    expect((await deliver(event)).status).toBe(204);
+    expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.state).toBe('active');
   });
 });

@@ -656,6 +656,7 @@ internal static class EnglishStrings
         ["CheckoutChangedTitleFormat"] = "You're now on {0}",
         ["CheckoutDoneBody"] = "Image and file sync keeps running.\nPaddle emails the receipt to the address used at checkout.",
         ["CheckoutDoneOk"] = "OK",
+        ["BillingDuplicateNote"] = "A second subscription was paid for. Only the first is used and the other will be refunded; let us know from Manage subscription or by support email.",
         ["BillingAnnualSaving"] = "Save 33%",
         ["BillingFeatureSync"] = "Images and files synced across all your devices",
         ["BillingFeatureQuota"] = "Attachments kept in the cloud",

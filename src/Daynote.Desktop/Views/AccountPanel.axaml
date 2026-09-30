@@ -265,6 +265,8 @@
                     IsVisible="{Binding CanUpgradeToPremium}" HorizontalAlignment="Left" />
             <Button Classes="quiet" Content="{Binding #Root.Strings[BillingManage]}" Command="{Binding ManageSubscriptionCommand}"
                     IsVisible="{Binding CanManageSubscription}" HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding #Root.Strings[BillingDuplicateNote]}" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Daynote.Product.Brush.Danger}" IsVisible="{Binding HasDuplicateSubscription}" />
             <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingPortalNote]}" FontSize="11.5" TextWrapping="Wrap" />
           </StackPanel>
         </Border>

@@ -177,14 +177,17 @@ export interface Storage {
 }
 
 /**
- * The effective quota is the tier's, unless an operator has set `users.quota_override_bytes` for
- * this account — which wins in either direction, so it can grant one account more or hold a
- * misbehaving one to less. An account with no tier in force (expired) is shown Pro's figure: it
- * cannot upload at all, and "used / 2GB" is the honest picture of what resubscribing to Pro buys.
+ * The effective quota is the tier's, raised by `users.quota_override_bytes` when an operator has
+ * granted one account more. The override only ever raises: a grant made before Premium existed
+ * (0010 carries every hand-set `quota_bytes` over) must not cap an account that later pays for
+ * Premium below what Premium includes. Holding an account to less than its tier is not something
+ * a column should do quietly; it would be a support conversation. An account with no tier in force
+ * (expired) is shown Pro's figure: it cannot upload at all, and "used / 2GB" is the honest picture
+ * of what resubscribing to Pro buys.
  *
- * Nothing here deletes. An account over its quota — after a downgrade from Premium, or a lowered
- * override — keeps every stored byte and can still download all of it; `assets.put` just refuses
- * anything that adds bytes until enough is deleted to be back under.
+ * Nothing here deletes. An account over its quota — after a downgrade from Premium, or a lapse —
+ * keeps every stored byte and can still download all of it; `assets.put` just refuses anything that
+ * adds bytes until enough is deleted to be back under.
  */
 export async function storage(env: Env, userId: string, entitlement: Entitlement): Promise<Storage> {
   const used = await env.DB.prepare(
@@ -197,7 +200,7 @@ export async function storage(env: Env, userId: string, entitlement: Entitlement
     .first<{ quota_override_bytes: number | null }>();
 
   return {
-    quotaBytes: user?.quota_override_bytes ?? TIER_QUOTA_BYTES[entitlement.tier ?? 'pro'],
+    quotaBytes: Math.max(user?.quota_override_bytes ?? 0, TIER_QUOTA_BYTES[entitlement.tier ?? 'pro']),
     usedBytes: used?.used ?? 0,
   };
 }
