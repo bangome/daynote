@@ -44,5 +44,9 @@ public sealed partial class SettingsViewModel
         OnPropertyChanged(nameof(IsShortcutsSection));
         OnPropertyChanged(nameof(IsDataSection));
         OnPropertyChanged(nameof(IsAccountSection));
+        if (value == SettingsSection.Account)
+        {
+            RefreshAccountPage();
+        }
     }
 }

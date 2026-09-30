@@ -37,6 +37,24 @@ public sealed partial class SettingsViewModel : ObservableObject, ILanguageAware
     /// </summary>
     public Account.AccountViewModel? Account { get; init; }
 
+    /// <summary>
+    /// Asks the server what the account is entitled to, so the account page can show it.
+    /// </summary>
+    /// <remarks>
+    /// The plan, the trial's remaining days, the prices and the management link all come from the
+    /// billing endpoint, and nothing on this page had asked for them: it showed a signed-in account
+    /// with no plan and no subscription on it. The account card refreshes when it opens for the same
+    /// reason. Called whenever the account section is picked, and again whenever the dialog opens,
+    /// because reopening it on the section it was left on changes nothing to react to.
+    /// </remarks>
+    public void RefreshAccountPage()
+    {
+        if (Account is { IsSignedIn: true } account)
+        {
+            _ = account.RefreshBillingCommand.ExecuteAsync(null);
+        }
+    }
+
     public SettingsViewModel(
         IStartupTaskService startup,
         IGlobalHotkeyService hotkeys,

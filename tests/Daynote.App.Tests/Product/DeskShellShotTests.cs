@@ -113,7 +113,13 @@ public sealed class DeskShellShotTests
         var shortcuts = new Daynote.App.Input.ConfigurableShortcuts(store);
 
         // The account page is the one that needs a signed-in account to show anything.
-        var accounts = new Tests.Account.FakeAccounts { Email = "jiwon@example.test" };
+        // On trial and never paid for, which is the state the plan has to be offered in.
+        var accounts = new Tests.Account.FakeAccounts
+        {
+            Email = "jiwon@example.test",
+            Entitlement = new Daynote.Core.Sync.Entitlement(
+                Daynote.Core.Sync.EntitlementState.Trial, DateTimeOffset.UtcNow.AddDays(4), true, false),
+        };
         var account = new Daynote.App.Account.AccountViewModel(
             accounts.Service,
             accounts.Store,
@@ -122,6 +128,7 @@ public sealed class DeskShellShotTests
             _ => { },
             @"C:\conflicts");
         Run(account.SignInCommand.ExecuteAsync(null));
+        Run(account.RefreshBillingCommand.ExecuteAsync(null));
 
         var settings = new SettingsViewModel(
             new Lifecycle.FakeStartupTaskService(Daynote.Core.Startup.StartupTaskState.Disabled),
