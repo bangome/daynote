@@ -444,7 +444,7 @@ const PRICE_LIST: Readonly<Record<Tier, Readonly<Record<Plan, readonly Money[]>>
   },
   premium: {
     monthly: [{ currency: 'KRW', amount: '5900' }, { currency: 'USD', amount: '499' }],
-    annual: [{ currency: 'KRW', amount: '49000' }, { currency: 'USD', amount: '3999' }],
+    annual: [{ currency: 'KRW', amount: '48000' }, { currency: 'USD', amount: '3999' }],
   },
 };
 

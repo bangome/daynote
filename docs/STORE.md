@@ -40,7 +40,7 @@ can only be done in your Partner Center account; the rest are already wired in t
    - **Listing content** (10.8.4): state the subscription price range and the trial terms,
      including that syncing stops when the trial ends. Say plainly that nothing is deleted.
      Since 2026-09-30 the range is two tiers: Pro ₩2,900/month or ₩24,000/year ($2.49 /
-     $19.99) with 2 GB, and Premium ₩5,900/month or ₩49,000/year ($4.99 / $39.99) with
+     $19.99) with 2 GB, and Premium ₩5,900/month or ₩48,000/year ($4.99 / $39.99) with
      "unlimited" storage held to a fair-use ceiling that the terms state (§5). The wording is in
      [store-listing.md](store-listing.md).
    - **Purchase flow** (10.8.2): the purchase starts in the app and continues in the browser,

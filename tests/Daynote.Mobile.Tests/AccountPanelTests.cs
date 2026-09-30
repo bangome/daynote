@@ -75,7 +75,7 @@ public sealed class AccountPanelTests
         account.Billing = new BillingLinks(true, true, CanChange: true, Offers:
         [
             new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
-            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000)]),
         ]);
         account.Entitlement = new Entitlement(
             EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(200), true, true,

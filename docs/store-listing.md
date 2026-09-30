@@ -21,7 +21,7 @@ promises more than the privacy page allows is the failure mode worth guarding ag
 > which is a Worker redeploy plus a listing edit, not an app change.
 >
 > **Two paid tiers since 2026-09-30**: Pro (2 GB, ₩2,900 / ₩24,000, $2.49 / $19.99) and
-> Premium ("unlimited", held to a 200 GB fair-use ceiling; ₩5,900 / ₩49,000, $4.99 / $39.99).
+> Premium ("unlimited", held to a 200 GB fair-use ceiling; ₩5,900 / ₩48,000, $4.99 / $39.99).
 > The subscription wording below states both, as 10.8.4's price range requires. Premium needs
 > an app build that knows the tier to be bought in-app; older builds keep selling Pro.
 
@@ -103,7 +103,7 @@ In **Product features**, drop the last two lines and add one:
 
 ```
 (제거) Google 로그인 시 노트·할 일·태그 동기화 무료
-(제거) 이미지·파일 동기화는 Pro(2GB, 월 ₩2,900 / 연 ₩24,000) 또는 Premium(무제한, 월 ₩5,900 / 연 ₩49,000) 구독, 14일 무료 체험
+(제거) 이미지·파일 동기화는 Pro(2GB, 월 ₩2,900 / 연 ₩24,000) 또는 Premium(무제한, 월 ₩5,900 / 연 ₩48,000) 구독, 14일 무료 체험
 (추가) Google 로그인 시 노트·할 일·태그가 모든 PC에서 무료로 동기화됩니다
 (추가) 이미지·파일 동기화는 가입 후 14일 포함
 ```
@@ -153,7 +153,7 @@ Windows 테마를 따르거나 한 번의 키로 바꿉니다. UI는 한국어�
 • 노트, 할 일, 태그, 즐겨찾기 동기화는 무료입니다. 기간 제한이 없습니다.
 • 첨부한 이미지와 파일까지 함께 따라오게 하려면 Pro 또는 Premium 구독이 필요합니다.
 
-Pro는 저장 용량 2GB에 월 ₩2,900 또는 연 ₩24,000, Premium은 저장 용량 무제한(공정 사용 범위 안에서)에 월 ₩5,900 또는 연 ₩49,000입니다. 가입 시 Pro 수준의 14일 무료 체험이 한 번 제공되며, 카드 등록은 필요하지 않습니다.
+Pro는 저장 용량 2GB에 월 ₩2,900 또는 연 ₩24,000, Premium은 저장 용량 무제한(공정 사용 범위 안에서)에 월 ₩5,900 또는 연 ₩48,000입니다. 가입 시 Pro 수준의 14일 무료 체험이 한 번 제공되며, 카드 등록은 필요하지 않습니다.
 
 체험이 끝나거나 구독을 해지하면 이미지·파일 동기화만 멈춥니다. 노트는 계속 동기화되고, 이 PC의 파일은 그대로이며, 이미 클라우드에 올라간 파일도 삭제되지 않습니다. 다시 구독하면 멈춘 지점에서 이어집니다.
 
@@ -190,7 +190,7 @@ Claude Desktop 등 MCP 클라이언트와 연동 (직접 켜야 동작)
 라이트·다크 테마, 한국어·영어 UI
 로그인 전까지 인터넷에 연결하지 않습니다. 텔레메트리 없음
 Google 로그인 시 노트·할 일·태그 동기화 무료
-이미지·파일 동기화는 Pro(2GB, 월 ₩2,900 / 연 ₩24,000) 또는 Premium(무제한, 월 ₩5,900 / 연 ₩49,000) 구독, 14일 무료 체험
+이미지·파일 동기화는 Pro(2GB, 월 ₩2,900 / 연 ₩24,000) 또는 Premium(무제한, 월 ₩5,900 / 연 ₩48,000) 구독, 14일 무료 체험
 ```
 
 ### Search terms (max 7, 30 chars each)

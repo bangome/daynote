@@ -74,7 +74,7 @@ APPLE_KEY_ID = "W2B29H98NT"
 # tiers at two intervals. Public, so vars. Both tiers sync images and files; they differ in storage.
 #
 #   Pro      2 GB                          monthly ₩2,900 / $2.49   annual ₩24,000 / $19.99
-#   Premium  "unlimited" (200 GB fair use)  monthly ₩5,900 / $4.99   annual ₩49,000 / $39.99
+#   Premium  "unlimited" (200 GB fair use)  monthly ₩5,900 / $4.99   annual ₩48,000 / $39.99
 #
 # Pro keeps the unprefixed names it had before Premium existed. The same amounts are written out in
 # src/billing.ts (PRICE_LIST), which is what the app displays; the site's pricing page and the Store
@@ -117,7 +117,7 @@ PADDLE_PRICE_ID_MONTHLY = ""
 PADDLE_PRICE_ID_ANNUAL = ""
 
 # Premium, added 2026-09-30. Empty for the same reasons as Pro above, and one more: the two Paddle
-# prices do not exist yet. Create them under the same product (₩5,900 / $4.99 monthly, ₩49,000 /
+# prices do not exist yet. Create them under the same product (₩5,900 / $4.99 monthly, ₩48,000 /
 # $39.99 annual), put their ids here, apply migrations/0010_tiers.sql remotely, and redeploy. Either
 # tier can be on sale without the other; the app offers only the ones that have ids.
 PADDLE_PRICE_ID_PREMIUM_MONTHLY = ""

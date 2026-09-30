@@ -22,7 +22,7 @@ public sealed class HttpAuthApiClientBillingTests
           "plans": ["monthly", "annual"],
           "offers": [
             { "tier": "pro", "plan": "monthly", "prices": [{ "currency": "KRW", "amount": "2900" }, { "currency": "USD", "amount": "249" }] },
-            { "tier": "premium", "plan": "annual", "prices": [{ "currency": "KRW", "amount": "49000" }, { "currency": "USD", "amount": "not-a-number" }] },
+            { "tier": "premium", "plan": "annual", "prices": [{ "currency": "KRW", "amount": "48000" }, { "currency": "USD", "amount": "not-a-number" }] },
             { "tier": "gold", "plan": "annual", "prices": [] }
           ],
           "server_utc": "2026-09-30T00:00:00.0000000Z"
@@ -56,7 +56,7 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.AreEqual(2, links.AvailableOffers.Count);
         Assert.AreEqual(249, links.Find(BillingTier.Pro, BillingPlan.Monthly)?.PriceIn("USD")?.MinorUnits);
         BillingOffer premium = links.Find(BillingTier.Premium, BillingPlan.Annual)!;
-        Assert.AreEqual(49000, premium.PriceIn("KRW")?.MinorUnits);
+        Assert.AreEqual(48000, premium.PriceIn("KRW")?.MinorUnits);
         Assert.IsNull(premium.PriceIn("USD"));
     }
 

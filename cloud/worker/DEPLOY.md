@@ -16,7 +16,7 @@ Current state, 2026-09-02:
 | Migration `0009_apple_and_deletion.sql` | **must be applied before** deploying the Worker that serves `/v1/auth/apple` and `DELETE /v1/account` — see §2c |
 | `PADDLE_WEBHOOK_SECRET`, `PADDLE_API_KEY` (secrets) | **must be set** for subscriptions — see §2b |
 | `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` (vars) | Pro — **empty on purpose** in `wrangler.toml` (₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual; the verified ids are in the comment there) — see §2b |
-| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` (vars) | Premium — **empty**; the Paddle prices do not exist yet (₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual) — see §2b |
+| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` (vars) | Premium — **empty**; the Paddle prices do not exist yet (₩5,900 / $4.99 monthly, ₩48,000 / $39.99 annual) — see §2b |
 | Migration `0010_tiers.sql` | **must be applied before** deploying the Worker that reads `subscriptions.tier` and `users.quota_override_bytes` — see §2b |
 | Google consent screen | Testing or Production — see §2 |
 | `workers_dev` | false, `preview_urls` false — only the custom domain answers |
@@ -132,7 +132,7 @@ Nothing above exists until there is something to sell, so this comes first:
 3. **Catalog → Products → New product** — "Daynote cloud sync". The name and description are what
    the customer sees on the checkout and the invoice.
 4. **Add four recurring prices** to it, tax-inclusive for KRW: Pro monthly (₩2,900 / $2.49) and
-   yearly (₩24,000 / $19.99), Premium monthly (₩5,900 / $4.99) and yearly (₩49,000 / $39.99).
+   yearly (₩24,000 / $19.99), Premium monthly (₩5,900 / $4.99) and yearly (₩48,000 / $39.99).
    Copy the `pri_...` ids into `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL`,
    `PADDLE_PRICE_ID_PREMIUM_MONTHLY` and `PADDLE_PRICE_ID_PREMIUM_ANNUAL` in `wrangler.toml`. The
    webhook reads the tier from the price, and a price it does not know reads as Pro — so set the

@@ -36,7 +36,7 @@ public sealed class SubscriptionFrameTests
         new(BillingTier.Pro, BillingPlan.Monthly, [new Money("KRW", 2900), new Money("USD", 249)]),
         new(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000), new Money("USD", 1999)]),
         new(BillingTier.Premium, BillingPlan.Monthly, [new Money("KRW", 5900), new Money("USD", 499)]),
-        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000), new Money("USD", 3999)]),
+        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000), new Money("USD", 3999)]),
     ];
 
     [TestMethod]

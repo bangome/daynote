@@ -979,7 +979,7 @@ never subscribes, or who stops, keeps every note and file on their own PC and ke
 | --- | --- |
 | Provider | **Paddle**, as merchant of record — it collects and remits VAT/sales tax in every jurisdiction it sells into, which a solo publisher otherwise does personally |
 | Free tier | **Text sync, forever.** Plus a **14-day Pro trial** (image and file sync, 2 GB), granted once at sign-up, never re-granted |
-| Paid tiers | **Pro**: image and file sync, 2 GB — ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. **Premium**: the same, storage shown as "무제한 / Unlimited" and held to a 200 GB fair-use ceiling — ₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual. Per-file size is the same on both |
+| Paid tiers | **Pro**: image and file sync, 2 GB — ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. **Premium**: the same, storage shown as "무제한 / Unlimited" and held to a 200 GB fair-use ceiling — ₩5,900 / $4.99 monthly, ₩48,000 / $39.99 annual. Per-file size is the same on both |
 | When it lapses | **File sync stops. Text keeps syncing. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
 | Card data | Never reaches Daynote or the Worker. The checkout is a hosted page in the system browser |
 | Enforcement | The asset routes answer **402 `subscription_required`** via `requireFileEntitlement`, and a file-metadata upsert comes back as `files_blocked`. Text push/pull, file *tombstones*, and file metadata on the pull all stay open — see §5.5 for why each. `/v1/auth/me` and `/v1/billing/status` report `can_sync_files` |
@@ -1039,7 +1039,7 @@ settle before the first paid submission.
 | --- | --- | --- |
 | `PADDLE_WEBHOOK_SECRET` | secret | Signs incoming events. Absent means every delivery is refused |
 | `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` | vars | Pro's two recurring prices (`pri_...`): ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. The checkout is created server-side so the transaction can carry `custom_data.user_id`; a hosted-checkout link cannot |
-| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` | vars | Premium's: ₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual. Empty means Premium is not on sale; either tier can be sold without the other. The webhook maps a price to its tier through these four, so a Premium price must be listed here before it can be bought |
+| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` | vars | Premium's: ₩5,900 / $4.99 monthly, ₩48,000 / $39.99 annual. Empty means Premium is not on sale; either tier can be sold without the other. The webhook maps a price to its tier through these four, so a Premium price must be listed here before it can be bought |
 | `PADDLE_API_KEY` | secret | Mints customer-portal links. There is **no** portal URL to configure: Paddle's links are single-use and short-lived, so `/v1/billing/portal` creates one per click |
 
 Trial length lives in `entitlement.ts` (`TRIAL_DAYS`), the retry window in `GRACE_DAYS`, the tier

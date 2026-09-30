@@ -149,7 +149,7 @@ loads Paddle.js and opens the server-created transaction from `?_ptxn=`.
 Bodies live in `../site/content/<slug>.<lang>.html`; the shell is `../site/page.html`. Before
 asking Paddle to approve the domain, fill in the constants at the top of `../site/build.mjs`:
 `OPERATOR`, `SUPPORT_EMAIL` (`PRICE_LINE` is set: Pro ₩2,900/mo · ₩24,000/yr, $2.49 / $19.99;
-Premium ₩5,900/mo · ₩49,000/yr, $4.99 / $39.99; the Paddle catalog must match),
+Premium ₩5,900/mo · ₩48,000/yr, $4.99 / $39.99; the Paddle catalog must match),
 Note the policy since 2026-09-07: text sync is free, the paid tiers cover image and file sync only
 (Phase 7); since 2026-09-30 there are two, Pro (2 GB) and Premium (unlimited within fair use). The Paddle product is still named "Daynote Cloud Sync"; rename its description in the
 dashboard to say images and files (an edit, not a recreate).

@@ -23,7 +23,7 @@ public sealed class SubscriptionTiersTests
         new(BillingTier.Pro, BillingPlan.Monthly, [new Money("KRW", 2900), new Money("USD", 249)]),
         new(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000), new Money("USD", 1999)]),
         new(BillingTier.Premium, BillingPlan.Monthly, [new Money("KRW", 5900), new Money("USD", 499)]),
-        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000), new Money("USD", 3999)]),
+        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000), new Money("USD", 3999)]),
     ];
 
     private FakeAccounts accounts = null!;
@@ -34,10 +34,6 @@ public sealed class SubscriptionTiersTests
     [TestInitialize]
     public void Setup()
     {
-        // The headless UI tests leave Avalonia's dispatcher context on the worker thread. The view
-        // model resumes on whatever context it was called from, and nothing pumps that dispatcher
-        // here, so an await inside it (the checkout poll's delay) would never come back.
-        SynchronizationContext.SetSynchronizationContext(null);
         previousLanguage = LocalizationService.Instance.Language;
         LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
         store = new FakeSyncStore();
@@ -50,6 +46,18 @@ public sealed class SubscriptionTiersTests
 
     [TestCleanup]
     public void Cleanup() => LocalizationService.Instance.SetLanguage(previousLanguage);
+
+    /// <summary>
+    /// Runs an async test body on the thread pool and blocks the test thread until it ends.
+    /// </summary>
+    /// <remarks>
+    /// The headless Avalonia session belongs to the thread that started it, and the UI tests reach it
+    /// through a blocking <c>Dispatcher.UIThread.Invoke</c>, which only works from that thread. An async
+    /// test whose awaits really yield (the checkout poll's delays) would hand the rest of the run to a
+    /// pool thread, and the next UI test would wait on the dispatcher forever. Blocking here keeps the
+    /// test thread where it was.
+    /// </remarks>
+    private static void Run(Func<Task> body) => Task.Run(body).GetAwaiter().GetResult();
 
     private async Task<AccountViewModel> SignedIn(Entitlement entitlement, bool isPhone = false)
     {
@@ -77,7 +85,7 @@ public sealed class SubscriptionTiersTests
         tier, plan, tier == BillingTier.Premium ? 200L << 30 : 2L << 30, used);
 
     [TestMethod]
-    public async Task A_trial_offers_Pro_at_the_servers_price_and_counts_down()
+    public void A_trial_offers_Pro_at_the_servers_price_and_counts_down() => Run(async () =>
     {
         AccountViewModel vm = await SignedIn(Trial());
 
@@ -88,18 +96,18 @@ public sealed class SubscriptionTiersTests
         Assert.AreEqual("Pro 구독하기 · ₩24,000", vm.ProCtaLabel);
         Assert.AreEqual("31% 할인", vm.AnnualSavingText);
         Assert.AreEqual("0MB / 2GB", vm.StorageText);
-    }
+    });
 
     [TestMethod]
-    public async Task The_plan_table_has_three_columns_with_prices_and_recommends_Pro()
+    public void The_plan_table_has_three_columns_with_prices_and_recommends_Pro() => Run(async () =>
     {
         AccountViewModel vm = await SignedIn(Trial());
 
         IReadOnlyList<PlanColumn> columns = vm.PlanColumns;
         CollectionAssert.AreEqual(new[] { "무료", "Pro", "Premium" }, columns.Select(c => c.Name).ToArray());
-        CollectionAssert.AreEqual(new[] { "₩0", "₩24,000", "₩49,000" }, columns.Select(c => c.Price).ToArray());
+        CollectionAssert.AreEqual(new[] { "₩0", "₩24,000", "₩48,000" }, columns.Select(c => c.Price).ToArray());
         Assert.AreEqual("연간 · 월 ₩2,000꼴", columns[1].Per);
-        Assert.AreEqual("연간 · 월 ₩4,100꼴", columns[2].Per);
+        Assert.AreEqual("연간 · 월 ₩4,000꼴", columns[2].Per);
         Assert.IsTrue(columns[1].IsHighlighted);
         Assert.AreEqual("체험 종료 후", columns[0].Note);
         Assert.IsTrue(columns[1].CanBuy && columns[2].CanBuy);
@@ -109,10 +117,10 @@ public sealed class SubscriptionTiersTests
 
         CollectionAssert.AreEqual(new[] { "₩0", "₩2,900", "₩5,900" }, vm.PlanColumns.Select(c => c.Price).ToArray());
         Assert.AreEqual("매월", vm.PlanColumns[2].Per);
-    }
+    });
 
     [TestMethod]
-    public async Task The_rows_are_honest_about_what_each_plan_has()
+    public void The_rows_are_honest_about_what_each_plan_has() => Run(async () =>
     {
         PlanComparisonRow storage = PlanComparison.Rows[^1];
         PlanComparisonRow files = PlanComparison.Rows[^2];
@@ -124,20 +132,20 @@ public sealed class SubscriptionTiersTests
         Assert.IsTrue(PlanComparison.Rows.Take(4).All(row => row.Free.IsCheck && row.Pro.IsCheck && row.Premium.IsCheck));
         Assert.AreEqual("무제한은 공정 사용 범위 안에서 제공됩니다", AppStrings.PlanFairUseNote);
         await Task.CompletedTask;
-    }
+    });
 
     [TestMethod]
-    public async Task English_shows_dollar_prices_from_the_same_list()
+    public void English_shows_dollar_prices_from_the_same_list() => Run(async () =>
     {
         LocalizationService.Instance.SetLanguage(AppLanguage.English);
         AccountViewModel vm = await SignedIn(Trial());
 
         CollectionAssert.AreEqual(new[] { "$0.00", "$19.99", "$39.99" }, vm.PlanColumns.Select(c => c.Price).ToArray());
         Assert.AreEqual("Subscribe to Pro · $19.99", vm.ProCtaLabel);
-    }
+    });
 
     [TestMethod]
-    public async Task A_Pro_subscriber_sees_the_subscribed_card_and_can_move_to_Premium()
+    public void A_Pro_subscriber_sees_the_subscribed_card_and_can_move_to_Premium() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true);
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Pro, used: 1_288_490_189));
@@ -157,10 +165,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsTrue(premium.CanBuy);
         Assert.AreEqual("변경하기", premium.ButtonText);
         Assert.AreEqual(string.Empty, vm.PlanColumns[0].Note);
-    }
+    });
 
     [TestMethod]
-    public async Task Premium_shows_usage_without_a_ceiling_and_offers_no_downgrade_from_the_table()
+    public void Premium_shows_usage_without_a_ceiling_and_offers_no_downgrade_from_the_table() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true);
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Premium, used: 5L << 30));
@@ -170,10 +178,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsFalse(vm.CanUpgradeToPremium);
         Assert.IsFalse(vm.PlanColumns[1].CanBuy);
         Assert.IsTrue(vm.PlanColumns[2].IsCurrent);
-    }
+    });
 
     [TestMethod]
-    public async Task Checkout_opens_the_browser_for_the_chosen_tier_and_waits_for_the_server()
+    public void Checkout_opens_the_browser_for_the_chosen_tier_and_waits_for_the_server() => Run(async () =>
     {
         AccountViewModel vm = await SignedIn(Trial());
 
@@ -182,9 +190,9 @@ public sealed class SubscriptionTiersTests
         Assert.AreEqual("구독하기", vm.CheckoutTitle);
         Assert.AreEqual("Premium · 연간", vm.CheckoutPlanLabel);
         Assert.AreEqual("₩5,900", vm.MonthlyPrice);
-        Assert.AreEqual("₩49,000", vm.AnnualPrice);
-        Assert.AreEqual("31% 할인", vm.CheckoutSavingText);
-        Assert.AreEqual("₩49,000 결제하기", vm.CheckoutConfirmLabel);
+        Assert.AreEqual("₩48,000", vm.AnnualPrice);
+        Assert.AreEqual("32% 할인", vm.CheckoutSavingText);
+        Assert.AreEqual("₩48,000 결제하기", vm.CheckoutConfirmLabel);
 
         vm.SelectCheckoutProCommand.Execute(null);
         vm.SelectMonthlyCommand.Execute(null);
@@ -207,10 +215,10 @@ public sealed class SubscriptionTiersTests
         Assert.AreEqual("Pro 구독이 시작되었습니다", vm.CheckoutDoneTitle);
         vm.CloseCheckoutCommand.Execute(null);
         Assert.IsFalse(vm.IsCheckoutOpen);
-    }
+    });
 
     [TestMethod]
-    public async Task A_subscriber_changes_plan_in_place_instead_of_buying_twice()
+    public void A_subscriber_changes_plan_in_place_instead_of_buying_twice() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true);
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Pro));
@@ -230,10 +238,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsTrue(vm.IsCheckoutDone);
         Assert.AreEqual("Premium 플랜으로 변경되었습니다", vm.CheckoutDoneTitle);
         Assert.AreEqual("Premium", vm.PlanBadge);
-    }
+    });
 
     [TestMethod]
-    public async Task Cancelling_goes_to_the_providers_portal()
+    public void Cancelling_goes_to_the_providers_portal() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true);
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Pro));
@@ -241,10 +249,10 @@ public sealed class SubscriptionTiersTests
         await vm.ManageSubscriptionCommand.ExecuteAsync(null);
 
         CollectionAssert.AreEqual(new[] { accounts.PortalUrl }, opened);
-    }
+    });
 
     [TestMethod]
-    public async Task Nothing_is_sold_when_the_server_offers_no_plans()
+    public void Nothing_is_sold_when_the_server_offers_no_plans() => Run(async () =>
     {
         accounts.Billing = BillingLinks.None;
         AccountViewModel vm = await SignedIn(Trial());
@@ -254,10 +262,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsFalse(vm.ShowTrialUpgrade);
         vm.OpenCheckoutCommand.Execute(null);
         Assert.IsFalse(vm.IsCheckoutOpen);
-    }
+    });
 
     [TestMethod]
-    public async Task A_phone_shows_the_plan_and_storage_but_never_a_checkout()
+    public void A_phone_shows_the_plan_and_storage_but_never_a_checkout() => Run(async () =>
     {
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Premium, used: 3L << 30), isPhone: true);
 
@@ -268,10 +276,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsFalse(vm.ShowSubscribedCard);
         vm.OpenCheckoutProCommand.Execute(null);
         Assert.IsFalse(vm.IsCheckoutOpen);
-    }
+    });
 
     [TestMethod]
-    public async Task An_older_server_still_sells_Pro_at_the_catalog_price_and_hides_Premium()
+    public void An_older_server_still_sells_Pro_at_the_catalog_price_and_hides_Premium() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, false);
         AccountViewModel vm = await SignedIn(new Entitlement(
@@ -282,10 +290,10 @@ public sealed class SubscriptionTiersTests
         Assert.IsFalse(vm.PlanColumns[2].CanBuy);
         Assert.IsFalse(vm.CanChoosePremium);
         Assert.IsFalse(vm.HasStorage);
-    }
+    });
 
     [TestMethod]
-    public async Task Reopening_the_checkout_opens_the_same_page_rather_than_a_second_transaction()
+    public void Reopening_the_checkout_opens_the_same_page_rather_than_a_second_transaction() => Run(async () =>
     {
         AccountViewModel vm = await SignedIn(Trial());
 
@@ -304,10 +312,10 @@ public sealed class SubscriptionTiersTests
         await vm.ReopenCheckoutCommand.ExecuteAsync(null);
         Assert.AreEqual(2, accounts.CheckoutSessionsMinted);
         vm.CloseCheckoutCommand.Execute(null);
-    }
+    });
 
     [TestMethod]
-    public async Task The_wait_survives_a_failed_refresh_and_still_sees_the_payment()
+    public void The_wait_survives_a_failed_refresh_and_still_sees_the_payment() => Run(async () =>
     {
         TimeSpan interval = AccountViewModel.CheckoutPollInterval;
         AccountViewModel.CheckoutPollInterval = TimeSpan.FromMilliseconds(20);
@@ -335,16 +343,16 @@ public sealed class SubscriptionTiersTests
         {
             AccountViewModel.CheckoutPollInterval = interval;
         }
-    }
+    });
 
     [TestMethod]
-    public async Task A_second_paid_subscription_is_said_out_loud()
+    public void A_second_paid_subscription_is_said_out_loud() => Run(async () =>
     {
         accounts.Billing = new BillingLinks(true, true, Offers: Offers, CanChange: true, DuplicateSubscription: true);
         AccountViewModel vm = await SignedIn(Paying(BillingTier.Pro));
 
         Assert.IsTrue(vm.HasDuplicateSubscription);
-    }
+    });
 
     private sealed class NoExport : IRecoveryKeyExporter
     {

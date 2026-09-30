@@ -255,7 +255,7 @@ public sealed class SubscriptionViewModelTests
         accounts.Billing = new BillingLinks(true, false, Offers:
         [
             new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
-            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000)]),
         ]);
         AccountViewModel vm = Create();
         await vm.SignInCommand.ExecuteAsync(null);
@@ -265,7 +265,7 @@ public sealed class SubscriptionViewModelTests
 
         Assert.AreEqual(BillingTier.Premium, accounts.LastCheckoutTier);
         Assert.AreEqual(BillingPlan.Annual, accounts.LastCheckoutPlan);
-        Assert.AreEqual("₩49,000", vm.PriceMain);
+        Assert.AreEqual("₩48,000", vm.PriceMain);
     }
 
     [TestMethod]
@@ -276,7 +276,7 @@ public sealed class SubscriptionViewModelTests
         accounts.Billing = new BillingLinks(true, true, CanChange: true, Offers:
         [
             new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
-            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000)]),
         ]);
         AccountViewModel vm = Create();
         await vm.SignInCommand.ExecuteAsync(null);

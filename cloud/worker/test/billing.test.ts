@@ -611,7 +611,7 @@ describe('tiers', () => {
       { tier: 'pro', plan: 'monthly', prices: [{ currency: 'KRW', amount: '2900' }, { currency: 'USD', amount: '249' }] },
       { tier: 'pro', plan: 'annual', prices: [{ currency: 'KRW', amount: '24000' }, { currency: 'USD', amount: '1999' }] },
       { tier: 'premium', plan: 'monthly', prices: [{ currency: 'KRW', amount: '5900' }, { currency: 'USD', amount: '499' }] },
-      { tier: 'premium', plan: 'annual', prices: [{ currency: 'KRW', amount: '49000' }, { currency: 'USD', amount: '3999' }] },
+      { tier: 'premium', plan: 'annual', prices: [{ currency: 'KRW', amount: '48000' }, { currency: 'USD', amount: '3999' }] },
     ]);
   });
 

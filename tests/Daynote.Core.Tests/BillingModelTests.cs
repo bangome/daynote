@@ -14,7 +14,7 @@ public sealed class BillingModelTests
         new(BillingTier.Pro, BillingPlan.Monthly, [new Money("KRW", 2900), new Money("USD", 249)]),
         new(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000), new Money("USD", 1999)]),
         new(BillingTier.Premium, BillingPlan.Monthly, [new Money("KRW", 5900), new Money("USD", 499)]),
-        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000), new Money("USD", 3999)]),
+        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48000), new Money("USD", 3999)]),
     ];
 
     [TestMethod]
@@ -32,7 +32,7 @@ public sealed class BillingModelTests
         var links = new BillingLinks(true, false, Offers: FourOffers);
 
         Assert.AreEqual(4, links.AvailableOffers.Count);
-        Assert.AreEqual(49000, links.Find(BillingTier.Premium, BillingPlan.Annual)?.PriceIn("KRW")?.MinorUnits);
+        Assert.AreEqual(48000, links.Find(BillingTier.Premium, BillingPlan.Annual)?.PriceIn("KRW")?.MinorUnits);
         Assert.AreEqual(499, links.Find(BillingTier.Premium, BillingPlan.Monthly)?.PriceIn("usd")?.MinorUnits);
         Assert.IsNull(links.Find(BillingTier.Premium, BillingPlan.Monthly)?.PriceIn("EUR"));
         Assert.IsTrue(links.Sells(BillingTier.Premium));
