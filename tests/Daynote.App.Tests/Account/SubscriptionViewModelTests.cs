@@ -247,4 +247,46 @@ public sealed class SubscriptionViewModelTests
             LocalizationService.Instance.SetLanguage(original);
         }
     }
+
+    [TestMethod]
+    public async Task The_upgrade_card_buys_the_tier_that_is_selected()
+    {
+        accounts.Entitlement = new Entitlement(EntitlementState.Expired, null, false, true);
+        accounts.Billing = new BillingLinks(true, false, Offers:
+        [
+            new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+        ]);
+        AccountViewModel vm = Create();
+        await vm.SignInCommand.ExecuteAsync(null);
+
+        vm.SelectCheckoutPremiumCommand.Execute(null);
+        await vm.CheckoutSelectedCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(BillingTier.Premium, accounts.LastCheckoutTier);
+        Assert.AreEqual(BillingPlan.Annual, accounts.LastCheckoutPlan);
+        Assert.AreEqual("₩49,000", vm.PriceMain);
+    }
+
+    [TestMethod]
+    public async Task A_paying_account_changes_plan_rather_than_buying_a_second_one()
+    {
+        accounts.Entitlement = new Entitlement(
+            EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(30), true, true, BillingTier.Pro, BillingPlan.Annual);
+        accounts.Billing = new BillingLinks(true, true, CanChange: true, Offers:
+        [
+            new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+        ]);
+        AccountViewModel vm = Create();
+        await vm.SignInCommand.ExecuteAsync(null);
+
+        vm.OpenCheckoutPremiumCommand.Execute(null);
+        await vm.ConfirmCheckoutCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(1, accounts.PlanChanges);
+        Assert.AreEqual(0, accounts.CheckoutSessionsMinted);
+        Assert.AreEqual(BillingTier.Premium, vm.Entitlement.Tier);
+        Assert.IsTrue(vm.IsCheckoutDone);
+    }
 }

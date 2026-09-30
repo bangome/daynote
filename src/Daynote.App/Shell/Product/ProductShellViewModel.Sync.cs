@@ -27,8 +27,15 @@ public sealed partial class ProductShellViewModel
         _syncScheduler.Start();
     }
 
-    /// <summary>The window came to the front — back from the tray or another app.</summary>
-    public void NotifyActivated() => _syncScheduler?.NotifyResumed();
+    /// <summary>
+    /// The window came to the front — back from the tray or another app. Often the browser, after a
+    /// payment, so a checkout waiting on the server re-reads the billing state too.
+    /// </summary>
+    public void NotifyActivated()
+    {
+        _syncScheduler?.NotifyResumed();
+        Account?.NotifyActivated();
+    }
 
     private async Task RefreshAfterSyncAsync(SyncReloadResult reload)
     {

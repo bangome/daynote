@@ -43,6 +43,10 @@
                                Text="{Binding DisplayName}" />
                     <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,1,0,0"
                                TextTrimming="CharacterEllipsis" Text="{Binding EntitlementSummary}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,1,0,0"
+                               Visibility="{Binding HasStorage, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                        <Run Text="{loc:Tr StorageLabel}" /> <Run Text="{Binding StorageText, Mode=OneWay}" />
+                    </TextBlock>
                 </StackPanel>
                 <Border Grid.Column="2" Margin="10,0,0,0" Style="{DynamicResource Daynote.Product.Style.Account.PlanPill}">
                     <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PlanPillText}" Text="{Binding PlanBadge}" />
@@ -63,6 +67,110 @@
                         Content="{Binding CheckoutLabel}"
                         Visibility="{Binding ShowUpgrade, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
                         AutomationProperties.Name="{Binding CheckoutLabel}" />
+            </StackPanel>
+        </Border>
+
+        <!--
+          ── Checkout: the tier and the interval, what it costs, then Paddle in the browser ──
+          The desktop design draws this as a dialog; here it is a card at the top of the page, bound
+          to the same state (Daynote Desktop B v2). The success state follows the server's billing
+          state, never the click. An account already paying changes plan in place instead.
+        -->
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}"
+                Visibility="{Binding IsCheckoutOpen, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+            <StackPanel>
+                <StackPanel Visibility="{Binding IsCheckoutForm, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{Binding CheckoutTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{Binding DisplayName}" />
+                    <Border Margin="0,12,0,0" HorizontalAlignment="Left" Style="{DynamicResource Daynote.Product.Style.Account.SegTray}">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                          IsChecked="{Binding IsCheckoutPro, Mode=OneWay}" IsEnabled="{Binding CanChoosePro}"
+                                          Command="{Binding SelectCheckoutProCommand}" Content="{loc:Tr CheckoutTierProSub}"
+                                          AutomationProperties.Name="{loc:Tr PlanProName}" />
+                            <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                          IsChecked="{Binding IsCheckoutPremium, Mode=OneWay}" IsEnabled="{Binding CanChoosePremium}"
+                                          Command="{Binding SelectCheckoutPremiumCommand}" Content="{loc:Tr CheckoutTierPremiumSub}"
+                                          AutomationProperties.Name="{loc:Tr PlanPremiumName}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="0,8,0,0" HorizontalAlignment="Left" Style="{DynamicResource Daynote.Product.Style.Account.SegTray}">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                          IsChecked="{Binding IsMonthlySelected, Mode=OneWay}" IsEnabled="{Binding CanChooseMonthly}"
+                                          Command="{Binding SelectMonthlyCommand}" AutomationProperties.Name="{loc:Tr BillingPlanMonthly}">
+                                <TextBlock><Run Text="{loc:Tr BillingPlanMonthly}" /> <Run Text="{Binding MonthlyPrice, Mode=OneWay}" /></TextBlock>
+                            </ToggleButton>
+                            <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                          IsChecked="{Binding IsAnnualSelected, Mode=OneWay}" IsEnabled="{Binding CanChooseAnnual}"
+                                          Command="{Binding SelectAnnualCommand}" AutomationProperties.Name="{loc:Tr BillingPlanAnnual}">
+                                <TextBlock><Run Text="{loc:Tr BillingPlanAnnual}" /> <Run Text="{Binding AnnualPrice, Mode=OneWay}" /></TextBlock>
+                            </ToggleButton>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{DynamicResource Daynote.Product.Style.Account.RowDivider}" Margin="0,13,0,12" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" Text="{Binding CheckoutPlanLabel}" />
+                        <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.RowValue}" Text="{Binding PriceMain}" />
+                    </Grid>
+                    <StackPanel Visibility="{Binding IsCheckoutChange, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" Text="{loc:Tr CheckoutRenewRow}" />
+                            <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.RowValue}" Text="{Binding CheckoutRenewText}" />
+                        </Grid>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" FontWeight="Bold" Text="{loc:Tr CheckoutTodayRow}" />
+                            <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.Price}" Text="{Binding PriceMain}" />
+                        </Grid>
+                    </StackPanel>
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,6,0,0" Text="{loc:Tr CheckoutChangeNote}"
+                               Visibility="{Binding IsCheckoutChange, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,10,0,0" Text="{loc:Tr CheckoutFinePrint}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Status}" Margin="0,8,0,0" Text="{Binding ErrorMessage}"
+                               Visibility="{Binding ErrorMessage, Converter={StaticResource Daynote.Convert.NullToVisibility}}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                Command="{Binding ConfirmCheckoutCommand}" IsEnabled="{Binding CanConfirmCheckout}"
+                                Content="{Binding CheckoutConfirmLabel}" AutomationProperties.Name="{Binding CheckoutConfirmLabel}" />
+                        <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                                Command="{Binding CloseCheckoutCommand}" Content="{loc:Tr CheckoutCancel}"
+                                AutomationProperties.Name="{loc:Tr CheckoutCancel}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding IsCheckoutWaiting, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr CheckoutWaitingTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr CheckoutWaitingBody}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Style="{DynamicResource Daynote.Product.Style.Button.Secondary}"
+                                Command="{Binding ReopenCheckoutCommand}" Content="{loc:Tr CheckoutReopen}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource Daynote.Convert.InverseBool}}"
+                                AutomationProperties.Name="{loc:Tr CheckoutReopen}" />
+                        <Button Margin="12,0,0,0" Style="{DynamicResource Daynote.Product.Style.Button.Link}"
+                                Command="{Binding CloseCheckoutCommand}" Content="{loc:Tr CheckoutCancel}"
+                                AutomationProperties.Name="{loc:Tr CheckoutCancel}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding IsCheckoutDone, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{Binding CheckoutDoneTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Text="{loc:Tr CheckoutDoneBody}" />
+                    <Button Margin="0,12,0,0" HorizontalAlignment="Left" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                            Command="{Binding CloseCheckoutCommand}" Content="{loc:Tr CheckoutDoneOk}"
+                            AutomationProperties.Name="{loc:Tr CheckoutDoneOk}" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
@@ -116,19 +224,35 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" VerticalAlignment="Center"
-                               Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr BillingUpgradeTitle}" />
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock VerticalAlignment="Center"
+                                   Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr BillingUpgradeTitle}" />
+                        <Border Margin="10,0,0,0" Style="{DynamicResource Daynote.Product.Style.Account.SegTray}">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                              IsChecked="{Binding IsCheckoutPro, Mode=OneWay}"
+                                              Command="{Binding SelectCheckoutProCommand}" Content="{loc:Tr PlanProName}"
+                                              Visibility="{Binding CanChoosePro, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                              AutomationProperties.Name="{loc:Tr PlanProName}" />
+                                <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
+                                              IsChecked="{Binding IsCheckoutPremium, Mode=OneWay}"
+                                              Command="{Binding SelectCheckoutPremiumCommand}" Content="{loc:Tr PlanPremiumName}"
+                                              Visibility="{Binding CanChoosePremium, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                              AutomationProperties.Name="{loc:Tr PlanPremiumName}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                     <Border Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.SegTray}">
                         <StackPanel Orientation="Horizontal">
                             <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
                                           IsChecked="{Binding IsMonthlySelected, Mode=OneWay}"
                                           Command="{Binding SelectMonthlyCommand}" Content="{loc:Tr BillingPlanMonthly}"
-                                          Visibility="{Binding CanCheckoutMonthly, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                          Visibility="{Binding CanChooseMonthly, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
                                           AutomationProperties.Name="{loc:Tr BillingPlanMonthly}" />
                             <ToggleButton Style="{DynamicResource Daynote.Product.Style.Account.SegButton}"
                                           IsChecked="{Binding IsAnnualSelected, Mode=OneWay}"
                                           Command="{Binding SelectAnnualCommand}" Content="{loc:Tr BillingPlanAnnual}"
-                                          Visibility="{Binding CanCheckoutAnnual, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                                          Visibility="{Binding CanChooseAnnual, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
                                           AutomationProperties.Name="{loc:Tr BillingPlanAnnual}" />
                         </StackPanel>
                     </Border>
@@ -139,7 +263,7 @@
                     <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PriceUnit}" Text="{Binding PriceUnit}" />
                     <Border Style="{DynamicResource Daynote.Product.Style.Account.SavingPill}"
                             Visibility="{Binding IsAnnualSelected, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.SavingText}" Text="{loc:Tr BillingAnnualSaving}" />
+                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.SavingText}" Text="{Binding CheckoutSavingText}" />
                     </Border>
                 </StackPanel>
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,5,0,0" Text="{Binding PriceSub}" />
@@ -180,16 +304,18 @@
         </Border>
 
         <!--
-          The plan table: what the two plans are, side by side, as the design draws it. Only one row
-          differs, and that is the honest shape of this product — signing in syncs notes for nothing
-          and the subscription is for images and files. Shown to a paid account too, where the Pro
-          column says "current plan" instead of offering to sell it.
+          The plan table: 무료, Pro and Premium side by side (Daynote Desktop B v2). Two rows differ
+          from the free plan - image and file sync, and how much of them may be stored - and Pro and
+          Premium differ in storage alone, which is the honest shape of the product. The column in use
+          (or Pro, as the recommendation) is tinted; a paid account's column says "현재 플랜".
+          Shown only while something is on sale; every price is the server's.
 
-          Each of the header, the rows and the footer is its own grid — an ItemsControl cannot lay its
-          items out as one table — so the two plan columns are a fixed width and the label column
-          takes the rest. That is what makes the three line up.
+          Each of the header, the rows and the footer is its own grid - an ItemsControl cannot lay its
+          items out as one table - so the three plan columns are a fixed width and the label column
+          takes the rest. That is what makes the four line up.
         -->
-        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}">
+        <Border Style="{DynamicResource Daynote.Product.Style.Settings.Card}"
+                Visibility="{Binding ShowPlanTable, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Margin="0,0,0,12"
                            Text="{loc:Tr PlanTableTitle}" />
@@ -197,63 +323,81 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="120" />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="104" />
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="1" Padding="12,10">
+                    <Border Grid.Column="1" Padding="8,10" CornerRadius="12,12,0,0">
                         <StackPanel>
-                            <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center" Text="{loc:Tr PlanFreeName}" />
-                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0"
-                                       Text="{loc:Tr PlanFreePrice}" />
+                            <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center" Text="{Binding PlanColumns[0].Name}" />
+                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0" Text="{Binding PlanColumns[0].Price}" />
                             <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" FontSize="11"
-                                       TextAlignment="Center" Margin="0,2,0,0" Text="{loc:Tr PlanFreeNote}" />
+                                       TextAlignment="Center" Margin="0,2,0,0" Text="{Binding PlanColumns[0].Per}" />
                         </StackPanel>
                     </Border>
-                    <Border Grid.Column="2" Padding="12,10" CornerRadius="12,12,0,0"
-                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
+                    <Border Grid.Column="2" Padding="8,10" CornerRadius="12,12,0,0"
+                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                            Visibility="{Binding PlanColumns[1].IsHighlighted, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <Border Grid.Column="2" Padding="8,10">
                         <StackPanel>
                             <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center"
-                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{loc:Tr PlanProName}" />
-                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0"
-                                       Text="{Binding PriceMain}" />
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{Binding PlanColumns[1].Name}" />
+                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0" Text="{Binding PlanColumns[1].Price}" />
                             <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" FontSize="11"
-                                       TextAlignment="Center" Margin="0,2,0,0" Text="{loc:Tr PlanProNote}" />
+                                       TextAlignment="Center" Margin="0,2,0,0" Text="{Binding PlanColumns[1].Per}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Padding="8,10" CornerRadius="12,12,0,0"
+                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                            Visibility="{Binding PlanColumns[2].IsHighlighted, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <Border Grid.Column="3" Padding="8,10">
+                        <StackPanel>
+                            <TextBlock FontSize="13" FontWeight="Bold" TextAlignment="Center"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{Binding PlanColumns[2].Name}" />
+                            <TextBlock FontSize="18" FontWeight="ExtraBold" TextAlignment="Center" Margin="0,6,0,0" Text="{Binding PlanColumns[2].Price}" />
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" FontSize="11"
+                                       TextAlignment="Center" Margin="0,2,0,0" Text="{Binding PlanColumns[2].Per}" />
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <ItemsControl ItemsSource="{Binding PlanRows}">
+                <ItemsControl ItemsSource="{Binding PlanRows}" Focusable="False">
+                    <ItemsControl.Resources>
+                        <DataTemplate DataType="{x:Type pacct:PlanCell}">
+                            <Grid>
+                                <Path Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      Data="{DynamicResource Daynote.Desk.Geo.Check}" Fill="{x:Null}"
+                                      Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Visibility="{Binding IsCheck, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <Border Width="10" Height="1.5" CornerRadius="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Background="{DynamicResource Daynote.Desk.Brush.Text3}"
+                                        Visibility="{Binding IsDash, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <TextBlock FontSize="12.5" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{Binding Text}"
+                                           Visibility="{Binding IsText, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.Resources>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type pacct:PlanComparisonRow}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="120" />
-                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="104" />
+                                    <ColumnDefinition Width="104" />
+                                    <ColumnDefinition Width="104" />
                                 </Grid.ColumnDefinitions>
+                                <Border Grid.Column="2" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                                        Visibility="{Binding DataContext.PlanColumns[1].IsHighlighted, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <Border Grid.Column="3" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                                        Visibility="{Binding DataContext.PlanColumns[2].IsHighlighted, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <Border Grid.ColumnSpan="4" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" />
                                 <TextBlock Grid.Column="0" FontSize="12.5" TextWrapping="Wrap" Margin="0,11" VerticalAlignment="Center"
                                            Text="{Binding Label}" />
-                                <Border Grid.Column="1" BorderThickness="0,1,0,0"
-                                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
-                                    <Grid>
-                                        <Path Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                              Data="{DynamicResource Daynote.Desk.Geo.Check}" Fill="{x:Null}"
-                                              Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8"
-                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                              Visibility="{Binding InFree, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                        <Border Width="10" Height="1.5" CornerRadius="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                Background="{DynamicResource Daynote.Desk.Brush.Text3}"
-                                                Visibility="{Binding NotInFree, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                    </Grid>
-                                </Border>
-                                <Border Grid.Column="2" BorderThickness="0,1,0,0"
-                                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
-                                        Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
-                                    <Path Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          Data="{DynamicResource Daynote.Desk.Geo.Check}" Fill="{x:Null}"
-                                          Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
-                                </Border>
+                                <ContentPresenter Grid.Column="1" Content="{Binding Free}" />
+                                <ContentPresenter Grid.Column="2" Content="{Binding Pro}" />
+                                <ContentPresenter Grid.Column="3" Content="{Binding Premium}" />
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -262,22 +406,34 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="120" />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="104" />
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="2" Padding="10,10,10,12" CornerRadius="0,0,12,12"
-                            Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
-                        <Grid>
-                            <Button HorizontalAlignment="Center" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
-                                    Command="{Binding CheckoutSelectedCommand}" Content="{loc:Tr BillingSubscribe}"
-                                    AutomationProperties.Name="{loc:Tr BillingSubscribe}"
-                                    Visibility="{Binding ShowUpgrade, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                            <TextBlock FontSize="11.5" FontWeight="ExtraBold" TextAlignment="Center" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{loc:Tr PlanCurrent}"
-                                       Visibility="{Binding IsPlanPaid, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                        </Grid>
-                    </Border>
+                    <Grid.Resources>
+                        <DataTemplate DataType="{x:Type pacct:PlanColumn}">
+                            <Grid Margin="6,10,6,12" MinHeight="30">
+                                <Button HorizontalAlignment="Center" Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                                        Command="{Binding ChooseCommand}" Content="{Binding ButtonText}"
+                                        AutomationProperties.Name="{Binding ButtonText}"
+                                        Visibility="{Binding CanBuy, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                <TextBlock FontSize="11.5" FontWeight="ExtraBold" TextAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Daynote.Desk.Brush.Text3}" Text="{Binding Note}"
+                                           Visibility="{Binding HasNote, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </Grid.Resources>
+                    <Border Grid.Column="2" CornerRadius="0,0,12,12" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                            Visibility="{Binding PlanColumns[1].IsHighlighted, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <Border Grid.Column="3" CornerRadius="0,0,12,12" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}"
+                            Visibility="{Binding PlanColumns[2].IsHighlighted, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                    <ContentPresenter Grid.Column="1" Content="{Binding PlanColumns[0]}" />
+                    <ContentPresenter Grid.Column="2" Content="{Binding PlanColumns[1]}" />
+                    <ContentPresenter Grid.Column="3" Content="{Binding PlanColumns[2]}" />
                 </Grid>
+
+                <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,10,0,0" FontSize="11.5"
+                           Text="{loc:Tr PlanFairUseNote}" />
             </StackPanel>
         </Border>
 
@@ -287,6 +443,15 @@
             <StackPanel>
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.CardTitle}" Text="{loc:Tr BillingDetailTitle}" />
                 <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" Text="{loc:Tr BillingRowPlan}" />
+                    <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.RowValue}" Text="{Binding SubscriptionPlanText}" />
+                </Grid>
+                <Border Style="{DynamicResource Daynote.Product.Style.Account.RowDivider}" Margin="0,9,0,9" />
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -303,6 +468,20 @@
                     <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" Text="{Binding SubscriptionDateLabel}" />
                     <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.RowValue}" Text="{Binding SubscriptionDateText}" />
                 </Grid>
+                <Grid Margin="0,9,0,0" Visibility="{Binding HasStorage, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Style="{DynamicResource Daynote.Product.Style.Account.RowLabel}" Text="{loc:Tr StorageLabel}" />
+                    <TextBlock Grid.Column="1" Style="{DynamicResource Daynote.Product.Style.Account.RowValue}" Text="{Binding StorageText}" />
+                </Grid>
+                <Button Margin="0,14,0,0" HorizontalAlignment="Left"
+                        Style="{DynamicResource Daynote.Product.Style.Button.Primary}"
+                        Command="{Binding OpenCheckoutPremiumCommand}"
+                        Visibility="{Binding CanUpgradeToPremium, Converter={StaticResource Daynote.Convert.BoolToVisibility}}"
+                        Content="{loc:Tr BillingChangeToPremium}"
+                        AutomationProperties.Name="{loc:Tr BillingChangeToPremium}" />
                 <Button Margin="0,14,0,0" HorizontalAlignment="Left"
                         Style="{DynamicResource Daynote.Product.Style.Button.Secondary}"
                         Command="{Binding ManageSubscriptionCommand}"
