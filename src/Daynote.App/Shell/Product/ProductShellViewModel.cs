@@ -63,6 +63,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
         Timeline = new TimelineViewModel(repository, OpenFromTimelineAsync);
+        AttachViews(clock, repository);
 
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;
@@ -120,10 +121,10 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     [ObservableProperty]
     private bool _isTimelineMode;
 
-    /// <summary>The normal editor layout is shown whenever the timeline is not.</summary>
-    public bool IsEditorMode => !IsTimelineMode;
+    /// <summary>The editor layout is shown whenever neither the timeline nor a list is.</summary>
+    public bool IsEditorMode => !IsTimelineMode && !IsListMode;
 
-    partial void OnIsTimelineModeChanged(bool value) => OnPropertyChanged(nameof(IsEditorMode));
+    partial void OnIsTimelineModeChanged(bool value) => RaiseViewState();
 
     /// <summary>True when a persisted note is open in the editor; a bare projection reads as "no note"
     /// so an empty date shows the editor empty-state and the note-list empty message (design fidelity).</summary>
@@ -267,6 +268,25 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     /// </summary>
     public Account.AccountViewModel? Account => SettingsViewModel?.Account;
 
+    /// <summary>The account card is open over the sidebar's account row. Declared here, as the
+    /// Avalonia shell declares it, so the two shells' design-B surfaces stay comparable.</summary>
+    [ObservableProperty]
+    private bool _isAccountOpen;
+
+    [RelayCommand]
+    private void OpenAccount()
+    {
+        if (Account is not null)
+        {
+            IsSettingsOpen = false;
+            IsAccountOpen = true;
+            _ = Account.RefreshBillingCommand.ExecuteAsync(null);
+        }
+    }
+
+    [RelayCommand]
+    private void CloseAccount() => IsAccountOpen = false;
+
     public void OpenSettings() => IsSettingsOpen = true;
 
     public void CloseSettings() => IsSettingsOpen = false;
@@ -390,6 +410,11 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
     private void OnNotesPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus))
+        {
+            RaiseSaveFooter();
+        }
+
         if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus) && Notes.SaveStatus == SaveStatusKind.Saved)
         {
             _ = Todo.RefreshAsync();
@@ -402,6 +427,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         }
         else if (e.PropertyName == nameof(NoteWorkspaceViewModel.EditorText))
         {
+            OnPropertyChanged(nameof(CharLineText));
             // Autosave persists the body without a "saved" signal, so debounce a todo re-parse just
             // past the autosave window; GetAllNotesAsync then reflects the latest checkbox lines.
             ScheduleTodoRefresh();
@@ -436,6 +462,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         int count = Notes.ProjectionOnly ? 0 : Notes.Tabs.Count(t => !t.IsProjection);
         NoteCountText = Localization.AppStrings.NoteCount(count);
         IsDayEmpty = count == 0;
+        RefreshDayViews();
     }
 
     private static string FormatDayLabel(LocalDate date) => LocalDates.DisplayDayHeading(date);
