@@ -104,6 +104,16 @@
                       HorizontalContentAlignment="Left" AutomationProperties.Name="{Binding AccountBarMenuLabel}">
                 <TextBlock FontSize="13" Text="{Binding AccountBarMenuLabel}" />
               </Button>
+              <!-- During the trial, the way to keep file sync (Daynote Desktop B v2). -->
+              <ContentControl Content="{Binding Account}" IsVisible="{Binding AccountBarShowsAvatar}">
+                <ContentControl.ContentTemplate>
+                  <DataTemplate x:DataType="account:AccountViewModel">
+                    <Button Classes="accent" CornerRadius="8" Padding="10,9" Margin="0,4" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" IsVisible="{Binding ShowTrialUpgrade}"
+                            Content="{Binding ProCtaLabel}" Click="OnUpgrade" />
+                  </DataTemplate>
+                </ContentControl.ContentTemplate>
+              </ContentControl>
               <Button Classes="row" CornerRadius="8" Padding="10,9" Click="OnOpenSettings" HorizontalContentAlignment="Left"
                       AutomationProperties.Name="{Binding Strings.Settings}">
                 <TextBlock FontSize="13" Text="{Binding Strings.Settings}" />

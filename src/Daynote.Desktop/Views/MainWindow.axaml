@@ -4,6 +4,7 @@
         xmlns:notes="using:Daynote.App.Notes"
         xmlns:pvm="using:Daynote.App.Shell.Product"
         xmlns:views="using:Daynote.Desktop.Views"
+        xmlns:account="using:Daynote.App.Account"
         x:Class="Daynote.Desktop.Views.MainWindow"
         x:DataType="vm:DesktopShellViewModel"
         Title="Daynote"
@@ -741,6 +742,20 @@
         </Grid>
       </Border>
     </Border>
+
+    <!--
+      Checkout (Daynote Desktop B v2): the tier, the interval, what it costs, then Paddle's page in
+      the browser. Above settings and the account card, which are what open it. Bound to the account
+      through a template, so a build with no sync endpoint never evaluates it.
+    -->
+    <ContentControl Grid.ColumnSpan="2" ZIndex="28" Content="{Binding Account}"
+                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+      <ContentControl.ContentTemplate>
+        <DataTemplate x:DataType="account:AccountViewModel">
+          <views:CheckoutDialog />
+        </DataTemplate>
+      </ContentControl.ContentTemplate>
+    </ContentControl>
 
     <!--
       Onboarding tutorial. The overlay dims the shell and cuts a hole around the step's target

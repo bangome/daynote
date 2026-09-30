@@ -1,0 +1,146 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:account="using:Daynote.App.Account"
+             x:Class="Daynote.Desktop.Views.CheckoutDialog"
+             x:Name="Root"
+             x:DataType="account:AccountViewModel">
+  <!--
+    구독하기 (Daynote Desktop B v2): Pro or Premium, monthly or annual, what that costs and when it
+    renews, then the button that opens Paddle's checkout in the browser. Payment never happens here:
+    the dialog waits for the server to report the subscription and only then says it started. For an
+    account already paying, the same dialog changes the plan in place instead of buying a second one.
+  -->
+  <Border Classes="scrim" IsVisible="{Binding IsCheckoutOpen}" PointerPressed="OnScrimPressed">
+    <Border x:Name="Card" Classes="modal" Width="400" Margin="24" ClipToBounds="True"
+            HorizontalAlignment="Center" VerticalAlignment="Center">
+      <Panel>
+
+        <!-- Choosing. -->
+        <StackPanel IsVisible="{Binding IsCheckoutForm}">
+          <StackPanel Margin="22,22,22,0">
+            <TextBlock FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.3" Text="{Binding CheckoutTitle}" />
+            <TextBlock Classes="muted" FontSize="12.5" Margin="0,4,0,0" Text="{Binding DisplayName}" />
+          </StackPanel>
+
+          <UniformGrid Columns="2" Margin="18,18,18,0">
+            <Button Classes="option" Classes.selected="{Binding IsCheckoutPro}" Margin="4,0" Command="{Binding SelectCheckoutProCommand}"
+                    IsEnabled="{Binding CanChoosePro}">
+              <StackPanel>
+                <TextBlock FontSize="13" FontWeight="ExtraBold" Text="{Binding #Root.Strings[PlanProName]}" />
+                <TextBlock Classes="muted" FontSize="11.5" Margin="0,3,0,0" Text="{Binding #Root.Strings[CheckoutTierProSub]}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="option" Classes.selected="{Binding IsCheckoutPremium}" Margin="4,0" Command="{Binding SelectCheckoutPremiumCommand}"
+                    IsEnabled="{Binding CanChoosePremium}">
+              <StackPanel>
+                <TextBlock FontSize="13" FontWeight="ExtraBold" Text="{Binding #Root.Strings[PlanPremiumName]}" />
+                <TextBlock Classes="muted" FontSize="11.5" Margin="0,3,0,0" Text="{Binding #Root.Strings[CheckoutTierPremiumSub]}" />
+              </StackPanel>
+            </Button>
+          </UniformGrid>
+
+          <UniformGrid Columns="2" Margin="18,8,18,0">
+            <Button Classes="option" Classes.selected="{Binding IsMonthlySelected}" Margin="4,0" Command="{Binding SelectMonthlyCommand}"
+                    IsEnabled="{Binding CanChooseMonthly}">
+              <StackPanel>
+                <TextBlock FontSize="12.5" FontWeight="Bold" Text="{Binding #Root.Strings[BillingPlanMonthly]}" />
+                <TextBlock FontSize="16" FontWeight="ExtraBold" Margin="0,6,0,0" Text="{Binding MonthlyPrice}" />
+                <TextBlock Classes="faint" FontSize="11" Margin="0,2,0,0" Text="{Binding #Root.Strings[CheckoutMonthlySub]}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="option" Classes.selected="{Binding IsAnnualSelected}" Margin="4,0" Command="{Binding SelectAnnualCommand}"
+                    IsEnabled="{Binding CanChooseAnnual}">
+              <StackPanel>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" FontSize="12.5" FontWeight="Bold" Text="{Binding #Root.Strings[BillingPlanAnnual]}" />
+                  <Border Grid.Column="1" Classes="chip" IsVisible="{Binding HasCheckoutSaving}">
+                    <TextBlock Text="{Binding CheckoutSavingText}" />
+                  </Border>
+                </Grid>
+                <TextBlock FontSize="16" FontWeight="ExtraBold" Margin="0,6,0,0" Text="{Binding AnnualPrice}" />
+                <TextBlock Classes="faint" FontSize="11" Margin="0,2,0,0" Text="{Binding #Root.Strings[CheckoutAnnualSub]}" />
+              </StackPanel>
+            </Button>
+          </UniformGrid>
+
+          <!-- What is being bought. A change states the proration instead of a total: Paddle works
+               the difference out for the rest of the period, and a guessed figure would be wrong. -->
+          <Border Margin="22,10,22,0" CornerRadius="12" ClipToBounds="True"
+                  BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto" Margin="16,14">
+                <TextBlock Grid.Column="0" FontSize="13" FontWeight="Bold" Text="{Binding CheckoutPlanLabel}" />
+                <TextBlock Grid.Column="1" FontSize="13" FontWeight="Bold" Text="{Binding PriceMain}" />
+              </Grid>
+              <StackPanel IsVisible="{Binding !IsCheckoutChange}">
+                <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0">
+                  <Grid ColumnDefinitions="*,Auto" Margin="16,12">
+                    <TextBlock Classes="muted" Grid.Column="0" FontSize="12.5" Text="{Binding #Root.Strings[CheckoutStartRow]}" />
+                    <TextBlock Classes="muted" Grid.Column="1" FontSize="12.5" Text="{Binding CheckoutStartText}" />
+                  </Grid>
+                </Border>
+                <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0">
+                  <Grid ColumnDefinitions="*,Auto" Margin="16,12">
+                    <TextBlock Classes="muted" Grid.Column="0" FontSize="12.5" Text="{Binding #Root.Strings[CheckoutRenewRow]}" />
+                    <TextBlock Classes="muted" Grid.Column="1" FontSize="12.5" Text="{Binding CheckoutRenewText}" />
+                  </Grid>
+                </Border>
+                <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0"
+                        Background="{DynamicResource Daynote.Product.Brush.Bg1}">
+                  <Grid ColumnDefinitions="*,Auto" Margin="16,14">
+                    <TextBlock Grid.Column="0" FontSize="13.5" FontWeight="ExtraBold" VerticalAlignment="Center" Text="{Binding #Root.Strings[CheckoutTodayRow]}" />
+                    <TextBlock Grid.Column="1" FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.3" Text="{Binding PriceMain}" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+              <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0" IsVisible="{Binding IsCheckoutChange}">
+                <TextBlock Classes="muted" FontSize="12.5" Margin="16,12" TextWrapping="Wrap" Text="{Binding #Root.Strings[CheckoutChangeNote]}" />
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="faint" FontSize="11.5" LineHeight="18" Margin="22,12,22,0" TextWrapping="Wrap" Text="{Binding #Root.Strings[CheckoutFinePrint]}" />
+          <TextBlock Classes="faint" FontSize="11.5" LineHeight="18" Margin="22,4,22,0" TextWrapping="Wrap" Text="{Binding #Root.Strings[BillingProviderNote]}" />
+          <TextBlock FontSize="12" Margin="22,8,22,0" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}"
+                     Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <Grid ColumnDefinitions="*,8,2*" Margin="22,18,22,22">
+            <Button Grid.Column="0" Classes="quiet" Height="40" CornerRadius="10" FontSize="13" FontWeight="Bold"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
+                    Content="{Binding #Root.Strings[CheckoutCancel]}" Command="{Binding CloseCheckoutCommand}" />
+            <Button Grid.Column="2" Classes="accent" Height="40" CornerRadius="10" FontWeight="ExtraBold"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
+                    Content="{Binding CheckoutConfirmLabel}" Command="{Binding ConfirmCheckoutCommand}" IsEnabled="{Binding CanConfirmCheckout}" />
+          </Grid>
+        </StackPanel>
+
+        <!-- Waiting on the browser. The success state comes from the server, not from here. -->
+        <StackPanel IsVisible="{Binding IsCheckoutWaiting}" Margin="26,30,26,24">
+          <TextBlock FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.3" TextAlignment="Center" Text="{Binding #Root.Strings[CheckoutWaitingTitle]}" />
+          <TextBlock Classes="muted" FontSize="12.5" LineHeight="20" Margin="0,6,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="{Binding #Root.Strings[CheckoutWaitingBody]}" />
+          <Button Classes="link sun" HorizontalAlignment="Center" FontSize="12.5" FontWeight="SemiBold" Margin="0,14,0,0"
+                  Content="{Binding #Root.Strings[CheckoutReopen]}" Command="{Binding ReopenCheckoutCommand}" IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" Height="40" CornerRadius="10" FontSize="13" FontWeight="Bold" Margin="0,18,0,0"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                  Content="{Binding #Root.Strings[CheckoutCancel]}" Command="{Binding CloseCheckoutCommand}" />
+        </StackPanel>
+
+        <!-- Done: the server reports the subscription (or the change went through). -->
+        <StackPanel IsVisible="{Binding IsCheckoutDone}" Margin="26,34,26,26">
+          <Border Width="52" Height="52" CornerRadius="26" HorizontalAlignment="Center" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}">
+            <Path Width="22" Height="22" Stretch="Uniform" Data="{StaticResource Daynote.Desk.Geo.Check}"
+                  Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="2.2" StrokeLineCap="Round" StrokeJoin="Round"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.3" Margin="0,16,0,0" TextAlignment="Center" Text="{Binding CheckoutDoneTitle}" />
+          <TextBlock Classes="muted" FontSize="12.5" LineHeight="20" Margin="0,6,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="{Binding #Root.Strings[CheckoutDoneBody]}" />
+          <Button Classes="accent" Height="40" CornerRadius="10" FontWeight="ExtraBold" Margin="0,20,0,0"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                  Content="{Binding #Root.Strings[CheckoutDoneOk]}" Command="{Binding CloseCheckoutCommand}" />
+        </StackPanel>
+      </Panel>
+    </Border>
+  </Border>
+</UserControl>

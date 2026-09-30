@@ -134,8 +134,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Escape closes whatever is on top: the palette, then the account card, then settings — the
-    /// order the design checks them in. The palette's own query box handles it first when focused.
+    /// Escape closes whatever is on top: the palette, then the checkout, then the account card, then
+    /// settings — the order the design checks them in. The palette's own query box handles it first when focused.
     /// </summary>
     private void DismissOverlayOnEscape(KeyEventArgs e)
     {
@@ -147,6 +147,10 @@ public partial class MainWindow : Window
         if (shell.IsPaletteOpen)
         {
             shell.ClosePaletteCommand.Execute(null);
+        }
+        else if (shell.Account is { IsCheckoutOpen: true } account)
+        {
+            account.CloseCheckoutCommand.Execute(null);
         }
         else if (shell.IsAccountOpen)
         {

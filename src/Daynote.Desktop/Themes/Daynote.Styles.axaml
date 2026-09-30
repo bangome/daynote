@@ -775,4 +775,104 @@
   <Style Selector="ToggleButton.switch:disabled">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
+
+  <!-- ── Subscription (Daynote Desktop B v2): the settings 계정 page and the checkout dialog ──── -->
+
+  <!-- The pill-shaped primary: the trial's "Pro 구독하기", the plan table's footer buttons. -->
+  <Style Selector="Button.accent.pill">
+    <Setter Property="CornerRadius" Value="99" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.accent.pill.small, Button.quiet.pill.small">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Button.quiet.pill">
+    <Setter Property="CornerRadius" Value="99" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- On the navy subscribed card: the inverted pill ("Premium으로 변경") and the plain link. -->
+  <Style Selector="Button.onpri">
+    <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+    <Setter Property="CornerRadius" Value="99" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+  </Style>
+  <Style Selector="Button.onpri.plain">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+    <Setter Property="Padding" Value="0,6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+  <Style Selector="Button.onpri.plain:pointerover">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- A choice drawn as a card: the dialog's tier and billing-cycle options. -->
+  <Style Selector="Button.option">
+    <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.option.selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+  </Style>
+  <Style Selector="Button.option:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- The segmented cycle toggle over the plan table: smaller than the account card's. -->
+  <Style Selector="Border.seg.compact">
+    <Setter Property="CornerRadius" Value="9" />
+  </Style>
+  <Style Selector="Border.seg.compact Button.tab">
+    <Setter Property="Height" Value="26" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- "이용 중" beside the plan in use, and the plan pill in the navy of a paid account. -->
+  <Style Selector="Border.nowtag">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="5,1" />
+  </Style>
+  <Style Selector="Border.nowtag TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+  </Style>
+  <Style Selector="Border.planpill">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+    <Setter Property="CornerRadius" Value="99" />
+    <Setter Property="Padding" Value="9,3" />
+  </Style>
+  <Style Selector="Border.planpill TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Border.planpill.paid">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+  </Style>
+  <Style Selector="Border.planpill.paid TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+  </Style>
 </Styles>

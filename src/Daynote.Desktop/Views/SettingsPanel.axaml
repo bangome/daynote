@@ -213,7 +213,10 @@
             <!-- ── 계정 ─────────────────────────────────────────────────────────────── -->
             <StackPanel IsVisible="{Binding IsAccountSection}">
               <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsAccount]}" />
-              <Border CornerRadius="14" Padding="18" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+
+              <!-- Signed out, or a build with no account: where the notes live, and the way in. -->
+              <Border CornerRadius="14" Padding="18" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
+                      IsVisible="{Binding !#Root.((vm:DesktopShellViewModel)DataContext).AccountBarShowsAvatar}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0"
                           Background="{DynamicResource Daynote.Desk.Brush.Sun}">
@@ -229,6 +232,189 @@
                           IsVisible="{Binding #Root.((vm:DesktopShellViewModel)DataContext).HasAccount}" />
                 </Grid>
               </Border>
+
+              <!--
+                Signed in (Daynote Desktop B v2): who, the plan, then the one card that fits the
+                billing state - the trial's countdown with its call to action, the lapse, or the
+                running subscription - then the plan table. Inside a template bound to the account
+                so nothing here is evaluated in a build without one. The rest of the account (sync,
+                the note lock, deletion) stays in the account card behind 관리.
+              -->
+              <ContentControl Content="{Binding #Root.((vm:DesktopShellViewModel)DataContext).Account}"
+                              IsVisible="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountBarShowsAvatar}">
+                <ContentControl.ContentTemplate>
+                  <DataTemplate x:DataType="account:AccountViewModel">
+                    <StackPanel Spacing="12">
+                      <Border Classes="panel" Padding="18,16">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,14,0"
+                                  Background="{DynamicResource Daynote.Desk.Brush.Pri}">
+                            <TextBlock FontSize="15" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.OnPri}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AvatarInitial}" />
+                          </Border>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock FontSize="14" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding DisplayName}" />
+                            <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding PlanSubline}" />
+                            <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" IsVisible="{Binding HasStorage}">
+                              <Run Text="{Binding #Root.Strings[StorageLabel]}" />
+                              <Run Text="{Binding StorageText}" />
+                            </TextBlock>
+                          </StackPanel>
+                          <Border Grid.Column="2" Classes="planpill" Classes.paid="{Binding IsPaying}" VerticalAlignment="Center" Margin="10,0,0,0">
+                            <TextBlock Text="{Binding PlanBadge}" />
+                          </Border>
+                          <Button Grid.Column="3" Classes="quiet" VerticalAlignment="Center" Margin="10,0,0,0"
+                                  Content="{Binding #Root.((vm:DesktopShellViewModel)DataContext).AccountCardAction}"
+                                  Command="{Binding #Root.((vm:DesktopShellViewModel)DataContext).OpenAccountCommand}" />
+                        </Grid>
+                      </Border>
+
+                      <!-- The trial: how long is left, and Pro at the chosen interval's price. -->
+                      <Border CornerRadius="14" Padding="18" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" IsVisible="{Binding ShowTrialUpgrade}">
+                        <StackPanel>
+                          <TextBlock FontSize="14" FontWeight="ExtraBold" Text="{Binding TrialUpgradeTitle}" />
+                          <TextBlock Classes="muted" FontSize="12.5" LineHeight="20" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding #Root.Strings[BillingTrialBannerBody]}" />
+                          <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0">
+                            <Button Classes="accent pill" Content="{Binding ProCtaLabel}" Command="{Binding OpenCheckoutProCommand}" />
+                            <Button Classes="link sun" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                    Content="{Binding #Root.Strings[PlanCompare]}" Click="OnComparePlans" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+
+                      <!-- After a lapse: that file sync stopped, that nothing was deleted, and the way back. -->
+                      <Border CornerRadius="14" Padding="18" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" IsVisible="{Binding ShowLapsedUpgrade}">
+                        <StackPanel>
+                          <TextBlock FontSize="14" FontWeight="ExtraBold" Text="{Binding BannerTitle}" />
+                          <TextBlock Classes="muted" FontSize="12.5" LineHeight="20" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding BannerBody}" />
+                          <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0">
+                            <Button Classes="accent pill" Content="{Binding ProCtaLabel}" Command="{Binding OpenCheckoutProCommand}" />
+                            <Button Classes="link sun" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                    Content="{Binding #Root.Strings[PlanCompare]}" Click="OnComparePlans" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+
+                      <!-- A running subscription: the next payment, a move to Premium, and cancelling at Paddle. -->
+                      <Border CornerRadius="14" Padding="18,16" Background="{DynamicResource Daynote.Desk.Brush.Pri}" IsVisible="{Binding ShowSubscribedCard}">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock FontSize="14" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.OnPri}" Text="{Binding SubscribedTitle}" />
+                            <TextBlock FontSize="12.5" Margin="0,3,0,0" Opacity="0.78" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.OnPri}" Text="{Binding SubscribedDetail}" />
+                          </StackPanel>
+                          <Button Grid.Column="1" Classes="onpri" Margin="14,0,0,0" VerticalAlignment="Center" IsVisible="{Binding CanUpgradeToPremium}"
+                                  Content="{Binding #Root.Strings[BillingChangeToPremium]}" Command="{Binding OpenCheckoutPremiumCommand}" />
+                          <Button Grid.Column="2" Classes="onpri plain" Margin="14,0,0,0" VerticalAlignment="Center" IsVisible="{Binding CanManageSubscription}"
+                                  Content="{Binding #Root.Strings[BillingCancel]}" Command="{Binding ManageSubscriptionCommand}" IsEnabled="{Binding !IsBusy}" />
+                        </Grid>
+                      </Border>
+
+                      <!--
+                        요금제: the cycle toggle, then 무료 / Pro / Premium side by side. The column
+                        tint sits behind the header, rows and footer as one rounded block per column,
+                        which is why the backgrounds are drawn first across the whole height.
+                      -->
+                      <Border x:Name="PlanTable" Classes="panel" Padding="18" IsVisible="{Binding ShowPlanTable}">
+                        <StackPanel>
+                          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+                            <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" VerticalAlignment="Center" Text="{Binding #Root.Strings[PlanTableTitle]}" />
+                            <Border Grid.Column="1" Classes="seg compact">
+                              <StackPanel Orientation="Horizontal">
+                                <Button Classes="tab" Classes.active="{Binding IsMonthlySelected}" Command="{Binding SelectMonthlyCommand}"
+                                        Content="{Binding #Root.Strings[BillingPlanMonthly]}" />
+                                <Button Classes="tab" Classes.active="{Binding IsAnnualSelected}" Command="{Binding SelectAnnualCommand}">
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding #Root.Strings[BillingPlanAnnual]}" />
+                                    <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasAnnualSaving}">
+                                      <TextBlock Text="{Binding AnnualSavingText}" />
+                                    </Border>
+                                  </StackPanel>
+                                </Button>
+                              </StackPanel>
+                            </Border>
+                          </Grid>
+
+                          <Grid ColumnDefinitions="1.4*,*,*,*">
+                            <Border Grid.Column="1" CornerRadius="12" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" IsVisible="{Binding PlanColumns[0].IsHighlighted}" />
+                            <Border Grid.Column="2" CornerRadius="12" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" IsVisible="{Binding PlanColumns[1].IsHighlighted}" />
+                            <Border Grid.Column="3" CornerRadius="12" Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" IsVisible="{Binding PlanColumns[2].IsHighlighted}" />
+
+                            <StackPanel Grid.ColumnSpan="4">
+                              <Grid ColumnDefinitions="1.4*,*,*,*">
+                                <StackPanel Grid.Column="1" Margin="8,12,8,14">
+                                  <TextBlock HorizontalAlignment="Center" FontSize="13" FontWeight="ExtraBold" Text="{Binding PlanColumns[0].Name}" />
+                                  <TextBlock HorizontalAlignment="Center" FontSize="18" FontWeight="ExtraBold" Margin="0,6,0,0" Text="{Binding PlanColumns[0].Price}" />
+                                  <TextBlock Classes="muted" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" Text="{Binding PlanColumns[0].Per}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="8,12,8,14">
+                                  <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock FontSize="13" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{Binding PlanColumns[1].Name}" />
+                                    <Border Classes="nowtag" VerticalAlignment="Center" IsVisible="{Binding PlanColumns[1].IsCurrent}"><TextBlock Text="{Binding #Root.Strings[PlanInUse]}" /></Border>
+                                  </StackPanel>
+                                  <TextBlock HorizontalAlignment="Center" FontSize="18" FontWeight="ExtraBold" Margin="0,6,0,0" Text="{Binding PlanColumns[1].Price}" />
+                                  <TextBlock Classes="muted" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" Text="{Binding PlanColumns[1].Per}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" Margin="8,12,8,14">
+                                  <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock FontSize="13" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="{Binding PlanColumns[2].Name}" />
+                                    <Border Classes="nowtag" VerticalAlignment="Center" IsVisible="{Binding PlanColumns[2].IsCurrent}"><TextBlock Text="{Binding #Root.Strings[PlanInUse]}" /></Border>
+                                  </StackPanel>
+                                  <TextBlock HorizontalAlignment="Center" FontSize="18" FontWeight="ExtraBold" Margin="0,6,0,0" Text="{Binding PlanColumns[2].Price}" />
+                                  <TextBlock Classes="muted" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" Text="{Binding PlanColumns[2].Per}" />
+                                </StackPanel>
+                              </Grid>
+
+                              <ItemsControl ItemsSource="{Binding PlanRows}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="account:PlanComparisonRow">
+                                    <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0">
+                                      <Grid ColumnDefinitions="1.4*,*,*,*" MinHeight="40">
+                                        <TextBlock Grid.Column="0" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,11" Text="{Binding Label}" />
+                                        <ContentControl Grid.Column="1" Content="{Binding Free}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <ContentControl Grid.Column="2" Content="{Binding Pro}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <ContentControl Grid.Column="3" Content="{Binding Premium}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                      </Grid>
+                                    </Border>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.DataTemplates>
+                                  <DataTemplate DataType="account:PlanCell">
+                                    <Panel>
+                                      <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Daynote.Desk.Geo.Check}"
+                                            Stroke="{DynamicResource Daynote.Desk.Brush.Sun}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round"
+                                            IsVisible="{Binding IsCheck}" />
+                                      <Border Width="10" Height="1.5" CornerRadius="1" Background="{DynamicResource Daynote.Desk.Brush.Text3}" IsVisible="{Binding IsDash}" />
+                                      <TextBlock FontSize="12.5" FontWeight="ExtraBold" Text="{Binding Text}" IsVisible="{Binding IsText}" />
+                                    </Panel>
+                                  </DataTemplate>
+                                </ItemsControl.DataTemplates>
+                              </ItemsControl>
+
+                              <Grid ColumnDefinitions="1.4*,*,*,*" MinHeight="52">
+                                <ContentControl Grid.Column="1" Content="{Binding PlanColumns[0]}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <ContentControl Grid.Column="2" Content="{Binding PlanColumns[1]}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <ContentControl Grid.Column="3" Content="{Binding PlanColumns[2]}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Grid.DataTemplates>
+                                  <DataTemplate DataType="account:PlanColumn">
+                                    <Panel Margin="0,10,0,12">
+                                      <Button Classes="pill small" IsVisible="{Binding CanBuy}" Classes.quiet="{Binding !IsPrimary}" Classes.accent="{Binding IsPrimary}"
+                                              Content="{Binding ButtonText}" Command="{Binding ChooseCommand}" />
+                                      <TextBlock Classes="faint" FontSize="11.5" FontWeight="Bold" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
+                                    </Panel>
+                                  </DataTemplate>
+                                </Grid.DataTemplates>
+                              </Grid>
+                            </StackPanel>
+                          </Grid>
+
+                          <TextBlock Classes="faint" FontSize="11.5" Margin="0,12,0,0" Text="{Binding #Root.Strings[PlanFairUseNote]}" />
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </DataTemplate>
+                </ContentControl.ContentTemplate>
+              </ContentControl>
             </StackPanel>
           </Panel>
         </ScrollViewer>

@@ -174,6 +174,24 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     [RelayCommand]
     private void CloseAccount() => IsAccountOpen = false;
 
+    /// <summary>
+    /// The popover's "Pro 구독하기": settings on the 계정 page, with the checkout open over it — the
+    /// page the dialog belongs to, so closing it leaves the plan table in view.
+    /// </summary>
+    [RelayCommand]
+    private void UpgradeFromMenu()
+    {
+        if (Account is null)
+        {
+            return;
+        }
+
+        IsAccountOpen = false;
+        SettingsViewModel?.SelectSectionCommand.Execute(SettingsSection.Account);
+        IsSettingsOpen = true;
+        Account.OpenCheckoutProCommand.Execute(null);
+    }
+
     /// <summary>First-run onboarding (auto-shown once; re-openable from Settings). Set by composition.</summary>
     [ObservableProperty]
     private Daynote.App.Onboarding.TutorialViewModel? _tutorial;
@@ -436,6 +454,11 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         if (value)
         {
             _ = SettingsViewModel?.RefreshAsync();
+            // The 계정 page shows the plan and its prices, which the server owns.
+            if (Account is not null)
+            {
+                _ = Account.RefreshBillingCommand.ExecuteAsync(null);
+            }
         }
         else
         {

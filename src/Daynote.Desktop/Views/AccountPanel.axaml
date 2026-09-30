@@ -257,14 +257,20 @@
               <TextBlock Classes="muted" Text="{Binding SubscriptionDateLabel}" FontSize="12" />
               <TextBlock Text="{Binding SubscriptionDateText}" FontSize="12" />
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasStorage}">
+              <TextBlock Classes="muted" Text="{Binding #Root.Strings[StorageLabel]}" FontSize="12" />
+              <TextBlock Text="{Binding StorageText}" FontSize="12" />
+            </StackPanel>
+            <Button Classes="quiet" Content="{Binding #Root.Strings[BillingChangeToPremium]}" Command="{Binding OpenCheckoutPremiumCommand}"
+                    IsVisible="{Binding CanUpgradeToPremium}" HorizontalAlignment="Left" />
             <Button Classes="quiet" Content="{Binding #Root.Strings[BillingManage]}" Command="{Binding ManageSubscriptionCommand}"
                     IsVisible="{Binding CanManageSubscription}" HorizontalAlignment="Left" />
             <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingPortalNote]}" FontSize="11.5" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <!-- Upgrade: a centred pitch, the way a pricing card reads - what you get, the plan, the
-             price, the button - rather than a left-aligned settings list. -->
+        <!-- Upgrade: a centred pitch - what you get and what it costs - whose button opens the
+             checkout dialog, where the tier and the interval are chosen. -->
         <Border Classes="panel" Padding="20,18" IsVisible="{Binding ShowUpgrade}">
           <StackPanel Spacing="12" HorizontalAlignment="Center">
             <TextBlock Text="{Binding #Root.Strings[BillingUpgradeTitle]}" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" />
@@ -276,21 +282,10 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Border Classes="seg" HorizontalAlignment="Center" Width="260" Margin="0,4,0,0">
-              <UniformGrid Columns="2">
-                <Button Classes="tab" Classes.active="{Binding IsMonthlySelected}" Content="{Binding #Root.Strings[BillingPlanMonthly]}"
-                        Command="{Binding SelectMonthlyCommand}" IsEnabled="{Binding CanCheckoutMonthly}" />
-                <Button Classes="tab" Classes.active="{Binding IsAnnualSelected}" Content="{Binding #Root.Strings[BillingPlanAnnual]}"
-                        Command="{Binding SelectAnnualCommand}" IsEnabled="{Binding CanCheckoutAnnual}" />
-              </UniformGrid>
-            </Border>
-            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-              <TextBlock Text="{Binding PriceMain}" FontSize="22" FontWeight="Bold" />
-              <TextBlock Classes="muted" Text="{Binding PriceUnit}" FontSize="12" VerticalAlignment="Bottom" Margin="0,0,0,4" />
-              <TextBlock Classes="muted" Text="{Binding PriceSub}" FontSize="11.5" VerticalAlignment="Bottom" Margin="8,0,0,4" />
-            </StackPanel>
-            <Button Classes="accent" Content="{Binding CheckoutLabel}" Command="{Binding CheckoutSelectedCommand}" IsEnabled="{Binding !IsBusy}"
+            <Button Classes="accent pill" Content="{Binding ProCtaLabel}" Command="{Binding OpenCheckoutProCommand}" IsEnabled="{Binding !IsBusy}"
                     HorizontalAlignment="Center" HorizontalContentAlignment="Center" MinWidth="200" />
+            <Button Classes="link sun" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold"
+                    Content="{Binding #Root.Strings[PlanPremiumName]}" Command="{Binding OpenCheckoutPremiumCommand}" IsVisible="{Binding CanChoosePremium}" />
             <TextBlock Classes="muted" Text="{Binding #Root.Strings[BillingProviderNote]}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400" />
           </StackPanel>
         </Border>

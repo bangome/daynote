@@ -27,6 +27,8 @@ public partial class AccountBar : UserControl
 
     private void OnOpenSettings(object? sender, RoutedEventArgs e) => Invoke(shell => shell.OpenSettingsCommand);
 
+    private void OnUpgrade(object? sender, RoutedEventArgs e) => Invoke(shell => shell.UpgradeFromMenuCommand);
+
     private void Invoke(Func<DesktopShellViewModel, System.Windows.Input.ICommand> pick)
     {
         Toggle.Flyout?.Hide();
