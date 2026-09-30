@@ -18,8 +18,12 @@ const OPERATOR = { ko: '위드큐브', en: 'Withcube' };
 const SUPPORT_EMAIL = 'aracube@gmail.com';
 // The subscription price exactly as sold in Paddle → Catalog. Shown on /pricing and in the terms.
 // Decided 2026-09-04: below Obsidian Sync / Bear on the annual plan, annual is the plan to push.
-const PRICE_LINE = { ko: '월 ₩2,900 · 연 ₩24,000', en: '$2.49 / month · $19.99 / year' };
-const PRICE_NOTE = { ko: '연간 결제 시 월 ₩2,000, 월 결제 대비 31% 할인', en: 'Annual works out to $1.67 a month, 31% off monthly' };
+// Premium added 2026-09-30 at roughly twice Pro, for unlimited (fair-use) storage.
+const PRICE_LINE = {
+  ko: 'Pro 월 ₩2,900 · 연 ₩24,000 / Premium 월 ₩5,900 · 연 ₩49,000',
+  en: 'Pro $2.49 / month · $19.99 / year; Premium $4.99 / month · $39.99 / year',
+};
+const PRICE_NOTE = { ko: '연간 결제 시 월 결제 대비 약 31% 할인', en: 'Annual works out about 33% below monthly' };
 // Paddle.js client-side token (Developer tools → Authentication → Client-side tokens) and the
 // environment it belongs to. The /checkout page is the "default payment link" Paddle opens
 // server-created transactions on; it needs both to render the checkout.
