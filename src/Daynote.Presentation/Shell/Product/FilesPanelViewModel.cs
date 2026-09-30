@@ -204,11 +204,34 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         try
         {
             await File.WriteAllBytesAsync(destination, bytes).ConfigureAwait(true);
+            await _picker.CompleteSaveAsync(destination).ConfigureAwait(true);
             item.SavedTo = destination;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             item.SaveFailed = true;
+        }
+    }
+
+    /// <summary>
+    /// The bytes behind a card, or null when this device does not hold them (still downloading, or
+    /// lost). For the phone, which opens an attachment rather than only saving a copy of it.
+    /// </summary>
+    public async Task<byte[]?> ReadBytesAsync(FileItemViewModel item, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (_files.FirstOrDefault(candidate => candidate.Id == item.Id) is not { } file)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _assetStore.ReadAsync(file.RelativePath, cancellationToken).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 

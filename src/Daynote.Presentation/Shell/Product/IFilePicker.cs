@@ -15,4 +15,14 @@ public interface IFilePicker
     /// files panel has to be exercised without one.
     /// </summary>
     Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Called once the copy has been written to the path <see cref="PickSavePathAsync"/> returned.
+    /// </summary>
+    /// <remarks>
+    /// A desktop dialog hands back a real path and has nothing left to do. A phone's save picker
+    /// hands back a document behind a content URI or a security-scoped URL, which is written through
+    /// a stream: that picker returns a staging path and forwards it to the destination here.
+    /// </remarks>
+    Task CompleteSaveAsync(string path, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

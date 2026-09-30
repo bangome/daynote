@@ -134,6 +134,29 @@ public sealed partial class SqliteSyncStore : ISyncStore
     }
 
     /// <summary>
+    /// The ids of the attachments this device has not yet pushed: their metadata is still in the
+    /// outbox. The phone shows these rows as waiting to upload, so an attachment that has reached the
+    /// cloud and one that has not do not look alike.
+    /// </summary>
+    public async ValueTask<IReadOnlySet<string>> ReadQueuedFileIdsAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using SqliteConnection connection = database.OpenReadConnection();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT entity_id FROM sync_outbox WHERE entity = 'file';";
+        var queued = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            queued.Add(reader.GetString(0));
+        }
+
+        return queued;
+    }
+
+    /// <summary>
     /// Attachment metadata awaiting push. The bytes and the merge side arrive with the R2 work in a
     /// later phase; this exists so the outbox can be drained rather than growing unbounded.
     /// </summary>
