@@ -351,7 +351,8 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="MinHeight" Value="0" />
-        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
+        <!-- The face carries the design's line height; a TextBox has no LineHeight of its own. -->
+        <Setter Property="FontFamily" Value="{x:Static product:DeskFonts.Body}" />
         <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionBg}" />
         <Setter Property="SelectionOpacity" Value="1" />
@@ -369,7 +370,7 @@
         <!-- The face is stated here rather than inherited. The caret belongs to the box above and
              the glyphs to this layer, so a face that differs by one metric drifts the two apart;
              inheritance would make that depend on whatever happens to be above them. -->
-        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
+        <Setter Property="FontFamily" Value="{x:Static product:DeskFonts.Body}" />
         <Setter Property="FontSize" Value="15.5" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Padding" Value="0" />

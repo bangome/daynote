@@ -41,6 +41,12 @@ public sealed class DeskShellShotTests
             harness.Shell.InitializeAsync().GetAwaiter().GetResult();
             harness.Shell.IsDark = dark;
 
+            // A note with a link in it, so the shot shows the body's line height and the colour
+            // the highlighter gives a mark in whichever theme is up.
+            harness.Shell.NewNoteCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+            harness.Shell.Notes.EditorText =
+                "회의 준비\n- [ ] 자료 정리\n- [ ] https://example.com 확인\n\n지난 주 논의 내용을 정리한다.";
+
             var window = new ProductWindow(harness.Shell);
             var content = (System.Windows.Controls.Grid)window.Content;
 

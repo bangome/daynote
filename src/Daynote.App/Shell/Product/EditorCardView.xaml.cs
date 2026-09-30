@@ -115,8 +115,6 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
     private void RebuildHighlight(string text)
     {
         Highlight.Inlines.Clear();
-        var accent = (System.Windows.Media.Brush?)TryFindResource("Daynote.Product.Brush.Accent")
-            ?? System.Windows.Media.Brushes.RoyalBlue;
         int last = 0;
         foreach (Match match in HighlightPattern.Matches(text))
         {
@@ -129,7 +127,13 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
             // lays the caret out from its own text at the normal weight, so a SemiBold run here is
             // wider than the same characters there and the caret drifts along the line from the
             // first mark onwards.
-            var run = new Run(match.Value) { Foreground = accent };
+            var run = new Run(match.Value);
+
+            // A resource reference, not the brush TryFindResource would hand back now. The theme
+            // applier swaps the whole palette dictionary, and a run holding the old object keeps
+            // the old colour: marks written in light stayed navy over the dark page, which is
+            // very nearly the page itself. This follows the swap instead.
+            run.SetResourceReference(TextElement.ForegroundProperty, "Daynote.Product.Brush.Accent");
             // Inline #tag used to be marked here too. Tags are the chips under the note title now,
             // so a '#' in the prose is prose.
             if (match.Value.StartsWith("[[file:", StringComparison.Ordinal)
