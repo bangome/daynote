@@ -1,0 +1,67 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+
+    <!--
+      The desktop's own palette, light: design "Daynote Desktop B", transcribed from the Avalonia
+      shell's Daynote.Desk.axaml so the two Windows shells paint the same thing.
+
+      Merged AFTER Daynote.Product.Light.xaml and before the styles, so it redefines the shared
+      Product keys and everything already painting with them takes the new colours without a rename.
+      Daynote.Product.Light/Dark.xaml is deliberately left alone: PaletteParityTests holds it to the
+      Avalonia shared palette, which the phone app also compiles. What only this design has — the
+      navy sidebar, the orange "sun" marks, the primary fill that turns orange in the dark — gets
+      Daynote.Desk.* keys.
+    -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FFF6F5F1" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FFF6F5F1" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FFFFFEFB" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Card" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke" Color="#FFE6E3DA" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Stroke2" Color="#FFEFECE5" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text" Color="#FF161A36" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Text2" Color="#FF62667D" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Accent" Color="#FF1B2356" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.AccentSoft" Color="#121B2356" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Hover" Color="#0B161A36" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Seg" Color="#FFEFEDE6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Input" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.OnAccent" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionBg" Color="#FF1B2356" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionText" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFEE7F35" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFCF4A3F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF9A9CAA" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Ok" Color="#FF2FB574" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Danger" Color="#FFCF4A3F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.DangerSoft" Color="#1ACF4A3F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Overdue" Color="#FFCF4A3F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Sticky" Color="#FFFFE99A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.StickyText" Color="#FF3B2F10" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.Scrim.Modal" Color="#660E1020" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Text3" Color="#FF9A9CAA" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Pri" Color="#FF1B2356" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.OnPri" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Sun" Color="#FFEE7F35" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SunInk" Color="#FFB4531A" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SunSoft" Color="#21EE7F35" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Sunday" Color="#FFCF4A3F" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Side" Color="#FF161B40" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SideText" Color="#FFECEEF9" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.Side2" Color="#FF9CA1C6" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SideHover" Color="#12FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SideActive" Color="#1FFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Desk.Brush.SideStroke" Color="#17FFFFFF" po:Freeze="True" />
+
+    <!--
+      The pop shadow, as the design's two-layer drop. Avalonia states it as one BoxShadows string;
+      WPF has no equivalent, so the outer layer is a DropShadowEffect and the tight inner one is
+      dropped — stacking two effects on a single element costs a second render pass for a shadow
+      that is 2px deep. Blur is the design's 60px radius halved, which is how WPF's BlurRadius maps
+      to a CSS blur.
+    -->
+    <DropShadowEffect x:Key="Daynote.Desk.Shadow.Pop" BlurRadius="30" ShadowDepth="10"
+                      Direction="270" Color="#161A36" Opacity="0.20" />
+</ResourceDictionary>

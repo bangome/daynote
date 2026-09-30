@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -102,6 +102,10 @@ public sealed partial class DesignResourceTests
         var paletteFiles = new[]
         {
             "Daynote.Colors.xaml", "Daynote.Product.Light.xaml", "Daynote.Product.Dark.xaml",
+            // The design-B layer is a palette declaration too. It redefines the product keys
+            // rather than editing them, because PaletteParityTests holds those to the Avalonia
+            // shared palette and the phone compiles the same file.
+            "Daynote.Desk.Light.xaml", "Daynote.Desk.Dark.xaml", "Daynote.Desk.xaml",
         };
         var candidates = Directory.EnumerateFiles(TestPaths.AppRoot, "*", SearchOption.AllDirectories)
             .Where(path => Path.GetExtension(path) is ".cs" or ".xaml")
@@ -128,19 +132,36 @@ public sealed partial class DesignResourceTests
         // The redesign's Light/Dark product dictionaries are INTENTIONALLY parallel: same keys, different
         // values, so the shell swaps one for the other (Revision 2026-07-21). Exclude that pair from the
         // no-accidental-redefinition scan; a separate assertion below pins their key sets to be identical.
+        // Daynote.Desk.Light/Dark are the same arrangement one layer up, and they redefine the
+        // product keys on purpose: that redefinition IS the design-B layer. Daynote.Desk.xaml holds
+        // its theme-independent half; the only keys it shares with anything are the two font
+        // families, which it takes over from Daynote.Product.Styles.xaml on purpose — every Setter
+        // in the shell binds FontFamily to Daynote.Product.Font.UI, so the design's face has to
+        // arrive under that name. Named one by one, so any OTHER collision still fails.
         string[] productThemePair = ["Daynote.Product.Light.xaml", "Daynote.Product.Dark.xaml"];
+        string[] deskThemePair = ["Daynote.Desk.Light.xaml", "Daynote.Desk.Dark.xaml"];
+        string[] layeredPalettes = [.. productThemePair, .. deskThemePair];
         var uniquenessKeys = themeFiles
-            .Where(path => !productThemePair.Any(name => path.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
+            .Where(path => !layeredPalettes.Any(name => path.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
             .SelectMany(path => Entries(XDocument.Load(path)).Keys)
             .ToArray();
+        string[] deskFontOverrides = ["Daynote.Product.Font.UI", "Daynote.Product.Font.Mono"];
         var duplicates = uniquenessKeys.GroupBy(key => key, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
+            .Where(key => !deskFontOverrides.Contains(key, StringComparer.Ordinal))
             .ToArray();
 
         var lightKeys = Entries(Load("Daynote.Product.Light.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
         var darkKeys = Entries(Load("Daynote.Product.Dark.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
         CollectionAssert.AreEqual(lightKeys, darkKeys, "Product Light and Dark must declare an identical key set so a theme swap resolves every brush.");
+
+        var deskLightKeys = Entries(Load("Daynote.Desk.Light.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
+        var deskDarkKeys = Entries(Load("Daynote.Desk.Dark.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
+        CollectionAssert.AreEqual(
+            deskLightKeys,
+            deskDarkKeys,
+            "Desk Light and Dark must declare an identical key set, or one theme keeps a brush the other has already overridden and the swap leaves a stale colour on screen.");
         var required = new[]
         {
             "Daynote.Inset.Control", "Daynote.Inset.Pane.Compact", "Daynote.Inset.Pane.Regular",

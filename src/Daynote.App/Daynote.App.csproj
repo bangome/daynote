@@ -8,6 +8,14 @@
     <StartupObject>Daynote.App.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Pretendard (OFL), the design-B face. Copied from Daynote.Desktop rather than linked: WPF
+         resolves a font family by pack URI into this assembly, so the files have to be its own
+         resources. The licence ships beside them. -->
+    <Resource Include="Assets\Fonts\Pretendard-Regular.otf" />
+    <Resource Include="Assets\Fonts\Pretendard-SemiBold.otf" />
+    <Resource Include="Assets\Fonts\Pretendard-Bold.otf" />
+    <Resource Include="Assets\Fonts\Pretendard-ExtraBold.otf" />
+    <None Include="Assets\Fonts\LICENSE-Pretendard.txt" />
     <Resource Include="Assets\Brand\daynote-favicon-v1.ico" />
     <Resource Include="Assets\Brand\daynote-favicon-v1.png" />
     <Resource Include="Assets\Brand\daynote-favicon-trimmed.png" />

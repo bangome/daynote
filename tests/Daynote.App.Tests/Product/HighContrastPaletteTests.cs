@@ -60,8 +60,10 @@ public sealed class HighContrastPaletteTests
         Application application = Fresh();
         new WpfProductThemeApplier(application, highContrast: false).Apply(dark: false);
 
+        // The design-B layer (Daynote.Desk.Light.xaml) is merged over the product palette, so the
+        // light page is its #F6F5F1 rather than the product dictionary's #F4F4F5.
         Assert.AreEqual(
-            (Color)ColorConverter.ConvertFromString("#FFF4F4F5")!,
+            (Color)ColorConverter.ConvertFromString("#FFF6F5F1")!,
             Resolve(application, "Bg1"),
             "A build that is not in high contrast should paint the light palette.");
     }

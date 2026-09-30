@@ -22,10 +22,25 @@ public sealed class WpfProductThemeApplier : IThemeApplier
     private const string LightUri = "/Daynote.App;component/Themes/Daynote.Product.Light.xaml";
     private const string DarkUri = "/Daynote.App;component/Themes/Daynote.Product.Dark.xaml";
 
+    /// <summary>
+    /// The design-B layer: the theme-independent half, then the light or dark half.
+    /// </summary>
+    /// <remarks>
+    /// A layer of its own rather than edits to the product palette, mirroring the Avalonia shell's
+    /// Daynote.Desk.axaml. The product dictionaries are held to the Avalonia shared palette by
+    /// PaletteParityTests, and that palette is also the phone's base — so the desktop design cannot
+    /// be written into them without dragging the phone along.
+    /// </remarks>
+    private const string DeskUri = "/Daynote.App;component/Themes/Daynote.Desk.xaml";
+    private const string DeskLightUri = "/Daynote.App;component/Themes/Daynote.Desk.Light.xaml";
+    private const string DeskDarkUri = "/Daynote.App;component/Themes/Daynote.Desk.Dark.xaml";
+
     private readonly System.Windows.Application _application;
     private readonly bool _highContrast;
     private ResourceDictionary? _stylesDictionary;
+    private ResourceDictionary? _deskDictionary;
     private ResourceDictionary? _themeDictionary;
+    private ResourceDictionary? _deskThemeDictionary;
     private ResourceDictionary? _highContrastDictionary;
 
     public WpfProductThemeApplier(System.Windows.Application application)
@@ -47,19 +62,32 @@ public sealed class WpfProductThemeApplier : IThemeApplier
     {
         Collection<ResourceDictionary> merged = _application.Resources.MergedDictionaries;
         _stylesDictionary ??= Add(merged, StylesUri);
+        _deskDictionary ??= Add(merged, DeskUri);
 
         ResourceDictionary next = Load(dark ? DarkUri : LightUri);
+        ResourceDictionary nextDesk = Load(dark ? DeskDarkUri : DeskLightUri);
         if (_themeDictionary is not null)
         {
             merged.Remove(_themeDictionary);
         }
 
+        if (_deskThemeDictionary is not null)
+        {
+            merged.Remove(_deskThemeDictionary);
+        }
+
         // Insert the theme brushes before the styles so the styles resolve them. A dictionary merged
         // later can still override them by key — which is what the High Contrast aggregate was meant
         // to do and does not, per the remarks above.
+        //
+        // The desk layer goes immediately after the product palette and still before the styles:
+        // after, so it wins on the shared keys it redefines; before, so a style setter written
+        // against a Daynote.Desk.* key still resolves.
         int stylesIndex = merged.IndexOf(_stylesDictionary);
         merged.Insert(Math.Max(0, stylesIndex), next);
+        merged.Insert(Math.Max(0, merged.IndexOf(next) + 1), nextDesk);
         _themeDictionary = next;
+        _deskThemeDictionary = nextDesk;
 
         if (!_highContrast)
         {
