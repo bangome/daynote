@@ -227,11 +227,24 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
 
     public ValueTask<string> CreateCheckoutSessionAsync(
         string accessToken,
+        BillingTier tier,
         BillingPlan plan,
         CancellationToken cancellationToken = default)
     {
         Account account = Authenticate(accessToken);
-        return ValueTask.FromResult($"https://pay.test/checkout?user={account.UserId}&plan={plan.ToWire()}");
+        return ValueTask.FromResult(
+            $"https://pay.test/checkout?user={account.UserId}&tier={tier.ToWire()}&plan={plan.ToWire()}");
+    }
+
+    public ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(
+        string accessToken,
+        BillingTier tier,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default)
+    {
+        _ = Authenticate(accessToken);
+        Entitlement = Entitlement with { Tier = tier, Plan = plan };
+        return ValueTask.FromResult((Entitlement, new BillingLinks(true, true, CanChange: true)));
     }
 
     public ValueTask<string> CreatePortalSessionAsync(

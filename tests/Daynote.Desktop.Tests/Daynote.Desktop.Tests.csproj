@@ -11,4 +11,10 @@
     <ProjectReference Include="..\..\src\Daynote.Desktop\Daynote.Desktop.csproj" />
     <PackageReference Include="Avalonia.Headless" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The account fakes, shared with the WPF suite so the subscription view model can be tested
+         here too: that suite targets Windows and cannot run on the macOS machine this one does. -->
+    <Compile Include="..\Daynote.App.Tests\Account\FakeAccounts.cs" Link="Account\FakeAccounts.cs" />
+    <Compile Include="..\Daynote.App.Tests\Account\FakeSyncStore.cs" Link="Account\FakeSyncStore.cs" />
+  </ItemGroup>
 </Project>

@@ -31,6 +31,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     private readonly string conflictsPath;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanConfirmCheckout))]
     private bool isBusy;
 
     [ObservableProperty]

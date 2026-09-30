@@ -62,7 +62,7 @@ public sealed partial class AccountViewModel
     /// </summary>
     public bool IsPhone { get; init; }
 
-    /// <summary>The pill next to the name: 무료 / 체험 중 / Pro / 결제 확인 중.</summary>
+    /// <summary>The pill next to the name: 무료 / 체험 중 / Pro / Premium / 결제 확인 중.</summary>
     /// <remarks>
     /// Not gated on <see cref="OffersSubscription"/>: the trial is real whether or not anything is
     /// for sale — it is what is opening file sync right now — and calling it 무료 while it runs
@@ -71,7 +71,7 @@ public sealed partial class AccountViewModel
     public string PlanBadge => Entitlement.State switch
     {
         EntitlementState.Trial => AppStrings.AccountPlanTrial,
-        EntitlementState.Active => AppStrings.AccountPlanPro,
+        EntitlementState.Active => TierName(Entitlement.PaidTier),
         EntitlementState.Grace => AppStrings.AccountPlanGrace,
         _ => AppStrings.AccountPlanFree,
     };
@@ -81,6 +81,10 @@ public sealed partial class AccountViewModel
 
     /// <summary>The plan table's rows. Fixed copy, so the list itself never changes.</summary>
     public static IReadOnlyList<PlanComparisonRow> PlanRows => PlanComparison.Rows;
+
+    /// <summary>A tier's display name. Brand names, but read from the catalog like everything else.</summary>
+    public static string TierName(BillingTier tier) =>
+        tier == BillingTier.Premium ? AppStrings.PlanPremiumName : AppStrings.PlanProName;
 
     /// <summary>True when the pill should read as something to look at rather than a plain fact.</summary>
     public bool IsPlanAttention => Entitlement.State == EntitlementState.Grace;
@@ -149,8 +153,11 @@ public sealed partial class AccountViewModel
     /// <summary>
     /// The upgrade card. Shown whenever there is something to buy and the subscription is not
     /// already running — including during the trial, so nobody has to wait for it to lapse to pay.
+    /// Not while a payment is being retried either: that subscription still exists, and a checkout
+    /// would start a second one beside it (the server refuses it); the portal is the way out.
     /// </summary>
-    public bool ShowUpgrade => CanCheckout && Entitlement.State != EntitlementState.Active;
+    public bool ShowUpgrade => CanCheckout
+        && Entitlement.State is not (EntitlementState.Active or EntitlementState.Grace);
 
     /// <summary>The subscription card, which only has anything to say once money is involved.</summary>
     public bool ShowSubscription => Entitlement.State
@@ -161,21 +168,46 @@ public sealed partial class AccountViewModel
 
     public bool IsAnnualSelected => SelectedPlan == BillingPlan.Annual;
 
-    public string PriceMain => IsAnnualSelected ? AppStrings.BillingPriceAnnual : AppStrings.BillingPriceMonthly;
+    /// <summary>The price of the selected tier at the selected interval, from the server's list.</summary>
+    public string PriceMain => PriceText(CheckoutTier, SelectedPlan);
 
     public string PriceUnit => IsAnnualSelected ? AppStrings.BillingPriceUnitAnnual : AppStrings.BillingPriceUnitMonthly;
 
-    public string PriceSub => IsAnnualSelected ? AppStrings.BillingPriceSubAnnual : AppStrings.BillingPriceSubMonthly;
+    /// <summary>
+    /// The line under the price: the monthly equivalent for annual, "billed monthly" for monthly.
+    /// Computed from the server's price for the same reason as the price itself.
+    /// </summary>
+    public string PriceSub => IsAnnualSelected ? PerText(CheckoutTier) : AppStrings.BillingPriceSubMonthly;
 
+    /// <summary>"Pro 구독하기 · ₩24,000" — the selected tier, at the selected interval.</summary>
     public string CheckoutLabel => string.Format(
         CultureInfo.CurrentCulture,
         AppStrings.BillingCheckoutFormat,
+        TierName(CheckoutTier),
         PriceMain);
 
+    /// <summary>
+    /// The trial's call to action, which names Pro whatever the picker says: the trial is Pro-level,
+    /// so Pro is what carries on unchanged (Daynote Desktop B v2, the trial banner and the popover).
+    /// </summary>
+    public string ProCtaLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        AppStrings.BillingCheckoutFormat,
+        TierName(BillingTier.Pro),
+        PriceText(BillingTier.Pro, SelectedPlan));
+
     /// <summary>Rows of the subscription card. Only what the entitlement actually knows.</summary>
-    public string SubscriptionPlanText => IsAnnualSelected
-        ? AppStrings.BillingPlanAnnual
-        : AppStrings.BillingPlanMonthly;
+    /// <remarks>
+    /// The tier, and the interval when the server reported one. A server from before Premium reports
+    /// neither, and the card says "Pro" alone rather than guessing an interval.
+    /// </remarks>
+    public string SubscriptionPlanText => Entitlement.Plan is { } plan
+        ? string.Format(
+            CultureInfo.CurrentCulture,
+            AppStrings.CheckoutPlanLabelFormat,
+            TierName(Entitlement.PaidTier),
+            plan == BillingPlan.Annual ? AppStrings.BillingPlanAnnual : AppStrings.BillingPlanMonthly)
+        : TierName(Entitlement.PaidTier);
 
     public string SubscriptionStateText => Entitlement.State switch
     {
@@ -236,9 +268,14 @@ public sealed partial class AccountViewModel
     [RelayCommand]
     private void SelectAnnual() => SelectedPlan = BillingPlan.Annual;
 
-    /// <summary>Buys whichever interval the picker has selected.</summary>
+    /// <summary>
+    /// Buys whichever tier and interval the picker has selected — or, for an account already paying,
+    /// moves its subscription there in place.
+    /// </summary>
     [RelayCommand]
-    private Task CheckoutSelectedAsync() => CheckoutAsync(SelectedPlan);
+    private Task CheckoutSelectedAsync() => IsCheckoutChange
+        ? (Task)ChangePlanAsync(CheckoutTier, SelectedPlan)
+        : CheckoutAsync(CheckoutTier, SelectedPlan);
 
     /// <summary>
     /// The banner's action, which differs by state: buy during a trial or after a lapse, and go to
@@ -247,7 +284,7 @@ public sealed partial class AccountViewModel
     [RelayCommand]
     private Task ResolveBannerAsync() => Entitlement.State == EntitlementState.Grace
         ? ManageSubscriptionAsync()
-        : CheckoutAsync(SelectedPlan);
+        : CheckoutAsync(BillingTier.Pro, SelectedPlan);
 
     [RelayCommand]
     private void OpenTerms() => openExternal(SiteUrl(AppStrings.AccountTermsUrl));
@@ -268,7 +305,8 @@ public sealed partial class AccountViewModel
         OnPropertyChanged(nameof(PriceUnit));
         OnPropertyChanged(nameof(PriceSub));
         OnPropertyChanged(nameof(CheckoutLabel));
-        OnPropertyChanged(nameof(SubscriptionPlanText));
+        OnPropertyChanged(nameof(ProCtaLabel));
+        RefreshCheckoutPresentation();
     }
 
     /// <summary>
@@ -286,9 +324,12 @@ public sealed partial class AccountViewModel
             nameof(SubscriptionStateText), nameof(SubscriptionDateLabel), nameof(SubscriptionDateText),
             nameof(HasSubscriptionDate), nameof(CheckoutLabel), nameof(PriceMain),
             nameof(ProFeatures), nameof(AppVersionText),
+            nameof(PriceSub), nameof(ProCtaLabel), nameof(SubscriptionPlanText),
         })
         {
             OnPropertyChanged(name);
         }
+
+        RefreshCheckoutPresentation();
     }
 }

@@ -213,6 +213,19 @@ public interface IAuthApiClient
     /// </summary>
     ValueTask<string> CreateCheckoutSessionAsync(
         string accessToken,
+        BillingTier tier,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves the running subscription to another tier or interval in place, and returns the billing
+    /// state after the change. How an existing subscriber upgrades: a second checkout would start a
+    /// second subscription and bill both. The provider settles the difference for the rest of the
+    /// period.
+    /// </summary>
+    ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(
+        string accessToken,
+        BillingTier tier,
         BillingPlan plan,
         CancellationToken cancellationToken = default);
 

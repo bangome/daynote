@@ -73,6 +73,10 @@ internal sealed class FakeAccounts
     /// <summary>The plan the last checkout was minted for, so a test can prove the choice travelled.</summary>
     internal BillingPlan? LastCheckoutPlan { get; set; }
 
+    internal BillingTier? LastCheckoutTier { get; set; }
+
+    internal int PlanChanges { get; set; }
+
     internal int PortalSessionsMinted { get; set; }
 
     /// <summary>Reads the stored session, so a test can assert what sign-out actually cleared.</summary>
@@ -192,13 +196,27 @@ internal sealed class FakeAccounts
 
         public ValueTask<string> CreateCheckoutSessionAsync(
             string accessToken,
+            BillingTier tier,
             BillingPlan plan,
             CancellationToken cancellationToken = default)
         {
             Throw();
             owner.CheckoutSessionsMinted += 1;
+            owner.LastCheckoutTier = tier;
             owner.LastCheckoutPlan = plan;
             return ValueTask.FromResult(owner.CheckoutUrl);
+        }
+
+        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(
+            string accessToken,
+            BillingTier tier,
+            BillingPlan plan,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            owner.PlanChanges += 1;
+            owner.Entitlement = owner.Entitlement with { Tier = tier, Plan = plan };
+            return ValueTask.FromResult((owner.Entitlement, owner.Billing));
         }
 
         public ValueTask<string> CreatePortalSessionAsync(

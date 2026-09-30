@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Daynote.App.Tests.Account;
 
 /// <summary>
-/// The plan table says what the two plans are, and says only what is true.
+/// The plan table says what the three plans are, and says only what is true.
 /// </summary>
 /// <remarks>
 /// A comparison table is the one screen where a wrong row is a promise the product does not keep, so
@@ -19,14 +19,21 @@ public sealed class PlanComparisonTests
     public void RestoreKorean() => LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
 
     [TestMethod]
-    public void The_paid_plan_adds_exactly_one_thing()
+    public void The_paid_plans_add_files_and_differ_only_in_storage()
     {
-        PlanComparisonRow[] onlyPro = [.. PlanComparison.Rows.Where(row => row.NotInFree)];
+        PlanComparisonRow[] paidOnly = [.. PlanComparison.Rows.Where(row => row.NotInFree)];
 
-        // Signing in syncs notes for nothing; the subscription is for images and files. A second
-        // row here means either the product changed or the table is claiming something.
-        Assert.AreEqual(1, onlyPro.Length, $"Pro claims {onlyPro.Length} things over free.");
-        StringAssert.Contains(onlyPro.Single().Label, "파일", "The row Pro adds is not the file one.");
+        // Signing in syncs notes for nothing; both subscriptions are for images and files, and the
+        // storage row says how much of them. A third row here means either the product changed or
+        // the table is claiming something.
+        Assert.AreEqual(2, paidOnly.Length, $"The paid plans claim {paidOnly.Length} things over free.");
+        StringAssert.Contains(paidOnly[0].Label, "파일", "The row the paid plans add is not the file one.");
+        Assert.IsTrue(paidOnly.All(row => !row.Pro.IsDash && !row.Premium.IsDash));
+
+        PlanComparisonRow[] differing = [.. PlanComparison.Rows.Where(row => row.Pro.Text != row.Premium.Text)];
+        Assert.AreEqual(1, differing.Length, "Pro and Premium differ in more than storage.");
+        Assert.AreEqual("2GB", differing[0].Pro.Text);
+        Assert.AreEqual(AppStrings.PlanStorageUnlimited, differing[0].Premium.Text);
     }
 
     [TestMethod]

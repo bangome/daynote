@@ -1,4 +1,5 @@
 using System.Buffers.Text;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -376,6 +377,17 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             () => Authorized(HttpMethod.Get, "v1/billing/status", accessToken),
             cancellationToken).ConfigureAwait(false);
 
+        return await ReadBillingAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Reads a billing-status body, which both <c>/v1/billing/status</c> and <c>/v1/billing/change</c>
+    /// answer with.
+    /// </summary>
+    private static async ValueTask<(Entitlement Entitlement, BillingLinks Links)> ReadBillingAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         BillingBody? body = await response.Content
             .ReadFromJsonAsync<BillingBody>(Json, cancellationToken)
@@ -393,18 +405,68 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 body.CanCheckout,
                 body.CanManage,
                 OffersMonthly: plans.Contains("monthly", StringComparer.Ordinal),
-                OffersAnnual: plans.Contains("annual", StringComparer.Ordinal)));
+                OffersAnnual: plans.Contains("annual", StringComparer.Ordinal),
+                // Absent before Premium; the Pro intervals above then stand for the whole menu.
+                Offers: body.Offers is null ? null : ToOffers(body.Offers),
+                CanChange: body.CanChange));
     }
+
+    /// <summary>
+    /// Keeps the offers this version understands. One with a tier or interval it does not know is
+    /// skipped rather than guessed at, and so is a price whose amount is not a whole number of minor
+    /// units — showing a wrong price on a purchase screen is worse than showing none.
+    /// </summary>
+    private static BillingOffer[] ToOffers(IEnumerable<OfferBody> offers) =>
+    [
+        .. offers
+            .Select(offer => (
+                Tier: BillingPlanExtensions.ParseTier(offer.Tier),
+                Plan: BillingPlanExtensions.ParsePlan(offer.Plan),
+                offer.Prices))
+            .Where(offer => offer.Tier is not null && offer.Plan is not null)
+            .Select(offer => new BillingOffer(
+                offer.Tier!.Value,
+                offer.Plan!.Value,
+                [
+                    .. (offer.Prices ?? [])
+                        .Where(price => price.Currency is { Length: > 0 }
+                            && long.TryParse(price.Amount, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+                        .Select(price => new Money(
+                            price.Currency!,
+                            long.Parse(price.Amount!, NumberStyles.None, CultureInfo.InvariantCulture))),
+                ])),
+    ];
 
     public ValueTask<string> CreateCheckoutSessionAsync(
         string accessToken,
+        BillingTier tier,
         BillingPlan plan,
         CancellationToken cancellationToken = default) =>
         CreateSessionAsync(
             "v1/billing/checkout",
             accessToken,
             cancellationToken,
-            payload: new { plan = plan.ToWire() });
+            payload: new { tier = tier.ToWire(), plan = plan.ToWire() });
+
+    public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(
+        string accessToken,
+        BillingTier tier,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        using HttpResponseMessage response = await SendAsync(
+            () =>
+            {
+                HttpRequestMessage message = Authorized(HttpMethod.Post, "v1/billing/change", accessToken);
+                message.Content = JsonContent.Create(new { tier = tier.ToWire(), plan = plan.ToWire() }, options: Json);
+                return message;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return await ReadBillingAsync(response, cancellationToken).ConfigureAwait(false);
+    }
 
     public ValueTask<string> CreatePortalSessionAsync(
         string accessToken,
@@ -470,7 +532,17 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             until = parsed.IsSuccess ? parsed.Value : null;
         }
 
-        return new Entitlement(state, until, body.CanSyncFiles, body.HasSubscribed);
+        // The four fields Premium added. Absent from an older server, and then null: the app keeps
+        // calling any paid state Pro and shows no storage line.
+        return new Entitlement(
+            state,
+            until,
+            body.CanSyncFiles,
+            body.HasSubscribed,
+            BillingPlanExtensions.ParseTier(body.Tier),
+            BillingPlanExtensions.ParsePlan(body.Plan),
+            body.QuotaBytes,
+            body.UsedBytes);
     }
 
     /// <summary>The key-custody fields, shared by the session and key-material responses.</summary>
@@ -511,22 +583,44 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         bool CanSyncFiles { get; }
 
         bool HasSubscribed { get; }
+
+        string? Tier { get; }
+
+        string? Plan { get; }
+
+        long? QuotaBytes { get; }
+
+        long? UsedBytes { get; }
     }
 
     private sealed record EntitlementBody(
         string? State,
         string? Until,
         bool CanSyncFiles,
-        bool HasSubscribed) : IEntitlementBody;
+        bool HasSubscribed,
+        string? Tier,
+        string? Plan,
+        long? QuotaBytes,
+        long? UsedBytes) : IEntitlementBody;
 
     private sealed record BillingBody(
         string? State,
         string? Until,
         bool CanSyncFiles,
         bool HasSubscribed,
+        string? Tier,
+        string? Plan,
+        long? QuotaBytes,
+        long? UsedBytes,
         bool CanCheckout,
         bool CanManage,
-        string[]? Plans) : IEntitlementBody;
+        bool CanChange,
+        string[]? Plans,
+        OfferBody[]? Offers) : IEntitlementBody;
+
+    private sealed record OfferBody(string? Tier, string? Plan, MoneyBody[]? Prices);
+
+    private sealed record MoneyBody(string? Currency, string? Amount);
 
     private sealed record SessionUrlBody(string? Url);
 

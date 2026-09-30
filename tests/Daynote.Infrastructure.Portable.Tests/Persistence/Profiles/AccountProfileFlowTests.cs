@@ -595,7 +595,10 @@ public sealed class AccountProfileFlowTests
         public ValueTask<(Entitlement Entitlement, BillingLinks Links)> GetBillingAsync(string accessToken, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult((Entitlement.Unknown, new BillingLinks(false, false)));
 
-        public ValueTask<string> CreateCheckoutSessionAsync(string accessToken, BillingPlan plan, CancellationToken cancellationToken = default) =>
+        public ValueTask<string> CreateCheckoutSessionAsync(string accessToken, BillingTier tier, BillingPlan plan, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(string accessToken, BillingTier tier, BillingPlan plan, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public ValueTask<string> CreatePortalSessionAsync(string accessToken, CancellationToken cancellationToken = default) =>

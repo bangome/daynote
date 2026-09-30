@@ -97,24 +97,48 @@ public sealed partial class AccountViewModel
     /// created for this click, because the transaction behind it carries this account's id.
     /// </summary>
     [RelayCommand]
-    private Task CheckoutAnnualAsync() => CheckoutAsync(BillingPlan.Annual);
+    private Task CheckoutAnnualAsync() => CheckoutAsync(BillingTier.Pro, BillingPlan.Annual);
 
     [RelayCommand]
-    private Task CheckoutMonthlyAsync() => CheckoutAsync(BillingPlan.Monthly);
+    private Task CheckoutMonthlyAsync() => CheckoutAsync(BillingTier.Pro, BillingPlan.Monthly);
 
-    private async Task CheckoutAsync(BillingPlan plan)
+    private async Task CheckoutAsync(BillingTier tier, BillingPlan plan)
     {
-        bool offered = plan == BillingPlan.Monthly ? Billing.CanCheckoutMonthly : Billing.CanCheckoutAnnual;
-        if (!offered)
+        if (Billing.Find(tier, plan) is null)
         {
             return;
         }
 
         await RunAsync(async () =>
         {
-            string url = await accounts.CreateCheckoutSessionAsync(plan).ConfigureAwait(true);
+            string url = await accounts.CreateCheckoutSessionAsync(tier, plan).ConfigureAwait(true);
             openExternal(url);
         }).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Moves the running subscription to another tier or interval (docs/CLOUD_SYNC.md §14). Done by
+    /// the server through the provider's subscription update, so the card, the renewal date and the
+    /// one subscription stay as they are; the answer is the state after the change.
+    /// </summary>
+    private async Task<bool> ChangePlanAsync(BillingTier tier, BillingPlan plan)
+    {
+        if (!Billing.CanChange || Billing.Find(tier, plan) is null)
+        {
+            return false;
+        }
+
+        bool changed = false;
+        await RunAsync(async () =>
+        {
+            (Entitlement entitlement, BillingLinks links) = await accounts
+                .ChangePlanAsync(tier, plan)
+                .ConfigureAwait(true);
+            Billing = links;
+            Entitlement = entitlement;
+            changed = true;
+        }).ConfigureAwait(true);
+        return changed;
     }
 
     /// <summary>

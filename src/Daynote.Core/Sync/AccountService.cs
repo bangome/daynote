@@ -363,10 +363,22 @@ public sealed partial class AccountService
     /// so a reused URL would bill the wrong person.
     /// </summary>
     public ValueTask<string> CreateCheckoutSessionAsync(
+        BillingTier tier,
         BillingPlan plan,
         CancellationToken cancellationToken = default) =>
         WithAccessTokenAsync(
-            (token, ct) => auth.CreateCheckoutSessionAsync(token, plan, ct),
+            (token, ct) => auth.CreateCheckoutSessionAsync(token, tier, plan, ct),
+            cancellationToken);
+
+    /// <summary>
+    /// Moves the running subscription to another tier or interval, and returns the state after it.
+    /// </summary>
+    public ValueTask<(Entitlement Entitlement, BillingLinks Links)> ChangePlanAsync(
+        BillingTier tier,
+        BillingPlan plan,
+        CancellationToken cancellationToken = default) =>
+        WithAccessTokenAsync(
+            (token, ct) => auth.ChangePlanAsync(token, tier, plan, ct),
             cancellationToken);
 
     /// <summary>
@@ -376,8 +388,8 @@ public sealed partial class AccountService
     public ValueTask<string> CreatePortalSessionAsync(CancellationToken cancellationToken = default) =>
         WithAccessTokenAsync(auth.CreatePortalSessionAsync, cancellationToken);
 
-    private async ValueTask<string> WithAccessTokenAsync(
-        Func<string, CancellationToken, ValueTask<string>> call,
+    private async ValueTask<T> WithAccessTokenAsync<T>(
+        Func<string, CancellationToken, ValueTask<T>> call,
         CancellationToken cancellationToken)
     {
         SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
