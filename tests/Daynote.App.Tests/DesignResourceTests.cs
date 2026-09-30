@@ -140,7 +140,13 @@ public sealed partial class DesignResourceTests
         // arrive under that name. Named one by one, so any OTHER collision still fails.
         string[] productThemePair = ["Daynote.Product.Light.xaml", "Daynote.Product.Dark.xaml"];
         string[] deskThemePair = ["Daynote.Desk.Light.xaml", "Daynote.Desk.Dark.xaml"];
-        string[] layeredPalettes = [.. productThemePair, .. deskThemePair];
+
+        // The account styles are an override layer in the same sense: every key in them is one an
+        // earlier file already declares, retuned for this design rather than restyling five hundred
+        // lines of billing markup. The assertion below pins that it only overrides and never
+        // introduces, which is what keeps it from becoming a second place to declare a style.
+        const string AccountOverrides = "Daynote.Desk.Styles.Account.xaml";
+        string[] layeredPalettes = [.. productThemePair, .. deskThemePair, AccountOverrides];
         var uniquenessKeys = themeFiles
             .Where(path => !layeredPalettes.Any(name => path.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
             .SelectMany(path => Entries(XDocument.Load(path)).Keys)
@@ -151,6 +157,17 @@ public sealed partial class DesignResourceTests
             .Select(group => group.Key)
             .Where(key => !deskFontOverrides.Contains(key, StringComparer.Ordinal))
             .ToArray();
+
+        string[] overrideKeys = [.. Entries(Load(AccountOverrides)).Keys];
+        string[] declaredElsewhere = [.. themeFiles
+            .Where(path => !path.EndsWith(AccountOverrides, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => Entries(XDocument.Load(path)).Keys)];
+        string[] introduced = [.. overrideKeys.Except(declaredElsewhere, StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+        Assert.AreEqual(
+            0,
+            introduced.Length,
+            $"{AccountOverrides} declares keys nothing else does: {string.Join(", ", introduced)}. "
+            + "It is an override layer; a style of its own belongs in the file for its surface.");
 
         var lightKeys = Entries(Load("Daynote.Product.Light.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
         var darkKeys = Entries(Load("Daynote.Product.Dark.xaml")).Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();

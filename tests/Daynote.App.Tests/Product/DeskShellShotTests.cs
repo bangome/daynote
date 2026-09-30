@@ -158,6 +158,20 @@ public sealed class DeskShellShotTests
                 620,
                 1500,
                 Path.Combine(directory, "account-detail.png"));
+
+            // And the other half: what someone who has not signed in is shown.
+            var signedOut = new Daynote.App.Account.AccountViewModel(
+                new Tests.Account.FakeAccounts().Service,
+                accounts.Store,
+                () => ValueTask.FromResult(Daynote.Core.Sync.SyncReport.For(Daynote.Core.Sync.SyncOutcome.Completed)),
+                new Tests.Account.AccountViewModelTests.FakeExporter(),
+                _ => { },
+                @"C:\conflicts");
+            Render(
+                new Daynote.App.Account.AccountSignInView { DataContext = signedOut },
+                620,
+                900,
+                Path.Combine(directory, "account-signin.png"));
         }
 
         application.Resources.MergedDictionaries.Clear();
