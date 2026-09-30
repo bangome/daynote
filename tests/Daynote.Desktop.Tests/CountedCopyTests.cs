@@ -28,7 +28,7 @@ public sealed class CountedCopyTests
             Assert.AreEqual("1 note", AppStrings.SearchDateNoteCount(1));
             Assert.AreEqual("1 result", AppStrings.SearchResultsCount(1));
             Assert.AreEqual("1 day left in your free trial.", AppStrings.BillingTrial(1));
-            Assert.AreEqual("1 day left in your Pro trial", AppStrings.BillingTrialBannerTitle(1));
+            Assert.AreEqual("1 day left in your trial", AppStrings.BillingTrialBannerTitle(1));
             StringAssert.StartsWith(AppStrings.AccountConflicts(1), "1 note was replaced");
         });
     }
@@ -43,7 +43,7 @@ public sealed class CountedCopyTests
             Assert.AreEqual("0 notes", AppStrings.NoteCount(0));
             Assert.AreEqual("2 notes", AppStrings.NoteCount(2));
             Assert.AreEqual("12 results", AppStrings.SearchResultsCount(12));
-            Assert.AreEqual("3 days left in your Pro trial", AppStrings.BillingTrialBannerTitle(3));
+            Assert.AreEqual("3 days left in your trial", AppStrings.BillingTrialBannerTitle(3));
             StringAssert.StartsWith(AppStrings.AccountConflicts(4), "4 notes were replaced");
         });
     }
