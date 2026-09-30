@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
+using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Input.TextInput;
 using Avalonia.Markup.Xaml;
 
@@ -158,6 +160,70 @@ public partial class MainView : UserControl
         }
 
         this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom, keyboard);
+
+        // The attachment sheets sit where the month sheet does.
+        Bleed(this.FindControl<Border>("AttachSheet"), bottom, extra: 6, fallback: 24);
+        Bleed(this.FindControl<Border>("FileSheet"), bottom, extra: 6, fallback: 24);
+
+        // The image viewer's dark ground covers the whole screen, notch and strip included, with its
+        // bar and buttons kept inside the safe area.
+        if (this.FindControl<Border>("Viewer") is { } viewer)
+        {
+            Thickness safe = _previewSafeArea ?? _safeArea;
+            viewer.Margin = new Thickness(-safe.Left, -safe.Top, -safe.Right, -safe.Bottom);
+            viewer.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
+        }
+    }
+
+    // ── The image viewer's zoom ──────────────────────────────────────────────────────────────────
+
+    private const double MaxZoom = 4;
+    private double _zoom = 1;
+    private double _pinchStartZoom = 1;
+
+    /// <summary>A new picture starts unzoomed.</summary>
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is ViewModels.MobileShellViewModel shell)
+        {
+            shell.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.ViewerImage))
+                {
+                    SetZoom(1);
+                }
+            };
+        }
+    }
+
+    protected override void OnLoaded(Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        if (this.FindControl<Border>("ViewerStage") is { } stage)
+        {
+            stage.AddHandler(InputElement.PinchEvent, OnViewerPinch);
+            stage.AddHandler(InputElement.PinchEndedEvent, (_, _) => _pinchStartZoom = _zoom);
+        }
+    }
+
+    /// <summary>Double tap: in to twice the size, and back out.</summary>
+    private void OnViewerDoubleTapped(object? sender, TappedEventArgs e) => SetZoom(_zoom > 1 ? 1 : 2);
+
+    private void OnViewerPinch(object? sender, PinchEventArgs e) => SetZoom(_pinchStartZoom * e.Scale);
+
+    private void SetZoom(double zoom)
+    {
+        _zoom = Math.Clamp(zoom, 1, MaxZoom);
+        if (_zoom == 1)
+        {
+            _pinchStartZoom = 1;
+        }
+
+        if (this.FindControl<Image>("ViewerImage") is { } image)
+        {
+            image.RenderTransform = new ScaleTransform(_zoom, _zoom);
+        }
     }
 
     /// <summary>The floating tab bar's bottom margin over a bottom inset of <paramref name="bottom"/> points.</summary>

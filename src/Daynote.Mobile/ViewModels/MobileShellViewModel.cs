@@ -72,6 +72,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
+        AttachFiles(filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
 
         _selectedDate = LocalDates.Today(clock);
@@ -115,6 +116,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(HasAccount));
         RefreshAccountBar();
         RefreshAccountCard();
+        RefreshFilesSyncNote();
         if (newValue is not null)
         {
             newValue.PropertyChanged += OnAccountPropertyChanged;
@@ -125,6 +127,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     {
         RefreshAccountBar();
         RefreshAccountCard();
+        RefreshFilesSyncNote();
     }
 
     private void RefreshAccountBar()
@@ -172,7 +175,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// The floating tab bar and the new-note button: on every tab, and gone while something covers
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
-    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsMonthPickerOpen;
+    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsMonthPickerOpen && !IsFileLayerOpen;
 
     partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -224,6 +227,9 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
         IsAccountOpen = false;
         IsMonthPickerOpen = false;
+        IsAttachSheetOpen = false;
+        MenuFile = null;
+        ViewerFile = null;
         Page = page;
 
         // The settings page carries the account card, and the subscription rows on it are read from
@@ -255,6 +261,11 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// </summary>
     public async Task<bool> GoBackAsync()
     {
+        if (CloseTopFileLayer())
+        {
+            return true;
+        }
+
         if (IsMonthPickerOpen)
         {
             IsMonthPickerOpen = false;
@@ -315,7 +326,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// <summary>
     /// Which of the three lists the Lists tab is showing. Reuses <see cref="RightTab"/> so the phone
     /// and the desktop name the same three things the same way; the phone has no Files entry,
-    /// because attachments are read on the note rather than browsed as a set.
+    /// because attachments are shown with their day rather than browsed as a set.
     /// </summary>
     [ObservableProperty]
     private RightTab _activeList = RightTab.Todo;
@@ -365,7 +376,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         LocalDate today = LocalDates.Today(_clock);
         SelectedDate = today;
         await Notes.LoadAsync(today, cancellationToken).ConfigureAwait(true);
-        await Files.LoadForDateAsync(today, cancellationToken).ConfigureAwait(true);
+        await LoadDayFilesAsync(today, cancellationToken).ConfigureAwait(true);
         await Calendar.ShowSelectedAsync(today, cancellationToken).ConfigureAwait(true);
         await RefreshWeekAsync(cancellationToken).ConfigureAwait(true);
         await RefreshTodosAsync(cancellationToken).ConfigureAwait(true);
@@ -392,7 +403,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
         SelectedDate = date;
         await Notes.LoadAsync(date, cancellationToken).ConfigureAwait(true);
-        await Files.LoadForDateAsync(date, cancellationToken).ConfigureAwait(true);
+        await LoadDayFilesAsync(date, cancellationToken).ConfigureAwait(true);
         if (date.Year == Calendar.CursorYear && date.Month == Calendar.CursorMonth)
         {
             Calendar.SyncSelection(date);
@@ -688,6 +699,11 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(IsEnglish));
         OnPropertyChanged(nameof(VersionText));
         OnPropertyChanged(nameof(SearchResultCountText));
+        RefreshFilesSyncNote();
+        foreach (MobileFileRowViewModel row in DayFiles)
+        {
+            row.OnLanguageChanged();
+        }
 
         // The weekday letters and the to-do band names are baked into their rows.
         OnPropertyChanged(nameof(PickerYearText));

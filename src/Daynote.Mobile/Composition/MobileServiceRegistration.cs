@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using Daynote.App.Composition;
 using Daynote.App.Notes;
 using Daynote.App.Shell.Product;
@@ -107,7 +108,7 @@ public static class MobileServiceRegistration
         services.AddSingleton(sp => new NoteWorkspaceViewModel(sp.GetRequiredService<NoteWorkspaceDependencies>()));
 
         services.AddSingleton<IThemeApplier>(_ => new MobileThemeApplier(application));
-        services.AddSingleton<IFilePicker>(_ => new MobileFilePicker(topLevel));
+        services.AddSingleton<IFilePicker>(_ => new MobileFilePicker(topLevel, platform.PickPhotos));
         services.AddSingleton<IThumbnailLoader, MobileThumbnailLoader>();
 
         services.AddSingleton(sp => new MobileShellViewModel(
@@ -125,11 +126,33 @@ public static class MobileServiceRegistration
             sp.GetRequiredService<IThemeApplier>())
         {
             Account = sp.GetService<Daynote.App.Account.AccountViewModel>(),
+            OpenFileExternally = platform.OpenFile ?? ((name, bytes) => LaunchAsync(topLevel, name, bytes)),
+            PendingFileUploads = sp.GetService<ISyncStore>() is SqliteSyncStore syncStore
+                ? async token => await syncStore.ReadQueuedFileIdsAsync(token).ConfigureAwait(false)
+                : null,
         });
 
         services.AddDaynoteMobileCloudSync(options, platform);
 
         return services;
+    }
+
+    /// <summary>
+    /// Opens an attachment through Avalonia's launcher, for a head that supplies no opener of its own.
+    /// The bytes are written under their own name first, since the store keeps them under a hash.
+    /// </summary>
+    private static async Task<bool> LaunchAsync(Func<TopLevel?> topLevel, string name, byte[] bytes)
+    {
+        if (topLevel() is not { Launcher: { } launcher })
+        {
+            return false;
+        }
+
+        string folder = Path.Combine(Path.GetTempPath(), "daynote-open", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, Path.GetFileName(name));
+        await File.WriteAllBytesAsync(path, bytes).ConfigureAwait(true);
+        return await launcher.LaunchFileInfoAsync(new FileInfo(path)).ConfigureAwait(true);
     }
 
     /// <summary>

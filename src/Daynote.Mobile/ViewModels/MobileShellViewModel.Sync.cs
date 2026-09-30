@@ -40,7 +40,7 @@ public sealed partial class MobileShellViewModel
             IsEditorOpen = false;
         }
 
-        await Files.LoadForDateAsync(SelectedDate).ConfigureAwait(true);
+        await LoadDayFilesAsync(SelectedDate).ConfigureAwait(true);
         await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
     }
 }

@@ -120,6 +120,16 @@ public partial class EditorPage : UserControl
     private void OnTitleLostFocus(object? sender, RoutedEventArgs e) =>
         (DataContext as MobileShellViewModel)?.CommitRenameTitleCommand.Execute(null);
 
+    /// <summary>A long press on a file chip: the same menu as the day screen's row.</summary>
+    private void OnFileChipContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is MobileFileRowViewModel row)
+        {
+            row.ShowMenuCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     // ── The writing helpers ──────────────────────────────────────────────────────────────────────
 
     /// <summary>Opens the caret's line with an empty checkbox, or removes the one already there.</summary>

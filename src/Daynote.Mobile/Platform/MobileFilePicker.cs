@@ -2,6 +2,8 @@ using System.IO;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Daynote.App.Shell.Product;
+using Daynote.Core.Files;
+using Daynote.Mobile.ViewModels;
 
 namespace Daynote.Mobile.Platform;
 
@@ -20,10 +22,20 @@ namespace Daynote.Mobile.Platform;
 /// user chose (Files, Drive) through a stream, so the caller is handed a cache path to write into and
 /// the contents are pushed to the chosen destination afterwards.
 /// </para>
+/// <para>
+/// Each pick is copied into a folder of its own under its own name, so the name the day's list shows
+/// is the one the user picked rather than a staging name. A copy stops one byte past
+/// <see cref="FileCapturePolicy.MaxFileBytes"/>: the caller sees the file is too large from its
+/// length, and a 4 GB video never lands in the cache whole.
+/// </para>
 /// </remarks>
-public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
+public sealed class MobileFilePicker(
+    Func<TopLevel?> topLevel,
+    Func<CancellationToken, Task<IReadOnlyList<string>>>? pickPhotos = null) : IFilePicker, IPhotoPicker
 {
     private readonly Func<TopLevel?> _topLevel = topLevel ?? throw new ArgumentNullException(nameof(topLevel));
+
+    public string StagingDirectory => InboxDirectory;
 
     /// <summary>Where picked bytes land before the asset store takes them. Cleared by the OS under pressure.</summary>
     private static string InboxDirectory
@@ -36,7 +48,14 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
         }
     }
 
-    public async Task<IReadOnlyList<string>> PickFilesAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> PickFilesAsync(CancellationToken cancellationToken = default) =>
+        PickAsync(imagesOnly: false, cancellationToken);
+
+    /// <summary>The platform's photo picker when it has one; otherwise the document picker, images only.</summary>
+    public Task<IReadOnlyList<string>> PickPhotosAsync(CancellationToken cancellationToken = default) =>
+        pickPhotos is not null ? pickPhotos(cancellationToken) : PickAsync(imagesOnly: true, cancellationToken);
+
+    private async Task<IReadOnlyList<string>> PickAsync(bool imagesOnly, CancellationToken cancellationToken)
     {
         if (_topLevel() is not { StorageProvider: { CanOpen: true } provider })
         {
@@ -47,6 +66,7 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
         {
             AllowMultiple = true,
             Title = Daynote.App.Localization.AppStrings.AddFile,
+            FileTypeFilter = imagesOnly ? [FilePickerFileTypes.ImageAll] : null,
         }).ConfigureAwait(true);
 
         var paths = new List<string>(files.Count);
@@ -72,7 +92,8 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
         {
             Title = Daynote.App.Localization.AppStrings.SaveFileTitle,
             SuggestedFileName = suggestedFileName,
-            DefaultExtension = Path.GetExtension(suggestedFileName).TrimStart('.'),
+            // No DefaultExtension: the suggested name already carries it, and Android's picker appends
+            // the default to it again ("photo.png.png").
             ShowOverwritePrompt = true,
         }).ConfigureAwait(true);
 
@@ -87,7 +108,7 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
         }
 
         // No path to hand back, so give the caller a staging file and forward it once it is written.
-        string staged = Path.Combine(InboxDirectory, $"{Guid.NewGuid():N}-{Path.GetFileName(suggestedFileName)}");
+        string staged = Path.Combine(NewSlot(), Sanitize(suggestedFileName));
         _pendingExports[staged] = destination;
         return staged;
     }
@@ -99,7 +120,7 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
     /// Pushes a staged export to the place the user picked. The files panel writes its copy to the
     /// path it was given and then asks for this; a path that was a real local one is already done.
     /// </summary>
-    public async Task CompleteExportAsync(string path, CancellationToken cancellationToken = default)
+    public async Task CompleteSaveAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!_pendingExports.Remove(path, out IStorageFile? destination))
         {
@@ -128,12 +149,12 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
             return local;
         }
 
-        string destination = Path.Combine(InboxDirectory, $"{Guid.NewGuid():N}-{Sanitize(file.Name)}");
+        string destination = Path.Combine(NewSlot(), Sanitize(file.Name));
         try
         {
             await using Stream source = await file.OpenReadAsync().ConfigureAwait(true);
             await using Stream target = File.Create(destination);
-            await source.CopyToAsync(target, cancellationToken).ConfigureAwait(true);
+            await CopyCappedAsync(source, target, FileCapturePolicy.MaxFileBytes + 1, cancellationToken).ConfigureAwait(true);
             return destination;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -144,6 +165,33 @@ public sealed class MobileFilePicker(Func<TopLevel?> topLevel) : IFilePicker
         finally
         {
             file.Dispose();
+        }
+    }
+
+    /// <summary>A new empty folder in the inbox, so a copy can keep its own name beside any other.</summary>
+    private static string NewSlot()
+    {
+        string slot = Path.Combine(InboxDirectory, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(slot);
+        return slot;
+    }
+
+    /// <summary>Copies at most <paramref name="limit"/> bytes: enough to tell a file is over the cap.</summary>
+    private static async Task CopyCappedAsync(Stream source, Stream target, long limit, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[81920];
+        long copied = 0;
+        while (copied < limit)
+        {
+            int read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, limit - copied)), cancellationToken)
+                .ConfigureAwait(true);
+            if (read == 0)
+            {
+                return;
+            }
+
+            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(true);
+            copied += read;
         }
     }
 

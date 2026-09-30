@@ -171,10 +171,85 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
+
+      <!--
+        파일 n: what was attached to this day. Compact rows as in the desktop's day panel - a tile with
+        the picture or the extension, the name, and the size or the state that matters more than the
+        size. A tap opens it; the dots, or a long press, offer a copy and the delete.
+      -->
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,26,0,10">
+        <TextBlock Grid.Column="0" Classes="section" Text="{Binding Strings[MobileFilesHeader]}" VerticalAlignment="Bottom" />
+        <TextBlock Grid.Column="1" Classes="count" Margin="8,0,0,1" VerticalAlignment="Bottom"
+                   Text="{Binding DayFiles.Count}" IsVisible="{Binding HasDayFiles}" />
+        <Button Grid.Column="3" x:Name="AttachButton" Classes="pill sun" Height="30" Padding="12,0" FontSize="13"
+                Command="{Binding OpenAttachSheetCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <views:Glyph Kind="Paperclip" Width="13" Height="13" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.SunInk}" />
+            <TextBlock Text="{Binding Strings[MobileFilesAdd]}" FontWeight="Bold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <Border Classes="card" Padding="0,4" IsVisible="{Binding HasDayFiles}">
+        <ItemsControl ItemsSource="{Binding DayFiles}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MobileFileRowViewModel">
+              <Grid ColumnDefinitions="*,44" Margin="0,0,6,0">
+                <Button Grid.Column="0" Classes="row filerow" Padding="12,8,4,8" Command="{Binding OpenCommand}"
+                        ContextRequested="OnFileRowContextRequested">
+                  <Grid ColumnDefinitions="40,*">
+                    <Border Grid.Column="0" Classes="filetile">
+                      <Panel>
+                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
+                        <TextBlock Classes="muted" FontSize="10" FontWeight="ExtraBold" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" TextWrapping="NoWrap" Text="{Binding Ext}"
+                                   IsVisible="{Binding !HasThumbnail}" />
+                      </Panel>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                      <TextBlock Classes="line" FontSize="15" FontWeight="SemiBold" Text="{Binding Name}" />
+                      <TextBlock Classes="line filedetail" Classes.alert="{Binding IsAlert}" Classes.busy="{Binding IsBusy}"
+                                 FontSize="12.5" Margin="0,2,0,0" Text="{Binding Detail}" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+                <Button Grid.Column="1" Classes="iconbtn" Command="{Binding ShowMenuCommand}"
+                        AutomationProperties.Name="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Strings[MobileFileMore]}">
+                  <views:Glyph Kind="More" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text3}" />
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+      <TextBlock Classes="faint" FontSize="13" Margin="0,2,0,0" Text="{Binding Strings[MobileFilesEmpty]}"
+                 IsVisible="{Binding !HasDayFiles}" />
+      <TextBlock Classes="muted" FontSize="12.5" LineHeight="18" Margin="4,10,4,0" Text="{Binding FilesSyncNote}"
+                 IsVisible="{Binding HasFilesSyncNote}" />
+      <TextBlock FontSize="12.5" LineHeight="18" Margin="4,8,4,0" Foreground="{DynamicResource Mobile.Danger}"
+                 Text="{Binding FilesNotice}" IsVisible="{Binding HasFilesNotice}" />
     </StackPanel>
   </ScrollViewer>
 
   <UserControl.Styles>
+    <Style Selector="Border.filetile">
+      <Setter Property="Width" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="ClipToBounds" Value="True" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+    </Style>
+    <Style Selector="TextBlock.filedetail">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="TextBlock.filedetail.busy">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
+    </Style>
+    <Style Selector="TextBlock.filedetail.alert">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Danger}" />
+    </Style>
     <Style Selector="Button.weekday">
       <Setter Property="Height" Value="62" />
       <Setter Property="Margin" Value="1.5,0" />

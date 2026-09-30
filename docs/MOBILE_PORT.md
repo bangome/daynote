@@ -40,8 +40,21 @@ the work is unfinished:
 | Updater | The store updates the app. |
 | Backup archive | There is no user-visible data folder to export to or restore from. |
 
-Attachments are still read and synced; the Files *panel* is gone, because attachments are read on
-the note rather than browsed as a set.
+There is no Files *tab*: attachments belong to a day, so they are shown with it rather than browsed
+as a set. The day screen lists the day's files under its to-dos ("파일 n": a tile with the picture or
+the extension, the name, and the size or the state), and the editor shows the same files as a strip
+over its helpers, with an attach button beside 할 일 / 날짜 / 시간. Attaching offers the photo
+library (on iOS the system photo picker, since the Files picker cannot see it) or files, and writes
+through the same `AddDayFile` path the desktop uses, so the outbox picks it up; files over
+`FileCapturePolicy.MaxFileBytes` are refused with a reason. A picture opens in a full-screen viewer;
+anything else is handed to another app (Android: a `FileProvider` content URI and ACTION_VIEW; iOS:
+Quick Look), and a file no app can take is offered as a copy through the save picker. Delete asks
+first and syncs as a tombstone, as on the desktop.
+
+A row says when its bytes are still coming from another device (내려받는 중) or still going up
+(업로드 대기). An account whose files do not sync - signed out, file sync lapsed, cloud storage full -
+keeps attaching locally and is told so in one neutral line under the list. Nothing on the phone names
+a price, a plan or a place to buy one (App Store 3.1.1, Play payments policy).
 
 ## The screens
 

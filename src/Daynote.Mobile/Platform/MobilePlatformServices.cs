@@ -43,13 +43,27 @@ namespace Daynote.Mobile.Platform;
 /// Sign in with Apple, on iOS only; null elsewhere, and the button is then absent. App Review 4.8
 /// requires it beside Google on iOS.
 /// </param>
+/// <param name="OpenFile">
+/// Hands an attachment to another app to view: Android through a <c>FileProvider</c> content URI and
+/// an ACTION_VIEW intent, iOS through a Quick Look preview. Given the display name and the bytes,
+/// because the bytes live under a hashed name no other app should be shown. Answers false when no
+/// app can take it, and the phone then offers to save a copy instead. Null falls back to Avalonia's
+/// launcher.
+/// </param>
+/// <param name="PickPhotos">
+/// The photo library picker, where the document picker cannot reach it (iOS: the Files picker does
+/// not show the photo library). Returns local paths of copies it made, empty when cancelled. Null
+/// uses the document picker filtered to images, which on Android already includes the gallery.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
     Daynote.Core.Sync.IIdentityProvider? Identity,
     Action<string> OpenExternal,
     Func<Avalonia.Controls.TopLevel?> TopLevel,
-    Daynote.Core.Sync.IAppleIdentityProvider? AppleIdentity = null)
+    Daynote.Core.Sync.IAppleIdentityProvider? AppleIdentity = null,
+    Func<string, byte[], Task<bool>>? OpenFile = null,
+    Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

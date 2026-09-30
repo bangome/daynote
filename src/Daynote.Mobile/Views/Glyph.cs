@@ -22,6 +22,11 @@ public enum GlyphKind
     TabSearch,
     TabLists,
     TabSettings,
+    Paperclip,
+    More,
+    Close,
+    Photo,
+    Document,
 }
 
 /// <summary>
@@ -130,6 +135,23 @@ public sealed class Glyph : Control
             c.DrawEllipse(fill, p, new Point(9, 7), 2.4, 2.4);
             c.DrawEllipse(fill, p, new Point(15, 17), 2.4, 2.4);
         }),
+        GlyphKind.Paperclip => (16, 1.5, (c, p, _) => c.DrawGeometry(null, p,
+            G("M13.5 7.6 L8 13.1 A3.5 3.5 0 0 1 3 8.1 L8.8 2.3 A2.3 2.3 0 0 1 12.1 5.6 L6.5 11.2 A1.1 1.1 0 0 1 4.9 9.6 L10 4.5"))),
+        GlyphKind.More => (18, 1, (c, p, _) =>
+        {
+            c.DrawEllipse(p.Brush, null, new Point(4, 9), 1.6, 1.6);
+            c.DrawEllipse(p.Brush, null, new Point(9, 9), 1.6, 1.6);
+            c.DrawEllipse(p.Brush, null, new Point(14, 9), 1.6, 1.6);
+        }),
+        GlyphKind.Close => (16, 1.8, (c, p, _) => c.DrawGeometry(null, p, G("M3.5 3.5 L12.5 12.5 M12.5 3.5 L3.5 12.5"))),
+        GlyphKind.Photo => (22, 1.7, (c, p, _) =>
+        {
+            c.DrawRectangle(null, p, new RoundedRect(new Rect(2.5, 4, 17, 14), 3.5));
+            c.DrawEllipse(null, p, new Point(8, 9), 1.7, 1.7);
+            c.DrawGeometry(null, p, G("M3 16 L8.5 11.5 L12 14.5 L15 12 L19.5 15.5"));
+        }),
+        GlyphKind.Document => (22, 1.7, (c, p, _) =>
+            c.DrawGeometry(null, p, G("M6 2.5 H12.5 L17 7 V18 A1.5 1.5 0 0 1 15.5 19.5 H6 A1.5 1.5 0 0 1 4.5 18 V4 A1.5 1.5 0 0 1 6 2.5 Z M12.5 2.5 V7 H17 M8 11.5 H13.5 M8 15 H13.5"))),
         _ => (1, 1, (_, _, _) => { }),
     };
 

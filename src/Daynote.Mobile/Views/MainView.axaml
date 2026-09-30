@@ -156,6 +156,113 @@
         </ScrollViewer>
       </Border>
     </Panel>
+
+    <!--
+      A picture, full screen, over everything. The ground runs under the notch and the home
+      indicator (MainView.axaml.cs sets the bleed); the bar and the actions stay inside the safe area.
+      A double tap, or a pinch, zooms.
+    -->
+    <Border x:Name="Viewer" Background="#0b0c14" IsVisible="{Binding IsImageViewerOpen}">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <Grid Grid.Row="0" Height="52" Margin="6,0" ColumnDefinitions="44,*,44">
+          <Button Grid.Column="0" x:Name="ViewerClose" Classes="iconbtn" Command="{Binding CloseImageViewerCommand}"
+                  AutomationProperties.Name="{Binding Strings[MobileClose]}">
+            <views:Glyph Kind="Close" Width="18" Height="18" Foreground="White" />
+          </Button>
+          <TextBlock Grid.Column="1" Classes="line" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ViewerTitle}" />
+        </Grid>
+        <Border Grid.Row="1" x:Name="ViewerStage" Background="Transparent" ClipToBounds="True"
+                DoubleTapped="OnViewerDoubleTapped">
+          <Border.GestureRecognizers>
+            <PinchGestureRecognizer />
+          </Border.GestureRecognizers>
+          <Image x:Name="ViewerImage" Source="{Binding ViewerImage}" Stretch="Uniform" RenderTransformOrigin="50%,50%" />
+        </Border>
+        <Grid Grid.Row="2" ColumnDefinitions="*,12,*" Margin="20,8,20,12">
+          <Button Grid.Column="0" Classes="viewerbtn" Command="{Binding SaveFileCopyCommand}">
+            <TextBlock Text="{Binding Strings[MobileFileSaveCopy]}" />
+          </Button>
+          <Button Grid.Column="2" Classes="viewerbtn" Command="{Binding DeleteViewerFileCommand}">
+            <TextBlock Text="{Binding Strings[MobileFileDelete]}" Foreground="#ff8076" />
+          </Button>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!--
+      The attachment sheets: "사진 or 파일" when attaching, and a file's menu, which turns into the
+      delete question in place. One sheet with three faces rather than three sheets, because only one
+      is ever up and they share the scrim and the bleed.
+    -->
+    <Panel IsVisible="{Binding IsAttachSheetOpen}">
+      <Button Classes="scrim" Command="{Binding CloseAttachSheetCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
+      <Border x:Name="AttachSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <StackPanel Margin="16,10,16,0" Spacing="8">
+          <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+          <TextBlock Classes="section" Margin="4,0,0,4" Text="{Binding Strings[MobileAttachTitle]}" />
+          <Button Classes="sheetrow" Command="{Binding AttachPhotosCommand}">
+            <Grid ColumnDefinitions="40,*">
+              <Border Grid.Column="0" Classes="sheeticon">
+                <views:Glyph Kind="Photo" Width="22" Height="22" Foreground="{DynamicResource Mobile.SunInk}" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock FontSize="15.5" FontWeight="Bold" Text="{Binding Strings[MobileAttachPhotos]}" />
+                <TextBlock Classes="muted" FontSize="12.5" Text="{Binding Strings[MobileAttachPhotosHint]}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+          <Button Classes="sheetrow" Command="{Binding AttachFilesFromPickerCommand}">
+            <Grid ColumnDefinitions="40,*">
+              <Border Grid.Column="0" Classes="sheeticon">
+                <views:Glyph Kind="Document" Width="22" Height="22" Foreground="{DynamicResource Mobile.SunInk}" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock FontSize="15.5" FontWeight="Bold" Text="{Binding Strings[MobileAttachFiles]}" />
+                <TextBlock Classes="muted" FontSize="12.5" Text="{Binding Strings[MobileAttachFilesHint]}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Margin="0,4,0,0" Command="{Binding CloseAttachSheetCommand}">
+            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+          </Button>
+        </StackPanel>
+      </Border>
+    </Panel>
+
+    <Panel IsVisible="{Binding IsFileMenuOpen}">
+      <Button Classes="scrim" Command="{Binding CloseFileMenuCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
+      <Border x:Name="FileSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <StackPanel Margin="16,10,16,0" Spacing="8">
+          <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+          <TextBlock Classes="line" FontSize="15.5" FontWeight="ExtraBold" Margin="4,0,4,4" Text="{Binding FileMenuTitle}" />
+
+          <StackPanel Spacing="8" IsVisible="{Binding !IsConfirmingDelete}">
+            <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding SaveFileCopyCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileFileSaveCopy]}" />
+            </Button>
+            <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding RequestDeleteFileCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Mobile.Danger}"
+                         Text="{Binding Strings[MobileFileDelete]}" />
+            </Button>
+          </StackPanel>
+
+          <StackPanel Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
+            <TextBlock FontSize="15" FontWeight="Bold" Margin="4,0" Text="{Binding Strings[MobileFileDeleteQuestion]}" />
+            <TextBlock Classes="muted" FontSize="13.5" Margin="4,0,4,6" Text="{Binding Strings[MobileFileDeleteBody]}" />
+            <Button x:Name="ConfirmDeleteFile" Classes="danger" HorizontalAlignment="Stretch" Command="{Binding ConfirmDeleteFileCommand}">
+              <TextBlock FontSize="15" FontWeight="Bold" Foreground="White" Text="{Binding Strings[MobileFileDelete]}" />
+            </Button>
+          </StackPanel>
+
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Margin="0,4,0,0" Command="{Binding CloseFileMenuCommand}">
+            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+          </Button>
+        </StackPanel>
+      </Border>
+    </Panel>
   </Panel>
 
   <UserControl.Styles>
@@ -175,6 +282,37 @@
       <Setter Property="TextAlignment" Value="Center" />
       <Setter Property="TextWrapping" Value="NoWrap" />
       <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+    </Style>
+
+    <!-- A choice in the attach sheet: an icon on the sun tint, a name, and where it picks from. -->
+    <Style Selector="Button.sheetrow">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="MinHeight" Value="60" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Card}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.sheeticon">
+      <Setter Property="Width" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
+    </Style>
+    <!-- The viewer's two actions, light on the dark ground in either theme. -->
+    <Style Selector="Button.viewerbtn">
+      <Setter Property="Height" Value="46" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Background" Value="#26ffffff" />
+    </Style>
+    <Style Selector="Button.viewerbtn TextBlock">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
     </Style>
 
     <Style Selector="Button.scrim">
