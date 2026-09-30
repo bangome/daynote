@@ -92,36 +92,21 @@ APPLE_KEY_ID = "W2B29H98NT"
 # Pro — the smaller quota — so the Premium ids must be set before a Premium price can be bought
 # anywhere, including from the Paddle dashboard.
 #
-# EMPTY ON PURPOSE, for the first Store release (2026-09-10). Two reasons, and the first alone
-# would be enough:
+# ON SALE since 2026-09-30. The ids were empty from the first Store release (2026-09-10) until
+# then: attachment sync had no R2 bucket behind it, and nothing was sold. The bucket exists now
+# (daynote-assets), and both tiers went on sale together with migrations/0010_tiers.sql.
 #
-#   1. Attachment sync is built but not deployed — the R2 bucket does not exist yet — so the
-#      subscription had nothing behind it. Selling it would have been selling a feature that does
-#      not run.
-#   2. Store policy 10.8.3 may require a Company account for a product that offers a paid tier,
-#      and Partner Center support could not be reached to settle it. With nothing on sale the
-#      question does not arise for this submission.
+# Emptying a pair takes that tier off sale with no app update: `availablePlans()` stops listing it,
+# and installed copies drop its purchase surfaces on their next status call. With all four empty,
+# `/v1/billing/status` reports `can_checkout: false` and the app hides billing entirely
+# (AccountViewModel.OffersSubscription), trial countdown included.
 #
-# Empty means `availablePlans()` returns nothing, `/v1/billing/status` reports
-# `can_checkout: false`, and the app hides every billing surface (AccountViewModel
-# .OffersSubscription) — including the trial countdown, which would otherwise count down to the
-# end of something nobody can buy. Restoring the two ids below and redeploying turns it all back
-# on, with no app update: installed copies pick it up on their next status call.
-#
-# Empty again after the round trip was verified on 2026-09-11 (see the note above). Restoring
-# these two and redeploying is all it takes to put Pro back on sale; no app update is involved.
-#
-#   PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
-#   PADDLE_PRICE_ID_ANNUAL  = "pri_01m1nb2txkj2aner6c88g1m2f4"
-PADDLE_PRICE_ID_MONTHLY = ""
-PADDLE_PRICE_ID_ANNUAL = ""
-
-# Premium, added 2026-09-30. Empty for the same reasons as Pro above, and one more: the two Paddle
-# prices do not exist yet. Create them under the same product (₩5,900 / $4.99 monthly, ₩48,000 /
-# $39.99 annual), put their ids here, apply migrations/0010_tiers.sql remotely, and redeploy. Either
-# tier can be on sale without the other; the app offers only the ones that have ids.
-PADDLE_PRICE_ID_PREMIUM_MONTHLY = ""
-PADDLE_PRICE_ID_PREMIUM_ANNUAL = ""
+# Store policy 10.8.3 may still require a Company account for a Microsoft Store product that offers
+# a paid tier; see docs/STORE.md.
+PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
+PADDLE_PRICE_ID_ANNUAL = "pri_01m1nb2txkj2aner6c88g1m2f4"
+PADDLE_PRICE_ID_PREMIUM_MONTHLY = "pri_01m3s234hqdvrfnf5ksf25jp7v"
+PADDLE_PRICE_ID_PREMIUM_ANNUAL = "pri_01m3s24dn13q3r0ygsftksc132"
 
 [[d1_databases]]
 binding = "DB"

@@ -462,6 +462,9 @@ describe('status', () => {
   it('does not offer a checkout when no price is configured', async () => {
     delete (env as { PADDLE_PRICE_ID_MONTHLY?: string }).PADDLE_PRICE_ID_MONTHLY;
     delete (env as { PADDLE_PRICE_ID_ANNUAL?: string }).PADDLE_PRICE_ID_ANNUAL;
+    // wrangler.toml puts Premium on sale too, and the test environment reads it.
+    delete (env as { PADDLE_PRICE_ID_PREMIUM_MONTHLY?: string }).PADDLE_PRICE_ID_PREMIUM_MONTHLY;
+    delete (env as { PADDLE_PRICE_ID_PREMIUM_ANNUAL?: string }).PADDLE_PRICE_ID_PREMIUM_ANNUAL;
     const account = await signIn();
 
     const status = await get('/v1/billing/status', { token: account.accessToken });
