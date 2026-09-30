@@ -38,10 +38,16 @@ public sealed class StoreScreenshotTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "brand");
 
     /// <summary>iPhone 6.9" display, the size App Store Connect requires.</summary>
-    private static readonly Target AppStore = new("app-store", 1320, 2868, 390);
+    private static readonly Target AppStore = new("app-store", 1320, 2868, 390, new Thickness(0, 59, 0, 34));
 
     /// <summary>Google Play phone: 9:18, the tallest ratio Play accepts (its limit is 2:1).</summary>
-    private static readonly Target GooglePlay = new("google-play", 1080, 2160, 360);
+    private static readonly Target GooglePlay = new("google-play", 1080, 2160, 360, new Thickness(0, 24, 0, 24));
+
+    /// <summary>Google Play 7-inch tablet, portrait: 600 points wide at 2x.</summary>
+    private static readonly Target PlayTablet7 = new("google-play", 1200, 1920, 600, new Thickness(0, 24, 0, 24), "tablet7");
+
+    /// <summary>Google Play 10-inch tablet, portrait: 800 points wide at 2x.</summary>
+    private static readonly Target PlayTablet10 = new("google-play", 1600, 2560, 800, new Thickness(0, 24, 0, 24), "tablet10");
 
     [TestMethod]
     [DataRow("ko")]
@@ -52,6 +58,15 @@ public sealed class StoreScreenshotTests
     [DataRow("ko")]
     [DataRow("en")]
     public void Google_Play_images(string language) => Render(GooglePlay, language);
+
+    [TestMethod]
+    [DataRow("ko")]
+    [DataRow("en")]
+    public void Google_Play_tablet_images(string language)
+    {
+        Render(PlayTablet7, language);
+        Render(PlayTablet10, language);
+    }
 
     private static void Render(Target target, string languageCode)
     {
@@ -83,6 +98,10 @@ public sealed class StoreScreenshotTests
                     DataContext = shell,
                     Width = target.LogicalWidth,
                     Height = target.Height / scale,
+
+                    // The status bar and the home indicator a real screen has, so the tab bar sits
+                    // where it does on a device rather than on the image's bottom edge.
+                    PreviewSafeArea = target.SafeArea,
                 };
                 var host = new Window
                 {
@@ -99,7 +118,9 @@ public sealed class StoreScreenshotTests
                 Wait(shell.InitializeAsync());
                 Seed(shell, language);
 
-                string prefix = $"daynote-{target.Folder}-{languageCode}";
+                string prefix = target.Variant is { } variant
+                    ? $"daynote-{target.Folder}-{variant}-{languageCode}"
+                    : $"daynote-{target.Folder}-{languageCode}";
 
                 // 1: the day, which is what opening the app shows.
                 shell.GoToPageCommand.Execute(MobilePage.Day);
@@ -232,7 +253,7 @@ public sealed class StoreScreenshotTests
         }
     }
 
-    private sealed record Target(string Folder, int Width, int Height, double LogicalWidth);
+    private sealed record Target(string Folder, int Width, int Height, double LogicalWidth, Thickness SafeArea, string? Variant = null);
 
     private sealed record ThemeVariantHolder(Avalonia.Styling.ThemeVariant? Value);
 
