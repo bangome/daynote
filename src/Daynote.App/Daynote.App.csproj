@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
@@ -19,6 +19,7 @@
     <Resource Include="Assets\Brand\daynote-favicon-v1.ico" />
     <Resource Include="Assets\Brand\daynote-favicon-v1.png" />
     <Resource Include="Assets\Brand\daynote-favicon-trimmed.png" />
+    <Resource Include="Assets\Brand\daynote-wordmark-navy.png" />
     <Resource Include="Assets\Brand\daynote-logo-transparent-v1.png" />
     <Resource Include="Assets\Brand\daynote-logo-trimmed.png" />
     <Resource Include="Assets\Brand\daynote-logo-en-trimmed.png" />

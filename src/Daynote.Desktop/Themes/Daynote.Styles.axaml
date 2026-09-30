@@ -530,8 +530,10 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
   </Style>
 
+  <!-- The design drew the heading at 32. Against a 15.5px body in a 760px column that reads as a
+       poster rather than a note, so it is 24 here and in the WPF shell. -->
   <Style Selector="TextBox.title">
-    <Setter Property="FontSize" Value="32" />
+    <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="ExtraBold" />
     <Setter Property="LetterSpacing" Value="-1.1" />
   </Style>

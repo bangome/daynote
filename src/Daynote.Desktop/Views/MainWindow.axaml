@@ -32,13 +32,11 @@
         <!-- Brand: the mark, the name, and the collapse chevron. Background="Transparent" is
              load-bearing: it is a drag handle on macOS, and a Grid with no brush takes no clicks. -->
         <Grid x:Name="BrandRow" Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="18,18,18,14" Background="Transparent">
-          <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7" ClipToBounds="True">
-            <Image Source="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png"
-                   RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="Daynote" />
-          </Border>
-          <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
-                     LetterSpacing="-0.3" Foreground="{DynamicResource Daynote.Desk.Brush.SideText}"
-                     Text="{Binding Strings[DeskBrandName]}" />
+          <!-- The wordmark carries the mark and the name together, cut out of the plate it was
+               drawn on so it sits on the sidebar's navy in either theme. -->
+          <Image Grid.Column="0" Grid.ColumnSpan="2" Height="28" HorizontalAlignment="Left"
+                 Source="avares://Daynote.Desktop/Assets/daynote-wordmark-navy.png"
+                 RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="Daynote" />
           <Button x:Name="SidebarCollapse" Grid.Column="2" Classes="sideicon" Width="26" Height="26" Command="{Binding ToggleLeftCommand}"
                   ToolTip.Tip="{Binding SidebarCollapseTip}" AutomationProperties.Name="{Binding Strings[SidebarsCollapse]}">
             <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
@@ -334,7 +332,7 @@
                 <!-- The heading is a label until it is clicked (or a tab's Rename is picked); then the
                      same slot holds a text box with a draft. Enter or focus loss commits, Escape drops
                      the draft. Both are set in the same type so the swap does not jump. -->
-                <TextBlock Grid.Column="0" FontSize="32" FontWeight="ExtraBold" LetterSpacing="-1.1"
+                <TextBlock Grid.Column="0" FontSize="24" FontWeight="ExtraBold" LetterSpacing="-0.8"
                            Text="{Binding Notes.SelectedTab.Title, FallbackValue=''}" Cursor="IBeam"
                            IsVisible="{Binding !IsRenamingTitle}" Tapped="OnTitleTapped" DoubleTapped="OnTitleDoubleTapped"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />

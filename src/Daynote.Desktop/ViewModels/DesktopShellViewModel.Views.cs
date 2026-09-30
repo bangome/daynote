@@ -387,7 +387,10 @@ public sealed partial class DesktopShellViewModel
         {
             _timelineRegroupPending = false;
             TimelineGroups.Clear();
-            foreach (TimelineDayGroup group in TimelineGrouping.Group(Timeline.Rows))
+
+            // Over a snapshot: the fold is posted, so a page still arriving can add to Rows while
+            // it walks them, and the walk throws. Caught by the test that folds a loaded timeline.
+            foreach (TimelineDayGroup group in TimelineGrouping.Group([.. Timeline.Rows]))
             {
                 TimelineGroups.Add(group);
             }

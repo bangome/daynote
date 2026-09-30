@@ -8,72 +8,87 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance pvm:TimelineViewModel}">
-    <Border Style="{DynamicResource Daynote.Product.Style.Panel}">
-        <Grid>
-            <!-- Read-only timeline of every note across all dates, newest day first, with infinite scroll. -->
-            <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Padding="14,4,14,14"
-                          ScrollChanged="OnScrollChanged"
-                          Visibility="{Binding IsEmpty, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
-                <ItemsControl ItemsSource="{Binding Rows}" VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling">
-                    <ItemsControl.Resources>
-                        <!-- Prominent date boundary: a top hairline divider, a large heading, and the count. -->
-                        <DataTemplate DataType="{x:Type pvm:TimelineDateHeaderRow}">
-                            <StackPanel Margin="0,22,0,10">
-                                <TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="Bold"
-                                           Foreground="{DynamicResource Daynote.Product.Brush.Accent}" />
-                                <TextBlock Text="{Binding CountText}" FontSize="11" Margin="0,1,0,0"
-                                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
-                            </StackPanel>
-                        </DataTemplate>
-                        <!-- Read-only note card: title (+ favorite star), truncated body, expand/collapse. -->
-                        <DataTemplate DataType="{x:Type pvm:TimelineNoteRow}">
-                            <Border Background="{DynamicResource Daynote.Product.Brush.Panel}"
-                                    CornerRadius="12"
-                                    Padding="15,13" Margin="0,0,0,8" Cursor="Hand">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke2}" />
-                                        <Setter Property="BorderThickness" Value="1" />
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenCommand}" />
-                                </Border.InputBindings>
-                                <StackPanel>
-                                    <Grid>
-                                        <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis" Margin="0,0,16,0"
-                                                   Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
-                                        <Path Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                              Data="{DynamicResource Daynote.Product.Geo.Star}" Fill="{DynamicResource Daynote.Product.Brush.Extras}"
-                                              Visibility="{Binding IsFavorite, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                    </Grid>
-                                    <TextBlock Text="{Binding DisplayBody}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
-                                               Foreground="{DynamicResource Daynote.Product.Brush.Text}" />
-                                    <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="8,3"
-                                            Style="{DynamicResource Daynote.Product.Style.GhostButton}"
-                                            Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}"
-                                            Foreground="{DynamicResource Daynote.Product.Brush.Accent}"
-                                            Visibility="{Binding IsTruncated, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-                                </StackPanel>
+    d:DataContext="{d:DesignInstance product:ProductShellViewModel}">
+
+    <!--
+      Every note, newest day first, as the design draws it: each day's date in a column of its own
+      with its notes beside it, a hairline between days, and nothing boxed that does not need to be.
+      The date opens that day in the editor.
+
+      Bound to the shell rather than to the timeline view model alone, because the rows are folded
+      into days by the shell (TimelineGroups) and the date column's command lives there too.
+    -->
+
+    <Grid>
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Padding="28,32,28,48"
+                      ScrollChanged="OnScrollChanged"
+                      Visibility="{Binding Timeline.IsEmpty, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+            <!-- A reading column, not the full width of the window: stretched, so the note cards
+                 fill the space beside the date, and capped so a wide window does not run lines
+                 halfway across the desk. -->
+            <StackPanel MaxWidth="860">
+                <ItemsControl ItemsSource="{Binding TimelineGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pvm:TimelineDayGroup}">
+                            <Border Padding="0,22" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- The date is the way back into that day. -->
+                                    <Button Grid.Column="0" VerticalAlignment="Top" Style="{DynamicResource Daynote.Desk.Button.Link}"
+                                            Command="{Binding DataContext.OpenTimelineDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" AutomationProperties.Name="{Binding Heading}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="15" FontWeight="ExtraBold" TextWrapping="Wrap" Text="{Binding Heading}" />
+                                            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Muted}" FontSize="12" Margin="0,3,0,0"
+                                                       Text="{Binding CountText}" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Notes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type pvm:TimelineNoteRow}">
+                                                <Border Style="{DynamicResource Daynote.Desk.Style.Panel}" Padding="20,18" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <Button Style="{DynamicResource Daynote.Desk.Button.Link}" Command="{Binding OpenCommand}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Text="{Binding Title}" />
+                                                                <Path Width="12" Height="12" Stretch="Uniform" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                                      Data="{DynamicResource Daynote.Desk.Geo.Star}"
+                                                                      Fill="{DynamicResource Daynote.Desk.Brush.Sun}" Stroke="{x:Null}"
+                                                                      Visibility="{Binding IsFavorite, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Muted}" FontSize="13.5" LineHeight="24.3"
+                                                                   TextWrapping="Wrap" Margin="0,8,0,0" Text="{Binding DisplayBody}" />
+                                                        <Button Style="{DynamicResource Daynote.Desk.Button.LinkSun}" FontSize="12.5" FontWeight="SemiBold"
+                                                                Margin="0,8,0,0" Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}"
+                                                                Visibility="{Binding IsTruncated, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
                             </Border>
                         </DataTemplate>
-                    </ItemsControl.Resources>
+                    </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </ScrollViewer>
 
-            <!-- Empty state -->
-            <TextBlock Text="{loc:Tr TimelineEmpty}" FontSize="13" TextAlignment="Center"
-                       VerticalAlignment="Center" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
-                       Visibility="{Binding IsEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
-        </Grid>
-    </Border>
+                <!-- The scroll loads the next page on its own; this is the same thing for a pointer
+                     that has stopped, and the only affordance a keyboard user has. -->
+                <Button Style="{DynamicResource Daynote.Desk.Button.Quiet}" HorizontalAlignment="Center" Margin="0,20,0,0"
+                        Content="{loc:Tr DeskLoadMore}" Command="{Binding Timeline.LoadMoreCommand}"
+                        Visibility="{Binding Timeline.HasMore, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" TextAlignment="Center"
+                   VerticalAlignment="Center" HorizontalAlignment="Center" Text="{loc:Tr TimelineEmpty}"
+                   Visibility="{Binding Timeline.IsEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+    </Grid>
 </UserControl>

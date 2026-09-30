@@ -196,9 +196,8 @@
                                         StickyNoteRequested="OnStickyNoteRequested"
                                         Visibility="{Binding IsEditorMode, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
 
-                <product:TimelineView Grid.Column="0" DataContext="{Binding Timeline}"
-                                      Visibility="{Binding DataContext.IsTimelineMode, RelativeSource={RelativeSource AncestorType=Window},
-                                                           Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                <product:TimelineView Grid.Column="0"
+                                      Visibility="{Binding IsTimelineMode, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
 
                 <product:DeskListsView Grid.Column="0"
                                        Visibility="{Binding IsListMode, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />

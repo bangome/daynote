@@ -23,7 +23,9 @@ public partial class TimelineView : WpfUserControl
             return;
         }
 
-        if (DataContext is not TimelineViewModel viewModel || !viewModel.HasMore)
+        // The view is bound to the shell now: the rows are folded into days there, so the page it
+        // asks for belongs to the shell's timeline.
+        if (DataContext is not ProductShellViewModel { Timeline: { HasMore: true } timeline })
         {
             return;
         }
@@ -31,7 +33,7 @@ public partial class TimelineView : WpfUserControl
         var scroller = (ScrollViewer)sender;
         if (e.VerticalOffset >= scroller.ScrollableHeight - NearBottomThreshold)
         {
-            viewModel.LoadMoreCommand.Execute(null);
+            timeline.LoadMoreCommand.Execute(null);
         }
     }
 }

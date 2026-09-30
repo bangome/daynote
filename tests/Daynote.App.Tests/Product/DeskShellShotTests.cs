@@ -21,9 +21,10 @@ namespace Daynote.App.Tests.Product;
 public sealed class DeskShellShotTests
 {
     [STATestMethod]
-    [DataRow(false, "light", DisplayName = "light")]
-    [DataRow(true, "dark", DisplayName = "dark")]
-    public void Shell_renders(bool dark, string name)
+    [DataRow(false, false, "light", DisplayName = "light")]
+    [DataRow(true, false, "dark", DisplayName = "dark")]
+    [DataRow(false, true, "timeline-light", DisplayName = "timeline")]
+    public void Shell_renders(bool dark, bool timeline, string name)
     {
         if (Environment.GetEnvironmentVariable("DAYNOTE_SHELL_SHOTS") != "1")
         {
@@ -39,12 +40,25 @@ public sealed class DeskShellShotTests
         WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
         try
         {
-            harness.Shell.InitializeAsync().GetAwaiter().GetResult();
+            Run(harness.Shell.InitializeAsync());
             harness.Shell.IsDark = dark;
 
             // A note with a link in it, so the shot shows the body's line height and the colour
             // the highlighter gives a mark in whichever theme is up.
-            harness.Shell.NewNoteCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+            Run(harness.Shell.NewNoteCommand.ExecuteAsync(null));
+            if (timeline)
+            {
+                Run(harness.Shell.ToggleTimelineCommand.ExecuteAsync(null));
+
+                // The rows are folded into days on the dispatcher; without letting that run the
+                // shot is of an empty timeline.
+                for (int i = 0; i < 8; i += 1)
+                {
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                        () => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                }
+            }
+
             harness.Shell.Notes.EditorText =
                 "회의 준비\n- [ ] 자료 정리\n- [ ] https://example.com 확인\n\n지난 주 논의 내용을 정리한다.";
 
@@ -107,11 +121,24 @@ public sealed class DeskShellShotTests
             () => { },
             () => { },
             @"C:\\Users\\Test\\AppData\\Local\\Daynote");
-        settings.LoadAsync().GetAwaiter().GetResult();
+        Run(settings.LoadAsync());
         settings.Section = section;
 
         Render(new SettingsView { DataContext = settings }, 900, 660, Path.Combine(directory, $"settings-{name}.png"));
         application.Resources.MergedDictionaries.Clear();
+    }
+
+    /// <summary>Waits for the shell while the dispatcher keeps running; see DeskTabStripTests.</summary>
+    private static void Run(Task task)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        _ = task.ContinueWith(
+            _ => frame.Continue = false,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+        task.GetAwaiter().GetResult();
     }
 
     private static string ShotDirectory()

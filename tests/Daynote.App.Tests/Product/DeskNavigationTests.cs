@@ -109,6 +109,64 @@ public sealed class DeskNavigationTests
         }
     }
 
+    [STATestMethod]
+    public void The_timeline_folds_its_rows_into_days()
+    {
+        // The timeline draws TimelineGroups, not the rows: the shell folds one into the other when
+        // the rows change, and it does that on the dispatcher because a page arrives as a run of
+        // twenty single adds. Nothing else would notice an empty fold — the view would simply draw
+        // no days and say nothing, which is how it looked before this was wired.
+        WorkspaceTestContext context = WorkspaceTestContext.Create();
+        WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
+        try
+        {
+            Run(harness.Shell.InitializeAsync());
+            Run(harness.Shell.NewNoteCommand.ExecuteAsync(null));
+            harness.Shell.Notes.EditorText = "회의 준비";
+
+            Run(harness.Shell.ToggleTimelineCommand.ExecuteAsync(null));
+            Drain();
+
+            Assert.IsFalse(harness.Shell.Timeline.IsEmpty, "The timeline loaded no rows, so the fold cannot be judged.");
+            Assert.IsGreaterThan(
+                0,
+                harness.Shell.TimelineGroups.Count,
+                "The timeline has rows but no days; the view would draw an empty page.");
+            Assert.AreEqual(
+                harness.Shell.Timeline.Rows.OfType<TimelineNoteRow>().Count(),
+                harness.Shell.TimelineGroups.Sum(group => group.Notes.Count),
+                "The days between them hold a different number of notes than the timeline has.");
+        }
+        finally
+        {
+            Run(harness.DisposeAsync().AsTask());
+            Run(context.DisposeAsync().AsTask());
+        }
+    }
+
+    /// <summary>Waits for a task while the dispatcher keeps running; see DeskTabStripTests.</summary>
+    private static void Run(Task task)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        _ = task.ContinueWith(
+            _ => frame.Continue = false,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+        task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>Lets the posted work — the regroup among it — run.</summary>
+    private static void Drain()
+    {
+        for (int i = 0; i < 8; i += 1)
+        {
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                () => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+        }
+    }
+
     private static void AssertOneView(ProductShellViewModel shell)
     {
         int showing = (shell.IsEditorMode ? 1 : 0) + (shell.IsTimelineMode ? 1 : 0) + (shell.IsListMode ? 1 : 0);

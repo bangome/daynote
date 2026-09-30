@@ -37,13 +37,12 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7" ClipToBounds="True">
-                    <Image Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-favicon-trimmed.png"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           AutomationProperties.Name="{loc:Tr AppTitle}" />
-                </Border>
-                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource Daynote.Desk.Brush.SideText}" Text="{loc:Tr DeskBrandName}" />
+                <!-- The wordmark carries the mark and the name together, cut out of the plate it
+                     was drawn on so it sits on the sidebar's navy in either theme. -->
+                <Image Grid.Column="0" Grid.ColumnSpan="2" Height="28" HorizontalAlignment="Left"
+                       Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-wordmark-navy.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       AutomationProperties.Name="{loc:Tr AppTitle}" />
                 <Button Grid.Column="2" Width="26" Height="26" Style="{DynamicResource Daynote.Desk.Button.SideIcon}"
                         Command="{Binding ToggleLeftCommand}" ToolTip="{Binding SidebarCollapseTip}"
                         AutomationProperties.Name="{loc:Tr SidebarsCollapse}">

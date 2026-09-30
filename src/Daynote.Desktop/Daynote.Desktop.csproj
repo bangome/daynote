@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -36,6 +36,7 @@
       used this file; only this one did not.
     -->
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-favicon-v1.ico" Link="Assets\daynote-favicon-v1.ico" />
+    <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-wordmark-navy.png" Link="Assets\daynote-wordmark-navy.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-trimmed.png" Link="Assets\daynote-logo-trimmed.png" />
     <AvaloniaResource Include="..\Daynote.App\Assets\Brand\daynote-logo-dark-trimmed.png" Link="Assets\daynote-logo-dark-trimmed.png" />
     <!-- The English wordmark, so an English build does not show a Korean logo (BrandLogos). -->

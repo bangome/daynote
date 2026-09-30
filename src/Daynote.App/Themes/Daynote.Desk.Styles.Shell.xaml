@@ -313,8 +313,10 @@
         <Setter Property="SelectionOpacity" Value="1" />
     </Style>
 
+    <!-- The design drew the heading at 32. Against a 15.5px body in a 760px column that reads as a
+         poster rather than a note, so it is 24 here and in the Avalonia shell. -->
     <Style x:Key="Daynote.Desk.TextBox.Title" TargetType="TextBox" BasedOn="{StaticResource Daynote.Desk.TextBox.Bare}">
-        <Setter Property="FontSize" Value="32" />
+        <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="ExtraBold" />
     </Style>
 
