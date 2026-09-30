@@ -7,6 +7,9 @@
       The desktop's own palette, dark. Same keys as Daynote.Desk.Light.xaml; see that file for why
       this layer exists and how it merges.
     -->
+    <!-- The page colour as a Color too: the tab strip's edge fades are gradients, and a
+         gradient stop takes a Color, not a brush. Same value as Bg1 above. -->
+    <Color x:Key="Daynote.Product.Color.Bg1">#FF0E1020</Color>
     <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FF0E1020" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FF0E1020" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FF141729" po:Freeze="True" />

@@ -44,12 +44,16 @@ public sealed class WpfProductThemeApplier : IThemeApplier
     /// <summary>The per-place half of the same styles; it builds on the file above, so it follows it.</summary>
     private const string DeskShellStylesUri = "/Daynote.App;component/Themes/Daynote.Desk.Styles.Shell.xaml";
 
+    /// <summary>The settings dialog's controls, which build on the bare button in the two above.</summary>
+    private const string DeskSettingsStylesUri = "/Daynote.App;component/Themes/Daynote.Desk.Styles.Settings.xaml";
+
     private readonly System.Windows.Application _application;
     private readonly bool _highContrast;
     private ResourceDictionary? _stylesDictionary;
     private ResourceDictionary? _deskDictionary;
     private ResourceDictionary? _deskStylesDictionary;
     private ResourceDictionary? _deskShellStylesDictionary;
+    private ResourceDictionary? _deskSettingsStylesDictionary;
     private ResourceDictionary? _themeDictionary;
     private ResourceDictionary? _deskThemeDictionary;
     private ResourceDictionary? _highContrastDictionary;
@@ -76,6 +80,7 @@ public sealed class WpfProductThemeApplier : IThemeApplier
         _deskDictionary ??= Add(merged, DeskUri);
         _deskStylesDictionary ??= Add(merged, DeskStylesUri);
         _deskShellStylesDictionary ??= Add(merged, DeskShellStylesUri);
+        _deskSettingsStylesDictionary ??= Add(merged, DeskSettingsStylesUri);
 
         ResourceDictionary next = Load(dark ? DarkUri : LightUri);
         ResourceDictionary nextDesk = Load(dark ? DeskDarkUri : DeskLightUri);

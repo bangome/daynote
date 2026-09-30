@@ -40,9 +40,14 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
         BodyBox.PreviewDrop += OnBodyDrop;
         BodyBox.PreviewMouseLeftButtonUp += OnBodyMouseUp;
 
+        // The tab strip: the wheel scrolls it sideways, and the fades say which end has more.
+        TabScroll.PreviewMouseWheel += OnTabStripWheel;
+        TabScroll.ScrollChanged += OnTabStripScrolled;
+
         // Tag-panel jumps ask the shell to select a body span; follow the DataContext so the editor
         // stays subscribed to the live shell and never leaks a handler.
         Loaded += OnEditorLoaded;
+        DataContextChanged += OnShellChanged;
     }
 
     /// <summary>
@@ -392,5 +397,75 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
         BodyBox.SelectedText = text;
         BodyBox.Select(index + text.Length, 0);
         BodyBox.Focus();
+    }
+
+    // ── The tab strip ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A wheel over the strip moves it sideways. There is no vertical room to scroll here, so the
+    /// gesture would otherwise fall through to whatever is underneath and scroll that instead.
+    /// </summary>
+    private void OnTabStripWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (TabScroll.ScrollableWidth <= 0)
+        {
+            return;
+        }
+
+        TabScroll.ScrollToHorizontalOffset(TabScroll.HorizontalOffset - e.Delta);
+        e.Handled = true;
+    }
+
+    private void OnTabStripScrolled(object sender, ScrollChangedEventArgs e) => UpdateTabFades();
+
+    /// <summary>Each fade shows only while that end still has tabs behind it.</summary>
+    private void UpdateTabFades()
+    {
+        TabFadeLeft.Opacity = TabScroll.HorizontalOffset > 0.5 ? 1 : 0;
+        TabFadeRight.Opacity = TabScroll.HorizontalOffset < TabScroll.ScrollableWidth - 0.5 ? 1 : 0;
+    }
+
+    private ProductShellViewModel? _observedShell;
+
+    private void OnShellChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_observedShell is not null)
+        {
+            _observedShell.Notes.PropertyChanged -= OnWorkspaceChanged;
+        }
+
+        _observedShell = Shell;
+        if (_observedShell is not null)
+        {
+            _observedShell.Notes.PropertyChanged += OnWorkspaceChanged;
+        }
+    }
+
+    private void OnWorkspaceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Notes.NoteWorkspaceViewModel.SelectedTab))
+        {
+            // Selecting a note from the day list or a search result can pick one that is scrolled
+            // off the strip. Wait for the containers to catch up with the collection first.
+            _ = Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Loaded,
+                () => ScrollSelectedTabIntoView());
+        }
+    }
+
+    /// <summary>Brings the selected note's tab back into the strip, if it has one.</summary>
+    private void ScrollSelectedTabIntoView()
+    {
+        if (Shell?.Notes.SelectedTab is not { } selected)
+        {
+            return;
+        }
+
+        if (TabItems.ItemContainerGenerator.ContainerFromItem(selected) is ContentPresenter presenter)
+        {
+            presenter.BringIntoView();
+        }
+
+        UpdateTabFades();
     }
 }

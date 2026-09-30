@@ -22,12 +22,16 @@ public sealed class DeskSurfaceParityTests
 {
     private const string WpfSource = "src/Daynote.App/Shell/Product/ProductShellViewModel.Desk.cs";
     private const string AvaloniaSource = "src/Daynote.Desktop/ViewModels/DesktopShellViewModel.Views.cs";
+    private const string WpfSections = "src/Daynote.App/Settings/SettingsViewModel.Sections.cs";
+    private const string AvaloniaSections = "src/Daynote.Desktop/ViewModels/DesktopSettingsViewModel.Sections.cs";
 
     [TestMethod]
-    public void Both_shells_declare_the_same_design_b_surface()
+    [DataRow(WpfSource, AvaloniaSource, DisplayName = "the shell's view surface")]
+    [DataRow(WpfSections, AvaloniaSections, DisplayName = "the settings dialog's sections")]
+    public void Both_shells_declare_the_same_design_b_surface(string wpfPath, string avaloniaPath)
     {
-        string[] wpf = Surface(WpfSource);
-        string[] avalonia = Surface(AvaloniaSource);
+        string[] wpf = Surface(wpfPath);
+        string[] avalonia = Surface(avaloniaPath);
 
         string[] onlyWpf = [.. wpf.Except(avalonia, StringComparer.Ordinal).Order(StringComparer.Ordinal)];
         string[] onlyAvalonia = [.. avalonia.Except(wpf, StringComparer.Ordinal).Order(StringComparer.Ordinal)];

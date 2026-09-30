@@ -25,9 +25,15 @@
         <!-- The day's notes as tabs, the selected one underlined in sun. Right-click a tab to
              rename, copy or delete it; Delete on a focused tab deletes it. -->
         <Border Grid.Row="0" Padding="28,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal">
-                    <ItemsControl ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
+            <!--
+              The strip scrolls with the wheel and shows no bar. A horizontal bar under a 46px row of
+              tabs is most of the row, and it only ever says what the fades already say: the two
+              gradients appear at whichever end still has tabs behind it. EditorCardView drives both.
+            -->
+            <Grid>
+                <ScrollViewer x:Name="TabScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                    <ItemsControl x:Name="TabItems" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
@@ -73,8 +79,27 @@
                             AutomationProperties.Name="{loc:Tr NewNote}">
                         <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Plus}" />
                     </Button>
-                </StackPanel>
-            </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- The fades sit over the strip in the page colour, so the tabs run under them. -->
+                <Rectangle x:Name="TabFadeLeft" Width="28" HorizontalAlignment="Left" IsHitTestVisible="False" Opacity="0">
+                    <Rectangle.Fill>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="{DynamicResource Daynote.Product.Color.Bg1}" />
+                            <GradientStop Offset="1" Color="Transparent" />
+                        </LinearGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <Rectangle x:Name="TabFadeRight" Width="28" HorizontalAlignment="Right" IsHitTestVisible="False" Opacity="0">
+                    <Rectangle.Fill>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="Transparent" />
+                            <GradientStop Offset="1" Color="{DynamicResource Daynote.Product.Color.Bg1}" />
+                        </LinearGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+            </Grid>
         </Border>
 
         <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->

@@ -14,6 +14,9 @@
       navy sidebar, the orange "sun" marks, the primary fill that turns orange in the dark — gets
       Daynote.Desk.* keys.
     -->
+    <!-- The page colour as a Color too: the tab strip's edge fades are gradients, and a
+         gradient stop takes a Color, not a brush. Same value as Bg1 above. -->
+    <Color x:Key="Daynote.Product.Color.Bg1">#FFF6F5F1</Color>
     <SolidColorBrush x:Key="Daynote.Product.Brush.Bg1" Color="#FFF6F5F1" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Bg2" Color="#FFF6F5F1" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Panel" Color="#FFFFFEFB" po:Freeze="True" />
