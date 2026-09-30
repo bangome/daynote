@@ -15,7 +15,9 @@ Current state, 2026-09-02:
 | `APPLE_TEAM_ID`, `APPLE_KEY_ID` (vars), `APPLE_PRIVATE_KEY` (secret) | **empty** — Apple sign-in is refused until they are set; see §2c |
 | Migration `0009_apple_and_deletion.sql` | **must be applied before** deploying the Worker that serves `/v1/auth/apple` and `DELETE /v1/account` — see §2c |
 | `PADDLE_WEBHOOK_SECRET`, `PADDLE_API_KEY` (secrets) | **must be set** for subscriptions — see §2b |
-| `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` (vars) | set in `wrangler.toml` (₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual) — see §2b |
+| `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` (vars) | Pro — **empty on purpose** in `wrangler.toml` (₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual; the verified ids are in the comment there) — see §2b |
+| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` (vars) | Premium — **empty**; the Paddle prices do not exist yet (₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual) — see §2b |
+| Migration `0010_tiers.sql` | **must be applied before** deploying the Worker that reads `subscriptions.tier` and `users.quota_override_bytes` — see §2b |
 | Google consent screen | Testing or Production — see §2 |
 | `workers_dev` | false, `preview_urls` false — only the custom domain answers |
 | The app | **does not use this service.** Cloud sync is held back; see §3 |
@@ -129,10 +131,16 @@ Nothing above exists until there is something to sell, so this comes first:
    unset default is the one configuration error that makes checkout fail at the last step.
 3. **Catalog → Products → New product** — "Daynote cloud sync". The name and description are what
    the customer sees on the checkout and the invoice.
-4. **Add two recurring prices** to it: monthly (₩2,900 / $2.49) and yearly (₩24,000 / $19.99),
-   tax-inclusive for KRW. Copy the `pri_...` ids into `PADDLE_PRICE_ID_MONTHLY` and
-   `PADDLE_PRICE_ID_ANNUAL` in `wrangler.toml`. The same prices have to be stated in the Store
-   listing as a range (policy 10.8.4) and on the site's `/pricing/` page.
+4. **Add four recurring prices** to it, tax-inclusive for KRW: Pro monthly (₩2,900 / $2.49) and
+   yearly (₩24,000 / $19.99), Premium monthly (₩5,900 / $4.99) and yearly (₩49,000 / $39.99).
+   Copy the `pri_...` ids into `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL`,
+   `PADDLE_PRICE_ID_PREMIUM_MONTHLY` and `PADDLE_PRICE_ID_PREMIUM_ANNUAL` in `wrangler.toml`. The
+   webhook reads the tier from the price, and a price it does not know reads as Pro — so set the
+   Premium ids before a Premium price can be bought anywhere. The same amounts are written in
+   `src/billing.ts` (`PRICE_LIST`, what the app displays), stated in the Store listing as a range
+   (policy 10.8.4) and on the site's `/pricing/` page; change one and change all four.
+   Then apply the tier migration: `npm run db:apply:remote` (it runs `0010_tiers.sql`, which
+   makes every existing subscription Pro), and deploy.
 5. **Developer tools → Notifications → New destination** pointing at
    `https://daynote.arachat.cc/v1/billing/webhook`, subscribed to the events below, then copy its
    secret key.
@@ -149,6 +157,12 @@ email the customer happened to type.
 So `/v1/billing/checkout` creates the transaction server-side with `custom_data`, and returns the
 `checkout.url` Paddle builds from the default payment link. Same for the portal
 (`/v1/billing/portal`). Neither URL is ever stored.
+
+An existing subscriber changes tier or interval through `/v1/billing/change`, which is Paddle's
+subscription update (`PATCH /subscriptions/{id}`, `proration_billing_mode: prorated_immediately`,
+`on_payment_failure: prevent_change`) — not the portal, which cannot switch prices, and not a
+second checkout, which would bill twice (the checkout refuses a live subscription with 409).
+Try an upgrade and a downgrade in the sandbox before going live.
 
 Both read stdin, so neither lands in shell history. **Neither belongs in a commit, a screenshot, or a
 chat window**; if one is exposed, revoke it in the dashboard and issue a new one — the webhook secret

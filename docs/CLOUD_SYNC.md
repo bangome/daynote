@@ -484,7 +484,7 @@ CREATE TABLE users (
     wrapped_dek_rk TEXT,                      -- recovery-key envelope; NULL only if user declined
     dek_generation INTEGER NOT NULL DEFAULT 1,
     rewrap_pending INTEGER NOT NULL DEFAULT 0 CHECK (rewrap_pending IN (0,1)),
-    quota_bytes    INTEGER NOT NULL DEFAULT 2147483648,
+    quota_bytes    INTEGER NOT NULL DEFAULT 2147483648,  -- superseded by quota_override_bytes (0010, §14.7)
     created_utc    TEXT NOT NULL
 );
 
@@ -957,8 +957,9 @@ At Cloudflare's current published tiers — verify against the live pricing page
   handful of rows per sync per device — negligible. Watch `change_log`: it grows per write and needs
   a scheduled compaction job (delete rows below the minimum known device cursor) or reads creep up.
 - **R2**: no egress fee; storage and class-A/B operations billed. Per-file size is already capped by
-  `FileCapturePolicy.MaxFileBytes`; the `users.quota_bytes` column enforces an account-level cap
-  (default 2 GB) so one account cannot run up an unbounded bill.
+  `FileCapturePolicy.MaxFileBytes`; an account-level cap stops one account running up an unbounded
+  bill: 2 GB on the trial and Pro, and a 200 GB fair-use ceiling behind Premium's "unlimited"
+  (§14.7). `users.quota_override_bytes` sets one account's figure by hand.
 - **Email**: none. Transactional email left with the password reset, taking its vendor, its API key,
   and its DNS records with it.
 - **Google OAuth**: free. The token exchange is one request per sign-in, from the Worker.
@@ -967,16 +968,18 @@ At Cloudflare's current published tiers — verify against the live pricing page
 
 ## 14. Subscriptions — BUILT 2026-09-02
 
-**Text sync is free; image and file sync is the paid tier** (decided 2026-09-07; before that the
-whole of sync was paid). Notes, to-dos, tags and favorites sync for every signed-in account with no
-time limit. The subscription ("Pro") gates the Phase 7 attachment endpoints only. **The app is not
-paid either**, and nothing in the billing layer touches local note-taking or text sync: a user who
+**Text sync is free; image and file sync is paid** (decided 2026-09-07; before that the whole of
+sync was paid). Notes, to-dos, tags and favorites sync for every signed-in account with no time
+limit. The subscription gates the Phase 7 attachment endpoints only, and since 2026-09-30 comes in
+two tiers that differ in storage alone — **Pro** (2 GB) and **Premium** ("unlimited", within fair
+use); see §14.7. **The app is not paid either**, and nothing in the billing layer touches local note-taking or text sync: a user who
 never subscribes, or who stops, keeps every note and file on their own PC and keeps syncing text.
 
 | Question | Decision |
 | --- | --- |
 | Provider | **Paddle**, as merchant of record — it collects and remits VAT/sales tax in every jurisdiction it sells into, which a solo publisher otherwise does personally |
-| Free tier | **Text sync, forever.** Plus a **14-day Pro trial** (image and file sync), granted once at sign-up, never re-granted |
+| Free tier | **Text sync, forever.** Plus a **14-day Pro trial** (image and file sync, 2 GB), granted once at sign-up, never re-granted |
+| Paid tiers | **Pro**: image and file sync, 2 GB — ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. **Premium**: the same, storage shown as "무제한 / Unlimited" and held to a 200 GB fair-use ceiling — ₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual. Per-file size is the same on both |
 | When it lapses | **File sync stops. Text keeps syncing. Nothing is deleted.** The cloud copy is kept indefinitely; resubscribing resumes from the same cursor |
 | Card data | Never reaches Daynote or the Worker. The checkout is a hosted page in the system browser |
 | Enforcement | The asset routes answer **402 `subscription_required`** via `requireFileEntitlement`, and a file-metadata upsert comes back as `files_blocked`. Text push/pull, file *tombstones*, and file metadata on the pull all stay open — see §5.5 for why each. `/v1/auth/me` and `/v1/billing/status` report `can_sync_files` |
@@ -1035,11 +1038,15 @@ settle before the first paid submission.
 | Name | Kind | Purpose |
 | --- | --- | --- |
 | `PADDLE_WEBHOOK_SECRET` | secret | Signs incoming events. Absent means every delivery is refused |
-| `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` | vars | The two recurring prices (`pri_...`): ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. The app POSTs `{"plan": "monthly" \| "annual"}` to `/v1/billing/checkout` (no body = annual) and `/v1/billing/status` lists the plans on sale in `plans`. The checkout is created server-side so the transaction can carry `custom_data.user_id`; a hosted-checkout link cannot |
+| `PADDLE_PRICE_ID_MONTHLY`, `PADDLE_PRICE_ID_ANNUAL` | vars | Pro's two recurring prices (`pri_...`): ₩2,900 / $2.49 monthly, ₩24,000 / $19.99 annual. The checkout is created server-side so the transaction can carry `custom_data.user_id`; a hosted-checkout link cannot |
+| `PADDLE_PRICE_ID_PREMIUM_MONTHLY`, `PADDLE_PRICE_ID_PREMIUM_ANNUAL` | vars | Premium's: ₩5,900 / $4.99 monthly, ₩49,000 / $39.99 annual. Empty means Premium is not on sale; either tier can be sold without the other. The webhook maps a price to its tier through these four, so a Premium price must be listed here before it can be bought |
 | `PADDLE_API_KEY` | secret | Mints customer-portal links. There is **no** portal URL to configure: Paddle's links are single-use and short-lived, so `/v1/billing/portal` creates one per click |
 
-Trial length lives in `entitlement.ts` (`TRIAL_DAYS`), the retry window in `GRACE_DAYS`. Tests:
-`cloud/worker/test/billing.test.ts` (15) and `tests/.../Account/SubscriptionViewModelTests.cs` (10).
+Trial length lives in `entitlement.ts` (`TRIAL_DAYS`), the retry window in `GRACE_DAYS`, the tier
+quotas in `TIER_QUOTA_BYTES` and the fair-use ceiling in `FAIR_USE_BYTES`. The displayed prices are
+`PRICE_LIST` in `billing.ts` and must match the Paddle catalog. Tests:
+`cloud/worker/test/billing.test.ts`, `files.test.ts` (quota by tier), `migration.test.ts` (0010),
+`tests/Daynote.Desktop.Tests/SubscriptionTiersTests.cs` and `tests/.../Account/SubscriptionViewModelTests.cs`.
 
 ### 14.6 Where the account lives in the app — BUILT 2026-09-04
 
@@ -1074,6 +1081,74 @@ The mock also shows a person's name above the address. Google's `profile` scope 
 name is not stored, so the address is the strong line and the avatar letter comes from it. Plumbing
 the name through would mean a migration and a new personal field on the server — a privacy decision,
 not a styling one, so it is not taken here.
+
+### 14.7 Two tiers, quota by tier, and fair use — BUILT 2026-09-30
+
+Premium was added beside Pro without changing Pro: the same features, the same prices, the same
+2 GB. What differs is storage, and only storage.
+
+| | Trial | Pro | Premium | Lapsed |
+| --- | --- | --- | --- | --- |
+| Image and file sync | yes | yes | yes | no (text still syncs) |
+| Quota the server enforces | 2 GiB | 2 GiB | 200 GiB (`FAIR_USE_BYTES`) | — (uploads refused anyway) |
+| What the app shows | "0.4GB / 2GB" | "1.2GB / 2GB" | "12GB 사용" — no ceiling | used / 2GB, if anything is stored |
+
+**Where the tier comes from.** The subscription's Paddle price. Every `subscription.*` webhook that
+lists items is mapped through the four price-id vars to `{tier, plan}` and written to
+`subscriptions.tier`, `plan` and `price_id` (migration 0010; every row that existed before it is
+Pro, the only tier there was). A price the Worker does not know reads as **Pro** — the smaller quota,
+so a missing var can never hand out Premium's — and is kept verbatim for reconciliation. An event
+without items (a status change, a failed transaction) leaves the tier alone.
+
+**Order.** An upgrade followed quickly by a downgrade can be delivered either way round. The tier,
+interval and price follow the event that *occurred* last (`occurred_at`, kept in
+`price_occurred_utc`); the period end keeps its own rule and still never moves backwards (§14.2).
+
+**The quota decision.** The quota used to be `users.quota_bytes`, NOT NULL with a 2 GiB default on
+every row. With tiers the quota is the tier's (`TIER_QUOTA_BYTES`), and a column that every account
+fills with the same default cannot also mean "an operator chose this". So the operator's figure
+moved to a new nullable `users.quota_override_bytes`: NULL follows the tier, a number wins in either
+direction (raise one account, or hold a misbehaving one to less). 0010 copies any non-default
+`quota_bytes` into it so no hand-made grant is lost; `quota_bytes` is left in place, unread, because
+dropping a column from `users` is a table rebuild under ON DELETE CASCADE (0009 showed the cost).
+
+**Nothing is deleted by going down.** This was already true of a lapse (§5.5) and the quota check
+kept it true for tiers: `assets.put` refuses only a request that *adds* bytes past the quota
+(`additional > 0`). An account over its quota after a downgrade from Premium, a lowered override, or
+a lapse keeps every object, downloads all of it, can re-send a key it already holds, and deletes
+freely (tombstones are never gated); it simply cannot add until it is back under. Hitting the
+ceiling on Premium is a 413 whose message names fair use.
+
+**Changing tier.** A running subscription moves through `POST /v1/billing/change {tier, plan}`,
+which is Paddle's subscription update (`PATCH /subscriptions/{id}` with the new price,
+`proration_billing_mode: prorated_immediately`, `on_payment_failure: prevent_change`). That is the
+path Paddle supports cleanly: its customer portal cancels, changes the card and lists invoices but
+cannot switch price, and a second checkout would create a second subscription billed alongside the
+first — which is why `/v1/billing/checkout` now answers **409 `subscription_active`** for an account
+with a live one (active, trialing, past due or paused). The PATCH answers with the updated
+subscription, which is applied through the same code as a webhook, so the app shows the new tier at
+once; the `subscription.updated` that follows is idempotent with it. Cancelling stays in the portal.
+The app offers Pro → Premium; Premium → Pro is not offered from the table (the design leaves it out),
+though the endpoint accepts it.
+
+**The wire.** `/v1/auth/me` (its `entitlement`) and `/v1/billing/status` gained `tier`
+(`"pro" | "premium" | null` — Pro during the trial, null once nothing is in force), `plan`,
+`quota_bytes` and `used_bytes`. Status also lists `offers`: every tier × interval that has a price,
+each with `prices: [{currency, amount}]` in minor units, which is where the app's prices come from;
+and `can_change`. For the apps already installed, `plans` still lists the Pro intervals under its
+old name, a checkout body with no `tier` buys Pro, and no body at all buys Pro annual — exactly
+what those apps have always been sold.
+
+**Fair use** is the site's terms §5 (`/terms/#fair-use`): "unlimited" is provided within fair use,
+uploads stop at 200 GB, the limit is not lowered to a subscriber's disadvantage (Store policy
+10.8.6), and nothing already uploaded is deleted when an account is over any limit.
+
+**In the apps.** The desktop's settings 계정 page (Daynote Desktop B v2) shows the plan pill and
+storage, the trial card, the subscribed card (Premium으로 변경 → the checkout dialog in change mode;
+구독 해지 → the portal), and the three-column plan table with a fair-use footnote. The checkout
+dialog opens Paddle in the browser and turns to its success state only when the billing state says
+the tier is paid — it polls, and re-reads when the window comes back to the front. WPF has the same
+surfaces as cards. Phones show the tier and the storage and never anything to buy.
 
 ## 13. Open questions
 
