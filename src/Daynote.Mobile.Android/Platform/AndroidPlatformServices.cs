@@ -35,7 +35,8 @@ public static class AndroidPlatformServices
             SecretProtector: new AndroidKeyStoreSecretProtector(),
             Identity: CreateIdentity(currentActivity),
             OpenExternal: target => OpenExternal(context, target),
-            TopLevel: () => TopLevel.GetTopLevel((currentActivity() as AvaloniaMainActivity)?.Content as Control));
+            TopLevel: () => TopLevel.GetTopLevel((currentActivity() as AvaloniaMainActivity)?.Content as Control),
+            OpenFile: (name, bytes) => OpenFileAsync(context, currentActivity, name, bytes));
     }
 
     /// <summary>
@@ -66,6 +67,67 @@ public static class AndroidPlatformServices
                 (url, scheme, token) => currentActivity() is { } activity
                     ? AndroidAuthSession.StartAsync(activity, url, scheme, token)
                     : Task.FromResult<Uri?>(null));
+
+    /// <summary>
+    /// The authority of the app's <c>FileProvider</c>, declared in AndroidManifest.xml. Only the
+    /// folder in <c>Resources/xml/daynote_file_paths.xml</c> is served through it.
+    /// </summary>
+    internal const string FileProviderAuthority = "cc.arachat.daynote.files";
+
+    /// <summary>
+    /// Shows an attachment in whichever app views its type, through a content URI with read access
+    /// granted to that one app. A <c>file://</c> URI would throw FileUriExposedException on every
+    /// Android since 7, and the store's own copy sits under a hashed name in private storage, so
+    /// the bytes are written under their real name into the cache folder the provider serves.
+    /// </summary>
+    /// <returns>False when no installed app views the type; the phone then offers a copy to save.</returns>
+    private static async Task<bool> OpenFileAsync(Context context, Func<Activity?> currentActivity, string name, byte[] bytes)
+    {
+        string folder = Path.Combine(context.CacheDir!.AbsolutePath, "daynote-open");
+        // Yesterday's hand-offs are done with; the viewing app had its read long ago.
+        try
+        {
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+
+        string slot = Path.Combine(folder, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(slot);
+        string path = Path.Combine(slot, Path.GetFileName(name));
+        await File.WriteAllBytesAsync(path, bytes).ConfigureAwait(true);
+
+        using var file = new Java.IO.File(path);
+        global::Android.Net.Uri uri = AndroidX.Core.Content.FileProvider.GetUriForFile(context, FileProviderAuthority, file)!;
+        string extension = Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
+        string mime = global::Android.Webkit.MimeTypeMap.Singleton?.GetMimeTypeFromExtension(extension) ?? "application/octet-stream";
+
+        using var intent = new Intent(Intent.ActionView);
+        intent.SetDataAndType(uri, mime);
+        intent.AddFlags(ActivityFlags.GrantReadUriPermission);
+        try
+        {
+            if (currentActivity() is { } activity)
+            {
+                activity.StartActivity(intent);
+            }
+            else
+            {
+                intent.AddFlags(ActivityFlags.NewTask);
+                context.StartActivity(intent);
+            }
+
+            return true;
+        }
+        catch (ActivityNotFoundException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>Opens the terms and privacy links in the browser. A failure is not worth a dialog.</summary>
     private static void OpenExternal(Context context, string target)

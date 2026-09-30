@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one folder the FileProvider serves: attachments written out to be opened in another app. -->
+<paths>
+  <cache-path name="open" path="daynote-open/" />
+</paths>

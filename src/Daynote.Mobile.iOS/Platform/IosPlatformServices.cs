@@ -48,7 +48,9 @@ public static class IosPlatformServices
             Identity: CreateIdentity(),
             OpenExternal: OpenExternal,
             TopLevel: ResolveTopLevel,
-            AppleIdentity: new IosAppleIdentityProvider());
+            AppleIdentity: new IosAppleIdentityProvider(),
+            OpenFile: IosFileHandoff.OpenFileAsync,
+            PickPhotos: IosFileHandoff.PickPhotosAsync);
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.

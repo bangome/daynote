@@ -11,7 +11,20 @@
                android:icon="@mipmap/ic_launcher"
                android:roundIcon="@mipmap/ic_launcher_round"
                android:allowBackup="true"
-               android:supportsRtl="true" />
+               android:supportsRtl="true">
+    <!--
+      Hands an attachment to the app that views it (a PDF reader, a gallery) as a content URI with
+      read access for that app only. Serves one cache folder and nothing else; see
+      Resources/xml/daynote_file_paths.xml.
+    -->
+    <provider android:name="androidx.core.content.FileProvider"
+              android:authorities="cc.arachat.daynote.files"
+              android:exported="false"
+              android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                 android:resource="@xml/daynote_file_paths" />
+    </provider>
+  </application>
 
   <!--
     Android 11 and later hide other packages from an app unless it declares which it needs. Without
