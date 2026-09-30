@@ -144,6 +144,11 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         OnPropertyChanged(nameof(TabIsFavorites));
         OnPropertyChanged(nameof(TabIsTags));
         OnPropertyChanged(nameof(TabIsFiles));
+
+        // The heading and the count beside it name the open list, so switching between two lists
+        // while one is already up has to raise them. Without this the middle of the window swaps
+        // its contents and keeps the first list's title.
+        RaiseViewState();
     }
 
     partial void OnIsDarkChanged(bool value)
@@ -290,18 +295,6 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     [RelayCommand]
     private void CloseAccount() => IsAccountOpen = false;
 
-    /// <summary>Raised when the post-it chord or button asks for the open note in its own window.</summary>
-    public event EventHandler? StickyNoteRequested;
-
-    [RelayCommand]
-    private void OpenSticky()
-    {
-        if (HasOpenNote)
-        {
-            StickyNoteRequested?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
     public void OpenSettings() => IsSettingsOpen = true;
 
     public void CloseSettings() => IsSettingsOpen = false;
@@ -421,6 +414,9 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         }
 
         await Timeline.LoadAsync().ConfigureAwait(true);
+        // The timeline replaces whatever filled the middle. A list left switched on would draw
+        // over it: the two views share the cell and each shows itself on its own flag.
+        IsListMode = false;
         IsTimelineMode = true;
     }
 
