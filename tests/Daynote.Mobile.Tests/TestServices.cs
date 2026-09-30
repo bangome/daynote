@@ -50,11 +50,15 @@ internal static class TestServices
     internal static void WithInitialisedShell(Action<Views.MainView, MobileShellViewModel> body) =>
         WithInitialisedShell(390, 844, body);
 
+    /// <summary>The data root of the shell <see cref="WithInitialisedShell(Action{Views.MainView, MobileShellViewModel})"/> is running, for seeding files.</summary>
+    internal static string? CurrentDataRoot { get; private set; }
+
     /// <summary>The same, at another handset's logical size.</summary>
     internal static void WithInitialisedShell(double width, double height, Action<Views.MainView, MobileShellViewModel> body)
     {
         ArgumentNullException.ThrowIfNull(body);
         using var data = new TempDataRoot();
+        CurrentDataRoot = data.Path;
 
         HeadlessAppFixture.OnUiThread(() =>
         {

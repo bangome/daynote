@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using Daynote.App.Composition;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
@@ -44,10 +45,32 @@ public sealed class ScreenshotTests
 
             LocalDate today = LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
             Seed(shell, today);
+            SeedFiles(shell);
             string suffix = variantName.ToLowerInvariant();
 
             shell.GoToPageCommand.Execute(MobilePage.Day);
             Capture(view, $"day-{suffix}");
+
+            // The files section, scrolled into view under the to-dos.
+            ScrollViewer dayScroller = view.GetVisualDescendants().OfType<Views.DayPage>().Single()
+                .GetVisualDescendants().OfType<ScrollViewer>().First();
+            dayScroller.ScrollToEnd();
+            Capture(view, $"day-files-{suffix}");
+            dayScroller.ScrollToHome();
+
+            shell.OpenAttachSheetCommand.Execute(null);
+            Capture(view, $"attach-sheet-{suffix}");
+            shell.CloseAttachSheetCommand.Execute(null);
+
+            shell.DayFiles[0].ShowMenuCommand.Execute(null);
+            Capture(view, $"file-menu-{suffix}");
+            shell.RequestDeleteFileCommand.Execute(null);
+            Capture(view, $"file-confirm-{suffix}");
+            shell.CloseFileMenuCommand.Execute(null);
+
+            Pump(() => shell.DayFiles.First(row => row.Item.IsImage).OpenCommand.ExecuteAsync(null));
+            Capture(view, $"viewer-{suffix}");
+            shell.CloseImageViewerCommand.Execute(null);
 
             // The meeting note, which carries a star, two tags and three to-dos.
             Pump(() => shell.Notes.SelectNoteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
@@ -132,6 +155,53 @@ public sealed class ScreenshotTests
 
         Pump(() => shell.SelectDateAsync(today));
         Pump(() => shell.RefreshAllAsync());
+    }
+
+    /// <summary>
+    /// Three attachments on the selected day: a photo, a document, and one whose bytes are still to
+    /// come from another device (its row is there and the asset is not).
+    /// </summary>
+    internal static void SeedFiles(MobileShellViewModel shell)
+    {
+        string dataRoot = TestServices.CurrentDataRoot ?? throw new InvalidOperationException("No shell is running.");
+        Pump(async () =>
+        {
+            using (var photo = new MemoryStream(SamplePng(320, 240)))
+            {
+                await shell.Files.AddFromStreamAsync("회의실 화이트보드.png", photo);
+            }
+
+            using (var document = new MemoryStream(new byte[184_320]))
+            {
+                await shell.Files.AddFromStreamAsync("2분기 지표 리뷰.pdf", document);
+            }
+
+            using var pending = new MemoryStream(new byte[2_516_582]);
+            if (await shell.Files.AddFromStreamAsync("현장 사진 모음.zip", pending) is { } missing)
+            {
+                File.Delete(Path.Combine(dataRoot, "files", missing.RelativePath));
+            }
+
+            await shell.Files.RefreshAsync();
+        });
+    }
+
+    /// <summary>A PNG of a sun over a navy ground, the brand's two colours, so a thumbnail reads as one.</summary>
+    internal static byte[] SamplePng(int width, int height)
+    {
+        using var bitmap = new RenderTargetBitmap(new PixelSize(width, height));
+        using (Avalonia.Media.DrawingContext context = bitmap.CreateDrawingContext())
+        {
+            context.FillRectangle(new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#1b2356")), new Rect(0, 0, width, height));
+            context.DrawEllipse(new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#ee7f35")), null,
+                new Point(width * 0.62, height * 0.42), height * 0.22, height * 0.22);
+            context.FillRectangle(new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f6f5f1")),
+                new Rect(0, height * 0.72, width, height * 0.28));
+        }
+
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, new PngBitmapEncoderOptions());
+        return stream.ToArray();
     }
 
     /// <summary>Runs an async command to completion on the dispatcher the UI is on.</summary>

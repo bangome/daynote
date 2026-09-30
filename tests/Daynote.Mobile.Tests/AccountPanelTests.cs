@@ -292,13 +292,13 @@ public sealed class AccountPanelTests
             throw new AccountException(AccountFailure.SignInCancelled, "Not used by these tests.");
     }
 
-    private sealed class NoGoogle : IIdentityProvider
+    internal sealed class NoGoogle : IIdentityProvider
     {
         public ValueTask<IdentityGrant> AuthorizeAsync(CancellationToken cancellationToken = default) =>
             throw new AccountException(AccountFailure.SignInCancelled, "Not used by these tests.");
     }
 
-    private sealed class XorProtector : ISecretProtector
+    internal sealed class XorProtector : ISecretProtector
     {
         public byte[] Protect(ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> entropy) => Xor(plaintext);
 

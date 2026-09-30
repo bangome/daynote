@@ -62,13 +62,34 @@ public sealed class DeviceSafeAreaTests
                 failures.AddRange(Offenders(view, safe).Select(offender => $"{device}/{screen}: {offender}"));
             }
 
+            ScreenshotTests.SeedFiles(shell);
             shell.GoToPageCommand.Execute(MobilePage.Day);
             Check("day");
+
+            // The files section sits under the to-dos, below the fold: scrolled to, its rows count.
+            ScrollDayToEnd(view);
+            Check("day-files");
+            ScrollDayToStart(view);
 
             ScreenshotTests.Pump(() => shell.Notes.SelectNoteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
             shell.IsEditorOpen = true;
             Check("editor");
             shell.IsEditorOpen = false;
+
+            shell.OpenAttachSheetCommand.Execute(null);
+            Check("attach-sheet");
+            shell.CloseAttachSheetCommand.Execute(null);
+
+            shell.DayFiles[0].ShowMenuCommand.Execute(null);
+            Check("file-menu");
+            shell.RequestDeleteFileCommand.Execute(null);
+            Check("file-confirm");
+            shell.CloseFileMenuCommand.Execute(null);
+
+            ScreenshotTests.Pump(() => shell.DayFiles.First(row => row.Item.IsImage).OpenCommand.ExecuteAsync(null));
+            Assert.IsTrue(shell.IsImageViewerOpen, $"{device}: the picture did not open in the viewer.");
+            Check("viewer");
+            shell.CloseImageViewerCommand.Execute(null);
 
             shell.GoToPageCommand.Execute(MobilePage.Lists);
             Check("lists");
@@ -91,6 +112,17 @@ public sealed class DeviceSafeAreaTests
 
         Assert.IsEmpty(failures, string.Join(Environment.NewLine, failures));
     }
+
+    private static ScrollViewer DayScroller(Control view) =>
+        view.GetVisualDescendants().OfType<Views.DayPage>().Single().GetVisualDescendants().OfType<ScrollViewer>().First();
+
+    private static void ScrollDayToEnd(Control view)
+    {
+        Settle(view);
+        DayScroller(view).ScrollToEnd();
+    }
+
+    private static void ScrollDayToStart(Control view) => DayScroller(view).ScrollToHome();
 
     /// <summary>Visible buttons whose on-screen part crosses into an inset.</summary>
     private static IEnumerable<string> Offenders(Control view, Thickness safe)

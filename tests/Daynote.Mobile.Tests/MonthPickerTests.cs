@@ -109,7 +109,8 @@ public sealed class MonthPickerTests
 
             Button scrim = view.GetLogicalDescendants()
                 .OfType<Button>()
-                .Single(b => b.Classes.Contains("scrim"));
+                // The one on screen: the attachment sheets have scrims of their own, hidden now.
+                .Single(b => b.Classes.Contains("scrim") && b.IsEffectivelyVisible);
 
             // The bound command, not a synthesised Click: a Button runs its Command from its own
             // OnClick, so raising the event from outside proves nothing about the binding. What is
