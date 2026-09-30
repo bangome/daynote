@@ -16,14 +16,28 @@
     <Border Width="300" Background="{DynamicResource Daynote.Product.Brush.Panel}"
             BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0"
             AllowDrop="True">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="20,20,20,10">
+        <!--
+          Two regions, not one scrolling column. The day's to-dos are what the panel is for, so
+          they take whatever room is left; the files sit under them and stop growing at a few
+          rows, scrolling within themselves past that. A single column let a day with a dozen
+          attachments push the to-dos off the top.
+        -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,20,20,10">
                     <TextBlock FontSize="14" FontWeight="ExtraBold" VerticalAlignment="Bottom" Text="{loc:Tr DeskDayTodoTitle}" />
                     <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="12" Margin="8,0,0,1"
                                VerticalAlignment="Bottom" Text="{Binding DayTodoCountText}" />
                 </StackPanel>
 
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
                 <ItemsControl ItemsSource="{Binding DayTodos}" Margin="10,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type pvm:TodoItemViewModel}">
@@ -70,10 +84,12 @@
                         Foreground="{DynamicResource Daynote.Product.Brush.Text2}" Text="{loc:Tr TodoEmptyCode}" /></Border></InlineUIContainer><Run
                         Text="{loc:Tr DeskDayTodoEmptySuffix}" />
                 </TextBlock>
+                </StackPanel>
+            </ScrollViewer>
 
-                <Border Height="1" Margin="20,14" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+                <Border Grid.Row="2" Height="1" Margin="20,14" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
-                <Grid Margin="20,0,20,10">
+                <Grid Grid.Row="3" Margin="20,0,20,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -83,6 +99,9 @@
                             VerticalAlignment="Bottom" Content="{loc:Tr DeskFilesAdd}" Command="{Binding Files.AddFilesCommand}" />
                 </Grid>
 
+            <!-- Five rows before it starts scrolling; past that the to-dos would lose the room. -->
+            <ScrollViewer Grid.Row="4" MaxHeight="230" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
                 <ItemsControl ItemsSource="{Binding Files.Items}" Margin="10,0,10,20">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type pvm:FileItemViewModel}">
@@ -128,5 +147,6 @@
                            Visibility="{Binding Files.IsEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
             </StackPanel>
         </ScrollViewer>
+        </Grid>
     </Border>
 </UserControl>
