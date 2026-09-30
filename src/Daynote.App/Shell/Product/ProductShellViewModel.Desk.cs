@@ -236,6 +236,10 @@ public sealed partial class ProductShellViewModel
     /// <summary>Wires the new surfaces to the panels they read. Called once from the constructor.</summary>
     private void AttachViews(Core.Time.IClock clock, Core.Notes.INoteRepository repository)
     {
+        // The thread this shell was built on owns the collections the window binds. A language
+        // switch or a sync callback can arrive on another one, and WPF refuses a change to a bound
+        // collection from off it, so the two rebuilds below come back here first.
+        _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
         Week = new WeekStripViewModel(clock, repository, date => SelectDateAsync(date));
         Todo.Refreshed += (_, _) => RefreshDayTodos();
         Timeline.Rows.CollectionChanged += OnTimelineRowsChanged;
@@ -360,8 +364,16 @@ public sealed partial class ProductShellViewModel
         RefreshDayTodos();
     }
 
+    private System.Windows.Threading.Dispatcher? _dispatcher;
+
     private void RefreshDayTodos()
     {
+        if (_dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            _ = dispatcher.BeginInvoke(RefreshDayTodos);
+            return;
+        }
+
         DayTodos.Clear();
         int open = 0;
         foreach (TodoItemViewModel item in Todo.TodayItems.Concat(Todo.Items)
@@ -389,7 +401,7 @@ public sealed partial class ProductShellViewModel
         }
 
         _timelineRegroupPending = true;
-        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(() =>
+        _ = (_dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher).BeginInvoke(() =>
         {
             _timelineRegroupPending = false;
             TimelineGroups.Clear();

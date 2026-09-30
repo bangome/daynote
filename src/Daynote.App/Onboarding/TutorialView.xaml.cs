@@ -128,7 +128,12 @@ public partial class TutorialView : System.Windows.Controls.UserControl
             return null;
         }
 
-        if (window.FindName(name) is not FrameworkElement { IsVisible: true } element
+        // The window's own namescope first, then the visual tree. Four of the steps now point at
+        // elements inside the sidebar, which is a user control of its own: its names belong to its
+        // namescope, so FindName on the window does not see them and the step would silently
+        // spotlight nothing.
+        if ((window.FindName(name) as FrameworkElement ?? FindByName(window, name)) is not
+            { IsVisible: true } element
             || element.ActualWidth <= 0 || element.ActualHeight <= 0)
         {
             return null;
@@ -215,6 +220,27 @@ public partial class TutorialView : System.Windows.Controls.UserControl
         }
 
         return target.TryFindResource("Daynote.Product.Radius.Control") is CornerRadius control ? control.TopLeft : 8;
+    }
+
+    /// <summary>The first descendant with this name, across every namescope under the root.</summary>
+    private static FrameworkElement? FindByName(DependencyObject root, string name)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, i);
+            if (child is FrameworkElement element && string.Equals(element.Name, name, StringComparison.Ordinal))
+            {
+                return element;
+            }
+
+            if (FindByName(child, name) is { } deeper)
+            {
+                return deeper;
+            }
+        }
+
+        return null;
     }
 
     private static Border? FirstRoundedDescendant(DependencyObject root)

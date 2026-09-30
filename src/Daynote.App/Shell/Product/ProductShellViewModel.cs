@@ -287,6 +287,18 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     [RelayCommand]
     private void CloseAccount() => IsAccountOpen = false;
 
+    /// <summary>Raised when the post-it chord or button asks for the open note in its own window.</summary>
+    public event EventHandler? StickyNoteRequested;
+
+    [RelayCommand]
+    private void OpenSticky()
+    {
+        if (HasOpenNote)
+        {
+            StickyNoteRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     public void OpenSettings() => IsSettingsOpen = true;
 
     public void CloseSettings() => IsSettingsOpen = false;

@@ -1,0 +1,384 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:product="clr-namespace:Daynote.App.Shell.Product">
+
+    <!--
+      The second half of the design-B control styles: the parts that belong to one place in the
+      window rather than to the whole page — the navy sidebar, the header, the editor and the
+      caption strip. Split from Daynote.Desk.Styles.xaml only so either file stays reviewable; the
+      two are merged together and in that order, because the styles here build on the bare button
+      and the icon style there.
+    -->
+
+    <!-- ── Sidebar (navy in both themes) ────────────────────────────────────────────────── -->
+
+
+    <Style x:Key="Daynote.Desk.Style.Sidebar" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Side}" />
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Text.Side2" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+    </Style>
+
+    <!-- Small square icon button on the navy ground (collapse, month steps). -->
+    <Style x:Key="Daynote.Desk.Button.SideIcon" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="7" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideHover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The design's boxes are content-box: a 36px field with a 1px border is 38px tall on screen,
+         and the heights here are the on-screen ones. -->
+    <Style x:Key="Daynote.Desk.Button.SideSearch" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="9" />
+        <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideHover}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.SideStroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideActive}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- One of the sidebar's six views. IsActive carries IsNavTodo and its siblings. -->
+    <Style x:Key="Daynote.Desk.Button.NavItem" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="8" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideHover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+            </Trigger>
+            <Trigger Property="product:DeskVisual.IsActive" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideActive}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+                <Setter Property="FontWeight" Value="Bold" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The 6px square that lights in sun beside the active view. -->
+    <Style x:Key="Daynote.Desk.Style.NavMark" TargetType="Border">
+        <Setter Property="Width" Value="6" />
+        <Setter Property="Height" Value="6" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Background" Value="Transparent" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding (product:DeskVisual.IsActive), RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Text.NavCount" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+    </Style>
+
+    <!--
+      Mini month cell: a 26px rounded square in a 30px row. Sunday, today and the selected day are
+      the cell view model's own flags, so the triggers read them directly rather than through
+      IsActive — there are three of them and they combine.
+    -->
+    <Style x:Key="Daynote.Desk.Button.MiniCell" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Margin" Value="0,0,0,1" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSunday}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideSunday}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                <Setter Property="FontWeight" Value="Bold" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.AvatarInk}" />
+                <Setter Property="FontWeight" Value="Bold" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsInMonth}" Value="False">
+                <Setter Property="IsHitTestVisible" Value="False" />
+                <Setter Property="Opacity" Value="0.35" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Style.MiniCellFace" TargetType="Border">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.SideStroke}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideActive}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Button.AccountRow" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Padding" Value="18,12" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.SideStroke}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideHover}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The sync dot on the avatar: grey idle, green settled, sun while working, amber to act. -->
+    <Style x:Key="Daynote.Desk.Style.SyncDot" TargetType="Ellipse">
+        <Setter Property="Width" Value="9" />
+        <Setter Property="Height" Value="9" />
+        <Setter Property="Fill" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+    </Style>
+
+    <!-- ── Header ───────────────────────────────────────────────────────────────────────── -->
+
+    <Style x:Key="Daynote.Desk.Button.WeekStep" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="52" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="8" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- One day in the week strip. Like the mini cell, its states are the day's own flags. -->
+    <Style x:Key="Daynote.Desk.Button.WeekDay" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Width" Value="48" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="12" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding IsTodayRing}" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Text.WeekDayName" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSunday}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Sunday}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Style.WeekDot" TargetType="Ellipse">
+        <Setter Property="Width" Value="4" />
+        <Setter Property="Height" Value="4" />
+        <Setter Property="Fill" Value="Transparent" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding HasNotes}" Value="True">
+                <Setter Property="Fill" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding HasNotes}" Value="True" />
+                    <Condition Binding="{Binding IsSelected}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Fill" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The header's outlined 36px buttons (theme, right panel) and the Timeline toggle. -->
+    <Style x:Key="Daynote.Desk.Button.Tool" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="MinWidth" Value="36" />
+        <Setter Property="product:DeskVisual.CornerRadius" Value="9" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+            <Trigger Property="product:DeskVisual.IsActive" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The timeline toggle, which fills with the primary rather than the segment grey when on. -->
+    <Style x:Key="Daynote.Desk.Button.ToolPrimary" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Tool}">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+            <Trigger Property="product:DeskVisual.IsActive" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ── Editor ───────────────────────────────────────────────────────────────────────── -->
+
+    <Style x:Key="Daynote.Desk.Button.NoteTab" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <!-- The underline is inside the bottom padding (the design draws it as an inset shadow), so
+             the border takes 2 of the 11px. -->
+        <Setter Property="Padding" Value="14,12,14,9" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+        <Setter Property="MaxWidth" Value="220" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+      A text box with nothing of its own: no fill, no border, no focus ring. The title, the tag
+      entry, the palette's query and the note body are all drawn this way — the design's inputs are
+      `border:none; background:transparent`, and the surface around them is what reads as the field.
+    -->
+    <ControlTemplate x:Key="Daynote.Desk.Template.BareTextBox" TargetType="TextBox">
+        <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}"
+                      Background="Transparent" BorderThickness="0"
+                      VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
+                      HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+    </ControlTemplate>
+
+    <Style x:Key="Daynote.Desk.TextBox.Bare" TargetType="TextBox">
+        <Setter Property="Template" Value="{StaticResource Daynote.Desk.Template.BareTextBox}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Daynote.Product.Font.UI}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionBg}" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionText}" />
+        <Setter Property="SelectionOpacity" Value="1" />
+    </Style>
+
+    <Style x:Key="Daynote.Desk.TextBox.Title" TargetType="TextBox" BasedOn="{StaticResource Daynote.Desk.TextBox.Bare}">
+        <Setter Property="FontSize" Value="32" />
+        <Setter Property="FontWeight" Value="ExtraBold" />
+    </Style>
+
+    <Style x:Key="Daynote.Desk.TextBox.TagEntry" TargetType="TextBox" BasedOn="{StaticResource Daynote.Desk.TextBox.Bare}">
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Width" Value="70" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Button.TagX" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+        <Setter Property="Width" Value="12" />
+        <Setter Property="Height" Value="14" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+      The note body and the highlight layer under it. Every metric that decides a line break is
+      stated here once for both, because the editor draws its text in nothing and the caret has to
+      land on the layer's glyphs. 15.5px at a 1.9 line height, as the design sets it.
+    -->
+    <Style x:Key="Daynote.Desk.TextBox.Editor" TargetType="TextBox" BasedOn="{StaticResource Daynote.Desk.TextBox.Bare}">
+        <Setter Property="FontSize" Value="15.5" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <!-- Selection paints its own glyphs: the visible text is the layer underneath, and this box
+             draws none, so without a selection foreground the selected run would vanish. -->
+        <Setter Property="Foreground" Value="Transparent" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource Daynote.Product.Brush.SelectionText}" />
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Text.EditorHighlight" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15.5" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <!-- ── Windows caption buttons ──────────────────────────────────────────────────────── -->
+
+    <Style x:Key="Daynote.Desk.Button.Caption" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Bare}">
+        <Setter Property="Width" Value="46" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Daynote.Desk.Button.CaptionClose" TargetType="Button" BasedOn="{StaticResource Daynote.Desk.Button.Caption}">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.CloseHover}" />
+                <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.OnClose}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

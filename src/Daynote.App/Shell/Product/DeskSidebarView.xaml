@@ -1,0 +1,265 @@
+<UserControl
+    x:Class="Daynote.App.Shell.Product.DeskSidebarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
+    xmlns:product="clr-namespace:Daynote.App.Shell.Product"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance product:ProductShellViewModel}">
+
+    <!--
+      The design's navy sidebar: the brand, the way into the palette, the six views, the month, and
+      who is signed in. Transcribed from the Avalonia shell's MainWindow.axaml, which draws the same
+      column from the same view model surface.
+
+      It is navy in both themes, so everything inside reads the Daynote.Desk.Brush.Side* keys rather
+      than the page ones.
+    -->
+
+    <Border Style="{DynamicResource Daynote.Desk.Style.Sidebar}" Width="256">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Brand: the mark, the name, and the collapse chevron. -->
+            <Grid Grid.Row="0" Margin="18,18,18,14" Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7" ClipToBounds="True">
+                    <Image Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-favicon-trimmed.png"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           AutomationProperties.Name="{loc:Tr AppTitle}" />
+                </Border>
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
+                           Foreground="{DynamicResource Daynote.Desk.Brush.SideText}" Text="{loc:Tr DeskBrandName}" />
+                <Button Grid.Column="2" Width="26" Height="26" Style="{DynamicResource Daynote.Desk.Button.SideIcon}"
+                        Command="{Binding ToggleLeftCommand}" ToolTip="{Binding SidebarCollapseTip}"
+                        AutomationProperties.Name="{loc:Tr SidebarsCollapse}">
+                    <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.ChevronLeft}" />
+                </Button>
+            </Grid>
+
+            <!-- Search: opens the palette. -->
+            <Button x:Name="TutSearch" Grid.Row="1" Margin="12,0,12,10" Style="{DynamicResource Daynote.Desk.Button.SideSearch}"
+                    Command="{Binding OpenPaletteCommand}" AutomationProperties.Name="{loc:Tr DeskSearch}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Path Grid.Column="0" Width="14" Height="14" Stretch="Uniform"
+                          Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Search}" />
+                    <TextBlock Grid.Column="1" Margin="9,0,0,0" FontSize="13" VerticalAlignment="Center" Text="{loc:Tr DeskSearch}" />
+                    <Border Grid.Column="2" BorderBrush="{DynamicResource Daynote.Desk.Brush.SideStroke}" BorderThickness="1"
+                            CornerRadius="5" Padding="6,1" VerticalAlignment="Center">
+                        <TextBlock FontSize="10.5" FontWeight="SemiBold"
+                                   Text="{x:Static product:ProductShellViewModel.PaletteHint}" />
+                    </Border>
+                </Grid>
+            </Button>
+
+            <!-- The views: today's notes, the timeline, and the four lists that used to be right-rail tabs. -->
+            <StackPanel Grid.Row="2" Margin="12,4">
+                <Button Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                        product:DeskVisual.IsActive="{Binding IsNavEditor}" Command="{Binding ShowEditorCommand}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavToday}" />
+                    </Grid>
+                </Button>
+                <Button Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                        product:DeskVisual.IsActive="{Binding IsNavTimeline}" Command="{Binding ShowTimelineCommand}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavTimeline}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="TutTabTodo" Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                        product:DeskVisual.IsActive="{Binding IsNavTodo}"
+                        Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavTodo}" />
+                        <TextBlock Grid.Column="2" Style="{DynamicResource Daynote.Desk.Text.NavCount}" VerticalAlignment="Center"
+                                   Text="{Binding Todo.OpenCount}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="TutTabFavorites" Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                        product:DeskVisual.IsActive="{Binding IsNavFavorites}"
+                        Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavFavorites}" />
+                        <TextBlock Grid.Column="2" Style="{DynamicResource Daynote.Desk.Text.NavCount}" VerticalAlignment="Center"
+                                   Text="{Binding Favorites.Items.Count}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="TutTabTags" Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                        product:DeskVisual.IsActive="{Binding IsNavTags}"
+                        Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavTags}" />
+                        <TextBlock Grid.Column="2" Style="{DynamicResource Daynote.Desk.Text.NavCount}" VerticalAlignment="Center"
+                                   Text="{Binding TagPanel.Tags.Count}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="TutTabFiles" Style="{DynamicResource Daynote.Desk.Button.NavItem}"
+                        product:DeskVisual.IsActive="{Binding IsNavFiles}"
+                        Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Files}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{DynamicResource Daynote.Desk.Style.NavMark}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Tr DeskNavFiles}" />
+                        <TextBlock Grid.Column="2" Style="{DynamicResource Daynote.Desk.Text.NavCount}" VerticalAlignment="Center"
+                                   Text="{Binding Files.Items.Count}" />
+                    </Grid>
+                </Button>
+            </StackPanel>
+
+            <!-- Mini month: the selected day a sun square, today a lighter one, a dot under days with notes. -->
+            <Border x:Name="TutCalendar" Grid.Row="4" Margin="12,0" Padding="6,14,6,12"
+                    BorderBrush="{DynamicResource Daynote.Desk.Brush.SideStroke}" BorderThickness="0,1,0,0">
+                <StackPanel>
+                    <Grid Margin="4,0,4,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Daynote.Desk.Brush.SideText}" Text="{Binding Calendar.MonthLabel}" />
+                        <Button Grid.Column="1" Width="24" Height="24" Margin="0,0,2,0"
+                                Style="{DynamicResource Daynote.Desk.Button.SideIcon}" product:DeskVisual.CornerRadius="6"
+                                Command="{Binding Calendar.PreviousMonthCommand}" AutomationProperties.Name="{loc:Tr PreviousMonth}">
+                            <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.ChevronLeft}" />
+                        </Button>
+                        <Button Grid.Column="2" Width="24" Height="24"
+                                Style="{DynamicResource Daynote.Desk.Button.SideIcon}" product:DeskVisual.CornerRadius="6"
+                                Command="{Binding Calendar.NextMonthCommand}" AutomationProperties.Name="{loc:Tr NextMonth}">
+                            <Path Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.ChevronRight}" />
+                        </Button>
+                    </Grid>
+
+                    <UniformGrid Columns="7">
+                        <UniformGrid.Resources>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontSize" Value="10.5" />
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="0,3" />
+                                <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <TextBlock Text="{loc:Tr WeekdaySun}" />
+                        <TextBlock Text="{loc:Tr WeekdayMon}" />
+                        <TextBlock Text="{loc:Tr WeekdayTue}" />
+                        <TextBlock Text="{loc:Tr WeekdayWed}" />
+                        <TextBlock Text="{loc:Tr WeekdayThu}" />
+                        <TextBlock Text="{loc:Tr WeekdayFri}" />
+                        <TextBlock Text="{loc:Tr WeekdaySat}" />
+                    </UniformGrid>
+
+                    <ItemsControl ItemsSource="{Binding Calendar.Cells}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pvm:CalendarDayCellViewModel}">
+                                <Button Style="{DynamicResource Daynote.Desk.Button.MiniCell}" Command="{Binding SelectCommand}"
+                                        AutomationProperties.Name="{Binding DayText}">
+                                    <Grid>
+                                        <Border Style="{DynamicResource Daynote.Desk.Style.MiniCellFace}">
+                                            <TextBlock Text="{Binding DayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <Ellipse Width="3" Height="3" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
+                                                 VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,-1"
+                                                 Visibility="{Binding HasNotes, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Who is signed in, the sync state, and the way to settings. -->
+            <Grid x:Name="TutSettings" Grid.Row="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Style="{DynamicResource Daynote.Desk.Button.AccountRow}"
+                        Command="{Binding OpenAccountCommand}" AutomationProperties.Name="{Binding AccountCardTitle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0" Width="30" Height="30" Margin="0,0,10,0">
+                            <Border CornerRadius="15" Background="{DynamicResource Daynote.Desk.Brush.Sun}" />
+                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" FontWeight="Bold"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.AvatarInk}" Text="{Binding AccountInitial}" />
+                            <Ellipse Style="{DynamicResource Daynote.Desk.Style.SyncDot}" HorizontalAlignment="Right"
+                                     VerticalAlignment="Bottom" Margin="0,0,-1,-1" />
+                        </Grid>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource Daynote.Desk.Brush.SideText}" Text="{Binding AccountCardTitle}" />
+                            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Side2}" FontSize="11" Margin="0,1,0,0"
+                                       TextTrimming="CharacterEllipsis" Text="{Binding AccountRowSubtitle}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
+                <Button Grid.Column="1" Width="30" Height="30" Margin="0,0,14,0" VerticalAlignment="Center"
+                        Style="{DynamicResource Daynote.Desk.Button.SideIcon}"
+                        Command="{Binding ToggleSettingsCommand}" ToolTip="{Binding SettingsTip}"
+                        AutomationProperties.Name="{loc:Tr Settings}">
+                    <Path Width="15" Height="15" Stretch="Uniform"
+                          Style="{DynamicResource Daynote.Desk.Style.Icon}" Data="{DynamicResource Daynote.Desk.Geo.Sliders}" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

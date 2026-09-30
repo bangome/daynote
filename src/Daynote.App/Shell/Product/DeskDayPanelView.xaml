@@ -1,0 +1,132 @@
+<UserControl
+    x:Class="Daynote.App.Shell.Product.DeskDayPanelView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
+    xmlns:product="clr-namespace:Daynote.App.Shell.Product"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance product:ProductShellViewModel}">
+
+    <!-- The day panel: this date's to-dos, then its files. The right rail's tabs moved to the
+         sidebar, so what is left here is only what belongs to the selected day. -->
+
+    <Border Width="300" Background="{DynamicResource Daynote.Product.Brush.Panel}"
+            BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0"
+            AllowDrop="True">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="20,20,20,10">
+                    <TextBlock FontSize="14" FontWeight="ExtraBold" VerticalAlignment="Bottom" Text="{loc:Tr DeskDayTodoTitle}" />
+                    <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="12" Margin="8,0,0,1"
+                               VerticalAlignment="Bottom" Text="{Binding DayTodoCountText}" />
+                </StackPanel>
+
+                <ItemsControl ItemsSource="{Binding DayTodos}" Margin="10,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pvm:TodoItemViewModel}">
+                            <Button Style="{DynamicResource Daynote.Desk.Button.Row}" Padding="10,9" Command="{Binding JumpCommand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{DynamicResource Daynote.Desk.Button.Check}" Margin="0,1,11,0"
+                                            Command="{Binding ToggleCommand}" AutomationProperties.Name="{Binding Text}">
+                                        <Path Width="9" Height="9" Stretch="Uniform"
+                                              Style="{DynamicResource Daynote.Desk.Style.CheckMark}"
+                                              Data="{DynamicResource Daynote.Desk.Geo.Check}" />
+                                    </Button>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock FontSize="13" TextWrapping="Wrap" Text="{Binding Text}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Checked}" Value="True">
+                                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Due}" FontSize="11.5" Margin="0,2,0,0"
+                                                   product:DeskVisual.IsActive="{Binding Overdue}" Text="{Binding DueLabel}"
+                                                   Visibility="{Binding HasDue, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" Margin="20,6,20,10"
+                           Visibility="{Binding IsDayTodoEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <Run Text="{loc:Tr TodoEmptyPrefix}" /><InlineUIContainer BaselineAlignment="Center"><Border
+                        Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="4" Padding="5,1" Margin="0,2"><TextBlock
+                        Style="{DynamicResource Daynote.Desk.Text.Mono}" FontSize="11.5"
+                        Foreground="{DynamicResource Daynote.Product.Brush.Text2}" Text="{loc:Tr TodoEmptyCode}" /></Border></InlineUIContainer><Run
+                        Text="{loc:Tr DeskDayTodoEmptySuffix}" />
+                </TextBlock>
+
+                <Border Height="1" Margin="20,14" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+
+                <Grid Margin="20,0,20,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" Text="{loc:Tr DeskNavFiles}" />
+                    <Button Grid.Column="1" Style="{DynamicResource Daynote.Desk.Button.LinkSun}" FontSize="12" FontWeight="SemiBold"
+                            VerticalAlignment="Bottom" Content="{loc:Tr DeskFilesAdd}" Command="{Binding Files.AddFilesCommand}" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding Files.Items}" Margin="10,0,10,20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pvm:FileItemViewModel}">
+                            <!-- Double-click writes a copy wherever the user points: the stored bytes live under
+                                 a hashed name, so this is the only way an attachment gets back out. -->
+                            <Border CornerRadius="9" Padding="10,8" Background="Transparent"
+                                    MouseLeftButtonDown="OnFileCardDoubleClick" ToolTip="{loc:Tr SaveFileTip}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="32" Height="32" CornerRadius="8" ClipToBounds="True" Margin="0,0,10,0"
+                                            Background="{DynamicResource Daynote.Product.Brush.Seg}">
+                                        <Grid>
+                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
+                                                   Visibility="{Binding HasThumbnail, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Muted}" FontSize="8.5" FontWeight="ExtraBold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Ext}"
+                                                       Visibility="{Binding HasThumbnail, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11" Text="{Binding SizeLabel}"
+                                                   Visibility="{Binding WasSaved, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Ok}"
+                                                   TextTrimming="CharacterEllipsis" Text="{Binding SavedTo}"
+                                                   Visibility="{Binding WasSaved, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" Text="{loc:Tr SaveFileFailed}"
+                                                   Visibility="{Binding SaveFailed, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        <!-- Another device attached this and the bytes are still coming. -->
+                                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11" Text="{loc:Tr FileAwaitingDownload}"
+                                                   Visibility="{Binding IsAwaitingDownload, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" Margin="20,-8,20,20" Text="{loc:Tr DeskFilesEmpty}"
+                           Visibility="{Binding Files.IsEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

@@ -30,13 +30,15 @@ public partial class ProductWindow : Window, IWindowHost, IAccountHost
         SettingsHost.CloseRequested += OnSettingsCloseRequested;
         viewModel.PanelUserToggled += OnPanelUserToggled;
         viewModel.TitleRenameRequested += (_, _) => TutEditor.FocusTitleForRename();
+        viewModel.StickyNoteRequested += (_, _) => OpenStickyNote();
         AttachTutorialStickyDemo();
     }
 
-    // A collapsed panel disappears entirely (no strip), freeing its full width plus its 10-DIP gap
-    // (see the XAML column definitions: left 290+10, right 300+10).
-    private const double LeftPanelWidthDelta = 290 + 10;
-    private const double RightPanelWidthDelta = 300 + 10;
+    // A collapsed panel disappears entirely (no strip), freeing its full width. Design B's columns
+    // sit flush against the middle, so there is no gap to reclaim on top of them: the sidebar is
+    // 256 wide and the day panel 300, as their views state.
+    private const double LeftPanelWidthDelta = 256;
+    private const double RightPanelWidthDelta = 300;
 
     /// <summary>
     /// A user panel toggle resizes the WINDOW by the freed/needed width so the editor column stays the

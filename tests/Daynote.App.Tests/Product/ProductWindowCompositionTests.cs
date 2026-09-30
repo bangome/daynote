@@ -56,9 +56,11 @@ public sealed class ProductWindowCompositionTests
             double rightEdge = window.Left + window.Width;
 
             harness.Shell.ToggleLeftCommand.Execute(null);
-            Assert.AreEqual(1200 - (290 + 10), window.Width, "Collapsing the left panel sheds its full width plus gap.");
+            // Design B's columns sit flush against the middle: there is no gap to reclaim beyond
+            // the sidebar's own 256 and the day panel's 300.
+            Assert.AreEqual(1200 - 256, window.Width, "Collapsing the sidebar sheds its full width.");
             Assert.AreEqual(rightEdge, window.Left + window.Width, "Left-panel toggle keeps the window right edge (editor) fixed.");
-            Assert.AreEqual(100 + (290 + 10), window.Left, "Collapsing the left panel moves the window's left edge in.");
+            Assert.AreEqual(100 + 256, window.Left, "Collapsing the sidebar moves the window's left edge in.");
 
             harness.Shell.ToggleLeftCommand.Execute(null);
             Assert.AreEqual(1200, window.Width, "Expanding restores the shed width.");
@@ -66,11 +68,11 @@ public sealed class ProductWindowCompositionTests
             Assert.AreEqual(rightEdge, window.Left + window.Width, "The editor's screen position is unchanged across left toggles.");
 
             harness.Shell.ToggleRightCommand.Execute(null);
-            Assert.AreEqual(1200 - (300 + 10), window.Width, "Collapsing the right panel sheds its full width plus gap.");
+            Assert.AreEqual(1200 - 300, window.Width, "Collapsing the day panel sheds its full width.");
             Assert.AreEqual(100, window.Left, "Right-panel toggle leaves the window left edge (editor) fixed.");
 
             harness.Shell.RightCollapsed = false;
-            Assert.AreEqual(1200 - (300 + 10), window.Width, "Non-user (auto) collapse state changes never resize the window.");
+            Assert.AreEqual(1200 - 300, window.Width, "Non-user (auto) collapse state changes never resize the window.");
         }
         finally
         {

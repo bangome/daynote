@@ -698,4 +698,32 @@ public static class AppStrings
             System.Globalization.CultureInfo.CurrentCulture,
             LocalizationService.Instance[count == 1 ? pluralKey + "One" : pluralKey],
             count);
+
+    // Keys the phone shell and the plural forms added. The shells that use them read the catalog
+    // through its indexer, so they compiled without these; the accessor set is what holds the two
+    // catalogs to each other, and a key with none is a key nothing checks.
+    public static string AccountBarLocalMobile => LocalizationService.Instance[nameof(AccountBarLocalMobile)];
+    public static string AccountConflictsFormatOne => LocalizationService.Instance[nameof(AccountConflictsFormatOne)];
+    public static string AccountPerkSyncDescMobile => LocalizationService.Instance[nameof(AccountPerkSyncDescMobile)];
+    public static string AccountSignInLeadMobile => LocalizationService.Instance[nameof(AccountSignInLeadMobile)];
+    public static string Back => LocalizationService.Instance[nameof(Back)];
+    public static string BillingTrialBannerTitleFormatOne => LocalizationService.Instance[nameof(BillingTrialBannerTitleFormatOne)];
+    public static string BillingTrialFormatOne => LocalizationService.Instance[nameof(BillingTrialFormatOne)];
+    public static string InsertDate => LocalizationService.Instance[nameof(InsertDate)];
+    public static string InsertTime => LocalizationService.Instance[nameof(InsertTime)];
+    public static string InsertTodo => LocalizationService.Instance[nameof(InsertTodo)];
+    public static string NextDay => LocalizationService.Instance[nameof(NextDay)];
+    public static string NoteCountFormatOne => LocalizationService.Instance[nameof(NoteCountFormatOne)];
+    public static string PreviousDay => LocalizationService.Instance[nameof(PreviousDay)];
+    public static string ProfileMoveBodyFormatOne => LocalizationService.Instance[nameof(ProfileMoveBodyFormatOne)];
+    public static string ProfileMoveFilesFormatOne => LocalizationService.Instance[nameof(ProfileMoveFilesFormatOne)];
+    public static string SearchDateNoteCountFormatOne => LocalizationService.Instance[nameof(SearchDateNoteCountFormatOne)];
+    public static string SearchResultsCountFormatOne => LocalizationService.Instance[nameof(SearchResultsCountFormatOne)];
+    public static string SegmentFavorites => LocalizationService.Instance[nameof(SegmentFavorites)];
+    public static string SegmentTags => LocalizationService.Instance[nameof(SegmentTags)];
+    public static string SegmentTodo => LocalizationService.Instance[nameof(SegmentTodo)];
+    public static string SignOutRemoveUnsyncedFormatOne => LocalizationService.Instance[nameof(SignOutRemoveUnsyncedFormatOne)];
+    public static string SignOutUnsyncedFormatOne => LocalizationService.Instance[nameof(SignOutUnsyncedFormatOne)];
+    public static string TabLists => LocalizationService.Instance[nameof(TabLists)];
+    public static string TabSearch => LocalizationService.Instance[nameof(TabSearch)];
 }
