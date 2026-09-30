@@ -1,5 +1,6 @@
 import { authenticate } from './auth';
 import { requireFileEntitlement } from './sync';
+import { storage } from './entitlement';
 import { MAX_ASSET_BYTES } from './files';
 import { ApiError, json } from './http';
 import { canonicalUtc } from './time';
@@ -35,22 +36,6 @@ export function blindedKeyFrom(pathname: string): string | null {
   return key !== undefined && BLINDED_KEY.test(key) ? key : null;
 }
 
-async function usedBytes(env: Env, userId: string): Promise<number> {
-  const row = await env.DB.prepare(
-    'SELECT COALESCE(SUM(stored_bytes), 0) AS used FROM assets WHERE user_id = ?1',
-  )
-    .bind(userId)
-    .first<{ used: number }>();
-  return row?.used ?? 0;
-}
-
-async function quotaBytes(env: Env, userId: string): Promise<number> {
-  const row = await env.DB.prepare('SELECT quota_bytes FROM users WHERE id = ?1')
-    .bind(userId)
-    .first<{ quota_bytes: number }>();
-  return row?.quota_bytes ?? 0;
-}
-
 function bucket(env: Env): R2Bucket {
   if (env.ASSET_BUCKET === undefined) {
     throw new ApiError('server_error', 'Attachment storage is not configured.');
@@ -67,7 +52,7 @@ function bucket(env: Env): R2Bucket {
  */
 export async function put(request: Request, env: Env, now: Date, key: string): Promise<Response> {
   const user = await authenticate(request, env, now);
-  await requireFileEntitlement(env, user.id, now);
+  const entitlement = await requireFileEntitlement(env, user.id, now);
 
   const declared = Number(request.headers.get('content-length') ?? 'NaN');
   if (!Number.isSafeInteger(declared) || declared <= 0 || declared > MAX_ASSET_BYTES) {
@@ -81,12 +66,20 @@ export async function put(request: Request, env: Env, now: Date, key: string): P
     .first<{ stored_bytes: number; uploaded_utc: string | null }>();
 
   // Re-uploading a key the account already holds replaces it, so only the difference is new.
+  // An account already over its quota (a downgrade, a lowered override) keeps everything it has
+  // and can still re-send a key it holds; it just cannot add bytes until it is back under.
   const additional = declared - (existing?.stored_bytes ?? 0);
-  if (additional > 0 && (await usedBytes(env, user.id)) + additional > (await quotaBytes(env, user.id))) {
-    throw new ApiError(
-      'payload_too_large',
-      'This attachment would exceed the storage included with your account.',
-    );
+  if (additional > 0) {
+    const { quotaBytes, usedBytes } = await storage(env, user.id, entitlement);
+    if (usedBytes + additional > quotaBytes) {
+      throw new ApiError(
+        'payload_too_large',
+        entitlement.tier === 'premium'
+          ? 'This attachment would go past the fair-use limit of unlimited storage. Delete some '
+            + 'attachments to make room, or contact support.'
+          : 'This attachment would exceed the storage included with your account.',
+      );
+    }
   }
 
   const body = await request.arrayBuffer();

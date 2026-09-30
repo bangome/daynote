@@ -177,15 +177,20 @@ export const KDF_PARAMS = { kdf: 'argon2id', m: 65536, t: 3, p: 4, v: 1 } as con
  * Grants an account an active subscription directly, for tests that are about something else.
  * The webhook path is exercised on its own in `billing.test.ts`.
  */
-export async function grantSubscription(userId: string, days = 30): Promise<void> {
+export async function grantSubscription(
+  userId: string,
+  days = 30,
+  tier: 'pro' | 'premium' = 'pro',
+): Promise<void> {
   const ends = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.prepare(
     `INSERT INTO subscriptions
-       (user_id, provider, customer_id, subscription_id, status, current_period_end_utc, updated_utc)
-     VALUES (?1, 'paddle', 'ctm_test', 'sub_test', 'active', ?2, ?2)
-     ON CONFLICT(user_id) DO UPDATE SET status = 'active', current_period_end_utc = excluded.current_period_end_utc`,
+       (user_id, provider, customer_id, subscription_id, status, current_period_end_utc, updated_utc, tier)
+     VALUES (?1, 'paddle', 'ctm_test', 'sub_test', 'active', ?2, ?2, ?3)
+     ON CONFLICT(user_id) DO UPDATE SET status = 'active',
+       current_period_end_utc = excluded.current_period_end_utc, tier = excluded.tier`,
   )
-    .bind(userId, ends)
+    .bind(userId, ends, tier)
     .run();
 }
 

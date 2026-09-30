@@ -207,7 +207,7 @@ describe('asset bytes', () => {
 
   it('refuses an upload that would exceed the quota', async () => {
     const { account, token } = await subscriber();
-    await env.DB.prepare('UPDATE users SET quota_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
+    await env.DB.prepare('UPDATE users SET quota_override_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
 
     expect((await putAsset(blinded(1), new Uint8Array(3000), token)).status).toBe(200);
     expect((await putAsset(blinded(2), new Uint8Array(3000), token)).status).toBe(413);
@@ -215,11 +215,94 @@ describe('asset bytes', () => {
 
   it('lets the same key be re-uploaded without counting twice', async () => {
     const { account, token } = await subscriber();
-    await env.DB.prepare('UPDATE users SET quota_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
+    await env.DB.prepare('UPDATE users SET quota_override_bytes = 4096 WHERE id = ?1').bind(account.userId).run();
 
     expect((await putAsset(blinded(1), new Uint8Array(3000), token)).status).toBe(200);
     // A retry after a dropped connection is the reason this must not fail.
     expect((await putAsset(blinded(1), new Uint8Array(3000), token)).status).toBe(200);
+  });
+});
+
+const GIB = 1024 * 1024 * 1024;
+
+/** Pretends the account already stores `bytes`, without uploading them: one claimed asset row. */
+async function occupy(userId: string, bytes: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO assets (user_id, blinded_key, stored_bytes, ref_count, uploaded_utc)
+     VALUES (?1, ?2, ?3, 1, '2026-09-01T00:00:00.0000000Z')`,
+  )
+    .bind(userId, 'f'.repeat(64), bytes)
+    .run();
+}
+
+describe('quota by tier', () => {
+  it('gives the trial and Pro 2 GB', async () => {
+    const trial = await signIn();
+    await occupy(trial.userId, 2 * GIB - 1000);
+    expect((await putAsset(blinded(1), new Uint8Array(3000), trial.accessToken)).status).toBe(413);
+
+    const pro = await signIn();
+    await grantSubscription(pro.userId, 30, 'pro');
+    await occupy(pro.userId, 2 * GIB - 1000);
+    expect((await putAsset(blinded(1), new Uint8Array(500), pro.accessToken)).status).toBe(200);
+    expect((await putAsset(blinded(2), new Uint8Array(3000), pro.accessToken)).status).toBe(413);
+
+    const me = await get('/v1/auth/me', { token: pro.accessToken });
+    expect(me.body.entitlement.tier).toBe('pro');
+    expect(me.body.entitlement.quota_bytes).toBe(2 * GIB);
+    expect(me.body.entitlement.used_bytes).toBe(2 * GIB - 500);
+  });
+
+  it('lets Premium store far past 2 GB', async () => {
+    const account = await signIn();
+    await grantSubscription(account.userId, 30, 'premium');
+    await occupy(account.userId, 50 * GIB);
+
+    expect((await putAsset(blinded(1), new Uint8Array(3000), account.accessToken)).status).toBe(200);
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.tier).toBe('premium');
+    expect(me.body.entitlement.quota_bytes).toBe(200 * GIB);
+  });
+
+  it('holds Premium to the 200 GB fair-use ceiling, and says so', async () => {
+    const account = await signIn();
+    await grantSubscription(account.userId, 30, 'premium');
+    await occupy(account.userId, 200 * GIB - 1000);
+
+    const refused = await putAsset(blinded(1), new Uint8Array(3000), account.accessToken);
+
+    expect(refused.status).toBe(413);
+    expect(refused.body.error).toBe('payload_too_large');
+    expect(refused.body.message).toContain('fair-use');
+  });
+
+  it('keeps everything after a downgrade, and only stops new bytes', async () => {
+    const account = await signIn();
+    await grantSubscription(account.userId, 30, 'premium');
+    const token = account.accessToken;
+    expect((await putAsset(blinded(1), new Uint8Array([4, 5, 6]), token)).status).toBe(200);
+    await occupy(account.userId, 5 * GIB);
+
+    await grantSubscription(account.userId, 30, 'pro');
+
+    // Over Pro's 2 GB now: nothing new goes up, but a key already held re-sends and everything
+    // stored still comes back down. Nothing was deleted.
+    expect((await putAsset(blinded(2), new Uint8Array(10), token)).status).toBe(413);
+    expect((await putAsset(blinded(1), new Uint8Array([4, 5, 6]), token)).status).toBe(200);
+    expect((await getAsset(blinded(1), token)).bytes).toEqual(new Uint8Array([4, 5, 6]));
+    expect(await assetRow(account.userId, 'f'.repeat(64))).toMatchObject({ stored_bytes: 5 * GIB });
+  });
+
+  it('lets an operator override win over the tier, either way', async () => {
+    const account = await signIn();
+    await grantSubscription(account.userId, 30, 'pro');
+    await env.DB.prepare('UPDATE users SET quota_override_bytes = ?2 WHERE id = ?1')
+      .bind(account.userId, 10 * GIB)
+      .run();
+    await occupy(account.userId, 5 * GIB);
+
+    expect((await putAsset(blinded(1), new Uint8Array(3000), account.accessToken)).status).toBe(200);
+    expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.quota_bytes).toBe(10 * GIB);
   });
 });
 

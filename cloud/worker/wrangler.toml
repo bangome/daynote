@@ -27,7 +27,8 @@ preview_urls = false
 # Subscriptions, over Paddle (docs/CLOUD_SYNC.md §14, DEPLOY.md §2b):
 #   wrangler secret put PADDLE_WEBHOOK_SECRET   # Developer tools -> Notifications -> destination
 #   wrangler secret put PADDLE_API_KEY          # Developer tools -> Authentication
-#                                               # (creates the checkout and the portal link)
+#                                               # (creates the checkout and the portal link,
+#                                               # and changes a subscription between tiers)
 
 # docs/PRIVACY.md is bundled as text so /privacy serves the repository's own policy rather than a
 # copy that has to be republished by hand. See src/privacy.ts.
@@ -69,12 +70,27 @@ APPLE_BUNDLE_ID = "cc.arachat.daynote"
 APPLE_TEAM_ID = "4T8C76SP99"
 APPLE_KEY_ID = "W2B29H98NT"
 
-# The two prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"). Public,
-# so vars. Monthly ₩2,900 / $2.49, annual ₩24,000 / $19.99; the site's pricing page and the Store
-# listing state the same numbers. The app picks one and POSTs {"plan": "monthly" | "annual"}.
+# The four prices the subscription is sold at (Paddle -> Catalog -> "Daynote Cloud Sync"), two
+# tiers at two intervals. Public, so vars. Both tiers sync images and files; they differ in storage.
+#
+#   Pro      2 GB                          monthly ₩2,900 / $2.49   annual ₩24,000 / $19.99
+#   Premium  "unlimited" (200 GB fair use)  monthly ₩5,900 / $4.99   annual ₩49,000 / $39.99
+#
+# Pro keeps the unprefixed names it had before Premium existed. The same amounts are written out in
+# src/billing.ts (PRICE_LIST), which is what the app displays; the site's pricing page and the Store
+# listing state them too. Change a price in Paddle and all three follow it, or the app shows one
+# number and the checkout charges another.
+#
+# The app POSTs {"tier": "pro" | "premium", "plan": "monthly" | "annual"}; apps installed before
+# Premium send {"plan"} alone or no body, which buys Pro (annual when there is no body). A running
+# subscription moves between tiers through /v1/billing/change, never a second checkout.
 # Neither the checkout nor the portal has a URL to configure: both are created per click by
 # /v1/billing/checkout and /v1/billing/portal. The checkout has to be, because only a
 # server-created transaction can carry the custom_data that ties it to an account.
+#
+# The webhook reads the tier from the subscription's price. A price that is not listed here reads as
+# Pro — the smaller quota — so the Premium ids must be set before a Premium price can be bought
+# anywhere, including from the Paddle dashboard.
 #
 # EMPTY ON PURPOSE, for the first Store release (2026-09-10). Two reasons, and the first alone
 # would be enough:
@@ -99,6 +115,13 @@ APPLE_KEY_ID = "W2B29H98NT"
 #   PADDLE_PRICE_ID_ANNUAL  = "pri_01m1nb2txkj2aner6c88g1m2f4"
 PADDLE_PRICE_ID_MONTHLY = ""
 PADDLE_PRICE_ID_ANNUAL = ""
+
+# Premium, added 2026-09-30. Empty for the same reasons as Pro above, and one more: the two Paddle
+# prices do not exist yet. Create them under the same product (₩5,900 / $4.99 monthly, ₩49,000 /
+# $39.99 annual), put their ids here, apply migrations/0010_tiers.sql remotely, and redeploy. Either
+# tier can be on sale without the other; the app offers only the ones that have ids.
+PADDLE_PRICE_ID_PREMIUM_MONTHLY = ""
+PADDLE_PRICE_ID_PREMIUM_ANNUAL = ""
 
 [[d1_databases]]
 binding = "DB"

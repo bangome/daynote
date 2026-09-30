@@ -86,7 +86,16 @@ export interface Env {
   PADDLE_PRICE_ID_ANNUAL?: string;
 
   /**
-   * Paddle API key, used for exactly one thing: minting a customer-portal link.
+   * The Premium prices, same shape. Pro keeps the two unprefixed names above so a deployment set up
+   * before Premium existed needs no change. Empty means Premium is not on sale; the webhook then
+   * reads any unknown price as Pro, the smaller quota.
+   */
+  PADDLE_PRICE_ID_PREMIUM_MONTHLY?: string;
+  PADDLE_PRICE_ID_PREMIUM_ANNUAL?: string;
+
+  /**
+   * Paddle API key. Creates the checkout transaction, mints customer-portal links, changes a
+   * subscription's plan, and cancels one when its account is deleted.
    *
    * The portal is not a static address. Paddle issues a single-use, short-lived URL per customer
    * (`POST /customers/{id}/portal-sessions`), which must be generated on demand and never stored —
@@ -99,7 +108,17 @@ export interface Env {
 
   /** Test seams: stand in for the two Paddle API calls, so billing can be exercised offline. */
   PADDLE_PORTAL_SESSION?: (customerId: string) => Promise<string>;
-  PADDLE_CHECKOUT_SESSION?: (userId: string, email: string, plan: string) => Promise<string>;
+  PADDLE_CHECKOUT_SESSION?: (userId: string, email: string, plan: string, tier: string) => Promise<string>;
+
+  /** Test seam: stands in for PATCH /subscriptions/{id}, returning the updated subscription entity. */
+  PADDLE_CHANGE_SUBSCRIPTION?: (subscriptionId: string, priceId: string) => Promise<{
+    id?: string;
+    status?: string;
+    customer_id?: string;
+    current_billing_period?: { ends_at?: string };
+    items?: { price?: { id?: string } | null }[];
+    updated_at?: string;
+  }>;
 
   /** Optional overrides, provided as strings because Workers vars are always strings. */
   ACCESS_TOKEN_TTL_SECONDS?: string;

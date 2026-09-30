@@ -1,5 +1,5 @@
 import { authenticate } from './auth';
-import { resolve as resolveEntitlement } from './entitlement';
+import { resolve as resolveEntitlement, type Entitlement } from './entitlement';
 import { ApiError, SYNC_BODY_LIMIT, json, readJsonObject } from './http';
 import { canonicalUtc, isCanonicalUtc } from './time';
 import type { Env } from './env';
@@ -147,7 +147,7 @@ async function readExisting(
  * files.ts. Deliberately NOT called by tombstones or by the pull: a delete that cannot be sent
  * corrupts the other devices, and metadata shares the notes' cursor. See the header of files.ts.
  */
-export async function requireFileEntitlement(env: Env, userId: string, now: Date): Promise<void> {
+export async function requireFileEntitlement(env: Env, userId: string, now: Date): Promise<Entitlement> {
   const entitlement = await resolveEntitlement(env, userId, now);
   if (!entitlement.canSyncFiles) {
     throw new ApiError(
@@ -156,6 +156,7 @@ export async function requireFileEntitlement(env: Env, userId: string, now: Date
         + 'this PC is affected, and the files already synced are kept.',
     );
   }
+  return entitlement;
 }
 
 export async function push(request: Request, env: Env, now: Date): Promise<Response> {

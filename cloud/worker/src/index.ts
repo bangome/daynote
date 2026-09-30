@@ -34,6 +34,7 @@ const ROUTES: Record<string, Handler> = {
   'DELETE /v1/account': account.remove,
   'GET /v1/billing/status': billing.status,
   'POST /v1/billing/checkout': billing.checkout,
+  'POST /v1/billing/change': billing.change,
   'POST /v1/billing/portal': billing.portal,
   'POST /v1/billing/webhook': billing.webhook,
   'POST /v1/sync/push': sync.push,

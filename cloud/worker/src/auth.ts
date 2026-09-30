@@ -2,7 +2,7 @@ import { identify as identifyWithApple } from './apple';
 import { uuid } from './bytes';
 import { createDek, open, seal, sealText, toWire } from './dek';
 import { accessTtlSeconds, refreshTtlDays, requireJwtSecret, type Env } from './env';
-import { resolve as resolveEntitlement, toWire as entitlementToWire, trialEnd } from './entitlement';
+import { describe as describeEntitlement, trialEnd } from './entitlement';
 import { identify } from './google';
 import { ApiError, bearerToken, clientIp, json, noContent, readJsonObject } from './http';
 import { issueAccessToken, verifyAccessToken } from './jwt';
@@ -199,7 +199,7 @@ async function sessionPayload(
     // Sent on every session response, so the app can show a trial countdown or a renewal prompt
     // without a second request. Store policy 10.8.4 requires telling people before a trial takes
     // functionality away, and the app cannot do that without knowing the date.
-    entitlement: entitlementToWire(await resolveEntitlement(env, user.id, now)),
+    entitlement: await describeEntitlement(env, user.id, now),
     server_utc: canonicalUtc(now),
   };
 }
@@ -271,7 +271,7 @@ export async function refresh(request: Request, env: Env, now: Date): Promise<Re
     refresh_expires_utc: rotated.session.expiresUtc,
     // No data key here: a refresh renews a session for a client that already has one. Handing the
     // key out on every rotation would widen its exposure for nothing.
-    entitlement: entitlementToWire(await resolveEntitlement(env, user.id, now)),
+    entitlement: await describeEntitlement(env, user.id, now),
     server_utc: canonicalUtc(now),
   });
 }
@@ -289,7 +289,7 @@ export async function me(request: Request, env: Env, now: Date): Promise<Respons
     user_id: user.id,
     email: user.email,
     devices: await listDevices(env, user.id, now),
-    entitlement: entitlementToWire(await resolveEntitlement(env, user.id, now)),
+    entitlement: await describeEntitlement(env, user.id, now),
     server_utc: canonicalUtc(now),
   });
 }

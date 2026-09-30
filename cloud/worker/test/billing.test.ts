@@ -478,3 +478,251 @@ describe('status', () => {
     expect((await get('/v1/billing/status')).status).toBe(401);
   });
 });
+
+describe('tiers', () => {
+  beforeEach(() => {
+    (env as { PADDLE_PRICE_ID_PREMIUM_MONTHLY?: string }).PADDLE_PRICE_ID_PREMIUM_MONTHLY = 'pri_test_premium_monthly';
+    (env as { PADDLE_PRICE_ID_PREMIUM_ANNUAL?: string }).PADDLE_PRICE_ID_PREMIUM_ANNUAL = 'pri_test_premium_annual';
+    (env as { PADDLE_CHECKOUT_SESSION?: unknown }).PADDLE_CHECKOUT_SESSION =
+      async (userId: string, _email: string, plan: string, tier: string) =>
+        `https://pay.paddle.test/checkout?user=${userId}&tier=${tier}&plan=${plan}`;
+  });
+
+  function onPrice(
+    userId: string,
+    priceId: string,
+    overrides: { occurredAt?: string; type?: string; endsAt?: string } = {},
+  ) {
+    const event = subscriptionEvent(userId, { type: overrides.type ?? 'subscription.updated', endsAt: overrides.endsAt });
+    return {
+      ...event,
+      occurred_at: overrides.occurredAt ?? new Date().toISOString(),
+      data: { ...event.data, items: [{ price: { id: priceId } }] },
+    };
+  }
+
+  async function tierRow(userId: string) {
+    return env.DB.prepare('SELECT tier, plan, price_id FROM subscriptions WHERE user_id = ?1')
+      .bind(userId)
+      .first<{ tier: string; plan: string | null; price_id: string | null }>();
+  }
+
+  it('maps each configured price to its tier and interval', async () => {
+    const { offerOfPrice } = await import('../src/billing');
+
+    expect(offerOfPrice(env, 'pri_test_monthly')).toEqual({ tier: 'pro', plan: 'monthly' });
+    expect(offerOfPrice(env, 'pri_test_annual')).toEqual({ tier: 'pro', plan: 'annual' });
+    expect(offerOfPrice(env, 'pri_test_premium_monthly')).toEqual({ tier: 'premium', plan: 'monthly' });
+    expect(offerOfPrice(env, 'pri_test_premium_annual')).toEqual({ tier: 'premium', plan: 'annual' });
+    expect(offerOfPrice(env, 'pri_someone_elses')).toBeNull();
+  });
+
+  it('records the tier a subscription is bought at', async () => {
+    const account = await signIn();
+
+    await deliver(onPrice(account.userId, 'pri_test_premium_annual', { type: 'subscription.activated' }));
+
+    expect(await tierRow(account.userId)).toEqual({
+      tier: 'premium', plan: 'annual', price_id: 'pri_test_premium_annual',
+    });
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement).toMatchObject({ state: 'active', tier: 'premium', plan: 'annual' });
+  });
+
+  it('reads a price it does not know as Pro, never as Premium', async () => {
+    const account = await signIn();
+
+    await deliver(onPrice(account.userId, 'pri_not_configured', { type: 'subscription.activated' }));
+
+    expect(await tierRow(account.userId)).toEqual({ tier: 'pro', plan: null, price_id: 'pri_not_configured' });
+  });
+
+  it('follows an upgrade and a downgrade', async () => {
+    const account = await signIn();
+    await deliver(onPrice(account.userId, 'pri_test_monthly', { type: 'subscription.activated' }));
+
+    await deliver(onPrice(account.userId, 'pri_test_premium_monthly'));
+    expect((await tierRow(account.userId))?.tier).toBe('premium');
+
+    await deliver(onPrice(account.userId, 'pri_test_annual'));
+    expect(await tierRow(account.userId)).toMatchObject({ tier: 'pro', plan: 'annual' });
+  });
+
+  it('settles on the change that happened last, whichever arrives last', async () => {
+    const account = await signIn();
+    const far = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+    const near = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    // The downgrade happened second but is delivered first.
+    await deliver(onPrice(account.userId, 'pri_test_monthly', { occurredAt: '2026-09-20T10:05:00.000000Z', endsAt: near }));
+    await deliver(onPrice(account.userId, 'pri_test_premium_monthly', { occurredAt: '2026-09-20T10:00:00.000000Z', endsAt: far }));
+
+    const row = await env.DB.prepare('SELECT tier, current_period_end_utc FROM subscriptions WHERE user_id = ?1')
+      .bind(account.userId)
+      .first<{ tier: string; current_period_end_utc: string }>();
+    expect(row?.tier).toBe('pro');
+    // The period end still only moves forward, whatever the tier did.
+    expect(row?.current_period_end_utc).toBe(far);
+  });
+
+  it('leaves the tier alone on an event that names no price', async () => {
+    const account = await signIn();
+    await deliver(onPrice(account.userId, 'pri_test_premium_annual', { type: 'subscription.activated' }));
+
+    await deliver({
+      event_id: `evt_${crypto.randomUUID()}`,
+      event_type: 'transaction.payment_failed',
+      data: { id: 'txn_1', subscription_id: 'sub_abc', customer_id: 'ctm_abc', items: [{ price: { id: 'pri_test_monthly' } }] },
+    });
+    await deliver(subscriptionEvent(account.userId, { type: 'subscription.past_due', status: 'past_due' }));
+
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement).toMatchObject({ state: 'grace', tier: 'premium' });
+  });
+
+  it('reports no tier once nothing is in force, and Pro during the trial', async () => {
+    const account = await signIn();
+    expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.tier).toBe('pro');
+
+    await expireEntitlement(account.userId);
+
+    const me = await get('/v1/auth/me', { token: account.accessToken });
+    expect(me.body.entitlement.tier).toBeNull();
+    expect(me.body.entitlement.can_sync_files).toBe(false);
+  });
+
+  it('lists every tier at every interval, with prices, and keeps the old list for old apps', async () => {
+    const account = await signIn();
+
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+
+    expect(status.body).toMatchObject({
+      state: 'trial',
+      tier: 'pro',
+      plan: null,
+      quota_bytes: 2 * 1024 * 1024 * 1024,
+      used_bytes: 0,
+      can_checkout: true,
+      can_manage: false,
+      can_change: false,
+      plans: ['monthly', 'annual'],
+    });
+    expect(status.body.offers).toEqual([
+      { tier: 'pro', plan: 'monthly', prices: [{ currency: 'KRW', amount: '2900' }, { currency: 'USD', amount: '249' }] },
+      { tier: 'pro', plan: 'annual', prices: [{ currency: 'KRW', amount: '24000' }, { currency: 'USD', amount: '1999' }] },
+      { tier: 'premium', plan: 'monthly', prices: [{ currency: 'KRW', amount: '5900' }, { currency: 'USD', amount: '499' }] },
+      { tier: 'premium', plan: 'annual', prices: [{ currency: 'KRW', amount: '49000' }, { currency: 'USD', amount: '3999' }] },
+    ]);
+  });
+
+  it('offers only the tiers that have prices', async () => {
+    delete (env as { PADDLE_PRICE_ID_PREMIUM_MONTHLY?: string }).PADDLE_PRICE_ID_PREMIUM_MONTHLY;
+    delete (env as { PADDLE_PRICE_ID_PREMIUM_ANNUAL?: string }).PADDLE_PRICE_ID_PREMIUM_ANNUAL;
+    const account = await signIn();
+
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+
+    expect(status.body.offers.map((offer: { tier: string }) => offer.tier)).toEqual(['pro', 'pro']);
+  });
+
+  it('sells Pro to an app that sends only a plan, or nothing', async () => {
+    const account = await signIn();
+
+    const bare = await post('/v1/billing/checkout', {}, { token: account.accessToken });
+    const monthly = await post('/v1/billing/checkout', { plan: 'monthly' }, { token: account.accessToken });
+
+    expect(bare.body.url).toContain('tier=pro&plan=annual');
+    expect(monthly.body.url).toContain('tier=pro&plan=monthly');
+  });
+
+  it('sells Premium when asked for it', async () => {
+    const account = await signIn();
+
+    const checkout = await post('/v1/billing/checkout', { tier: 'premium', plan: 'monthly' }, { token: account.accessToken });
+
+    expect(checkout.status).toBe(200);
+    expect(checkout.body.url).toContain('tier=premium&plan=monthly');
+  });
+
+  it('rejects a tier that is not on the menu, or not on sale', async () => {
+    const account = await signIn();
+    expect((await post('/v1/billing/checkout', { tier: 'gold' }, { token: account.accessToken })).status).toBe(400);
+
+    delete (env as { PADDLE_CHECKOUT_SESSION?: unknown }).PADDLE_CHECKOUT_SESSION;
+    delete (env as { PADDLE_PRICE_ID_PREMIUM_ANNUAL?: string }).PADDLE_PRICE_ID_PREMIUM_ANNUAL;
+    const refused = await post('/v1/billing/checkout', { tier: 'premium', plan: 'annual' }, { token: account.accessToken });
+    expect(refused.status).toBe(400);
+  });
+
+  it('will not start a second subscription beside a running one', async () => {
+    const account = await signIn();
+    await deliver(onPrice(account.userId, 'pri_test_monthly', { type: 'subscription.activated' }));
+
+    const checkout = await post('/v1/billing/checkout', { tier: 'premium', plan: 'annual' }, { token: account.accessToken });
+
+    expect(checkout.status).toBe(409);
+    expect(checkout.body.error).toBe('subscription_active');
+    expect((await get('/v1/billing/status', { token: account.accessToken })).body.can_change).toBe(true);
+  });
+
+  it('upgrades the running subscription in place, and shows it at once', async () => {
+    const account = await signIn();
+    await deliver(onPrice(account.userId, 'pri_test_monthly', { type: 'subscription.activated' }));
+    const seen: string[] = [];
+    (env as { PADDLE_CHANGE_SUBSCRIPTION?: unknown }).PADDLE_CHANGE_SUBSCRIPTION =
+      async (subscriptionId: string, priceId: string) => {
+        seen.push(`${subscriptionId} ${priceId}`);
+        return {
+          id: subscriptionId,
+          status: 'active',
+          customer_id: 'ctm_abc',
+          items: [{ price: { id: priceId } }],
+          updated_at: new Date(Date.now() + 1000).toISOString(),
+        };
+      };
+
+    try {
+      const changed = await post('/v1/billing/change', { tier: 'premium', plan: 'monthly' }, { token: account.accessToken });
+
+      expect(changed.status).toBe(200);
+      expect(seen).toEqual(['sub_abc pri_test_premium_monthly']);
+      expect(changed.body).toMatchObject({ state: 'active', tier: 'premium', plan: 'monthly', quota_bytes: 200 * 1024 ** 3 });
+    } finally {
+      delete (env as { PADDLE_CHANGE_SUBSCRIPTION?: unknown }).PADDLE_CHANGE_SUBSCRIPTION;
+    }
+  });
+
+  it('sends the change to Paddle as a prorated subscription update', async () => {
+    const account = await signIn();
+    await deliver(onPrice(account.userId, 'pri_test_premium_annual', { type: 'subscription.activated' }));
+    (env as { PADDLE_API_KEY?: string }).PADDLE_API_KEY = 'pdl_test_key';
+    const calls = mockFetch(() => jsonResponse({
+      data: { id: 'sub_abc', status: 'active', items: [{ price: { id: 'pri_test_annual' } }], updated_at: new Date(Date.now() + 1000).toISOString() },
+    }));
+
+    try {
+      const changed = await post('/v1/billing/change', { tier: 'pro', plan: 'annual' }, { token: account.accessToken });
+
+      expect(changed.status).toBe(200);
+      expect(changed.body.tier).toBe('pro');
+      expect(calls).toHaveLength(1);
+      expect(`${calls[0]!.method} ${calls[0]!.url}`).toBe('PATCH https://api.paddle.com/subscriptions/sub_abc');
+      expect(JSON.parse(calls[0]!.body)).toEqual({
+        items: [{ price_id: 'pri_test_annual', quantity: 1 }],
+        proration_billing_mode: 'prorated_immediately',
+        on_payment_failure: 'prevent_change',
+      });
+    } finally {
+      vi.restoreAllMocks();
+      delete (env as { PADDLE_API_KEY?: string }).PADDLE_API_KEY;
+    }
+  });
+
+  it('has nothing to change without a running subscription', async () => {
+    const account = await signIn();
+
+    const changed = await post('/v1/billing/change', { tier: 'premium', plan: 'annual' }, { token: account.accessToken });
+
+    expect(changed.status).toBe(404);
+  });
+});

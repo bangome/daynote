@@ -190,3 +190,32 @@ describe('0009 over an existing database', () => {
     ).rejects.toThrow(/CHECK/);
   });
 });
+
+describe('0010 over an existing database', () => {
+  it('makes every existing subscription Pro, and keeps any quota an operator had set', async () => {
+    await windBackTo0008();
+    await populate();
+    const upTo0009 = inject('migrations').filter((migration) => migration.name < '0010');
+    await applyD1Migrations(env.DB, upTo0009);
+    await env.DB.prepare(
+      `INSERT INTO users (id, google_sub, email, wrapped_dek, quota_bytes, created_utc, last_seen_utc)
+       VALUES ('granted', 'g-granted', 'granted@example.test', 's1.sealed', 10737418240, ?1, ?1)`,
+    )
+      .bind(STAMP)
+      .run();
+
+    await applyD1Migrations(env.DB, inject('migrations'));
+
+    const subscription = await env.DB.prepare('SELECT status, tier, plan, price_id FROM subscriptions WHERE user_id = ?1')
+      .bind(USER)
+      .first();
+    expect(subscription).toEqual({ status: 'active', tier: 'pro', plan: null, price_id: null });
+
+    const { results } = await env.DB.prepare('SELECT id, quota_override_bytes FROM users ORDER BY id').all();
+    // The default 2 GiB was never a decision, so it now follows the tier; a raised figure was one.
+    expect(results).toEqual([
+      { id: USER, quota_override_bytes: null },
+      { id: 'granted', quota_override_bytes: 10737418240 },
+    ]);
+  });
+});
