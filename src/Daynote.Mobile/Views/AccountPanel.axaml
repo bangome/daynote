@@ -307,6 +307,10 @@
             <TextBlock Classes="muted" FontSize="12.5" Text="{Binding SubscriptionDateLabel}" />
             <TextBlock FontSize="12.5" Text="{Binding SubscriptionDateText}" />
           </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasStorage}">
+            <TextBlock Classes="muted" FontSize="12.5" Text="{Binding #Root.Strings[StorageLabel]}" />
+            <TextBlock FontSize="12.5" Text="{Binding StorageText}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

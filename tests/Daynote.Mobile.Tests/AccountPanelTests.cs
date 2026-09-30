@@ -68,6 +68,33 @@ public sealed class AccountPanelTests
     });
 
     [TestMethod]
+    public void A_subscriber_sees_the_tier_and_the_storage_but_nothing_to_buy() => WithAccountPanel(null, (panel, account) =>
+    {
+        LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+        account.SignedInEmail = "someone@example.com";
+        account.Billing = new BillingLinks(true, true, CanChange: true, Offers:
+        [
+            new BillingOffer(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24000)]),
+            new BillingOffer(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 49000)]),
+        ]);
+        account.Entitlement = new Entitlement(
+            EntitlementState.Active, DateTimeOffset.UtcNow.AddDays(200), true, true,
+            BillingTier.Premium, BillingPlan.Annual, 200L << 30, 5L << 30);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.AreEqual("Premium", account.PlanBadge);
+        Assert.IsTrue(TextShown(panel, "Premium · 연간"), "The card does not say which plan this is.");
+        Assert.IsTrue(TextShown(panel, "5GB 사용"), "The card does not show the storage in use.");
+        // Store rules: no purchase surface of any kind on a phone.
+        Assert.IsFalse(account.OffersSubscription);
+        Assert.IsFalse(account.ShowPlanTable || account.CanUpgradeToPremium || account.ShowSubscribedCard);
+        account.OpenCheckoutPremiumCommand.Execute(null);
+        Assert.IsFalse(account.IsCheckoutOpen);
+        Assert.IsFalse(panel.GetLogicalDescendants().OfType<Button>().Any(
+            button => button.IsEffectivelyVisible && button.Content is string text && text.Contains('₩')));
+    });
+
+    [TestMethod]
     public void The_move_question_replaces_the_sign_in_buttons() => WithAccountPanel(null, (panel, account) =>
     {
         account.IsChoosingHandOff = true;
