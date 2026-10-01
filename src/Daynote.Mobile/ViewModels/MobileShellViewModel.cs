@@ -175,7 +175,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// The floating tab bar and the new-note button: on every tab, and gone while something covers
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
-    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsMonthPickerOpen && !IsFileLayerOpen;
+    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen;
 
     partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -226,6 +226,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         }
 
         IsAccountOpen = false;
+        IsStoreOpen = false;
         IsMonthPickerOpen = false;
         IsAttachSheetOpen = false;
         MenuFile = null;
@@ -269,6 +270,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (IsMonthPickerOpen)
         {
             IsMonthPickerOpen = false;
+            return true;
+        }
+
+        if (IsStoreOpen)
+        {
+            IsStoreOpen = false;
             return true;
         }
 

@@ -1171,7 +1171,8 @@ storage, the trial card, the subscribed card (Premium으로 변경 → the check
 구독 해지 → the portal), and the three-column plan table with a fair-use footnote. The checkout
 dialog opens Paddle in the browser and turns to its success state only when the billing state says
 the tier is paid — it polls, and re-reads when the window comes back to the front. WPF has the same
-surfaces as cards. Phones show the tier and the storage and never anything to buy.
+surfaces as cards. Phones show the tier and the storage; since 2026-10-02 the iPhone also sells,
+through the App Store (§14.8), and Android still sells nothing.
 
 ### 14.8 The App Store, beside Paddle — BUILT 2026-10-02
 
@@ -1227,6 +1228,20 @@ subscription is live only inside its period or grace, so a missed expiry cannot 
 Purchase key is set), `apple_can_purchase`, `apple_product_id` and `duplicate_provider`;
 `can_manage` is now Paddle's portal only. The App Store's localized price is what the iPhone shows,
 read from StoreKit, never from `offers`.
+
+**In the iPhone app.** 설정 › 계정 › 요금제 · 구독 opens the plans page (`StorePage.axaml`,
+`MobileStoreViewModel`): the plan in force and its storage, a monthly/annual toggle, Pro and Premium
+cards priced by StoreKit (never by the server's Paddle list), each with its title, length and
+price beside its button, the auto-renewal terms with the terms of use (EULA) and privacy links, 구매
+복원, 구독 관리 (Apple's own subscriptions page) and the comparison table. Signed out it asks for a
+sign-in first; held by a Paddle subscription it says "컴퓨터에서 구독 중" with no price, link or
+button. StoreKit 1 sits behind `IStorePurchases` (`IosStorePurchases` in the iOS head; Android has
+none): one payment-queue observer from launch, the account id as `applicationUsername` (so it
+becomes `appAccountToken`), and a transaction finished only once the server has answered — 200, or
+403 for another account's — so an unconfirmed one comes back on the next launch. Upgrades and
+downgrades are StoreKit purchases of the other product in the same group. A purchase is shown as done
+only from the server's answer. Tests: `tests/Daynote.Mobile.Tests/StoreTests.cs`,
+`DeviceSafeAreaTests` (the plans page on three devices), `HttpAuthApiClientBillingTests`.
 
 **Deletion.** No server can cancel an App Store subscription, so `DELETE /v1/account` does not wait
 for one; the app says before deleting that it continues until cancelled in Settings.

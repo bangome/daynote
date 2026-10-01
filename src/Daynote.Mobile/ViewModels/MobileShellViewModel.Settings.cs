@@ -102,6 +102,7 @@ public sealed partial class MobileShellViewModel
         OnPropertyChanged(nameof(NeedsAccountAttention));
         OnPropertyChanged(nameof(StorageText));
         OnPropertyChanged(nameof(SyncNowLabel));
+        OnPropertyChanged(nameof(StoreEntrySubtitle));
     }
 
     // ── Theme and language ───────────────────────────────────────────────────────────────────────

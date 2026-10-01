@@ -24,15 +24,36 @@ internal static class TestServices
     internal static MobilePlatformServices PlatformFor(string dataRoot) =>
         new(dataRoot, SecretProtector: null, Identity: null, OpenExternal: _ => { }, TopLevel: () => null);
 
-    internal static ServiceProvider Build(string dataRoot, Application application)
+    internal static ServiceProvider Build(string dataRoot, Application application, ShellSetup? setup = null)
     {
         var services = new ServiceCollection();
         services.AddDaynoteMobile(
-            new DaynoteAppOptions(dataRoot),
+            new DaynoteAppOptions(dataRoot) { SyncEndpoint = setup?.SyncEndpoint },
             application,
             () => null,
-            PlatformFor(dataRoot));
+            setup?.Platform?.Invoke(PlatformFor(dataRoot)) ?? PlatformFor(dataRoot));
+        setup?.Services?.Invoke(services);
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// What a test changes about the composition: a sync endpoint and platform services, so the
+    /// account exists, and registrations of its own on top (a stand-in store, say).
+    /// </summary>
+    internal sealed record ShellSetup(
+        Uri? SyncEndpoint = null,
+        Func<MobilePlatformServices, MobilePlatformServices>? Platform = null,
+        Action<IServiceCollection>? Services = null)
+    {
+        /// <summary>A signed-in-capable account: an endpoint, a sealed store and a sign-in that is never used.</summary>
+        internal static ShellSetup WithAccount(Action<IServiceCollection>? services = null) => new(
+            new Uri("https://sync.invalid"),
+            platform => platform with
+            {
+                SecretProtector = new AccountPanelTests.XorProtector(),
+                Identity = new AccountPanelTests.NoGoogle(),
+            },
+            services);
     }
 
     /// <summary>
@@ -54,7 +75,12 @@ internal static class TestServices
     internal static string? CurrentDataRoot { get; private set; }
 
     /// <summary>The same, at another handset's logical size.</summary>
-    internal static void WithInitialisedShell(double width, double height, Action<Views.MainView, MobileShellViewModel> body)
+    internal static void WithInitialisedShell(double width, double height, Action<Views.MainView, MobileShellViewModel> body) =>
+        WithInitialisedShell(width, height, setup: null, body);
+
+    /// <summary>The same, composed with <paramref name="setup"/>.</summary>
+    internal static void WithInitialisedShell(
+        double width, double height, ShellSetup? setup, Action<Views.MainView, MobileShellViewModel> body)
     {
         ArgumentNullException.ThrowIfNull(body);
         using var data = new TempDataRoot();
@@ -63,7 +89,7 @@ internal static class TestServices
         HeadlessAppFixture.OnUiThread(() =>
         {
             Application application = Application.Current!;
-            ServiceProvider provider = Build(data.Path, application);
+            ServiceProvider provider = Build(data.Path, application, setup);
             var shell = provider.GetRequiredService<MobileShellViewModel>();
             var view = new Views.MainView { DataContext = shell };
 

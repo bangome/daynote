@@ -34,6 +34,21 @@
           </StackPanel>
         </Grid>
 
+        <!-- The plans page, on the iPhone: the App Store sells what the desktop sells (§14.8). -->
+        <Button Classes="row" CornerRadius="18" Command="{Binding OpenStoreCommand}" IsVisible="{Binding HasStore}"
+                AutomationProperties.Name="{Binding Strings[StoreEntryTitle]}">
+          <Border Classes="panel" Padding="16,14">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="3">
+                <TextBlock Classes="line" FontSize="15.5" FontWeight="Bold" Text="{Binding Strings[StoreEntryTitle]}" />
+                <TextBlock Classes="muted line" FontSize="13" Text="{Binding StoreEntrySubtitle}" />
+              </StackPanel>
+              <views:Glyph Grid.Column="1" Kind="ChevronRightLarge" Width="13" Height="13" Opacity="0.6"
+                           VerticalAlignment="Center" Foreground="{DynamicResource Mobile.Text}" />
+            </Grid>
+          </Border>
+        </Button>
+
         <views:AccountPanel DataContext="{Binding Account}" />
       </StackPanel>
     </ScrollViewer>

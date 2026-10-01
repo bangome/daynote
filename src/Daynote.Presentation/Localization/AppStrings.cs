@@ -701,6 +701,8 @@ public static class AppStrings
     public static string CheckoutDoneBody => LocalizationService.Instance[nameof(CheckoutDoneBody)];
     public static string CheckoutDoneOk => LocalizationService.Instance[nameof(CheckoutDoneOk)];
     public static string BillingDuplicateNote => LocalizationService.Instance[nameof(BillingDuplicateNote)];
+    public static string BillingAppStoreManaged => LocalizationService.Instance[nameof(BillingAppStoreManaged)];
+    public static string AccountDeleteAppStoreNote => LocalizationService.Instance[nameof(AccountDeleteAppStoreNote)];
     public static string BillingAnnualSaving => LocalizationService.Instance[nameof(BillingAnnualSaving)];
     public static string BillingFeatureSync => LocalizationService.Instance[nameof(BillingFeatureSync)];
     public static string BillingFeatureQuota => LocalizationService.Instance[nameof(BillingFeatureQuota)];

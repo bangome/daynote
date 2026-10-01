@@ -23,6 +23,7 @@
 
     <views:EditorPage x:Name="Editor" IsVisible="{Binding IsEditorOpen}" />
     <views:AccountPage IsVisible="{Binding IsAccountOpen}" />
+    <views:StorePage IsVisible="{Binding IsStoreOpen}" />
 
     <!--
       The floating bar and the new-note button beside it. It floats over the page rather than

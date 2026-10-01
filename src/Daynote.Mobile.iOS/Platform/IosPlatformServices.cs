@@ -50,7 +50,10 @@ public static class IosPlatformServices
             TopLevel: ResolveTopLevel,
             AppleIdentity: new IosAppleIdentityProvider(),
             OpenFile: IosFileHandoff.OpenFileAsync,
-            PickPhotos: IosFileHandoff.PickPhotosAsync);
+            PickPhotos: IosFileHandoff.PickPhotosAsync,
+            // Constructed here, at launch, so its payment-queue observer is in place before StoreKit
+            // delivers anything held for the app (a renewal, an interrupted purchase).
+            Store: new IosStorePurchases());
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.

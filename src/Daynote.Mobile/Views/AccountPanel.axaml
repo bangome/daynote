@@ -324,6 +324,10 @@
         <StackPanel Spacing="10">
           <TextBlock Classes="h2" Text="{Binding #Root.Strings[AccountDeleteTitle]}" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding #Root.Strings[AccountDeleteBody]}" />
+          <!-- No server can cancel an App Store subscription; App Store guideline 5.1.1(v) asks that
+               the person is told billing goes on until they cancel it in Settings. -->
+          <TextBlock FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasAppStoreSubscription}"
+                     Text="{Binding #Root.Strings[AccountDeleteAppStoreNote]}" />
           <!-- The failure is said here, next to the button that caused it, not at the top of a long page. -->
           <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                      Text="{Binding ErrorMessage}"

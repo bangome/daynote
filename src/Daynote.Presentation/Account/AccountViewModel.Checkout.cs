@@ -198,6 +198,14 @@ public sealed partial class AccountViewModel
         get
         {
             string date = Entitlement.Until is { } until ? FormatDate(until) : "—";
+
+            // Bought on an iPhone: the App Store charges its own price per storefront, so the
+            // catalog's Paddle price would be wrong here, and the card says where it is managed.
+            if (HasAppStoreSubscription)
+            {
+                return AppStrings.BillingAppStoreManaged + " · " + AppStrings.BillingRowRenews + " " + date;
+            }
+
             if (Entitlement.Plan is not { } plan)
             {
                 return AppStrings.BillingRowRenews + " " + date;

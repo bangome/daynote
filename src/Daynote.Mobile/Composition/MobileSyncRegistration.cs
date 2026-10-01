@@ -6,6 +6,7 @@ using Daynote.Infrastructure.Persistence;
 using Daynote.Infrastructure.Persistence.Profiles;
 using Daynote.Infrastructure.Sync;
 using Daynote.Mobile.Platform;
+using Daynote.Mobile.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Daynote.Mobile.Composition;
@@ -84,6 +85,17 @@ public static class MobileSyncRegistration
         {
             IsPhone = true,
         });
+
+        // In-App Purchase, where the head has it (iOS). Built with the account, so its payment-queue
+        // handler is attached as soon as the shell is, which is at launch.
+        if (platform.Store is { } store)
+        {
+            services.AddSingleton(sp => new MobileStoreViewModel(
+                store,
+                sp.GetRequiredService<AccountViewModel>(),
+                token => sp.GetRequiredService<AccountService>().SignedInUserIdAsync(token),
+                (transactionId, token) => sp.GetRequiredService<AccountService>().SubmitAppStoreTransactionAsync(transactionId, token)));
+        }
 
         return services;
     }

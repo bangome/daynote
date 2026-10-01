@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:account="using:Daynote.App.Account"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.StorePage"
+             x:DataType="vm:MobileShellViewModel"
+             Background="{DynamicResource Mobile.Bg}">
+  <!--
+    The plans page, on the iPhone only (docs/CLOUD_SYNC.md §14.8): what the account has, Pro and
+    Premium at the App Store's own prices, and the purchase, restore and management that come with
+    selling through In-App Purchase. The content follows the desktop's plan table (Daynote Desktop B
+    v2) in the phone's cards: the plan in force first, then the two paid plans, then the comparison.
+
+    Beside the buy buttons: the title, length and price of each subscription and the auto-renewal
+    terms, with links to the terms of use and the privacy policy - App Store guideline 3.1.2.
+  -->
+  <UserControl.Resources>
+    <DataTemplate x:Key="PlanCardTemplate" x:DataType="vm:StorePlanCard">
+      <Border Classes="card" Padding="18,16" Classes.highlight="{Binding IsHighlighted}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="3">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="line" FontSize="18" FontWeight="ExtraBold" Text="{Binding Name}" />
+                <Border CornerRadius="99" Padding="8,2" VerticalAlignment="Center"
+                        Background="{DynamicResource Mobile.Sun}" IsVisible="{Binding IsCurrent}">
+                  <TextBlock Classes="line" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
+                             Text="{Binding $parent[views:StorePage].Strings[PlanInUse]}" />
+                </Border>
+              </StackPanel>
+              <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding Detail}" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="line" FontSize="16" FontWeight="ExtraBold" VerticalAlignment="Top"
+                       Margin="10,2,0,0" Text="{Binding PriceText}" />
+          </Grid>
+          <Button Classes="solid" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  Content="{Binding ButtonText}" Command="{Binding BuyCommand}" IsEnabled="{Binding CanBuy}" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding TermsText}" />
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Border.card.highlight">
+      <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Height="48" Margin="6,0" ColumnDefinitions="44,*,44">
+      <Button Grid.Column="0" Classes="iconbtn" Command="{Binding CloseStoreCommand}"
+              AutomationProperties.Name="{Binding Strings[Back]}">
+        <views:Glyph Kind="Back" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
+      </Button>
+      <TextBlock Grid.Column="1" Classes="muted line" FontSize="14" FontWeight="SemiBold"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Strings[StoreTitle]}" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="20,4,20,40" Spacing="16" DataContext="{Binding Store}" x:DataType="vm:MobileStoreViewModel"
+                  IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+
+        <!-- The plan in force, and its storage. -->
+        <Border Classes="card" Padding="18,16">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="subhead" Text="{Binding Strings[PlanCurrent]}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="line" FontSize="20" FontWeight="ExtraBold" Text="{Binding CurrentPlanTitle}" />
+              <Border Grid.Column="1" CornerRadius="99" Padding="10,3" VerticalAlignment="Center"
+                      Background="{DynamicResource Mobile.Seg}">
+                <TextBlock Classes="line" FontSize="12" FontWeight="Bold" Text="{Binding CurrentPlanName}" />
+              </Border>
+            </Grid>
+            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding CurrentPlanDetail}" />
+            <StackPanel Spacing="6" Margin="0,4,0,0" IsVisible="{Binding HasStorage}">
+              <TextBlock Classes="line" FontSize="13" Text="{Binding StorageText}" />
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding StorageFraction}" Height="6" MinHeight="6"
+                           CornerRadius="3" Foreground="{DynamicResource Mobile.Pri}" Background="{DynamicResource Mobile.Seg}"
+                           IsVisible="{Binding ShowsStorageBar}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Signed out: a purchase belongs to an account, so that comes first. -->
+        <Border Classes="panel" IsVisible="{Binding ShowsSignInPrompt}">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding Strings[StoreSignInTitle]}" />
+            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding Strings[StoreSignInBody]}" />
+            <Button Classes="solid" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Content="{Binding Strings[StoreSignIn]}" Command="{Binding SignInCommand}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Bought on the desktop: subscribed, and nothing here points anywhere else. -->
+        <Border Classes="panel" IsVisible="{Binding IsManagedElsewhere}">
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Grid.Column="0" Width="30" Height="30" CornerRadius="15" VerticalAlignment="Top"
+                    Background="{DynamicResource Mobile.SunSoft}">
+              <views:Glyph Kind="Check" Width="14" Height="14" Foreground="{DynamicResource Mobile.SunInk}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
+              <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding Strings[StoreManagedTitle]}" />
+              <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding Strings[StoreManagedBody]}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- The two paid plans, at the interval the toggle shows. -->
+        <StackPanel Spacing="12" IsVisible="{Binding ShowsPlans}">
+          <Border CornerRadius="99" Padding="4" Background="{DynamicResource Mobile.Seg}" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Button Classes="pill small" Classes.on="{Binding IsMonthly}" MinWidth="96" Command="{Binding SelectMonthlyCommand}">
+                <TextBlock Text="{Binding Strings[BillingPlanMonthly]}" HorizontalAlignment="Center" />
+              </Button>
+              <Button Classes="pill small" Classes.on="{Binding IsAnnual}" MinWidth="96" Command="{Binding SelectAnnualCommand}">
+                <TextBlock Text="{Binding Strings[BillingPlanAnnual]}" HorizontalAlignment="Center" />
+              </Button>
+            </StackPanel>
+          </Border>
+
+          <ContentControl Content="{Binding ProCard}" ContentTemplate="{StaticResource PlanCardTemplate}" />
+          <ContentControl Content="{Binding PremiumCard}" ContentTemplate="{StaticResource PlanCardTemplate}" />
+
+          <TextBlock Classes="muted" FontSize="12.5" TextWrapping="Wrap" IsVisible="{Binding HasNoPrices}"
+                     Text="{Binding Strings[StorePricesUnavailable]}" />
+        </StackPanel>
+
+        <TextBlock FontSize="13" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" Text="{Binding StatusMessage}" />
+        <TextBlock FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
+                   IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+        <Border Classes="panel" Background="{DynamicResource Mobile.DangerSoft}" IsVisible="{Binding HasDuplicate}">
+          <TextBlock FontSize="12.5" TextWrapping="Wrap" Text="{Binding Strings[StoreDuplicateNote]}" />
+        </Border>
+
+        <!-- The renewal terms and the two documents, close to the buttons they govern. -->
+        <StackPanel Spacing="8" IsVisible="{Binding ShowsPlans}">
+          <TextBlock Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" Text="{Binding Strings[StoreAutoRenew]}" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Button Classes="quiet" FontSize="12.5" MinHeight="44" Content="{Binding Strings[StoreTerms]}"
+                    Command="{Binding OpenTermsCommand}" />
+            <Button Classes="quiet" FontSize="12.5" MinHeight="44" Content="{Binding Strings[StorePrivacy]}"
+                    Command="{Binding OpenPrivacyCommand}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+          <Button Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  Content="{Binding Strings[StoreRestore]}" Command="{Binding RestoreCommand}" IsEnabled="{Binding !IsBusy}" />
+          <Button Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  Content="{Binding Strings[StoreManage]}" Command="{Binding ManageCommand}"
+                  IsVisible="{Binding !IsManagedElsewhere}" />
+        </StackPanel>
+
+        <!-- What each plan includes, side by side. -->
+        <Border Classes="panel" Padding="14,12">
+          <StackPanel Spacing="2">
+            <Grid ColumnDefinitions="*,58,58,72" Margin="0,0,0,6">
+              <TextBlock Grid.Column="0" Classes="subhead" Text="{Binding Strings[PlanCompare]}" />
+              <TextBlock Grid.Column="1" Classes="line" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" Text="{Binding Strings[PlanFreeName]}" />
+              <TextBlock Grid.Column="2" Classes="line" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" Text="{Binding Strings[PlanProName]}" />
+              <TextBlock Grid.Column="3" Classes="line" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" Text="{Binding Strings[PlanPremiumName]}" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding PlanRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="account:PlanComparisonRow">
+                  <Border Classes="rule" Padding="0,9">
+                    <Grid ColumnDefinitions="*,58,58,72">
+                      <TextBlock Grid.Column="0" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding Label}" />
+                      <ContentControl Grid.Column="1" Content="{Binding Free}" HorizontalAlignment="Center" />
+                      <ContentControl Grid.Column="2" Content="{Binding Pro}" HorizontalAlignment="Center" />
+                      <ContentControl Grid.Column="3" Content="{Binding Premium}" HorizontalAlignment="Center" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+              <ItemsControl.DataTemplates>
+                <DataTemplate x:DataType="account:PlanCell">
+                  <Panel VerticalAlignment="Center">
+                    <views:Glyph Kind="Check" Width="14" Height="14" Foreground="{DynamicResource Mobile.Pri}" IsVisible="{Binding IsCheck}" />
+                    <TextBlock Classes="line" FontSize="12.5" FontWeight="Bold" IsVisible="{Binding IsText}" Text="{Binding Text}" />
+                    <TextBlock Classes="faint line" FontSize="13" IsVisible="{Binding IsDash}" Text="—" />
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
+            </ItemsControl>
+            <TextBlock Classes="muted" FontSize="11.5" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Strings[PlanFairUseNote]}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

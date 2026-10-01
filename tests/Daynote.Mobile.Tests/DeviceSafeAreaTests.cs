@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 using Daynote.App.Composition;
 using Daynote.Core.Domain;
 using Daynote.Mobile.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Daynote.Mobile.Tests;
@@ -112,6 +113,73 @@ public sealed class DeviceSafeAreaTests
         });
 
         Assert.IsEmpty(failures, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>
+    /// The iPhone's plans page, which only exists with an account and a store: in each of the three
+    /// states it has (selling, an App Store subscriber, a desktop subscriber), top and bottom.
+    /// </summary>
+    [TestMethod]
+    [DataRow("iphone-16-pro", 402, 874, 0, 62, 0, 34)]
+    [DataRow("iphone-se", 375, 667, 0, 20, 0, 0)]
+    [DataRow("iphone-16-pro-landscape", 874, 402, 62, 0, 62, 21)]
+    public void The_plans_page_keeps_clear_of_the_notch_and_the_bottom_strip(
+        string device, double width, double height, double left, double top, double right, double bottom)
+    {
+        var safe = new Thickness(left, top, right, bottom);
+        string directory = Path.Combine(OutputDirectory, device);
+        Directory.CreateDirectory(directory);
+        var failures = new List<string>();
+        var store = new StoreTests.FakeStore();
+        var server = new StoreTests.FakeServer();
+
+        TestServices.WithInitialisedShell(width, height, TestServices.ShellSetup.WithAccount(services =>
+            services.AddSingleton(sp => new MobileStoreViewModel(
+                store,
+                sp.GetRequiredService<Daynote.App.Account.AccountViewModel>(),
+                _ => ValueTask.FromResult<string?>("4b1f6d2e-9a39-4c47-8a0e-5f7c1d2b3a40"),
+                server.SubmitAsync,
+                () => Task.CompletedTask))), (view, shell) =>
+        {
+            view.PreviewSafeArea = safe;
+            Daynote.App.Account.AccountViewModel account = shell.Account!;
+            account.SignedInEmail = "someone@example.com";
+            shell.GoToPageCommand.Execute(MobilePage.Settings);
+            shell.OpenAccountCommand.Execute(null);
+            account.Entitlement = StoreTests.Trial;
+            account.Billing = StoreTests.Selling();
+            Check("account-store-row");
+
+            foreach ((string name, Daynote.Core.Sync.BillingLinks billing) in new[]
+            {
+                ("store", StoreTests.Selling()),
+                ("store-apple", StoreTests.Selling(Daynote.Core.Sync.BillingProvider.Apple, "cc.arachat.daynote.pro.annual")),
+                ("store-desktop", StoreTests.Selling(Daynote.Core.Sync.BillingProvider.Paddle, canPurchase: false)),
+            })
+            {
+                account.Billing = billing;
+                shell.OpenStoreCommand.Execute(null);
+                Check(name);
+                ScrollStoreToEnd(view);
+                Check($"{name}-end");
+                shell.CloseStoreCommand.Execute(null);
+            }
+
+            void Check(string screen)
+            {
+                Settle(view);
+                Save(view, Path.Combine(directory, $"{screen}.png"));
+                failures.AddRange(Offenders(view, safe).Select(offender => $"{device}/{screen}: {offender}"));
+            }
+        });
+
+        Assert.IsEmpty(failures, string.Join(Environment.NewLine, failures));
+    }
+
+    private static void ScrollStoreToEnd(Control view)
+    {
+        Settle(view);
+        view.GetVisualDescendants().OfType<Views.StorePage>().Single().GetVisualDescendants().OfType<ScrollViewer>().First().ScrollToEnd();
     }
 
     private static ScrollViewer DayScroller(Control view) =>

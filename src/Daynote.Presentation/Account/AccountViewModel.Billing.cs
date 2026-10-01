@@ -39,6 +39,13 @@ public sealed partial class AccountViewModel
 
     public bool CanManageSubscription => Billing.CanManage;
 
+    /// <summary>
+    /// The subscription on record was bought on an iPhone through the App Store. No server can
+    /// cancel one, and the desktop's portal and plan change do not reach it: it is managed in the
+    /// iPhone's Settings, which the subscription card and the delete confirmation say.
+    /// </summary>
+    public bool HasAppStoreSubscription => Billing.Provider == BillingProvider.Apple && Entitlement.HasSubscribed;
+
     /// <summary>One line describing the billing state, with the date or the days left in it.</summary>
     public string EntitlementSummary
     {
@@ -183,6 +190,7 @@ public sealed partial class AccountViewModel
         OnPropertyChanged(nameof(IsUnpaid));
         OnPropertyChanged(nameof(ShouldWarnAboutEntitlement));
         OnPropertyChanged(nameof(EntitlementSummary));
+        OnPropertyChanged(nameof(HasAppStoreSubscription));
         RefreshPresentation();
     }
 
@@ -193,6 +201,7 @@ public sealed partial class AccountViewModel
         OnPropertyChanged(nameof(CanCheckoutMonthly));
         OnPropertyChanged(nameof(CanCheckoutAnnual));
         OnPropertyChanged(nameof(CanManageSubscription));
+        OnPropertyChanged(nameof(HasAppStoreSubscription));
         RefreshPresentation();
     }
 }

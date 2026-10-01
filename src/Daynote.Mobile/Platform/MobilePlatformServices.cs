@@ -55,6 +55,11 @@ namespace Daynote.Mobile.Platform;
 /// not show the photo library). Returns local paths of copies it made, empty when cancelled. Null
 /// uses the document picker filtered to images, which on Android already includes the gallery.
 /// </param>
+/// <param name="Store">
+/// In-App Purchase, on iOS only: the App Store subscriptions the iPhone has to sell beside the
+/// desktop's (App Store guideline 3.1.3(b)). Null elsewhere, and no purchase surface exists then —
+/// Android honours a subscription bought on the desktop and sells nothing.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
@@ -63,7 +68,8 @@ public sealed record MobilePlatformServices(
     Func<Avalonia.Controls.TopLevel?> TopLevel,
     Daynote.Core.Sync.IAppleIdentityProvider? AppleIdentity = null,
     Func<string, byte[], Task<bool>>? OpenFile = null,
-    Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null)
+    Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null,
+    IStorePurchases? Store = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store
