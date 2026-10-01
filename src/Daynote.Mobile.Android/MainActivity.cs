@@ -49,6 +49,14 @@ public class MainActivity : AvaloniaMainActivity
         Current = this;
         base.OnCreate(savedInstanceState);
 
+        // With three-button navigation Android lays a translucent grey scrim over the button bar for
+        // contrast, which read as the bottom of the app being dimmed. The app paints that strip in its
+        // own background colour (MainView), so the scrim has nothing to add.
+        if (OperatingSystem.IsAndroidVersionAtLeast(29) && Window is { } window)
+        {
+            window.NavigationBarContrastEnforced = false;
+        }
+
         // The system back gesture closes the editor first; only then does it leave the app.
         BackRequested += (_, e) =>
         {
@@ -57,6 +65,65 @@ public class MainActivity : AvaloniaMainActivity
                 e.Handled = app.TryGoBackAsync().GetAwaiter().GetResult();
             }
         };
+    }
+
+    /// <summary>
+    /// Keeps the system bars clear of the platform's translucent scrim.
+    /// </summary>
+    /// <remarks>
+    /// Avalonia goes edge to edge by setting the translucent status and navigation flags. Android 15
+    /// ignores them, but 14 and earlier — most Galaxy phones still in use — draw a dark grey scrim over
+    /// both bars for them, which made the top and bottom of the app look cut off. The window still
+    /// draws behind the bars without them (Avalonia also takes over insets fitting); clearing them
+    /// here, whenever they come back, leaves the bars the app's own colour.
+    /// </remarks>
+    public override void OnWindowAttributesChanged(WindowManagerLayoutParams? @params)
+    {
+        base.OnWindowAttributesChanged(@params);
+
+        // Android 15 and later draw every app edge to edge and ignore all of this. The change is
+        // posted rather than made here: changing the window from inside its own attributes callback
+        // re-entered the window manager and left the app not responding on Android 14.
+        if (OperatingSystem.IsAndroidVersionAtLeast(35) || @params is null || _barFixPending ||
+            ((@params.Flags & TranslucentBars) == 0 && BarsAreTransparent()))
+        {
+            return;
+        }
+
+        _barFixPending = true;
+        Window?.DecorView.Post(ClearBarScrim);
+    }
+
+    private const WindowManagerFlags TranslucentBars = WindowManagerFlags.TranslucentStatus | WindowManagerFlags.TranslucentNavigation;
+
+    private bool _barFixPending;
+
+    private bool BarsAreTransparent() =>
+        OperatingSystem.IsAndroidVersionAtLeast(35) || Window is not { } window ||
+        (window.StatusBarColor == global::Android.Graphics.Color.Transparent.ToArgb() &&
+         window.NavigationBarColor == global::Android.Graphics.Color.Transparent.ToArgb());
+
+    private void ClearBarScrim()
+    {
+        _barFixPending = false;
+        if (OperatingSystem.IsAndroidVersionAtLeast(35) || Window is not { } window)
+        {
+            return;
+        }
+
+        if ((window.Attributes?.Flags & TranslucentBars) != 0)
+        {
+            window.ClearFlags(TranslucentBars);
+            window.AddFlags(WindowManagerFlags.DrawsSystemBarBackgrounds);
+        }
+
+        // Without the flags the bars show whatever colour was left on them (white); transparent lets
+        // the app's own background, which already runs behind them, show through.
+        if (!BarsAreTransparent())
+        {
+            window.SetStatusBarColor(global::Android.Graphics.Color.Transparent);
+            window.SetNavigationBarColor(global::Android.Graphics.Color.Transparent);
+        }
     }
 
     /// <summary>
