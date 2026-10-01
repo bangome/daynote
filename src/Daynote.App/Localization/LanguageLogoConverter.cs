@@ -16,7 +16,10 @@ public sealed class LanguageLogoConverter : IValueConverter
 {
     private const string KoreanLogo = "pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-logo-trimmed.png";
     private const string EnglishLogo = "pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-logo-en-trimmed.png";
-    private const string KoreanLogoDark = "pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-logo-dark-trimmed.png";
+    // The dark pair is what sits on a dark ground, which since design B means the navy sidebar in
+    // either theme. Korean's is the wordmark cut out of its plate; English's is the older
+    // light-ink lockup, which is the only English artwork there is.
+    private const string KoreanLogoDark = "pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-wordmark-navy.png";
     private const string EnglishLogoDark = "pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-logo-en-dark-trimmed.png";
 
     private static readonly ImageSource Korean = Load(KoreanLogo);

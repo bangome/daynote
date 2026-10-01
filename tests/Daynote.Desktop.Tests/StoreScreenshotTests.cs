@@ -4,11 +4,15 @@ using Avalonia.Headless;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Daynote.App.Account;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.App.Shell.Product;
+using Daynote.App.Tests.Account;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
+using Daynote.Core.Sync;
 using Daynote.Desktop.ViewModels;
 using Daynote.Desktop.Views;
 
@@ -82,12 +86,89 @@ public sealed class StoreScreenshotTests
                 shell.IsDark = true;
                 Shoot(window, directory, $"{prefix}-04-dark");
                 shell.IsDark = false;
+
+                // What the app sells. Two paid tiers is a thing a listing has to say out loud, and
+                // it is the one screen a reviewer looks for when the app takes money.
+                ShowPlans(window, shell);
+                Shoot(window, directory, $"{prefix}-05-plans");
+                shell.CloseSettingsCommand.Execute(null);
+                Pump();
             });
         }
         finally
         {
             LocalizationService.Instance.SetLanguage(original);
         }
+    }
+
+    /// <summary>The catalogue the worker sells, so the table prices both tiers rather than a dash.</summary>
+    private static readonly BillingOffer[] Offers =
+    [
+        new(BillingTier.Pro, BillingPlan.Monthly, [new Money("KRW", 2_900), new Money("USD", 249)]),
+        new(BillingTier.Pro, BillingPlan.Annual, [new Money("KRW", 24_000), new Money("USD", 1_999)]),
+        new(BillingTier.Premium, BillingPlan.Monthly, [new Money("KRW", 5_900), new Money("USD", 499)]),
+        new(BillingTier.Premium, BillingPlan.Annual, [new Money("KRW", 48_000), new Money("USD", 3_999)]),
+    ];
+
+    /// <summary>
+    /// Signs an account in on a trial and opens the settings page at the plan table.
+    /// </summary>
+    /// <remarks>
+    /// A trial with everything on sale is the state that shows the most: the free column, both paid
+    /// columns priced, and the button that buys one. A signed-out shell would show an empty page
+    /// and a paid one would hide half the table behind "current plan".
+    /// </remarks>
+    private static void ShowPlans(Window window, DesktopShellViewModel shell)
+    {
+        var accounts = new FakeAccounts
+        {
+            Email = "jiwon@example.com",
+            Billing = new BillingLinks(true, false, Offers: Offers),
+            Entitlement = new Entitlement(
+                EntitlementState.Trial,
+                DateTimeOffset.UtcNow.AddDays(3).AddHours(1),
+                true,
+                false,
+                BillingTier.Pro,
+                null,
+                2L << 30,
+                0),
+        };
+
+        var account = new AccountViewModel(
+            accounts.Service,
+            accounts.Store,
+            () => ValueTask.FromResult(SyncReport.For(SyncOutcome.Completed)),
+            new NoStoreExport(),
+            _ => { },
+            Path.Combine(Path.GetTempPath(), "daynote-store-shots-conflicts"));
+        Wait(account.SignInCommand.ExecuteAsync(null));
+        shell.Account = account;
+        Pump();
+
+        shell.SettingsViewModel!.Section = SettingsSection.Account;
+        shell.OpenSettingsCommand.Execute(null);
+        Pump();
+        window.UpdateLayout();
+
+        // The table is below the fold of a 560px dialog; the listing wants the table, not the
+        // account row above it.
+        ScrollViewer scroller = window.GetVisualDescendants().OfType<SettingsPanel>().Single()
+            .GetVisualDescendants().OfType<ScrollViewer>().First();
+        Control table = scroller.GetVisualDescendants().OfType<Control>()
+            .First(control => control.Name == "PlanTable");
+        Assert.IsTrue(table.IsEffectivelyVisible, "The plan table is not on the page.");
+        scroller.Offset = new Avalonia.Vector(0, scroller.Extent.Height);
+        Pump();
+        window.UpdateLayout();
+    }
+
+    /// <summary>The account view model wants an exporter; nothing is exported for a screenshot.</summary>
+    private sealed class NoStoreExport : IRecoveryKeyExporter
+    {
+        public Task<bool> TryCopyToClipboardAsync(string recoveryKey) => Task.FromResult(false);
+
+        public Task<bool> TrySaveToFileAsync(string recoveryKey) => Task.FromResult(false);
     }
 
     private static void Seed(DesktopShellViewModel shell, AppLanguage language)

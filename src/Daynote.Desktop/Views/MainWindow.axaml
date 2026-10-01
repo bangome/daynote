@@ -36,7 +36,7 @@
           <!-- The wordmark carries the mark and the name together, cut out of the plate it was
                drawn on so it sits on the sidebar's navy in either theme. -->
           <Image Grid.Column="0" Grid.ColumnSpan="2" Height="28" HorizontalAlignment="Left"
-                 Source="avares://Daynote.Desktop/Assets/daynote-wordmark-navy.png"
+                 Source="{Binding BrandLogo}"
                  RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="Daynote" />
           <Button x:Name="SidebarCollapse" Grid.Column="2" Classes="sideicon" Width="26" Height="26" Command="{Binding ToggleLeftCommand}"
                   ToolTip.Tip="{Binding SidebarCollapseTip}" AutomationProperties.Name="{Binding Strings[SidebarsCollapse]}">

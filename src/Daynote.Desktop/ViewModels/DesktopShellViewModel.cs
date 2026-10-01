@@ -270,8 +270,12 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     /// The titlebar wordmark, which depends on both the theme (the ink has to contrast with the
     /// ground) and the language (the lockup carries the product name).
     /// </summary>
+    /// <summary>
+    /// The sidebar's wordmark. Always the dark-ground pair: the sidebar is navy in both themes, so
+    /// the theme does not choose here — only the language does.
+    /// </summary>
     public Avalonia.Media.Imaging.Bitmap BrandLogo =>
-        Views.BrandLogos.For(Daynote.App.Localization.LocalizationService.Instance.Language, IsDark);
+        Views.BrandLogos.For(Daynote.App.Localization.LocalizationService.Instance.Language, dark: true);
 
     /// <summary>Catalog strings the window binds to; refreshed wholesale on a language switch.</summary>
     public AppStringsProxy Strings => AppStringsProxy.Instance;

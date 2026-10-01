@@ -33,7 +33,8 @@ public static class BrandLogos
     private const string Root = "avares://Daynote.Desktop/Assets/";
 
     private static readonly Lazy<Bitmap> KoreanLight = Load("daynote-logo-trimmed.png");
-    private static readonly Lazy<Bitmap> KoreanDark = Load("daynote-logo-dark-trimmed.png");
+    // See LanguageLogoConverter: the dark pair is the one that sits on the navy sidebar.
+    private static readonly Lazy<Bitmap> KoreanDark = Load("daynote-wordmark-navy.png");
     private static readonly Lazy<Bitmap> EnglishLight = Load("daynote-logo-en-trimmed.png");
     private static readonly Lazy<Bitmap> EnglishDark = Load("daynote-logo-en-dark-trimmed.png");
 

@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:pvm="clr-namespace:Daynote.App.Shell.Product;assembly=Daynote.Presentation"
     xmlns:product="clr-namespace:Daynote.App.Shell.Product"
+    xmlns:locp="clr-namespace:Daynote.App.Localization;assembly=Daynote.Presentation"
     xmlns:loc="clr-namespace:Daynote.App.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -40,7 +41,8 @@
                 <!-- The wordmark carries the mark and the name together, cut out of the plate it
                      was drawn on so it sits on the sidebar's navy in either theme. -->
                 <Image Grid.Column="0" Grid.ColumnSpan="2" Height="28" HorizontalAlignment="Left"
-                       Source="pack://application:,,,/Daynote.App;component/Assets/Brand/daynote-wordmark-navy.png"
+                       Source="{Binding Language, Source={x:Static locp:LocalizationService.Instance},
+                                        Converter={StaticResource Daynote.Convert.LanguageLogo}, ConverterParameter=Dark}"
                        RenderOptions.BitmapScalingMode="HighQuality"
                        AutomationProperties.Name="{loc:Tr AppTitle}" />
                 <Button Grid.Column="2" Width="26" Height="26" Style="{DynamicResource Daynote.Desk.Button.SideIcon}"

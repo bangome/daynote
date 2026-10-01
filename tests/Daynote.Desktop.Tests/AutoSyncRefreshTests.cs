@@ -10,9 +10,9 @@ using Daynote.Core.Domain.Notes;
 using Daynote.Core.Notes;
 using Daynote.Core.Sync;
 using Daynote.Desktop.Composition;
+using Daynote.Desktop.ViewModels;
 using Daynote.Infrastructure.Notes;
 using Daynote.Infrastructure.Persistence;
-using Daynote.Desktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
