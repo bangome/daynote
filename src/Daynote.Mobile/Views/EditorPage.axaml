@@ -82,7 +82,13 @@
       </WrapPanel>
     </StackPanel>
 
+    <!--
+      AcceptsReturn lets the box take a line break, but the phone's keyboard is told separately what
+      the field is: left at the defaults it got a single-line field whose return key is "Done", so
+      Enter closed the keyboard instead of starting a new line.
+    -->
     <TextBox Grid.Row="2" x:Name="Body" Classes="bare body" Text="{Binding Notes.EditorText}"
+             TextInputOptions.Multiline="True" TextInputOptions.ReturnKeyType="Return"
              PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}" />
 
     <!--
