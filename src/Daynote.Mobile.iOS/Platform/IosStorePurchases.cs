@@ -235,7 +235,9 @@ public sealed class IosStorePurchases : IStorePurchases
         await SettleOneAsync(transaction).ConfigureAwait(true);
         if (transaction.TransactionState != SKPaymentTransactionState.Restored)
         {
-            Complete(transaction.Payment?.ProductIdentifier ?? string.Empty, new StorePurchaseResult(StorePurchaseStatus.Purchased));
+            Complete(
+                transaction.Payment?.ProductIdentifier ?? string.Empty,
+                new StorePurchaseResult(StorePurchaseStatus.Purchased, TransactionId: transaction.TransactionIdentifier));
         }
     }
 

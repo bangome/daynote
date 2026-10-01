@@ -98,6 +98,36 @@ public sealed class StoreTests
     });
 
     [TestMethod]
+    public void Another_transaction_confirmed_meanwhile_does_not_count_as_this_purchase() => WithStore((store, server, fake, _) =>
+    {
+        fake.RenewalDuringPurchase = true;
+        server.FailOnly = "1000000000000001";
+
+        Run(store.ProCard.BuyCommand);
+
+        Assert.AreEqual(MobileStrings.Get("StoreVerifyFailed"), store.ErrorMessage);
+        Assert.IsNull(store.StatusMessage, "An unrecorded purchase was announced as started.");
+    });
+
+    [TestMethod]
+    public void A_background_renewal_of_another_accounts_subscription_says_nothing() => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(AccountFailure.PurchaseBelongsToAnotherAccount, "other");
+
+        bool finish = Pump2(fake.TransactionHandler!(new StoreTransaction("6000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false)));
+
+        Assert.IsTrue(finish);
+        Assert.IsNull(store.ErrorMessage, "An error with nothing behind it from the person holding the phone.");
+    });
+
+    [TestMethod]
+    public void Terms_open_the_App_Store_licence_agreement() => WithStore((store, _, _, _) =>
+    {
+        store.OpenTermsCommand.Execute(null);
+        CollectionAssert.AreEqual(new[] { MobileStoreViewModel.StandardEulaUrl }, Opened);
+    });
+
+    [TestMethod]
     public void A_cancelled_sheet_says_nothing_and_sends_nothing() => WithStore((store, server, fake, _) =>
     {
         fake.Next = StorePurchaseStatus.Cancelled;
@@ -318,6 +348,14 @@ public sealed class StoreTests
     [ThreadStatic]
     private static FakeServer? Server;
 
+    private static readonly List<string> Opened = [];
+
+    private static bool Pump2(Task<bool> task)
+    {
+        Pump(() => task);
+        return task.Result;
+    }
+
     [ThreadStatic]
     private static FakeStore? Fake;
 
@@ -330,6 +368,7 @@ public sealed class StoreTests
         double height = 844)
     {
         LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+        Opened.Clear();
         var fake = new FakeStore();
         var server = new FakeServer();
         using var data = new TempDataRoot();
@@ -341,7 +380,8 @@ public sealed class StoreTests
                     sp.GetRequiredService<AccountViewModel>(),
                     _ => ValueTask.FromResult<string?>(UserId),
                     server.SubmitAsync,
-                    () => Task.CompletedTask))));
+                    () => Task.CompletedTask,
+                    url => Opened.Add(url)))));
             var shell = provider.GetRequiredService<MobileShellViewModel>();
 
             // 390x844 logical, the narrowest mainstream iPhone; scaled as a whole for a store image.
@@ -447,12 +487,20 @@ public sealed class StoreTests
 
         public AccountException? Failure { get; set; }
 
+        /// <summary>Fails just this transaction id, as Apple being unreachable for one call would.</summary>
+        public string? FailOnly { get; set; }
+
         public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAsync(string transactionId, CancellationToken token)
         {
             Submitted.Add(transactionId);
             if (Failure is { } failure)
             {
                 throw failure;
+            }
+
+            if (FailOnly == transactionId)
+            {
+                throw new AccountException(AccountFailure.Offline, "offline");
             }
 
             return ValueTask.FromResult(Answer ?? (Paid(BillingTier.Pro, BillingPlan.Annual), Selling(BillingProvider.Apple)));
@@ -465,6 +513,8 @@ public sealed class StoreTests
         private int serial;
 
         public StorePurchaseStatus Next { get; set; } = StorePurchaseStatus.Purchased;
+
+        public bool RenewalDuringPurchase { get; set; }
 
         public string? LastPurchase { get; private set; }
 
@@ -504,7 +554,14 @@ public sealed class StoreTests
                         Finished.Add(id);
                     }
 
-                    return new StorePurchaseResult(StorePurchaseStatus.Purchased);
+                    // A renewal of something else settles during the sheet, and confirms: the result
+                    // must still be about this purchase.
+                    if (RenewalDuringPurchase)
+                    {
+                        await TransactionHandler!(new StoreTransaction("5000000000000001", productId, IsRestore: false)).ConfigureAwait(true);
+                    }
+
+                    return new StorePurchaseResult(StorePurchaseStatus.Purchased, TransactionId: id);
                 case StorePurchaseStatus.Failed:
                     return new StorePurchaseResult(StorePurchaseStatus.Failed, "Cannot connect to iTunes Store");
                 default:

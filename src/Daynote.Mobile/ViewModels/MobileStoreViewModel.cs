@@ -76,8 +76,16 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     private readonly Func<Task> _refreshBilling;
     private readonly Dictionary<string, StoreProduct> _products = new(StringComparer.Ordinal);
 
-    /// <summary>Set by the transaction handler: whether the last purchase reached the server.</summary>
-    private bool _lastConfirmed;
+    /// <summary>
+    /// The transactions the server has recorded, by the id sent: how a purchase knows its own
+    /// transaction went through, rather than whichever one the handler saw last.
+    /// </summary>
+    private readonly HashSet<string> _confirmed = new(StringComparer.Ordinal);
+
+    /// <summary>Apple's standard licence agreement, which the app uses as its EULA.</summary>
+    public const string StandardEulaUrl = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+    private readonly Action<string>? _openExternal;
 
     /// <summary>Restored subscriptions the server confirmed during the restore in progress.</summary>
     private int _restoreConfirmed;
@@ -87,7 +95,8 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         AccountViewModel account,
         Func<CancellationToken, ValueTask<string?>> accountToken,
         Func<string, CancellationToken, ValueTask<(Entitlement Entitlement, BillingLinks Links)>> submit,
-        Func<Task>? refreshBilling = null)
+        Func<Task>? refreshBilling = null,
+        Action<string>? openExternal = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(account);
@@ -96,6 +105,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         _accountToken = accountToken;
         _submit = submit;
         _refreshBilling = refreshBilling ?? (() => account.RefreshBillingCommand.ExecuteAsync(null));
+        _openExternal = openExternal;
 
         account.PropertyChanged += (_, e) =>
         {
@@ -358,11 +368,10 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             }
 
             bool wasOnApple = HasAppleSubscription && Account.IsPaying;
-            _lastConfirmed = false;
             StorePurchaseResult result = await _store.PurchaseAsync(product.ProductId, token, CancellationToken.None).ConfigureAwait(true);
             switch (result.Status)
             {
-                case StorePurchaseStatus.Purchased when _lastConfirmed:
+                case StorePurchaseStatus.Purchased when result.TransactionId is { } id && _confirmed.Contains(id):
                     StatusMessage = MobileStrings.Format(
                         wasOnApple ? "StoreChangedFormat" : "StoreDoneFormat",
                         AccountViewModel.TierName(tier));
@@ -445,7 +454,19 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     private void Manage() => _store.OpenSubscriptionManagement();
 
     [RelayCommand]
-    private void OpenTerms() => Account.OpenTermsCommand.Execute(null);
+    private void OpenTerms()
+    {
+        // The App Store's own standard EULA: the terms an In-App Purchase is sold under (guideline
+        // 3.1.2), which the site's terms of service are not.
+        if (_openExternal is { } open)
+        {
+            open(StandardEulaUrl);
+        }
+        else
+        {
+            Account.OpenTermsCommand.Execute(null);
+        }
+    }
 
     [RelayCommand]
     private void OpenPrivacy() => Account.OpenPrivacyCommand.Execute(null);
@@ -468,7 +489,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 .ConfigureAwait(true);
             Account.Entitlement = entitlement;
             Account.Billing = links;
-            _lastConfirmed = true;
+            _confirmed.Add(transaction.TransactionId);
             if (transaction.IsRestore)
             {
                 _restoreConfirmed++;
@@ -478,18 +499,28 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         }
         catch (AccountException failure) when (failure.Failure == AccountFailure.PurchaseBelongsToAnotherAccount)
         {
-            ErrorMessage = MobileStrings.Get("StoreOtherAccount");
+            // Said only when someone is buying or restoring here. A renewal of another account's
+            // subscription arriving in the background is that account's business, and the
+            // server's notifications keep its row current.
+            if (IsBusy)
+            {
+                ErrorMessage = MobileStrings.Get("StoreOtherAccount");
+            }
+
             return true;
         }
         catch (AccountException failure) when (failure.Failure == AccountFailure.PurchaseRefused)
         {
             // Never going to be accepted; finishing it stops it coming back on every launch.
-            ErrorMessage = MobileStrings.Get("StoreFailed");
+            if (IsBusy)
+            {
+                ErrorMessage = MobileStrings.Get("StoreFailed");
+            }
+
             return true;
         }
         catch (AccountException)
         {
-            _lastConfirmed = false;
             return false;
         }
     }

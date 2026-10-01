@@ -94,7 +94,8 @@ public static class MobileSyncRegistration
                 store,
                 sp.GetRequiredService<AccountViewModel>(),
                 token => sp.GetRequiredService<AccountService>().SignedInUserIdAsync(token),
-                (transactionId, token) => sp.GetRequiredService<AccountService>().SubmitAppStoreTransactionAsync(transactionId, token)));
+                (transactionId, token) => sp.GetRequiredService<AccountService>().SubmitAppStoreTransactionAsync(transactionId, token),
+                openExternal: platform.OpenExternal));
         }
 
         return services;

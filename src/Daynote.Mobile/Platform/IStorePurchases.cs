@@ -75,4 +75,9 @@ public enum StorePurchaseStatus
     Failed,
 }
 
-public sealed record StorePurchaseResult(StorePurchaseStatus Status, string? Message = null);
+/// <summary>
+/// The outcome of one purchase sheet. <paramref name="TransactionId"/> is the id the handler was given
+/// for this purchase, so the caller can tell whether this transaction — not another one delivered
+/// meanwhile — reached the server.
+/// </summary>
+public sealed record StorePurchaseResult(StorePurchaseStatus Status, string? Message = null, string? TransactionId = null);
