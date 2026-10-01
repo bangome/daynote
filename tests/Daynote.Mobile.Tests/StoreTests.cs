@@ -156,6 +156,29 @@ public sealed class StoreTests
     });
 
     [TestMethod]
+    public void A_purchase_the_server_refuses_for_good_is_finished() => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(AccountFailure.PurchaseRefused, "not ours");
+
+        Run(store.ProCard.BuyCommand);
+
+        CollectionAssert.AreEqual(new[] { "1000000000000001" }, fake.Finished, "It would come back on every launch.");
+        Assert.AreEqual(MobileStrings.Get("StoreFailed"), store.ErrorMessage);
+    });
+
+    [TestMethod]
+    public void Signing_in_sends_what_StoreKit_held_back() => WithStorePage(
+        Entitlement.Unknown,
+        BillingLinks.None,
+        (_, _, shell) =>
+        {
+            int before = Fake!.Retries;
+            shell.Account!.SignedInEmail = "someone@example.com";
+            Assert.IsGreaterThan(before, Fake.Retries, "Transactions held while signed out are never sent.");
+        },
+        signedIn: false);
+
+    [TestMethod]
     public void Restore_with_nothing_to_restore_says_so() => WithStore((store, server, _, _) =>
     {
         Run(store.RestoreCommand);
@@ -505,5 +528,9 @@ public sealed class StoreTests
         public void OpenSubscriptionManagement()
         {
         }
+
+        public int Retries { get; private set; }
+
+        public void RetryHeld() => Retries++;
     }
 }

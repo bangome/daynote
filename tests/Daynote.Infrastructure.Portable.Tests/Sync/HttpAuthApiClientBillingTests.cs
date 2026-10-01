@@ -152,6 +152,28 @@ public sealed class HttpAuthApiClientBillingTests
         StringAssert.Contains(failure.Message, "different Daynote account");
     }
 
+    [TestMethod]
+    public async Task A_refused_App_Store_purchase_is_final_and_an_unconfigured_server_is_not()
+    {
+        var refused = new StubHandler("""{ "error": "bad_request", "message": "That purchase is not a Daynote subscription." }""")
+        {
+            Status = HttpStatusCode.BadRequest,
+        };
+        var client = new HttpAuthApiClient(new HttpClient(refused) { BaseAddress = new Uri("https://daynote.test/") });
+        AccountException final = await Assert.ThrowsExactlyAsync<AccountException>(
+            async () => await client.SubmitAppStoreTransactionAsync("token", "2000000000000001"));
+        Assert.AreEqual(AccountFailure.PurchaseRefused, final.Failure);
+
+        var unconfigured = new StubHandler("""{ "error": "unavailable", "message": "not configured" }""")
+        {
+            Status = HttpStatusCode.ServiceUnavailable,
+        };
+        client = new HttpAuthApiClient(new HttpClient(unconfigured) { BaseAddress = new Uri("https://daynote.test/") });
+        AccountException later = await Assert.ThrowsExactlyAsync<AccountException>(
+            async () => await client.SubmitAppStoreTransactionAsync("token", "2000000000000001"));
+        Assert.AreEqual(AccountFailure.ServerError, later.Failure, "A server not set up yet must leave the purchase to be sent again.");
+    }
+
     private sealed class StubHandler(string response) : HttpMessageHandler
     {
         public string Response { get; set; } = response;

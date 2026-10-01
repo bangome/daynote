@@ -30,6 +30,12 @@ public interface IStorePurchases
     /// </summary>
     Func<StoreTransaction, Task<bool>>? TransactionHandler { get; set; }
 
+    /// <summary>
+    /// Sends again the transactions the handler declined — signed out at launch, offline — now
+    /// that it might accept them. StoreKit 1 itself only hands them back on the next launch.
+    /// </summary>
+    void RetryHeld();
+
     /// <summary>The products StoreKit knows, with prices localized for this storefront.</summary>
     Task<IReadOnlyList<StoreProduct>> LoadProductsAsync(IReadOnlyCollection<string> productIds, CancellationToken cancellationToken);
 
@@ -41,7 +47,8 @@ public interface IStorePurchases
 
     /// <summary>
     /// Asks StoreKit for this Apple ID's earlier purchases and waits until the handler has dealt with
-    /// each. Answers how many there were.
+    /// each. Answers how many subscriptions there were — not transactions: StoreKit returns one per
+    /// renewal, and those are sent once per subscription.
     /// </summary>
     Task<int> RestoreAsync(CancellationToken cancellationToken);
 

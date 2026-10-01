@@ -475,6 +475,17 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             },
             cancellationToken).ConfigureAwait(false);
 
+        // A 400 or 404 here is a verdict on the purchase, not a passing failure: the app finishes
+        // the transaction rather than sending it on every launch. A 503 (not configured yet) and
+        // anything else stay retryable.
+        if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.NotFound)
+        {
+            string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            throw new AccountException(
+                AccountFailure.PurchaseRefused,
+                ReadErrorMessage(body) ?? "The App Store purchase was refused.");
+        }
+
         return await ReadBillingAsync(response, cancellationToken).ConfigureAwait(false);
     }
 

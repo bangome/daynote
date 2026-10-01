@@ -79,6 +79,9 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// <summary>Set by the transaction handler: whether the last purchase reached the server.</summary>
     private bool _lastConfirmed;
 
+    /// <summary>Restored subscriptions the server confirmed during the restore in progress.</summary>
+    private int _restoreConfirmed;
+
     public MobileStoreViewModel(
         IStorePurchases store,
         AccountViewModel account,
@@ -100,6 +103,14 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 or nameof(AccountViewModel.IsSignedIn) or nameof(AccountViewModel.SignedInEmail))
             {
                 Refresh();
+            }
+
+            // Signed in at last: what StoreKit delivered before there was an account to record it
+            // against (a renewal at launch, a purchase a crash interrupted) can be sent now.
+            if (e.PropertyName is nameof(AccountViewModel.IsSignedIn) or nameof(AccountViewModel.SignedInEmail)
+                && account.IsSignedIn)
+            {
+                _store.RetryHeld();
             }
         };
         LocalizationService.Instance.LanguageChanged += (_, _) => Refresh();
@@ -265,6 +276,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         StatusMessage = null;
         if (IsSignedIn)
         {
+            _store.RetryHeld();
             await _refreshBilling().ConfigureAwait(true);
         }
 
@@ -398,6 +410,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         }
 
         IsBusy = true;
+        _restoreConfirmed = 0;
         try
         {
             int restored = await _store.RestoreAsync(CancellationToken.None).ConfigureAwait(true);
@@ -407,7 +420,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             }
             else if (ErrorMessage is null)
             {
-                StatusMessage = MobileStrings.Get(_lastConfirmed ? "StoreRestoreDone" : "StoreVerifyFailed");
+                StatusMessage = MobileStrings.Get(_restoreConfirmed > 0 ? "StoreRestoreDone" : "StoreVerifyFailed");
             }
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -456,11 +469,22 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             Account.Entitlement = entitlement;
             Account.Billing = links;
             _lastConfirmed = true;
+            if (transaction.IsRestore)
+            {
+                _restoreConfirmed++;
+            }
+
             return true;
         }
         catch (AccountException failure) when (failure.Failure == AccountFailure.PurchaseBelongsToAnotherAccount)
         {
             ErrorMessage = MobileStrings.Get("StoreOtherAccount");
+            return true;
+        }
+        catch (AccountException failure) when (failure.Failure == AccountFailure.PurchaseRefused)
+        {
+            // Never going to be accepted; finishing it stops it coming back on every launch.
+            ErrorMessage = MobileStrings.Get("StoreFailed");
             return true;
         }
         catch (AccountException)

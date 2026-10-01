@@ -140,6 +140,12 @@ public enum AccountFailure
     /// </summary>
     PurchaseBelongsToAnotherAccount,
 
+    /// <summary>
+    /// The server read the App Store purchase and will never accept it: another app's, not one of
+    /// the subscriptions, or unknown to the App Store. Sending it again cannot change that.
+    /// </summary>
+    PurchaseRefused,
+
     ServerError,
 }
 

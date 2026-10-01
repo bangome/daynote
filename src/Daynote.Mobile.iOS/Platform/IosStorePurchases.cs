@@ -42,10 +42,18 @@ public sealed class IosStorePurchases : IStorePurchases
     /// <summary>The purchase sheet that is up, by product id: one at a time per product.</summary>
     private readonly Dictionary<string, TaskCompletionSource<StorePurchaseResult>> purchases = new(StringComparer.Ordinal);
 
-    /// <summary>The restore in progress, its count, and the handler calls it has to wait for.</summary>
+    /// <summary>
+    /// The restore in progress. StoreKit 1 hands back one restored transaction per renewal ever paid,
+    /// so they are grouped by subscription (the original transaction): one server call each, made one
+    /// after another, and the rest of a group finished with the first.
+    /// </summary>
     private TaskCompletionSource<int>? restore;
-    private int restored;
+    private readonly Dictionary<string, Task<bool>> restoreGroups = new(StringComparer.Ordinal);
     private readonly List<Task> restoreWork = [];
+    private Task restoreChain = Task.CompletedTask;
+
+    /// <summary>Transactions being sent right now, by StoreKit's id, so a retry does not send one twice.</summary>
+    private readonly HashSet<string> settling = new(StringComparer.Ordinal);
 
     private Func<StoreTransaction, Task<bool>>? handler;
 
@@ -66,17 +74,22 @@ public sealed class IosStorePurchases : IStorePurchases
         set
         {
             handler = value;
-            if (value is null || held.Count == 0)
-            {
-                return;
-            }
+            RetryHeld();
+        }
+    }
 
-            SKPaymentTransaction[] waiting = [.. held];
-            held.Clear();
-            foreach (SKPaymentTransaction transaction in waiting)
-            {
-                _ = SettleAsync(transaction);
-            }
+    public void RetryHeld()
+    {
+        if (handler is null || held.Count == 0)
+        {
+            return;
+        }
+
+        SKPaymentTransaction[] waiting = [.. held];
+        held.Clear();
+        foreach (SKPaymentTransaction transaction in waiting)
+        {
+            _ = SettleAsync(transaction);
         }
     }
 
@@ -157,8 +170,9 @@ public sealed class IosStorePurchases : IStorePurchases
     public async Task<int> RestoreAsync(CancellationToken cancellationToken)
     {
         restore = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        restored = 0;
+        restoreGroups.Clear();
         restoreWork.Clear();
+        restoreChain = Task.CompletedTask;
         SKPaymentQueue.DefaultQueue.RestoreCompletedTransactions();
         using (cancellationToken.Register(() => restore.TrySetCanceled(cancellationToken)))
         {
@@ -183,18 +197,11 @@ public sealed class IosStorePurchases : IStorePurchases
             switch (transaction.TransactionState)
             {
                 case SKPaymentTransactionState.Purchased:
+                    _ = SettleAsync(transaction);
+                    break;
+
                 case SKPaymentTransactionState.Restored:
-                    if (transaction.TransactionState == SKPaymentTransactionState.Restored)
-                    {
-                        restored++;
-                    }
-
-                    Task settling = SettleAsync(transaction);
-                    if (restore is not null && transaction.TransactionState == SKPaymentTransactionState.Restored)
-                    {
-                        restoreWork.Add(settling);
-                    }
-
+                    Restored(transaction);
                     break;
 
                 case SKPaymentTransactionState.Failed:
@@ -225,39 +232,96 @@ public sealed class IosStorePurchases : IStorePurchases
     /// </summary>
     private async Task SettleAsync(SKPaymentTransaction transaction)
     {
-        string productId = transaction.Payment?.ProductIdentifier ?? string.Empty;
-        if (handler is not { } settle)
+        await SettleOneAsync(transaction).ConfigureAwait(true);
+        if (transaction.TransactionState != SKPaymentTransactionState.Restored)
         {
-            held.Add(transaction);
-            return;
+            Complete(transaction.Payment?.ProductIdentifier ?? string.Empty, new StorePurchaseResult(StorePurchaseStatus.Purchased));
         }
+    }
 
+    /// <summary>
+    /// One call to the handler. True finishes the transaction; false keeps it in <see cref="held"/>,
+    /// sent again by <see cref="RetryHeld"/> (signing in) or, failing that, by StoreKit on the next launch.
+    /// </summary>
+    private async Task<bool> SettleOneAsync(SKPaymentTransaction transaction)
+    {
+        string productId = transaction.Payment?.ProductIdentifier ?? string.Empty;
         bool isRestore = transaction.TransactionState == SKPaymentTransactionState.Restored;
         string? id = isRestore
             ? transaction.OriginalTransaction?.TransactionIdentifier ?? transaction.TransactionIdentifier
             : transaction.TransactionIdentifier;
+        string key = transaction.TransactionIdentifier ?? id ?? string.Empty;
+
+        if (handler is not { } settle || id is not { Length: > 0 } || !settling.Add(key))
+        {
+            Hold(transaction);
+            return false;
+        }
 
         bool finish = false;
-        if (id is { Length: > 0 })
+        try
         {
-            try
-            {
-                finish = await settle(new StoreTransaction(id, productId, isRestore)).ConfigureAwait(true);
-            }
-            catch (Exception exception) when (exception is not OutOfMemoryException)
-            {
-                System.Diagnostics.Trace.TraceError($"Recording an App Store transaction failed: {exception}");
-            }
+            finish = await settle(new StoreTransaction(id, productId, isRestore)).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            System.Diagnostics.Trace.TraceError($"Recording an App Store transaction failed: {exception}");
+        }
+        finally
+        {
+            settling.Remove(key);
         }
 
         if (finish)
         {
             SKPaymentQueue.DefaultQueue.FinishTransaction(transaction);
         }
-
-        if (!isRestore)
+        else
         {
-            Complete(productId, new StorePurchaseResult(StorePurchaseStatus.Purchased));
+            Hold(transaction);
+        }
+
+        return finish;
+    }
+
+    private void Hold(SKPaymentTransaction transaction)
+    {
+        if (!held.Contains(transaction))
+        {
+            held.Add(transaction);
+        }
+    }
+
+    /// <summary>
+    /// A restored transaction: the first of its subscription is sent, after the one before it; the
+    /// rest of that subscription wait for its answer and are finished, or held, with it.
+    /// </summary>
+    private void Restored(SKPaymentTransaction transaction)
+    {
+        string group = transaction.OriginalTransaction?.TransactionIdentifier ?? transaction.TransactionIdentifier ?? string.Empty;
+        if (restoreGroups.TryGetValue(group, out Task<bool>? first))
+        {
+            restoreWork.Add(FollowAsync(first, transaction));
+            return;
+        }
+
+        Task<bool> sent = SendAfterAsync(restoreChain, transaction);
+        restoreChain = sent;
+        restoreGroups[group] = sent;
+        restoreWork.Add(sent);
+    }
+
+    private async Task<bool> SendAfterAsync(Task before, SKPaymentTransaction transaction)
+    {
+        await before.ConfigureAwait(true);
+        return await SettleOneAsync(transaction).ConfigureAwait(true);
+    }
+
+    private static async Task FollowAsync(Task<bool> first, SKPaymentTransaction transaction)
+    {
+        if (await first.ConfigureAwait(true))
+        {
+            SKPaymentQueue.DefaultQueue.FinishTransaction(transaction);
         }
     }
 
@@ -283,9 +347,10 @@ public sealed class IosStorePurchases : IStorePurchases
             return;
         }
 
-        // Every restored transaction has been delivered by now; wait for the server to have each.
+        // Every restored transaction has been delivered by now; wait for the server to have each
+        // subscription, and answer how many subscriptions there were.
         await Task.WhenAll([.. restoreWork]).ConfigureAwait(true);
-        completion.TrySetResult(restored);
+        completion.TrySetResult(restoreGroups.Count);
     }
 
     /// <summary>
