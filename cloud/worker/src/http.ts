@@ -19,6 +19,7 @@ export type ErrorCode =
   | 'subscription_required'
   | 'subscription_active'
   | 'payload_too_large'
+  | 'unavailable'
   | 'server_error';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -37,6 +38,8 @@ const STATUS: Record<ErrorCode, number> = {
   // the account's state is what stands in the way, and cancelling billing first resolves it.
   subscription_active: 409,
   payload_too_large: 413,
+  // Something this server has not been set up for yet; worth trying again later.
+  unavailable: 503,
   server_error: 500,
 };
 

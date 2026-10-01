@@ -129,11 +129,12 @@ function readConfig(env: Env): IapConfig | null {
   };
 }
 
-/** A 400 the app can show, as for an unconfigured sign-in: nothing is broken, a key is missing. */
+/** A refusal the app can show: nothing is broken, a key is missing. */
 function requireConfig(env: Env): IapConfig {
   const config = readConfig(env);
   if (config === null) {
-    throw new ApiError('bad_request', 'App Store purchases are not configured on this server yet.');
+    // 503, not 400: the purchase is fine and the app keeps it to send again once the key is set.
+    throw new ApiError('unavailable', 'App Store purchases are not configured on this server yet.');
   }
   return config;
 }

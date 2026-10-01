@@ -219,14 +219,21 @@ export async function webhook(request: Request, env: Env, now: Date): Promise<Re
   // The record and the change commit together (a D1 batch is one transaction). If applying fails —
   // a schema the deploy got ahead of, say — the event is not marked seen, the 500 makes Paddle
   // retry, and the retry applies it. Recording first would have swallowed it for good.
+  let results: D1Result[];
   try {
-    await env.DB.batch(change === null ? [record] : [record, change]);
+    results = await env.DB.batch(change === null ? [record] : [record, change]);
   } catch (error) {
     // A concurrent delivery of the same event won the insert: that one applied it.
     if (error instanceof Error && /UNIQUE/i.test(error.message)) {
       return noContent();
     }
     throw error;
+  }
+
+  // The upsert's guard refused it: another live subscription took the row after `ownership` read
+  // it. This one is set aside like any other second subscription.
+  if (userId !== null && subscriptionId?.startsWith('sub_') && results[1]?.meta.changes === 0) {
+    await markDuplicate(env, userId, subscriptionId, now).run();
   }
 
   return noContent();
@@ -323,7 +330,8 @@ async function applyStatement(
        tier = CASE WHEN ?12 THEN excluded.tier ELSE tier END,
        plan = CASE WHEN ?12 THEN excluded.plan ELSE plan END,
        price_id = CASE WHEN ?12 THEN excluded.price_id ELSE price_id END,
-       price_occurred_utc = CASE WHEN ?12 THEN excluded.price_occurred_utc ELSE price_occurred_utc END`
+       price_occurred_utc = CASE WHEN ?12 THEN excluded.price_occurred_utc ELSE price_occurred_utc END
+     ${subscriptionId?.startsWith('sub_') ? ownershipGuard('?13') : ''}`
       // ?12 is spelled out rather than bound: it has to compare against the stored row.
       .replaceAll(
         '?12',
@@ -343,6 +351,8 @@ async function applyStatement(
       price?.plan ?? null,
       price?.priceId ?? null,
       occurred,
+      // ?12 is spelled out in the text, so the guard's instant is ?13 and ?12 is bound to nothing.
+      ...(subscriptionId?.startsWith('sub_') ? [null, canonicalUtc(now)] : []),
     );
 }
 
@@ -361,6 +371,11 @@ interface StoredSubscription {
  * only a notification moves its status and a missed one must not hold the account for ever.
  */
 export function isLive(row: StoredSubscription, now: Date): boolean {
+  // An App Store subscription with auto-renew off is paid up to its period end, and entitled
+  // (entitlement.ts): until then it holds the account like any running one.
+  if (row.provider === 'apple' && row.status === 'canceled') {
+    return row.current_period_end_utc !== null && Date.parse(row.current_period_end_utc) > now.getTime();
+  }
   if (!LIVE.has(row.status)) {
     return false;
   }
@@ -415,6 +430,23 @@ export async function ownership(
     return 'duplicate';
   }
   return 'ignore';
+}
+
+/**
+ * `isLive` in SQL, over the stored row of an upsert, against the instant bound as `now`. Used as the
+ * upsert's own guard so that the decision `ownership` took cannot be undone by a write that landed
+ * in between: two subscriptions arriving together can both read "take", and only the first write
+ * may then succeed. The caller sees `meta.changes === 0` for the one that lost and sets it aside.
+ */
+export function ownershipGuard(now: string): string {
+  const live = `(
+      (provider = 'apple' AND status = 'canceled' AND current_period_end_utc > ${now})
+      OR (status IN ('active', 'trialing', 'past_due', 'paused') AND (
+        (provider = 'paddle' AND substr(subscription_id, 1, 4) = 'sub_')
+        OR (provider = 'apple' AND status = 'past_due' AND grace_ends_utc > ${now})
+        OR (provider = 'apple' AND status <> 'past_due' AND current_period_end_utc > ${now}))))`;
+  return `WHERE subscription_id IS NULL OR NOT ${live}
+      OR (provider = excluded.provider AND subscription_id = excluded.subscription_id)`;
 }
 
 export function markDuplicate(env: Env, userId: string, subscriptionId: string, now: Date): D1PreparedStatement {

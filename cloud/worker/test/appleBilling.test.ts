@@ -85,6 +85,8 @@ function transaction(userId: string | undefined, overrides: Record<string, unkno
 interface AppleState {
   environment?: 'Production' | 'Sandbox';
   transaction: Record<string, unknown> & { transactionId: string; originalTransactionId: string };
+  /** The subscription's newest transaction, when it is not the one posted. */
+  latest?: Record<string, unknown>;
   status?: number;
   autoRenewStatus?: number;
   signingChain?: TestChain;
@@ -114,7 +116,7 @@ function appleApi(state: AppleState): OutboundCall[] {
           lastTransactions: [{
             originalTransactionId: state.transaction.originalTransactionId,
             status: state.status ?? 1,
-            signedTransactionInfo: await signJws(signingChain, state.transaction),
+            signedTransactionInfo: await signJws(signingChain, state.latest ?? state.transaction),
             signedRenewalInfo: await signJws(signingChain, {
               originalTransactionId: state.transaction.originalTransactionId,
               autoRenewProductId: state.transaction.productId,
@@ -350,7 +352,8 @@ describe('POST /v1/billing/apple/transaction', () => {
     const account = await signIn();
 
     const response = await post('/v1/billing/apple/transaction', { transaction_id: '2000000000000001' }, { token: account.accessToken });
-    expect(response.status).toBe(400);
+    // 503, so the app keeps the transaction and sends it again once the key is set.
+    expect(response.status).toBe(503);
     expect(response.body.message).toMatch(/not configured/);
   });
 
@@ -358,6 +361,74 @@ describe('POST /v1/billing/apple/transaction', () => {
     const account = await signIn();
     const response = await post('/v1/billing/apple/transaction', { transaction_id: '../etc' }, { token: account.accessToken });
     expect(response.status).toBe(400);
+  });
+});
+
+describe('one App Store subscription, one account', () => {
+  it('follows the newest transaction’s account, and refuses the old one re-posted', async () => {
+    const first = await signIn();
+    const second = await signIn();
+    const bought = transaction(first.userId, { productId: PRO_MONTHLY, signedDate: Date.now() - 2000 });
+    appleApi({ transaction: bought });
+    expect((await post('/v1/billing/apple/transaction', { transaction_id: bought.transactionId }, { token: first.accessToken })).status).toBe(200);
+    vi.restoreAllMocks();
+
+    // The same Apple ID changes product from the second account: the new transaction is its.
+    const switched = {
+      ...bought, transactionId: '3000000000000009', productId: PREMIUM_MONTHLY,
+      appAccountToken: second.userId, signedDate: Date.now(),
+    };
+    appleApi({ transaction: switched });
+    expect((await post('/v1/billing/apple/transaction', { transaction_id: switched.transactionId }, { token: second.accessToken })).status).toBe(200);
+    vi.restoreAllMocks();
+
+    expect(await row(second.userId)).toMatchObject({ provider: 'apple', status: 'active', tier: 'premium' });
+    expect((await row(first.userId))?.status).toBe('transferred');
+
+    // The first account posting its own old purchase again finds the subscription is no longer its.
+    appleApi({ transaction: bought, latest: switched });
+    const replay = await post('/v1/billing/apple/transaction', { transaction_id: bought.transactionId }, { token: first.accessToken });
+    expect(replay.status).toBe(403);
+    expect((await get('/v1/billing/status', { token: first.accessToken })).body.can_sync_files).toBe(false);
+  });
+});
+
+describe('a subscription that will not renew, but is paid up', () => {
+  it('still holds the account against Paddle and against a late event for another one', async () => {
+    const account = await signIn();
+    const txn = transaction(account.userId, { signedDate: Date.now() - 1000 });
+    appleApi({ transaction: txn, autoRenewStatus: 0 });
+    await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+    vi.restoreAllMocks();
+
+    const checkout = await post('/v1/billing/checkout', { tier: 'pro', plan: 'monthly' }, { token: account.accessToken });
+    expect(checkout.status).toBe(409);
+
+    // An older App Store subscription's expiry, delivered late, must not take the row.
+    const older = transaction(account.userId, { expiresDate: Date.now() - DAY, signedDate: Date.now() });
+    await notify(await notification('EXPIRED', older, { status: 2 }));
+    expect(await row(account.userId)).toMatchObject({ subscription_id: txn.originalTransactionId, status: 'canceled' });
+  });
+});
+
+describe('the upsert guard', () => {
+  it('refuses a write over a live subscription that ownership() did not see', async () => {
+    const { ownershipGuard } = await import('../src/billing');
+    const account = await signIn();
+    await env.DB.prepare(
+      `INSERT INTO subscriptions (user_id, provider, subscription_id, status, current_period_end_utc, updated_utc, tier)
+       VALUES (?1, 'apple', '2000000000000555', 'active', ?2, ?2, 'premium')`,
+    ).bind(account.userId, new Date(Date.now() + 10 * DAY).toISOString()).run();
+
+    const write = (provider: string, subscriptionId: string) => env.DB.prepare(
+      `INSERT INTO subscriptions (user_id, provider, subscription_id, status, updated_utc)
+       VALUES (?1, ?2, ?3, 'active', ?4)
+       ON CONFLICT(user_id) DO UPDATE SET subscription_id = excluded.subscription_id, provider = excluded.provider
+       ${ownershipGuard('?4')}`,
+    ).bind(account.userId, provider, subscriptionId, new Date().toISOString()).run();
+
+    expect((await write('paddle', 'sub_racer')).meta.changes).toBe(0);
+    expect((await write('apple', '2000000000000555')).meta.changes).toBe(1);
   });
 });
 

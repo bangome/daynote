@@ -2,7 +2,7 @@ import { authenticate } from './auth';
 import { sha256Hex } from './bytes';
 import { graceEnd, type Plan, type Tier } from './entitlement';
 import { ApiError, json, readJsonObject } from './http';
-import { markDuplicate, ownership, statusBody } from './billing';
+import { markDuplicate, ownership, ownershipGuard, statusBody } from './billing';
 import {
   APPLE_PRODUCTS,
   appStoreGet,
@@ -133,7 +133,9 @@ function snapshotOf(
       status = 'expired';
   }
 
-  const live = (status === 'active' && !expired)
+  // Paid up counts as live whether or not it renews: a subscriber who turned auto-renew off still
+  // holds the account until the period ends (billing.ts, isLive).
+  const live = ((status === 'active' || status === 'canceled') && !expired)
     || (status === 'past_due' && grace !== null && Date.parse(grace) > now.getTime());
 
   return {
@@ -194,7 +196,8 @@ async function snapshotStatement(
            THEN NULL ELSE duplicate_subscription_id END,
        ${['provider', 'subscription_id', 'status', 'current_period_end_utc', 'grace_ends_utc', 'tier', 'plan',
          'price_id', 'environment', 'price_occurred_utc'].map(follow).join(',\n       ')},
-       updated_utc = excluded.updated_utc`,
+       updated_utc = excluded.updated_utc
+     ${ownershipGuard('?12')}`,
   ).bind(
     userId,
     snapshot.originalTransactionId,
@@ -207,7 +210,38 @@ async function snapshotStatement(
     snapshot.productId,
     snapshot.signedUtc,
     snapshot.environment,
+    canonicalUtc(now),
   );
+}
+
+/**
+ * Writes a snapshot. Two things beyond the upsert: a lost race with another subscription (the
+ * upsert's guard refused it, `meta.changes === 0`) is set aside as a duplicate, and any other
+ * account still holding this subscription loses it — one App Store subscription entitles one
+ * account, the one its newest transaction was made for.
+ */
+async function applySnapshot(
+  env: Env,
+  userId: string,
+  snapshot: Snapshot,
+  now: Date,
+  record?: D1PreparedStatement,
+): Promise<void> {
+  const change = await snapshotStatement(env, userId, snapshot, now);
+  const release = env.DB.prepare(
+    `UPDATE subscriptions SET status = 'transferred', updated_utc = ?3
+      WHERE provider = 'apple' AND subscription_id = ?2 AND user_id <> ?1`,
+  ).bind(userId, snapshot.originalTransactionId, canonicalUtc(now));
+
+  const statements = [...(record === undefined ? [] : [record]), ...(change === null ? [] : [change, release])];
+  if (statements.length === 0) {
+    return;
+  }
+  const results = await env.DB.batch(statements);
+  const changeResult = change === null ? undefined : results[record === undefined ? 0 : 1];
+  if (changeResult !== undefined && changeResult.meta.changes === 0) {
+    await markDuplicate(env, userId, snapshot.originalTransactionId, now).run();
+  }
 }
 
 /** The account a token names, when it is an account that exists. */
@@ -223,7 +257,7 @@ async function accountOfToken(env: Env, token: string | undefined): Promise<stri
 
 async function accountOfSubscription(env: Env, originalTransactionId: string): Promise<string | null> {
   const row = await env.DB.prepare(
-    "SELECT user_id FROM subscriptions WHERE provider = 'apple' AND subscription_id = ?1",
+    "SELECT user_id FROM subscriptions WHERE provider = 'apple' AND subscription_id = ?1 AND status <> 'transferred'",
   )
     .bind(originalTransactionId)
     .first<{ user_id: string }>();
@@ -234,21 +268,40 @@ const OTHER_ACCOUNT =
   'This App Store subscription belongs to a different Daynote account. Sign in with that account to use it.';
 
 /**
- * Refuses a transaction that belongs to someone else. The token decides when it names an account
- * that exists. With no token — a subscription started outside the app, from an offer code — or a
- * token whose account was deleted, the transaction is free to claim unless another account already
- * holds the subscription.
+ * Refuses a subscription that belongs to someone else.
+ *
+ * The newest transaction decides, not the one posted: an Apple ID can change product from another
+ * Daynote account, and the new transaction then carries that account's token, so an old transaction
+ * id re-posted by the first account must not keep it entitled. A token naming an existing account
+ * decides; the caller may take the subscription from another account only when the newest token is
+ * the caller's (`applySnapshot` then releases the other row). With no token on either — an offer
+ * code redeemed outside the app — or a token whose account was deleted, it is free to claim unless
+ * another account already holds it.
  */
-async function requireOwnership(env: Env, userId: string, transaction: AppleTransaction): Promise<void> {
-  const tokenOwner = await accountOfToken(env, transaction.appAccountToken);
-  if (tokenOwner !== null) {
-    if (tokenOwner !== userId) {
+async function requireOwnership(
+  env: Env,
+  userId: string,
+  purchased: AppleTransaction,
+  latest: AppleTransaction,
+): Promise<void> {
+  const latestOwner = await accountOfToken(env, latest.appAccountToken);
+  if (latestOwner !== null) {
+    if (latestOwner !== userId) {
       throw new ApiError('forbidden', OTHER_ACCOUNT);
     }
     return;
   }
-  const holder = await accountOfSubscription(env, transaction.originalTransactionId ?? '');
-  if (holder !== null && holder !== userId) {
+  const purchasedOwner = await accountOfToken(env, purchased.appAccountToken);
+  if (purchasedOwner !== null && purchasedOwner !== userId) {
+    throw new ApiError('forbidden', OTHER_ACCOUNT);
+  }
+  const holders = await env.DB.prepare(
+    `SELECT user_id FROM subscriptions
+      WHERE provider = 'apple' AND subscription_id = ?1 AND user_id <> ?2 AND status <> 'transferred'`,
+  )
+    .bind(latest.originalTransactionId ?? '', userId)
+    .first<{ user_id: string }>();
+  if (holders !== null) {
     throw new ApiError('forbidden', OTHER_ACCOUNT);
   }
 }
@@ -293,7 +346,6 @@ export async function transaction(request: Request, env: Env, now: Date): Promis
   const found = await appStoreGet(env, `/inApps/v1/transactions/${transactionId}`, now);
   const purchased = await verifyJws<AppleTransaction>(env, found.body['signedTransactionInfo'], now);
   requireOurs(env, purchased);
-  await requireOwnership(env, user.id, purchased);
 
   // The transaction is one moment; the subscription's status says where it stands now — renewed
   // since, upgraded, refunded, retrying a card. Asked in the environment the purchase was found in.
@@ -313,9 +365,11 @@ export async function transaction(request: Request, env: Env, now: Date): Promis
       : await verifyJws<AppleRenewalInfo>(env, item.signedRenewalInfo, now);
   }
 
+  await requireOwnership(env, user.id, purchased, latest);
+
   const snapshot = snapshotOf(latest, renewal, item?.status, found.environment, now);
   if (snapshot !== null) {
-    await (await snapshotStatement(env, user.id, snapshot, now))?.run();
+    await applySnapshot(env, user.id, snapshot, now);
   }
 
   return json(await statusBody(env, user.id, now));
@@ -394,12 +448,14 @@ export async function notifications(request: Request, env: Env, now: Date): Prom
     'INSERT INTO billing_events (event_id, event_type, user_id, received_utc) VALUES (?1, ?2, ?3, ?4)',
   ).bind(eventId, eventType, userId, canonicalUtc(now));
 
-  const change = userId !== null && snapshot !== null && HANDLED.has(payload.notificationType ?? '')
-    ? await snapshotStatement(env, userId, snapshot, now)
-    : null;
+  const acts = userId !== null && snapshot !== null && HANDLED.has(payload.notificationType ?? '');
 
   try {
-    await env.DB.batch(change === null ? [record] : [record, change]);
+    if (acts) {
+      await applySnapshot(env, userId!, snapshot!, now, record);
+    } else {
+      await record.run();
+    }
   } catch (error) {
     if (error instanceof Error && /UNIQUE/i.test(error.message)) {
       return json({ ok: true });
