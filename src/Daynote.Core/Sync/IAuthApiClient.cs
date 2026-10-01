@@ -230,6 +230,17 @@ public interface IAuthApiClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Hands the server an App Store transaction id after a purchase, renewal or restore on the
+    /// iPhone. The server reads the purchase from Apple itself and answers with the billing state
+    /// after it (docs/CLOUD_SYNC.md §14.8). Throws
+    /// <see cref="AccountFailure.PurchaseBelongsToAnotherAccount"/> for another account's purchase.
+    /// </summary>
+    ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(
+        string accessToken,
+        string transactionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Mints a link to the provider's customer portal, where a subscription is cancelled, a card is
     /// changed, and invoices are found. Called at the moment the user asks for it, because the link
     /// is single-use and expires.

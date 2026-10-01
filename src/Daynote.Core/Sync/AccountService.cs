@@ -381,6 +381,32 @@ public sealed partial class AccountService
             (token, ct) => auth.ChangePlanAsync(token, tier, plan, ct),
             cancellationToken);
 
+    /// <summary>Records an App Store purchase with the server and returns the billing state after it.</summary>
+    public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(
+        string transactionId,
+        CancellationToken cancellationToken = default) =>
+        WithAccessTokenAsync(
+            (token, ct) => auth.SubmitAppStoreTransactionAsync(token, transactionId, ct),
+            cancellationToken);
+
+    /// <summary>
+    /// The signed-in account's id, or null when signed out. The iPhone hands it to StoreKit as the
+    /// purchase's <c>appAccountToken</c>, which is how the server knows whose purchase it is.
+    /// </summary>
+    public async ValueTask<string?> SignedInUserIdAsync(CancellationToken cancellationToken = default)
+    {
+        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (credentials is null)
+        {
+            return null;
+        }
+
+        using (credentials)
+        {
+            return credentials.UserId;
+        }
+    }
+
     /// <summary>
     /// Mints a link to the provider's customer portal. Not cached: the link is single-use and
     /// expires, so it is created when the user clicks and used immediately.

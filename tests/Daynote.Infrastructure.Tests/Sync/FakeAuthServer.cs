@@ -247,6 +247,15 @@ internal sealed class FakeAuthServer(Func<DateTimeOffset> utcNow) : IAuthApiClie
         return ValueTask.FromResult((Entitlement, new BillingLinks(true, true, CanChange: true)));
     }
 
+    public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(
+        string accessToken,
+        string transactionId,
+        CancellationToken cancellationToken = default)
+    {
+        _ = Authenticate(accessToken);
+        return ValueTask.FromResult((Entitlement, new BillingLinks(true, false, Provider: BillingProvider.Apple)));
+    }
+
     public ValueTask<string> CreatePortalSessionAsync(
         string accessToken,
         CancellationToken cancellationToken = default)

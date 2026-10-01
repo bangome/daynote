@@ -134,6 +134,12 @@ public enum AccountFailure
     /// </summary>
     SubscriptionStillActive,
 
+    /// <summary>
+    /// An App Store purchase was made for a different Daynote account than the one signed in. It
+    /// stays with that account; signing in with it is the way to use it.
+    /// </summary>
+    PurchaseBelongsToAnotherAccount,
+
     ServerError,
 }
 

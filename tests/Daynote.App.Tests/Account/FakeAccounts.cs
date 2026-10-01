@@ -219,6 +219,15 @@ internal sealed class FakeAccounts
             return ValueTask.FromResult((owner.Entitlement, owner.Billing));
         }
 
+        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(
+            string accessToken,
+            string transactionId,
+            CancellationToken cancellationToken = default)
+        {
+            Throw();
+            return ValueTask.FromResult((owner.Entitlement, owner.Billing));
+        }
+
         public ValueTask<string> CreatePortalSessionAsync(
             string accessToken,
             CancellationToken cancellationToken = default)

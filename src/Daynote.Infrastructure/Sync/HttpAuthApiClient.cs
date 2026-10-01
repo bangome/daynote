@@ -268,6 +268,13 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         string? code = ReadErrorCode(body);
+        if (code == ForbiddenCode)
+        {
+            throw new AccountException(
+                AccountFailure.PurchaseBelongsToAnotherAccount,
+                ReadErrorMessage(body) ?? "This purchase belongs to a different Daynote account.");
+        }
+
         if (code == SubscriptionActiveCode)
         {
             throw new AccountException(
@@ -296,6 +303,9 @@ public sealed class HttpAuthApiClient : IAuthApiClient
     /// <summary>The Worker's code for "a paid subscription would outlive the account".</summary>
     private const string SubscriptionActiveCode = "subscription_active";
 
+    /// <summary>The Worker's code for "this App Store purchase is another account's".</summary>
+    private const string ForbiddenCode = "forbidden";
+
     /// <summary>
     /// The machine-readable half of the Worker's <c>{"error": code, "message": text}</c> body. Only the
     /// code is read: the message is English written for developers and never reaches the UI.
@@ -309,6 +319,24 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 && document.RootElement.TryGetProperty("error", out JsonElement error)
                 && error.ValueKind == JsonValueKind.String
                     ? error.GetString()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The human half of the error body, for the one refusal the app shows as the server words it.</summary>
+    private static string? ReadErrorMessage(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("message", out JsonElement message)
+                && message.ValueKind == JsonValueKind.String
+                    ? message.GetString()
                     : null;
         }
         catch (JsonException)
@@ -409,7 +437,45 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 // Absent before Premium; the Pro intervals above then stand for the whole menu.
                 Offers: body.Offers is null ? null : ToOffers(body.Offers),
                 CanChange: body.CanChange,
-                DuplicateSubscription: body.DuplicateSubscription));
+                DuplicateSubscription: body.DuplicateSubscription,
+                // The App Store fields; absent before the iPhone sold anything, and then empty.
+                Provider: BillingPlanExtensions.ParseProvider(body.Provider),
+                AppleProducts: ToAppleProducts(body.AppleProducts ?? []),
+                AppleCanPurchase: body.AppleCanPurchase,
+                AppleProductId: body.AppleProductId,
+                DuplicateProvider: BillingPlanExtensions.ParseProvider(body.DuplicateProvider)));
+    }
+
+    /// <summary>The App Store products this version understands; an unknown tier or interval is skipped.</summary>
+    private static AppStoreProduct[] ToAppleProducts(IEnumerable<AppleProductBody> products) =>
+    [
+        .. products
+            .Select(product => (
+                Tier: BillingPlanExtensions.ParseTier(product.Tier),
+                Plan: BillingPlanExtensions.ParsePlan(product.Plan),
+                product.ProductId))
+            .Where(product => product.Tier is not null && product.Plan is not null && product.ProductId is { Length: > 0 })
+            .Select(product => new AppStoreProduct(product.Tier!.Value, product.Plan!.Value, product.ProductId!)),
+    ];
+
+    public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(
+        string accessToken,
+        string transactionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(transactionId);
+
+        using HttpResponseMessage response = await SendAsync(
+            () =>
+            {
+                HttpRequestMessage message = Authorized(HttpMethod.Post, "v1/billing/apple/transaction", accessToken);
+                message.Content = JsonContent.Create(new { transaction_id = transactionId }, options: Json);
+                return message;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return await ReadBillingAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -618,7 +684,14 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         bool CanChange,
         bool DuplicateSubscription,
         string[]? Plans,
-        OfferBody[]? Offers) : IEntitlementBody;
+        OfferBody[]? Offers,
+        string? Provider = null,
+        AppleProductBody[]? AppleProducts = null,
+        bool AppleCanPurchase = false,
+        string? AppleProductId = null,
+        string? DuplicateProvider = null) : IEntitlementBody;
+
+    private sealed record AppleProductBody(string? Tier, string? Plan, string? ProductId);
 
     private sealed record OfferBody(string? Tier, string? Plan, MoneyBody[]? Prices);
 

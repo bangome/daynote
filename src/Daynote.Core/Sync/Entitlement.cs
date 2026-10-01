@@ -101,6 +101,15 @@ public sealed record Entitlement(
 /// for a refund; the app says so rather than letting it bill unseen.
 /// </para>
 /// </remarks>
+/// <remarks>
+/// The App Store fields came with the iPhone's In-App Purchase (docs/CLOUD_SYNC.md §14.8).
+/// <see cref="Provider"/> is the store that sold the subscription on record. <see cref="AppleProducts"/>
+/// are the StoreKit product ids on sale, which the iPhone asks StoreKit for localized prices with;
+/// <see cref="AppleCanPurchase"/> is false while a subscription bought elsewhere holds the account,
+/// so the iPhone shows it as managed on another device instead of selling a second.
+/// <see cref="AppleProductId"/> is the App Store product the account is on. All are absent from an
+/// older server, which sold nothing through the App Store.
+/// </remarks>
 public sealed record BillingLinks(
     bool CanCheckout,
     bool CanManage,
@@ -108,7 +117,12 @@ public sealed record BillingLinks(
     bool OffersAnnual = true,
     IReadOnlyList<BillingOffer>? Offers = null,
     bool CanChange = false,
-    bool DuplicateSubscription = false)
+    bool DuplicateSubscription = false,
+    BillingProvider? Provider = null,
+    IReadOnlyList<AppStoreProduct>? AppleProducts = null,
+    bool AppleCanPurchase = false,
+    string? AppleProductId = null,
+    BillingProvider? DuplicateProvider = null)
 {
     public static BillingLinks None { get; } = new(false, false, false, false);
 
@@ -130,6 +144,10 @@ public sealed record BillingLinks(
     /// <summary>True when at least one interval of <paramref name="tier"/> is on sale.</summary>
     public bool Sells(BillingTier tier) => AvailableOffers.Any(offer => offer.Tier == tier);
 
+    /// <summary>The App Store product for this tier and interval, or null when it is not on sale.</summary>
+    public AppStoreProduct? FindAppleProduct(BillingTier tier, BillingPlan plan) =>
+        (AppleProducts ?? []).FirstOrDefault(product => product.Tier == tier && product.Plan == plan);
+
     private BillingOffer[] LegacyOffers()
     {
         List<BillingOffer> offers = [];
@@ -146,6 +164,19 @@ public sealed record BillingLinks(
         return [.. offers];
     }
 }
+
+/// <summary>Which store sold a subscription: Paddle on the desktop, the App Store on the iPhone.</summary>
+public enum BillingProvider
+{
+    Paddle,
+    Apple,
+}
+
+/// <summary>
+/// One App Store product on sale: a tier at an interval, under the StoreKit id its localized price is
+/// read with. The price itself is never sent by the server; the App Store decides it per storefront.
+/// </summary>
+public sealed record AppStoreProduct(BillingTier Tier, BillingPlan Plan, string ProductId);
 
 /// <summary>
 /// The two paid tiers. Both sync images and files; Pro includes 2GB of storage, Premium is sold as
@@ -218,6 +249,14 @@ public static class BillingPlanExtensions
     {
         "monthly" => BillingPlan.Monthly,
         "annual" => BillingPlan.Annual,
+        _ => null,
+    };
+
+    /// <summary>Reads a store from the wire; null for anything this version does not know.</summary>
+    public static BillingProvider? ParseProvider(string? value) => value switch
+    {
+        "paddle" => BillingProvider.Paddle,
+        "apple" => BillingProvider.Apple,
         _ => null,
     };
 

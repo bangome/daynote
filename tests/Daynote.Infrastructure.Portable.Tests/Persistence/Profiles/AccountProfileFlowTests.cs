@@ -604,6 +604,9 @@ public sealed class AccountProfileFlowTests
         public ValueTask<string> CreatePortalSessionAsync(string accessToken, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAppStoreTransactionAsync(string accessToken, string transactionId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         private SessionResponse Issue(string userId, bool withKeys)
         {
             string refresh = "refresh-" + Guid.NewGuid().ToString("N");

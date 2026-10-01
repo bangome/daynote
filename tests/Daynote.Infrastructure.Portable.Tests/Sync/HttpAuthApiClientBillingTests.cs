@@ -96,9 +96,67 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.AreEqual(BillingTier.Premium, changed.Tier);
     }
 
+    private const string AppStoreStatus = """
+        {
+          "state": "active", "until": "2026-11-01T00:00:00.0000000Z", "can_sync_files": true,
+          "has_subscribed": true, "tier": "pro", "plan": "monthly",
+          "can_checkout": true, "can_manage": false, "can_change": false, "duplicate_subscription": true,
+          "duplicate_provider": "paddle", "provider": "apple",
+          "apple_products": [
+            { "tier": "pro", "plan": "monthly", "product_id": "cc.arachat.daynote.pro.monthly" },
+            { "tier": "premium", "plan": "annual", "product_id": "cc.arachat.daynote.premium.annual" },
+            { "tier": "gold", "plan": "annual", "product_id": "cc.arachat.daynote.gold" }
+          ],
+          "apple_can_purchase": true, "apple_product_id": "cc.arachat.daynote.pro.monthly",
+          "server_utc": "2026-10-02T00:00:00.0000000Z"
+        }
+        """;
+
+    [TestMethod]
+    public async Task Reads_the_App_Store_fields_and_does_without_them()
+    {
+        var handler = new StubHandler(AppStoreStatus);
+        var client = new HttpAuthApiClient(new HttpClient(handler) { BaseAddress = new Uri("https://daynote.test/") });
+
+        (_, BillingLinks links) = await client.SubmitAppStoreTransactionAsync("token", "2000000000000001");
+
+        Assert.AreEqual("/v1/billing/apple/transaction", handler.LastPath);
+        Assert.AreEqual("""{"transaction_id":"2000000000000001"}""", handler.LastBody);
+        Assert.AreEqual(BillingProvider.Apple, links.Provider);
+        Assert.AreEqual(BillingProvider.Paddle, links.DuplicateProvider);
+        Assert.IsTrue(links.AppleCanPurchase);
+        Assert.AreEqual("cc.arachat.daynote.pro.monthly", links.AppleProductId);
+        Assert.AreEqual(2, links.AppleProducts!.Count, "The product of an unknown tier was kept.");
+        Assert.AreEqual("cc.arachat.daynote.premium.annual", links.FindAppleProduct(BillingTier.Premium, BillingPlan.Annual)?.ProductId);
+
+        handler.Response = OldStatus;
+        (_, BillingLinks old) = await client.GetBillingAsync("token");
+        Assert.IsNull(old.Provider);
+        Assert.IsFalse(old.AppleCanPurchase);
+        Assert.AreEqual(0, old.AppleProducts!.Count);
+    }
+
+    [TestMethod]
+    public async Task Another_accounts_App_Store_purchase_is_its_own_failure()
+    {
+        var handler = new StubHandler("""{ "error": "forbidden", "message": "This App Store subscription belongs to a different Daynote account." }""")
+        {
+            Status = HttpStatusCode.Forbidden,
+        };
+        var client = new HttpAuthApiClient(new HttpClient(handler) { BaseAddress = new Uri("https://daynote.test/") });
+
+        AccountException failure = await Assert.ThrowsExactlyAsync<AccountException>(
+            async () => await client.SubmitAppStoreTransactionAsync("token", "2000000000000001"));
+
+        Assert.AreEqual(AccountFailure.PurchaseBelongsToAnotherAccount, failure.Failure);
+        StringAssert.Contains(failure.Message, "different Daynote account");
+    }
+
     private sealed class StubHandler(string response) : HttpMessageHandler
     {
         public string Response { get; set; } = response;
+
+        public HttpStatusCode Status { get; init; } = HttpStatusCode.OK;
 
         public string? LastPath { get; private set; }
 
@@ -108,7 +166,7 @@ public sealed class HttpAuthApiClientBillingTests
         {
             LastPath = request.RequestUri?.AbsolutePath;
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(Status)
             {
                 Content = new StringContent(Response, Encoding.UTF8, "application/json"),
             };
