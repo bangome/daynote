@@ -49,3 +49,6 @@ Desktop.ini
 
 # Design-tool exports the user drops in for reference, not source
 docs/*.zip
+
+# Intermediate PNGs for the site images; shots.mjs encodes them into public/img.
+cloud/site/shots/
