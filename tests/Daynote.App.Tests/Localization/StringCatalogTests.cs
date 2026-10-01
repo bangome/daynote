@@ -106,6 +106,13 @@ public sealed partial class StringCatalogTests
             // won in both; and the paid plan is called Pro wherever it is named.
             nameof(AppStrings.PlanFreePrice),
             nameof(AppStrings.PlanProName),
+            nameof(AppStrings.PlanPremiumName),
+            nameof(AppStrings.AccountPlanPremium),
+
+            // A size and two pure format strings: there is nothing in them to translate.
+            nameof(AppStrings.PlanStoragePro),
+            nameof(AppStrings.StorageUsageFormat),
+            nameof(AppStrings.CheckoutPlanLabelFormat),
         };
 
         string[] untranslated = [.. korean

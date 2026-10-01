@@ -304,10 +304,10 @@
         </Border>
 
         <!--
-          The plan table: 무료, Pro and Premium side by side (Daynote Desktop B v2). Two rows differ
+          The plan table: free, Pro and Premium side by side (Daynote Desktop B v2). Two rows differ
           from the free plan - image and file sync, and how much of them may be stored - and Pro and
           Premium differ in storage alone, which is the honest shape of the product. The column in use
-          (or Pro, as the recommendation) is tinted; a paid account's column says "현재 플랜".
+          (or Pro, as the recommendation) is tinted; a paid account's column says it is the current one.
           Shown only while something is on sale; every price is the server's.
 
           Each of the header, the rows and the footer is its own grid - an ItemsControl cannot lay its
