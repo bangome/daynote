@@ -37,8 +37,11 @@
         sit 5 points up and the weekday is placed on the same baseline by hand.
       -->
       <StackPanel Orientation="Horizontal" Height="40" Margin="0,2,0,16">
+        <!-- Padded on both sides and pulled back by the same amount: at this weight and tracking a wide
+             first digit ("30") draws a couple of points left of the text's box, and a device clips it
+             there; the padding gives the ink room without moving the number. -->
         <TextBlock Classes="line" FontSize="40" FontWeight="ExtraBold" LetterSpacing="-2" LineHeight="40"
-                   VerticalAlignment="Top" Margin="0,-5,0,0" Text="{Binding BigDayText}" />
+                   VerticalAlignment="Top" Margin="-6,-5,-4,0" Padding="6,0,4,0" Text="{Binding BigDayText}" />
         <TextBlock Classes="line" FontSize="20" FontWeight="Bold" LetterSpacing="-0.6"
                    VerticalAlignment="Top" Margin="10,14,0,0" Text="{Binding BigWeekdayText}" />
         <Ellipse Width="8" Height="8" Margin="12,16,0,0" VerticalAlignment="Top"

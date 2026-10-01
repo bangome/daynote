@@ -60,8 +60,8 @@ public partial class MainView : UserControl
     /// What Avalonia's own handling cannot give is a surface whose fill reaches the bottom edge: it
     /// stops above the home indicator and the page colour shows through beneath. The editor's
     /// toolbar and the month sheet are pulled down into that strip with a negative margin and their
-    /// content pushed back up by the same amount. The floating tab bar dips into it by the few
-    /// points the design has it do.
+    /// content pushed back up by the same amount. The floating tab bar does not: on a device the
+    /// content is clipped where the strip begins, so the bar sits above it (see DockBottomMargin).
     /// </para>
     /// <para>
     /// Both platforms report the inset in points. Android used to report it in physical pixels, and
@@ -141,10 +141,10 @@ public partial class MainView : UserControl
             ? Math.Max(0, top.ClientSize.Height - bottom - keyboardTop)
             : 0;
 
-        // The bar sits 30 points off the bottom edge of a 34-point home-indicator strip, so 4 into
-        // it. Anything taller is a bar of buttons (Android's three-button navigation reports 48),
-        // which the bar keeps clear of instead of sitting on; with no strip at all it keeps clear of
-        // the edge.
+        // The bar keeps clear of the home-indicator strip or the navigation buttons, and of the
+        // edge when there is neither. The design dips it 4 points into the strip, but on a device
+        // the content stops where the strip begins and anything drawn past it is clipped: on an
+        // iPhone that cut the bar's round bottom flat, and the shadow under it everywhere.
         if (this.FindControl<Grid>("Dock") is { } dock)
         {
             dock.Margin = new Thickness(16, 0, 16, DockBottomMargin(bottom));
@@ -227,15 +227,8 @@ public partial class MainView : UserControl
     }
 
     /// <summary>The floating tab bar's bottom margin over a bottom inset of <paramref name="bottom"/> points.</summary>
-    public static double DockBottomMargin(double bottom) => bottom switch
-    {
-        <= 0 => 16,
-        <= HomeIndicatorStrip => -Math.Min(4, bottom),
-        _ => 8,
-    };
+    public static double DockBottomMargin(double bottom) => bottom > 0 ? 12 : 16;
 
-    /// <summary>The tallest bottom inset that is a home-indicator strip rather than a bar of buttons.</summary>
-    public const double HomeIndicatorStrip = 34;
 
     /// <summary>
     /// Runs a bottom surface's fill under the home indicator and keeps its content above it, by

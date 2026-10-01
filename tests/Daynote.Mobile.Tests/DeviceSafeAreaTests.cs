@@ -23,8 +23,9 @@ namespace Daynote.Mobile.Tests;
 /// </para>
 /// <para>
 /// A button counts only as far as it is on screen: clipped by the scroll view it sits in, a row
-/// scrolled under the tab bar is not a row in the home indicator. The one thing allowed across the
-/// line is the floating tab bar, which the design dips 4 points into the home-indicator strip.
+/// scrolled under the tab bar is not a row in the home indicator. Nothing is allowed across the
+/// line, the floating tab bar included: off a device nothing clips there, but a phone does, and the
+/// design's 4-point dip into the strip came out as a bar with its round bottom cut flat.
 /// Frames land beside the other screen renders, under <c>artifacts/mobile-screens/devices</c>.
 /// </para>
 /// </remarks>
@@ -135,6 +136,15 @@ public sealed class DeviceSafeAreaTests
         Size size = root.ClientSize;
         var dock = view.FindControl<Grid>("Dock");
 
+        // The tab bar as a whole, not only its buttons: a device clips whatever crosses into the
+        // bottom strip, and the bar's round lower edge was cut flat on an iPhone while every button
+        // above it still passed.
+        if (dock is { IsEffectivelyVisible: true } && dock.TranslatePoint(default, root) is { } dockAt &&
+            dockAt.Y + dock.Bounds.Height > size.Height - safe.Bottom + 0.5)
+        {
+            yield return $"the tab bar reaches {dockAt.Y + dock.Bounds.Height:0.#}, past the safe area's bottom {size.Height - safe.Bottom:0.#}";
+        }
+
         foreach (Button button in view.GetVisualDescendants().OfType<Button>())
         {
             if (!button.IsEffectivelyVisible || button.Bounds.Width <= 0 || button.Bounds.Height <= 0 ||
@@ -144,7 +154,7 @@ public sealed class DeviceSafeAreaTests
             }
 
             bool inDock = dock is not null && button.GetVisualAncestors().Contains(dock);
-            double bottomLimit = size.Height - safe.Bottom - (inDock ? Math.Min(0, Views.MainView.DockBottomMargin(safe.Bottom)) : 0);
+            double bottomLimit = size.Height - safe.Bottom;
 
             if (rect.Top < safe.Top - 0.5 || rect.Left < safe.Left - 0.5 ||
                 rect.Right > size.Width - safe.Right + 0.5 || rect.Bottom > bottomLimit + 0.5)
