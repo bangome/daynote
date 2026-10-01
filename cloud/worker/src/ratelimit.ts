@@ -84,3 +84,11 @@ export const SIGNIN_LIMITS = (ip: string): readonly Limit[] => [
 export const ACCOUNT_DELETE_LIMITS = (userId: string): readonly Limit[] => [
   { action: 'delete', scope: 'user', value: userId, max: 10 },
 ];
+
+/**
+ * A posted App Store transaction costs two calls to Apple. The app posts one per purchase, restore
+ * or renewal it sees, plus retries while the network is down; this is far above that.
+ */
+export const APPLE_TRANSACTION_LIMITS = (userId: string): readonly Limit[] => [
+  { action: 'apple_txn', scope: 'user', value: userId, max: 60 },
+];

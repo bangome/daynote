@@ -254,6 +254,60 @@ deletion without the app. Use `https://daynote.arachat.cc/delete-account`. It is
 `../site/content/delete-account.*.html` and served by this Worker; the email fallback on it is
 `SUPPORT_EMAIL` in `../site/build.mjs`, so that mailbox has to be read.
 
+## 2d. Subscriptions in the iPhone app (In-App Purchase)
+
+App Store guideline 3.1.3(b) lets the iPhone app unlock file sync bought on the desktop only if it
+also sells the same subscriptions through In-App Purchase, so it does (docs/CLOUD_SYNC.md §14.8).
+Android sells nothing: Google allows an app to honour an entitlement bought elsewhere.
+
+What exists in App Store Connect (created 2026-10-02 through the API): subscription group **Daynote
+Cloud** (22432564) with four auto-renewable subscriptions, Premium ranked above Pro —
+`cc.arachat.daynote.premium.annual` (level 1), `.premium.monthly` (2), `.pro.annual` (3),
+`.pro.monthly` (4). KOR base prices ₩48,000 / ₩5,900 / ₩24,000 / ₩2,900, other storefronts
+equalised by Apple (US $29.99 / $3.99 / $14.99 / $1.99 — below Paddle's dollar prices; a pricing
+decision, not a bug). No introductory offer: the server's 14-day trial is the only one. App Store
+Server Notifications V2 point at `https://daynote.arachat.cc/v1/billing/apple/notifications` for
+both production and sandbox.
+
+| Value | Kind | Where it comes from |
+| --- | --- | --- |
+| `APPLE_IAP_PRIVATE_KEY` | secret | App Store Connect → **Users and Access → Integrations → In-App Purchase** → key `F47T589ZC4`, the `.p8` downloaded once. Not the Sign in with Apple key |
+| `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID` | vars | Same page: the key id, and the issuer id at the top. Public, in `wrangler.toml` |
+| `APPLE_IAP_PRODUCTS` | var | The product ids the app offers. Empty takes the App Store off sale in the app |
+| `APPLE_APP_ID` | var | The app's Apple id, checked on production notifications |
+
+### Going live, in order
+
+```sh
+cd cloud/worker
+npx wrangler d1 time-travel info daynote                       # bookmark, in case
+npx wrangler d1 migrations apply daynote --remote              # 0011_app_store.sql: one ADD COLUMN
+npx wrangler secret put APPLE_IAP_PRIVATE_KEY < ~/.config/schooling/SubscriptionKey_F47T589ZC4.p8
+npm run deploy
+curl -s https://daynote.arachat.cc/v1/health
+```
+
+The migration goes first: the Worker that writes App Store rows names `subscriptions.environment`,
+and before it every Paddle webhook would fail on the missing column (and be retried by Paddle, so
+nothing would be lost, but nothing would apply either). The Worker deployed before the secret is
+harmless — the app is offered nothing to buy — so the order of the last two does not matter.
+
+Then App Store Connect → the app → **App Information → App Store Server Notifications** → **Request
+a Test Notification** for Sandbox; the Worker logs nothing on success, and `billing_events` gains a
+row `apple.TEST`:
+
+```sh
+npx wrangler d1 execute daynote --remote --command \
+  "SELECT event_type, received_utc FROM billing_events WHERE event_type LIKE 'apple.%' ORDER BY received_utc DESC LIMIT 5"
+```
+
+### Account deletion and an App Store subscription
+
+The server cannot cancel an App Store subscription — only the subscriber can, in Settings — so
+`DELETE /v1/account` does not wait for it; the app says, before deleting, that the subscription
+goes on until it is cancelled there. It stays visible and cancellable in the Apple ID after the
+account is gone.
+
 ## 3. Point the app at it
 
 **The shipped app does not talk to this service.** `DaynoteAppOptions.SyncEnabledByDefault` is

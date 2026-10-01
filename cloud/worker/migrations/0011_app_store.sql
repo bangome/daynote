@@ -1,0 +1,20 @@
+-- Subscriptions sold through the App Store, beside Paddle (docs/CLOUD_SYNC.md §14.8).
+--
+-- An App Store subscription uses the row every subscription uses, so entitlement, the quota by
+-- tier and the paywall work unchanged:
+--
+--   provider            'apple'
+--   subscription_id     the originalTransactionId, which names the subscription for its whole life
+--                       across renewals, upgrades and downgrades (digits; Paddle's are `sub_...`)
+--   customer_id         left as it was: an Apple ID is not a customer this server can address, and
+--                       a Paddle customer id from an earlier subscription is kept for its next checkout
+--   tier, plan,         from the product id (appStore.ts, APPLE_PRODUCTS); price_id holds it
+--   price_id
+--   price_occurred_utc  the signedDate of the newest Apple payload applied. Apple's payloads are
+--                       whole snapshots of the subscription, so the newest one wins outright and an
+--                       older one, delivered late, changes nothing
+--
+-- The one thing the row could not already say is which App Store environment the purchase was made
+-- in. TestFlight and App Review buy in the sandbox against the production server, so a sandbox
+-- purchase is honoured; recording it keeps those accounts tellable apart from paying ones.
+ALTER TABLE subscriptions ADD COLUMN environment TEXT;

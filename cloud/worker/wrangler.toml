@@ -26,6 +26,11 @@ preview_urls = false
 #
 # Subscriptions, over Paddle (docs/CLOUD_SYNC.md §14, DEPLOY.md §2b):
 #   wrangler secret put PADDLE_WEBHOOK_SECRET   # Developer tools -> Notifications -> destination
+#
+# Subscriptions in the iPhone app, over In-App Purchase (docs/CLOUD_SYNC.md §14.8, DEPLOY.md §2d).
+# The In-App Purchase key from App Store Connect signs the App Store Server API token:
+#   wrangler secret put APPLE_IAP_PRIVATE_KEY < SubscriptionKey_F47T589ZC4.p8
+#
 #   wrangler secret put PADDLE_API_KEY          # Developer tools -> Authentication
 #                                               # (creates the checkout and the portal link,
 #                                               # and changes a subscription between tiers)
@@ -103,6 +108,18 @@ APPLE_KEY_ID = "W2B29H98NT"
 #
 # Store policy 10.8.3 may still require a Company account for a Microsoft Store product that offers
 # a paid tier; see docs/STORE.md.
+# The App Store side of the same four offers (src/appStore.ts, APPLE_PRODUCTS maps each id to its
+# tier and interval). Group "Daynote Cloud" in App Store Connect, Premium ranked above Pro. The App
+# Store sets the price per storefront from the KRW base: ₩2,900 / ₩24,000 / ₩5,900 / ₩48,000.
+# The ids listed here are the ones the iPhone app offers; emptying the list takes the App Store off
+# sale in the app without a release, and changes nothing for anyone already subscribed.
+# The key id and issuer id are public; the key is the APPLE_IAP_PRIVATE_KEY secret above. Until it
+# is set, the app is offered nothing to buy and /v1/billing/apple/transaction is refused.
+APPLE_IAP_KEY_ID = "F47T589ZC4"
+APPLE_IAP_ISSUER_ID = "fff3ff8a-e95d-496f-8c6d-aab2b5bf2455"
+APPLE_IAP_PRODUCTS = "cc.arachat.daynote.pro.monthly,cc.arachat.daynote.pro.annual,cc.arachat.daynote.premium.monthly,cc.arachat.daynote.premium.annual"
+APPLE_APP_ID = "6817146422"
+
 PADDLE_PRICE_ID_MONTHLY = "pri_01m1nb3xgjdycqb2fzjfxfed98"
 PADDLE_PRICE_ID_ANNUAL = "pri_01m1nb2txkj2aner6c88g1m2f4"
 PADDLE_PRICE_ID_PREMIUM_MONTHLY = "pri_01m3s234hqdvrfnf5ksf25jp7v"

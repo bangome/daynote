@@ -68,6 +68,32 @@ export interface Env {
   APPLE_PRIVATE_KEY?: string;
 
   /**
+   * App Store subscriptions, for the iPhone app (src/appStore.ts, docs/CLOUD_SYNC.md §14.8). The
+   * In-App Purchase key — a `.p8` from App Store Connect → Users and Access → Integrations → In-App
+   * Purchase, a different key from Sign in with Apple's — signs the token the App Store Server API
+   * wants; its id and the team's issuer id are public and live in wrangler.toml, the key is a
+   * secret. Any of the three empty means `/v1/billing/apple/transaction` is refused with a message
+   * and the app is offered nothing to buy. Notifications need none of them: they are verified
+   * against Apple's root certificate.
+   *
+   * `APPLE_IAP_PRODUCTS` lists the product ids on sale, comma-separated; empty takes the App Store
+   * off sale in the app without a release, as an empty Paddle price id does for the desktop.
+   */
+  APPLE_IAP_KEY_ID?: string;
+  APPLE_IAP_ISSUER_ID?: string;
+  APPLE_IAP_PRIVATE_KEY?: string;
+  APPLE_IAP_PRODUCTS?: string;
+
+  /** The app's App Store id, checked against production notifications when set. */
+  APPLE_APP_ID?: string;
+
+  /**
+   * Test seam: the DER roots an Apple JWS chain may end at, in place of the pinned Apple Root CA -
+   * G3. Never set in production — and a wrangler var cannot be a byte array, so it cannot be.
+   */
+  APPLE_ROOT_CERTIFICATES?: Uint8Array[];
+
+  /**
    * Paddle, the merchant of record for subscriptions (docs/CLOUD_SYNC.md §14). The webhook secret
    * signs incoming events; without it the webhook refuses every delivery rather than granting
    * entitlement on an unauthenticated request.

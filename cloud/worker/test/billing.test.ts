@@ -823,3 +823,67 @@ describe('review fixes', () => {
     expect((await get('/v1/auth/me', { token: account.accessToken })).body.entitlement.state).toBe('active');
   });
 });
+
+describe('beside an App Store subscription', () => {
+  /** The row `/v1/billing/apple/transaction` writes (appleBilling.test.ts covers how). */
+  async function appleRow(userId: string, endsInDays: number, status = 'active') {
+    const ends = new Date(Date.now() + endsInDays * 24 * 60 * 60 * 1000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO subscriptions
+         (user_id, provider, subscription_id, status, current_period_end_utc, updated_utc, tier, plan,
+          price_id, price_occurred_utc, environment)
+       VALUES (?1, 'apple', '2000000000000777', ?2, ?3, ?3, 'premium', 'monthly',
+               'cc.arachat.daynote.premium.monthly', ?4, 'Production')`,
+    ).bind(userId, status, ends, new Date(Date.now() + 60_000).toISOString()).run();
+  }
+
+  async function storedRow(userId: string) {
+    return env.DB.prepare(
+      'SELECT provider, subscription_id, status, tier, environment, duplicate_subscription_id FROM subscriptions WHERE user_id = ?1',
+    ).bind(userId).first();
+  }
+
+  it('sets a Paddle subscription aside while the App Store one is live', async () => {
+    const account = await signIn();
+    await appleRow(account.userId, 20);
+
+    await deliver(subscriptionEvent(account.userId, { subscriptionId: 'sub_desktop' }));
+
+    expect(await storedRow(account.userId)).toMatchObject({
+      provider: 'apple', subscription_id: '2000000000000777', duplicate_subscription_id: 'sub_desktop',
+    });
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+    expect(status.body).toMatchObject({ provider: 'apple', duplicate_provider: 'paddle', can_manage: false });
+  });
+
+  it('ignores a dead Paddle subscription’s late event while the App Store one is live', async () => {
+    const account = await signIn();
+    await appleRow(account.userId, 20);
+
+    await deliver(subscriptionEvent(account.userId, {
+      type: 'subscription.canceled', status: 'canceled', subscriptionId: 'sub_old',
+      endsAt: new Date(Date.now() - 1000).toISOString(),
+    }));
+
+    expect(await storedRow(account.userId)).toMatchObject({
+      provider: 'apple', status: 'active', duplicate_subscription_id: null,
+    });
+  });
+
+  it('takes the row back for Paddle once the App Store subscription has ended', async () => {
+    const account = await signIn();
+    await appleRow(account.userId, -1, 'expired');
+
+    await deliver({
+      ...subscriptionEvent(account.userId, { subscriptionId: 'sub_desktop' }),
+      occurred_at: new Date().toISOString(),
+      data: { ...subscriptionEvent(account.userId, { subscriptionId: 'sub_desktop' }).data, items: [{ price: { id: 'pri_test_monthly' } }] },
+    });
+
+    expect(await storedRow(account.userId)).toMatchObject({
+      provider: 'paddle', subscription_id: 'sub_desktop', status: 'active', tier: 'pro', environment: null,
+    });
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+    expect(status.body).toMatchObject({ provider: 'paddle', state: 'active', can_manage: true, apple_can_purchase: false });
+  });
+});

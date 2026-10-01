@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'invalid_credentials'
   | 'email_taken'
   | 'unauthorized'
+  | 'forbidden'
   | 'not_found'
   | 'rate_limited'
   | 'subscription_required'
@@ -25,6 +26,8 @@ const STATUS: Record<ErrorCode, number> = {
   invalid_credentials: 401,
   unauthorized: 401,
   email_taken: 409,
+  // An App Store purchase made for a different account than the caller's.
+  forbidden: 403,
   not_found: 404,
   rate_limited: 429,
   // 402, not 403: the request was understood and the caller is who they say they are — what is

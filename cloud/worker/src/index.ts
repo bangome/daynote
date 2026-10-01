@@ -7,6 +7,7 @@ import * as account from './account';
 import * as assets from './assets';
 import * as auth from './auth';
 import * as billing from './billing';
+import * as appleBilling from './appleBilling';
 import * as files from './files';
 import * as sync from './sync';
 import type { Env } from './env';
@@ -37,6 +38,8 @@ const ROUTES: Record<string, Handler> = {
   'POST /v1/billing/change': billing.change,
   'POST /v1/billing/portal': billing.portal,
   'POST /v1/billing/webhook': billing.webhook,
+  'POST /v1/billing/apple/transaction': appleBilling.transaction,
+  'POST /v1/billing/apple/notifications': appleBilling.notifications,
   'POST /v1/sync/push': sync.push,
   'GET /v1/sync/pull': sync.pull,
   'POST /v1/files/push': files.push,

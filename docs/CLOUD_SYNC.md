@@ -1173,6 +1173,67 @@ dialog opens Paddle in the browser and turns to its success state only when the 
 the tier is paid — it polls, and re-reads when the window comes back to the front. WPF has the same
 surfaces as cards. Phones show the tier and the storage and never anything to buy.
 
+### 14.8 The App Store, beside Paddle — BUILT 2026-10-02
+
+The iPhone app unlocks file sync for a desktop subscriber, and App Store guideline 3.1.3(b) allows
+that only if the app also sells the same subscriptions through In-App Purchase. So it does: the same
+two tiers at the same two intervals, as four auto-renewable subscriptions in one group ("Daynote
+Cloud", Premium ranked above Pro so a move between them is an upgrade or a downgrade, never a second
+subscription). Android sells nothing; Google allows an app to honour what was bought elsewhere.
+
+**One row, two stores.** An App Store subscription is written to the same `subscriptions` row as a
+Paddle one, with `provider = 'apple'` and the `originalTransactionId` as `subscription_id`, so
+entitlement, the tier's quota (Premium's 200 GB) and the paywall are untouched. The product id maps
+to `{tier, plan}` in one place (`appStore.ts`, `APPLE_PRODUCTS`) and is kept in `price_id`; migration
+0011 adds `environment` (`Production` | `Sandbox` — TestFlight and App Review buy in the sandbox
+against the production server, and are honoured).
+
+**How a purchase arrives.** The app buys with StoreKit, setting `appAccountToken` (StoreKit 1:
+`SKMutablePayment.ApplicationUsername`) to the account id, and posts only the transaction id to
+`POST /v1/billing/apple/transaction`. The Worker asks the App Store Server API for the transaction
+and for the subscription's current status (production first, the sandbox on `4040010`), with a token
+signed by the In-App Purchase key. App Store Server Notifications V2 arrive at
+`POST /v1/billing/apple/notifications`. Either way every JWS is verified — the `x5c` chain to the
+Apple Root CA - G3 pinned in `x509.ts`, Apple's marker extensions on the leaf and intermediate, the
+signature — and the bundle id and product id are checked, so the API path does not rest on TLS
+alone and a forged notification is a 401.
+
+**Whose purchase it is.** A token that names an existing account decides; a transaction whose token
+is another account's is refused with 403. With no token (an offer code redeemed outside the app) or
+the token of a deleted account, the transaction can be claimed by the account restoring it unless
+another account already holds that subscription.
+
+**Order.** Apple's payloads are whole snapshots rather than deltas, so the newest by `signedDate`
+(kept in `price_occurred_utc`) wins outright and an older one changes nothing — the App Store form
+of §14.2 and §14.7: a stale event never shortens the period or moves the tier back. A newer one may
+shorten it, as an annual-to-monthly upgrade really does. Notifications are idempotent by
+`notificationUUID` in `billing_events`, written in one batch with the change, as Paddle's are.
+
+**States**, in Paddle's vocabulary so `entitlement.ts` needs nothing new: active → `active`; active
+with auto-renew off → `canceled` (entitled to the period end); billing retry or Apple's grace period
+→ `past_due` with a grace window (Apple's own if it is on, else GRACE_DAYS from the period end);
+expired → `expired`; refunded or revoked → `revoked`, which fails closed.
+
+**One subscription per account, across stores.** `ownership()` in `billing.ts` decides for both
+stores: an event for a different subscription while the stored one is live is set aside in
+`duplicate_subscription_id` (and reported as `duplicate_subscription`, `duplicate_provider`); one
+that is not live either is ignored; once the stored one has ended, the new one takes the row. The
+Paddle checkout answers 409 while an App Store subscription is live, and status tells the iPhone
+`apple_can_purchase: false` while a Paddle one is, so neither app sells a second. An App Store
+subscription is live only inside its period or grace, so a missed expiry cannot hold an account.
+
+**The wire.** `/v1/billing/status` gained `provider` (`paddle` | `apple` | null),
+`apple_products` (`[{tier, plan, product_id}]`, from `APPLE_IAP_PRODUCTS`, empty until the In-App
+Purchase key is set), `apple_can_purchase`, `apple_product_id` and `duplicate_provider`;
+`can_manage` is now Paddle's portal only. The App Store's localized price is what the iPhone shows,
+read from StoreKit, never from `offers`.
+
+**Deletion.** No server can cancel an App Store subscription, so `DELETE /v1/account` does not wait
+for one; the app says before deleting that it continues until cancelled in Settings.
+
+Tests: `cloud/worker/test/appleBilling.test.ts` (a test CA shaped like Apple's, mocked App Store
+Server API), and the cross-store cases at the end of `billing.test.ts`.
+
 ## 13. Open questions
 
 1. **Email verification at registration.** The sender dependency now exists anyway, so this is

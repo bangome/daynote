@@ -13,6 +13,7 @@ import { ApiError, json, noContent, readJsonObject } from './http';
 import { authenticate } from './auth';
 import { canonicalUtc } from './time';
 import { isFromPaddle } from './paddleIps';
+import { iapConfigured, productsOnSale } from './appStore';
 import type { Env } from './env';
 
 /**
@@ -267,31 +268,21 @@ async function applyStatement(
   subscriptionId: string | null,
   occurredAt: string | undefined,
   now: Date,
-): Promise<D1PreparedStatement> {
-  // One account, one subscription. Two checkouts paid close together (a second tab, a reopened
-  // page before the first webhook landed) make two Paddle subscriptions, and letting the second
-  // overwrite the first would hide one that keeps billing. So an event for a different `sub_...`
-  // than the live one on record leaves the row alone and is set aside for the operator: the id goes
-  // to `duplicate_subscription_id`, the log says so, and status reports it. It is not cancelled
-  // here — that subscription was paid for, and cancelling without a refund is not ours to decide.
+): Promise<D1PreparedStatement | null> {
+  const status = eventType === 'transaction.payment_failed' ? 'past_due' : data.status ?? 'unknown';
+
+  // One account, one subscription — see `ownership`. A second Paddle subscription, or a Paddle
+  // event while an App Store subscription is live, leaves the row to the one already there.
   if (subscriptionId?.startsWith('sub_')) {
-    const stored = await env.DB.prepare('SELECT subscription_id, status FROM subscriptions WHERE user_id = ?1')
-      .bind(userId)
-      .first<{ subscription_id: string | null; status: string }>();
-    if (
-      stored !== null
-      && stored.subscription_id?.startsWith('sub_')
-      && stored.subscription_id !== subscriptionId
-      && LIVE.has(stored.status)
-    ) {
-      console.error('second paddle subscription for one account', userId, stored.subscription_id, subscriptionId);
-      return env.DB.prepare(
-        'UPDATE subscriptions SET duplicate_subscription_id = ?2, updated_utc = ?3 WHERE user_id = ?1',
-      ).bind(userId, subscriptionId, canonicalUtc(now));
+    const verdict = await ownership(env, userId, { provider: 'paddle', subscriptionId, live: LIVE.has(status) }, now);
+    if (verdict === 'ignore') {
+      return null;
+    }
+    if (verdict === 'duplicate') {
+      return markDuplicate(env, userId, subscriptionId, now);
     }
   }
 
-  const status = eventType === 'transaction.payment_failed' ? 'past_due' : data.status ?? 'unknown';
   const periodEnd = data.current_billing_period?.ends_at ?? data.next_billed_at ?? null;
   const grace = status === 'past_due' ? graceEnd(now) : null;
 
@@ -305,12 +296,19 @@ async function applyStatement(
         grace_ends_utc, updated_utc, tier, plan, price_id, price_occurred_utc)
      VALUES (?1, 'paddle', ?2, ?3, ?4, ?5, ?6, ?7, COALESCE(?8, 'pro'), ?9, ?10, ?11)
      ON CONFLICT(user_id) DO UPDATE SET
+       -- A row an App Store subscription held until it ended becomes Paddle's again (ownership()
+       -- has already decided this event may take it), and nothing of Apple's is carried over.
+       provider = 'paddle',
+       environment = NULL,
        customer_id = COALESCE(excluded.customer_id, customer_id),
-       subscription_id = COALESCE(excluded.subscription_id, subscription_id),
+       subscription_id = CASE WHEN provider <> 'paddle' THEN excluded.subscription_id
+           ELSE COALESCE(excluded.subscription_id, subscription_id) END,
        status = excluded.status,
        -- Keep the furthest known period end: events can arrive out of order, and moving it
-       -- backwards would cut off access the customer has already paid for.
+       -- backwards would cut off access the customer has already paid for. A period the App Store
+       -- recorded is not this subscription's, so it is replaced, not compared.
        current_period_end_utc = CASE
+           WHEN provider <> 'paddle' THEN excluded.current_period_end_utc
            WHEN excluded.current_period_end_utc IS NULL THEN current_period_end_utc
            WHEN current_period_end_utc IS NULL THEN excluded.current_period_end_utc
            WHEN excluded.current_period_end_utc > current_period_end_utc
@@ -329,8 +327,8 @@ async function applyStatement(
       // ?12 is spelled out rather than bound: it has to compare against the stored row.
       .replaceAll(
         '?12',
-        `(excluded.price_occurred_utc IS NOT NULL AND
-          (price_occurred_utc IS NULL OR excluded.price_occurred_utc >= price_occurred_utc))`,
+        `(excluded.price_occurred_utc IS NOT NULL AND (provider <> 'paddle' OR
+          price_occurred_utc IS NULL OR excluded.price_occurred_utc >= price_occurred_utc))`,
       ),
   )
     .bind(
@@ -346,6 +344,83 @@ async function applyStatement(
       price?.priceId ?? null,
       occurred,
     );
+}
+
+/** A subscriptions row, as far as deciding who owns it goes. */
+interface StoredSubscription {
+  provider: string;
+  subscription_id: string | null;
+  status: string;
+  current_period_end_utc: string | null;
+  grace_ends_utc: string | null;
+}
+
+/**
+ * True while the stored subscription is still billing. A Paddle one is live by its status, as
+ * Paddle keeps it current; an App Store one also has to be inside its period or its grace, because
+ * only a notification moves its status and a missed one must not hold the account for ever.
+ */
+export function isLive(row: StoredSubscription, now: Date): boolean {
+  if (!LIVE.has(row.status)) {
+    return false;
+  }
+  if (row.provider === 'apple') {
+    const until = row.status === 'past_due' ? row.grace_ends_utc : row.current_period_end_utc;
+    return until !== null && Date.parse(until) > now.getTime();
+  }
+  return row.subscription_id?.startsWith('sub_') === true;
+}
+
+/**
+ * One account, one subscription, whichever store sold it. Decides what an event for
+ * `incoming.subscriptionId` may do to the account's row:
+ *
+ * - **take** it — no row, the same subscription, or the one on the row is no longer live (it ended,
+ *   was cancelled and ran out, was refunded). A new subscription after an old one ends is normal.
+ * - **duplicate** — a different subscription while the stored one is live. Two checkouts paid close
+ *   together, or a purchase on the iPhone beside a running Paddle one (the apps refuse both, so this
+ *   is what slips through). Letting the second overwrite the first would hide one that keeps
+ *   billing, so the row stays and the other id goes to `duplicate_subscription_id`, logged, for
+ *   status to report. Nothing is cancelled here: both were paid for, and which to refund is a
+ *   decision for the operator (Paddle) or the customer (Apple, which refunds only through itself).
+ * - **ignore** — a different subscription that is not live either, arriving while the stored one
+ *   is: a late expiry or refund of the one that lost. Recorded by the caller, applied to nothing.
+ *
+ * A second Paddle subscription is set aside whatever its status, as before the App Store existed.
+ */
+export async function ownership(
+  env: Env,
+  userId: string,
+  incoming: { provider: 'paddle' | 'apple'; subscriptionId: string; live: boolean },
+  now: Date,
+): Promise<'take' | 'duplicate' | 'ignore'> {
+  const stored = await env.DB.prepare(
+    `SELECT provider, subscription_id, status, current_period_end_utc, grace_ends_utc
+       FROM subscriptions WHERE user_id = ?1`,
+  )
+    .bind(userId)
+    .first<StoredSubscription>();
+  if (stored === null || stored.subscription_id === null || !isLive(stored, now)) {
+    return 'take';
+  }
+  if (stored.provider === incoming.provider && stored.subscription_id === incoming.subscriptionId) {
+    return 'take';
+  }
+  const bothPaddle = stored.provider === 'paddle' && incoming.provider === 'paddle';
+  if (bothPaddle || incoming.live) {
+    console.error(
+      'second subscription for one account', userId,
+      `${stored.provider}:${stored.subscription_id}`, `${incoming.provider}:${incoming.subscriptionId}`,
+    );
+    return 'duplicate';
+  }
+  return 'ignore';
+}
+
+export function markDuplicate(env: Env, userId: string, subscriptionId: string, now: Date): D1PreparedStatement {
+  return env.DB.prepare(
+    'UPDATE subscriptions SET duplicate_subscription_id = ?2, updated_utc = ?3 WHERE user_id = ?1',
+  ).bind(userId, subscriptionId, canonicalUtc(now));
 }
 
 function parseOr(value: string | undefined, fallback: Date): Date {
@@ -494,23 +569,25 @@ const LIVE = new Set(['active', 'trialing', 'past_due', 'paused']);
  */
 const CHANGEABLE = new Set(['active', 'trialing']);
 
-interface OwnSubscription {
+interface OwnSubscription extends StoredSubscription {
   customer_id: string | null;
-  subscription_id: string | null;
-  status: string;
   duplicate_subscription_id: string | null;
+  price_id: string | null;
 }
 
 async function findSubscription(env: Env, userId: string): Promise<OwnSubscription | null> {
   return env.DB.prepare(
-    'SELECT customer_id, subscription_id, status, duplicate_subscription_id FROM subscriptions WHERE user_id = ?1',
+    `SELECT provider, customer_id, subscription_id, status, current_period_end_utc, grace_ends_utc,
+            duplicate_subscription_id, price_id
+       FROM subscriptions WHERE user_id = ?1`,
   )
     .bind(userId)
     .first<OwnSubscription>();
 }
 
 function canChange(row: OwnSubscription | null): row is OwnSubscription & { subscription_id: string } {
-  return row !== null && CHANGEABLE.has(row.status) && row.subscription_id?.startsWith('sub_') === true;
+  return row !== null && row.provider === 'paddle' && CHANGEABLE.has(row.status)
+    && row.subscription_id?.startsWith('sub_') === true;
 }
 
 /** What the app shows in its settings panel: the state, and where to go next. */
@@ -519,10 +596,14 @@ export async function status(request: Request, env: Env, now: Date): Promise<Res
   return json(await statusBody(env, user.id, now));
 }
 
-async function statusBody(env: Env, userId: string, now: Date): Promise<Record<string, unknown>> {
+export async function statusBody(env: Env, userId: string, now: Date): Promise<Record<string, unknown>> {
   const entitlement = await resolve(env, userId, now);
   const subscription = await findSubscription(env, userId);
   const offers = availableOffers(env);
+  const appleProducts = iapConfigured(env) ? productsOnSale(env) : [];
+  // Held by a live subscription the App Store did not sell: the iPhone shows it as managed on
+  // another device and offers nothing, rather than selling a second subscription beside it.
+  const heldElsewhere = subscription !== null && subscription.provider !== 'apple' && isLive(subscription, now);
 
   return {
     ...toWire(entitlement, await storage(env, userId, entitlement)),
@@ -536,13 +617,35 @@ async function statusBody(env: Env, userId: string, now: Date): Promise<Record<s
     // The Pro intervals alone, under the name and shape the apps installed before Premium read.
     // They know one paid tier and send `{ plan }`, which the checkout still sells as Pro.
     plans: offers.filter((offer) => offer.tier === 'pro').map((offer) => offer.plan),
-    can_manage: subscription?.customer_id != null,
+    // The Paddle portal manages Paddle subscriptions only. An App Store one is managed in the
+    // iPhone's Settings, which the app opens itself; the server has no link for it.
+    can_manage: subscription?.provider === 'paddle' && subscription.customer_id != null,
     // True when the running subscription can move to another offer through `/v1/billing/change`,
     // which is how an existing subscriber upgrades — never through a second checkout.
     can_change: canChange(subscription) && offers.length > 0,
     // A second subscription was paid for beside the live one (see `applyStatement`). The app says
     // so and points at the portal; the operator refunds it.
     duplicate_subscription: subscription?.duplicate_subscription_id != null,
+    // Which store the duplicate came from: Paddle ids are `sub_...`, App Store ones are digits. The
+    // app words the two differently, because only Paddle's can be refunded by us.
+    duplicate_provider: subscription?.duplicate_subscription_id == null
+      ? null
+      : subscription.duplicate_subscription_id.startsWith('sub_') ? 'paddle' : 'apple',
+    // The store that sold the subscription on record ('paddle' | 'apple'), or null when there has
+    // never been one. Added with the App Store; earlier apps ignore it.
+    provider: subscription?.provider ?? null,
+    // For the iPhone app: the App Store products on sale, in display order, as the StoreKit ids it
+    // asks for localized prices with. The App Store, not this list, decides what is charged.
+    apple_products: appleProducts.map((product) => ({
+      tier: product.tier,
+      plan: product.plan,
+      product_id: product.productId,
+    })),
+    // False when there is nothing to sell, or the account is already held by a subscription
+    // bought elsewhere; the app then buys nothing.
+    apple_can_purchase: appleProducts.length > 0 && !heldElsewhere,
+    // The App Store product the account is subscribed to, so the app can mark it in the table.
+    apple_product_id: subscription?.provider === 'apple' ? subscription.price_id : null,
     server_utc: canonicalUtc(now),
   };
 }
@@ -563,10 +666,12 @@ export async function checkout(request: Request, env: Env, now: Date): Promise<R
   // tiers or intervals is `change`; a subscription being retried or paused is fixed in the portal.
   const existing = await findSubscription(env, user.id);
   // Only a real subscription counts: a row without a `sub_...` id is no subscription to bill twice.
-  if (existing !== null && LIVE.has(existing.status) && existing.subscription_id?.startsWith('sub_')) {
+  if (existing !== null && isLive(existing, now)) {
     throw new ApiError(
       'subscription_active',
-      'This account already has a subscription. Change its plan, or manage it in the portal, instead.',
+      existing.provider === 'apple'
+        ? 'This account is subscribed through the App Store on an iPhone. Manage it there, in Settings.'
+        : 'This account already has a subscription. Change its plan, or manage it in the portal, instead.',
     );
   }
 
@@ -653,7 +758,7 @@ export async function change(request: Request, env: Env, now: Date): Promise<Res
     ? await env.PADDLE_CHANGE_SUBSCRIPTION(row.subscription_id, priceId)
     : await patchSubscription(requireApiKey(env), row.subscription_id, priceId);
 
-  await (await applyStatement(env, user.id, 'subscription.updated', updated, row.subscription_id, updated.updated_at, now)).run();
+  await (await applyStatement(env, user.id, 'subscription.updated', updated, row.subscription_id, updated.updated_at, now))?.run();
 
   return json(await statusBody(env, user.id, now));
 }
@@ -745,12 +850,20 @@ export async function portal(request: Request, env: Env, now: Date): Promise<Res
  */
 export async function cancelForDeletion(env: Env, userId: string, now: Date): Promise<void> {
   const row = await env.DB.prepare(
-    'SELECT customer_id, subscription_id, status FROM subscriptions WHERE user_id = ?1',
+    'SELECT provider, customer_id, subscription_id, status FROM subscriptions WHERE user_id = ?1',
   )
     .bind(userId)
-    .first<{ customer_id: string | null; subscription_id: string | null; status: string }>();
+    .first<{ provider: string; customer_id: string | null; subscription_id: string | null; status: string }>();
 
   if (row === null || row.status === 'canceled') {
+    return;
+  }
+
+  // An App Store subscription is billed to the Apple ID, not to this account, and no server can
+  // cancel it: only the subscriber can, in Settings. It stays visible and cancellable there after
+  // the account is gone, unlike a Paddle one, so it does not hold the deletion up; the app says
+  // so before deleting (App Store guideline 5.1.1(v) asks that it tells people how billing goes on).
+  if (row.provider === 'apple') {
     return;
   }
 

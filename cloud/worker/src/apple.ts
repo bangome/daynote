@@ -73,14 +73,14 @@ function requireConfig(env: Env): AppleConfig {
  * Imports the `.p8` key. Accepts the PEM as downloaded, and also with its line breaks flattened to
  * literal `\n` — which is what a PEM pasted into a one-line secret prompt often turns into.
  */
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
+export async function importPrivateKey(pem: string, name = 'APPLE_PRIVATE_KEY'): Promise<CryptoKey> {
   const body = pem
     .replaceAll('\\n', '\n')
     .replace(/-----(BEGIN|END) PRIVATE KEY-----/g, '')
     .replace(/\s+/g, '');
   const der = fromBase64Url(body.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, ''));
   if (der === null) {
-    throw new Error('APPLE_PRIVATE_KEY is not a PKCS#8 PEM. Run: wrangler secret put APPLE_PRIVATE_KEY');
+    throw new Error(`${name} is not a PKCS#8 PEM. Run: wrangler secret put ${name}`);
   }
   return crypto.subtle.importKey(
     'pkcs8',
@@ -91,7 +91,7 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
   );
 }
 
-function encodeJson(value: unknown): string {
+export function encodeJson(value: unknown): string {
   return toBase64Url(new TextEncoder().encode(JSON.stringify(value)));
 }
 
