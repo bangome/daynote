@@ -261,10 +261,31 @@
                 <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                     <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.Price}" Text="{Binding PriceMain}" />
                     <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.PriceUnit}" Text="{Binding PriceUnit}" />
-                    <Border Style="{DynamicResource Daynote.Product.Style.Account.SavingPill}"
-                            Visibility="{Binding IsAnnualSelected, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                        <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.SavingText}" Text="{Binding CheckoutSavingText}" />
-                    </Border>
+                    <!-- Annual alone is not enough: the saving is a comparison, and it comes out
+                         empty whenever the catalogue lists only one of the two intervals. Gated on
+                         the text as well, or the pill is drawn with nothing in it. -->
+                    <!-- The condition lives on a wrapper rather than on the pill's own style: a
+                         BasedOn is a StaticResource, and the account styles are not loaded yet
+                         wherever this view is parsed before the theme is applied. -->
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnnualSelected}" Value="True" />
+                                            <Condition Binding="{Binding HasCheckoutSaving}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Border Style="{DynamicResource Daynote.Product.Style.Account.SavingPill}">
+                            <TextBlock Style="{DynamicResource Daynote.Product.Style.Account.SavingText}" Text="{Binding CheckoutSavingText}" />
+                        </Border>
+                    </Grid>
                 </StackPanel>
                 <TextBlock Style="{DynamicResource Daynote.Product.Style.Settings.Desc}" Margin="0,5,0,0" Text="{Binding PriceSub}" />
 

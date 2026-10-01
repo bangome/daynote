@@ -119,6 +119,20 @@ public sealed class DeskShellShotTests
             Email = "jiwon@example.test",
             Entitlement = new Daynote.Core.Sync.Entitlement(
                 Daynote.Core.Sync.EntitlementState.Trial, DateTimeOffset.UtcNow.AddDays(4), true, false),
+
+            // The catalogue the worker actually sells, both tiers at both intervals. The default
+            // fake falls back to a one-tier legacy list, and the shot then shows Premium priced at
+            // a dash — a picture of the screen nobody is served.
+            Billing = new Daynote.Core.Sync.BillingLinks(
+                CanCheckout: true,
+                CanManage: true,
+                Offers:
+                [
+                    Offer(Daynote.Core.Sync.BillingTier.Pro, Daynote.Core.Sync.BillingPlan.Monthly, 2_900),
+                    Offer(Daynote.Core.Sync.BillingTier.Pro, Daynote.Core.Sync.BillingPlan.Annual, 24_000),
+                    Offer(Daynote.Core.Sync.BillingTier.Premium, Daynote.Core.Sync.BillingPlan.Monthly, 5_900),
+                    Offer(Daynote.Core.Sync.BillingTier.Premium, Daynote.Core.Sync.BillingPlan.Annual, 48_000),
+                ]),
         };
         var account = new Daynote.App.Account.AccountViewModel(
             accounts.Service,
@@ -176,6 +190,11 @@ public sealed class DeskShellShotTests
 
         application.Resources.MergedDictionaries.Clear();
     }
+
+    private static Daynote.Core.Sync.BillingOffer Offer(
+        Daynote.Core.Sync.BillingTier tier,
+        Daynote.Core.Sync.BillingPlan plan,
+        long won) => new(tier, plan, [new Daynote.Core.Sync.Money("KRW", won)]);
 
     /// <summary>Waits for the shell while the dispatcher keeps running; see DeskTabStripTests.</summary>
     private static void Run(Task task)
