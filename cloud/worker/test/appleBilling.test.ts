@@ -365,7 +365,7 @@ describe('POST /v1/billing/apple/transaction', () => {
 });
 
 describe('one App Store subscription, one account', () => {
-  it('follows the newest transaction’s account, and refuses the old one re-posted', async () => {
+  it('refuses a second account, whatever the newer transaction’s token says', async () => {
     const first = await signIn();
     const second = await signIn();
     const bought = transaction(first.userId, { productId: PRO_MONTHLY, signedDate: Date.now() - 2000 });
@@ -373,23 +373,107 @@ describe('one App Store subscription, one account', () => {
     expect((await post('/v1/billing/apple/transaction', { transaction_id: bought.transactionId }, { token: first.accessToken })).status).toBe(200);
     vi.restoreAllMocks();
 
-    // The same Apple ID changes product from the second account: the new transaction is its.
+    // The same Apple ID changes product while signed in to the second account: the new
+    // transaction carries the second account's token, under the same original transaction.
     const switched = {
       ...bought, transactionId: '3000000000000009', productId: PREMIUM_MONTHLY,
       appAccountToken: second.userId, signedDate: Date.now(),
     };
     appleApi({ transaction: switched });
-    expect((await post('/v1/billing/apple/transaction', { transaction_id: switched.transactionId }, { token: second.accessToken })).status).toBe(200);
+    const taken = await post('/v1/billing/apple/transaction', { transaction_id: switched.transactionId }, { token: second.accessToken });
+    expect(taken.status).toBe(403);
+    expect(await row(second.userId)).toBeNull();
     vi.restoreAllMocks();
 
-    expect(await row(second.userId)).toMatchObject({ provider: 'apple', status: 'active', tier: 'premium' });
-    expect((await row(first.userId))?.status).toBe('transferred');
+    // The first account keeps it, and its notifications keep writing to it.
+    expect(await row(first.userId)).toMatchObject({ provider: 'apple', status: 'active' });
+    delete (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY;
+    await notify(await notification('DID_CHANGE_RENEWAL_PREF', switched, { subtype: 'UPGRADE', status: 1 }));
+    expect(await row(first.userId)).toMatchObject({ tier: 'premium' });
+    expect(await row(second.userId)).toBeNull();
+  });
 
-    // The first account posting its own old purchase again finds the subscription is no longer its.
-    appleApi({ transaction: bought, latest: switched });
+  it('refuses the first account re-posting its old purchase once the newest is another’s', async () => {
+    const first = await signIn();
+    const second = await signIn();
+    const bought = transaction(first.userId, { signedDate: Date.now() - 2000 });
+    const newest = { ...bought, transactionId: '3000000000000010', appAccountToken: second.userId, signedDate: Date.now() };
+    appleApi({ transaction: bought, latest: newest });
+
     const replay = await post('/v1/billing/apple/transaction', { transaction_id: bought.transactionId }, { token: first.accessToken });
     expect(replay.status).toBe(403);
-    expect((await get('/v1/billing/status', { token: first.accessToken })).body.can_sync_files).toBe(false);
+  });
+
+  it('holds two accounts to one subscription in the schema too', async () => {
+    const first = await signIn();
+    const second = await signIn();
+    const insert = (userId: string) => env.DB.prepare(
+      `INSERT INTO subscriptions (user_id, provider, subscription_id, status, updated_utc)
+       VALUES (?1, 'apple', '2000000000000999', 'active', ?2)`,
+    ).bind(userId, new Date().toISOString()).run();
+    await insert(first.userId);
+    await expect(insert(second.userId)).rejects.toThrow(/UNIQUE/);
+  });
+
+  it('refuses a subscription shared through Family Sharing', async () => {
+    const account = await signIn();
+    const txn = transaction(undefined, { inAppOwnershipType: 'FAMILY_SHARED' });
+    appleApi({ transaction: txn });
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+    expect(response.status).toBe(400);
+    expect(await row(account.userId)).toBeNull();
+  });
+});
+
+describe('a notification, read against where the subscription stands now', () => {
+  it('does not let a refund of an earlier period revoke a running subscription', async () => {
+    const account = await signIn();
+    const current = transaction(account.userId, { transactionId: '4000000000000002', signedDate: Date.now() - 1000 });
+    appleApi({ transaction: current });
+    await post('/v1/billing/apple/transaction', { transaction_id: current.transactionId }, { token: account.accessToken });
+
+    // Apple refunds the previous month; the subscription itself is still active.
+    const refunded = {
+      ...current, transactionId: '4000000000000001', expiresDate: Date.now() - DAY,
+      revocationDate: Date.now(), signedDate: Date.now(),
+    };
+    const calls = appleApi({ transaction: refunded, latest: { ...current, signedDate: Date.now() }, status: 1 });
+    await notify(await notification('REFUND', refunded));
+
+    expect(calls.some((call) => new URL(call.url).pathname === `/inApps/v1/subscriptions/${refunded.transactionId}`)).toBe(true);
+    expect(await row(account.userId)).toMatchObject({ status: 'active' });
+    const status = await get('/v1/billing/status', { token: account.accessToken });
+    expect(status.body.can_sync_files).toBe(true);
+  });
+
+  it('without the API, still keeps a running subscription through an earlier period’s refund', async () => {
+    delete (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY;
+    const account = await signIn();
+    const current = transaction(account.userId, { signedDate: Date.now() - 1000 });
+    await notify(await notification('SUBSCRIBED', current, { status: 1 }));
+
+    await notify(await notification('REFUND', { ...current, revocationDate: Date.now(), signedDate: Date.now() }, { status: 1 }));
+    expect((await row(account.userId))?.status).toBe('active');
+  });
+
+  it('is applied again by Apple when the API cannot be reached', async () => {
+    const account = await signIn();
+    mockFetch(() => jsonResponse({}, 503));
+    const response = await notify(await notification('DID_RENEW', transaction(account.userId), { status: 1 }));
+    expect(response.status).toBe(500);
+    expect((await env.DB.prepare('SELECT COUNT(*) AS n FROM billing_events').first<{ n: number }>())?.n).toBe(0);
+  });
+
+  it('refuses a body that declares itself too large before reading it', async () => {
+    const worker = (await import('../src/index')).default;
+    const request = new Request('https://daynote.test/v1/billing/apple/notifications', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': String(1024 * 1024) },
+      body: '{}',
+    });
+    const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+    expect((await worker.fetch(request, env as any, ctx)).status).toBe(413);
   });
 });
 
@@ -507,6 +591,12 @@ describe('one subscription per account, across stores', () => {
 });
 
 describe('POST /v1/billing/apple/notifications', () => {
+  // These exercise the notification's own payload: with the In-App Purchase key set the Worker reads
+  // the subscription's state from Apple instead, which the describe above covers.
+  beforeEach(() => {
+    delete (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY;
+  });
+
   it('applies SUBSCRIBED, and ignores the same notification delivered again', async () => {
     const account = await signIn();
     const txn = transaction(account.userId);
@@ -596,9 +686,11 @@ describe('POST /v1/billing/apple/notifications', () => {
   it('finds the account by the subscription when the purchase carried no token', async () => {
     const account = await signIn();
     const txn = transaction(undefined, { signedDate: Date.now() - 1000 });
+    (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY = await iapKeyPem();
     appleApi({ transaction: txn });
     await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
     vi.restoreAllMocks();
+    delete (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY;
 
     await notify(await notification('EXPIRED', { ...txn, expiresDate: Date.now() - 1000, signedDate: Date.now() }, {
       subtype: 'VOLUNTARY',

@@ -127,6 +127,7 @@ describe('0009 over an existing database', () => {
       'rate_limits_expiry',
       'refresh_tokens_family',
       'refresh_tokens_user',
+      'subscriptions_apple_subscription',
       'subscriptions_customer',
       'subscriptions_subscription',
       'users_email',

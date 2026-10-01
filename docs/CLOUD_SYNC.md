@@ -1199,10 +1199,22 @@ Apple Root CA - G3 pinned in `x509.ts`, Apple's marker extensions on the leaf an
 signature — and the bundle id and product id are checked, so the API path does not rest on TLS
 alone and a forged notification is a 401.
 
-**Whose purchase it is.** A token that names an existing account decides; a transaction whose token
-is another account's is refused with 403. With no token (an offer code redeemed outside the app) or
-the token of a deleted account, the transaction can be claimed by the account restoring it unless
-another account already holds that subscription.
+**Whose purchase it is.** One App Store subscription (one `originalTransactionId`) entitles one
+account, held to that by a partial unique index (migration 0012). A post is refused with 403 when
+another account already holds the subscription, whatever the tokens say — nothing moves silently —
+and when the token on the subscription's newest transaction, or on the one posted, names another
+existing account (StoreKit stamps each new transaction with the account signed in, so the newest
+decides). With no token (an offer code redeemed outside the app) or the token of a deleted account,
+it can be claimed by the account restoring it. Family Sharing is off for the group, and a
+`FAMILY_SHARED` transaction is refused (it carries no token, and each family member could claim it).
+
+**Notifications are read against Apple.** A notification is about one transaction — a refund can
+be of an earlier period while the subscription runs on — so with the In-App Purchase key set the
+Worker re-reads Get All Subscription Statuses for it (in the notification's environment) and writes
+the newest transaction, as the transaction endpoint does. If Apple cannot be reached the answer is a
+500 and Apple delivers it again. Without the key the notification's payload is used, and a revocation
+date on a transaction Apple still calls active or retrying is not read as a revoked subscription.
+The account already holding the subscription receives it; only an unheld one goes by token.
 
 **Order.** Apple's payloads are whole snapshots rather than deltas, so the newest by `signedDate`
 (kept in `price_occurred_utc`) wins outright and an older one changes nothing — the App Store form
@@ -1242,6 +1254,20 @@ becomes `appAccountToken`), and a transaction finished only once the server has 
 downgrades are StoreKit purchases of the other product in the same group. A purchase is shown as done
 only from the server's answer. Tests: `tests/Daynote.Mobile.Tests/StoreTests.cs`,
 `DeviceSafeAreaTests` (the plans page on three devices), `HttpAuthApiClientBillingTests`.
+
+**Sandbox, honoured on purpose.** TestFlight and App Review buy in Apple's sandbox against the
+production server, and App Review signs in with accounts of its own, so an allowlist would fail
+review; sandbox purchases therefore entitle like any other. The trade: everyone with the TestFlight
+build can unlock a paid tier without paying. It is bounded by Apple's sandbox clock — a sandbox
+month lasts minutes and a subscription stops after a few renewals — and the Worker follows the real
+`expiresDate`, never extending it, so a sandbox grant runs out on its own. Every such row carries
+`environment = 'Sandbox'`; to see them, or to end one by hand:
+
+```sql
+SELECT user_id, tier, plan, status, current_period_end_utc FROM subscriptions
+ WHERE provider = 'apple' AND environment = 'Sandbox';
+UPDATE subscriptions SET status = 'revoked' WHERE user_id = '<id>' AND environment = 'Sandbox';
+```
 
 **Deletion.** No server can cancel an App Store subscription, so `DELETE /v1/account` does not wait
 for one; the app says before deleting that it continues until cancelled in Settings.

@@ -69,6 +69,8 @@ export interface AppleTransaction {
   readonly appAccountToken?: string;
   readonly environment?: string;
   readonly signedDate?: number;
+  /** `PURCHASED`, or `FAMILY_SHARED` for a family member's share. */
+  readonly inAppOwnershipType?: string;
 }
 
 /** A decoded `JWSRenewalInfo`. */

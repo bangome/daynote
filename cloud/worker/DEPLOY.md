@@ -281,7 +281,7 @@ both production and sandbox.
 ```sh
 cd cloud/worker
 npx wrangler d1 time-travel info daynote                       # bookmark, in case
-npx wrangler d1 migrations apply daynote --remote              # 0011_app_store.sql: one ADD COLUMN
+npx wrangler d1 migrations apply daynote --remote              # 0011 (one ADD COLUMN), 0012 (unique index)
 npx wrangler secret put APPLE_IAP_PRIVATE_KEY < ~/.config/schooling/SubscriptionKey_F47T589ZC4.p8
 npm run deploy
 curl -s https://daynote.arachat.cc/v1/health
@@ -300,6 +300,17 @@ row `apple.TEST`:
 npx wrangler d1 execute daynote --remote --command \
   "SELECT event_type, received_utc FROM billing_events WHERE event_type LIKE 'apple.%' ORDER BY received_utc DESC LIMIT 5"
 ```
+
+0012's index covers App Store rows only, and none exists before 0011 is deployed, so it cannot
+fail on existing data. To check anyway before applying:
+
+```sh
+npx wrangler d1 execute daynote --remote --command \
+  "SELECT subscription_id, COUNT(*) FROM subscriptions WHERE provider = 'apple' AND subscription_id IS NOT NULL GROUP BY subscription_id HAVING COUNT(*) > 1"
+```
+
+Sandbox (TestFlight, App Review) purchases entitle on the production server by design — see
+docs/CLOUD_SYNC.md §14.8 for the trade and the queries that list or end them.
 
 ### Account deletion and an App Store subscription
 
