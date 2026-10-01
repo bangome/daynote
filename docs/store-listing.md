@@ -208,7 +208,7 @@ markdown
 ### Copyright and trademark info
 
 ```
-© 2026 Bread Jinhwa Jeong
+© 2026 Withcube
 ```
 
 ### Additional license terms

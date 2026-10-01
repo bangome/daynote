@@ -235,7 +235,7 @@ internal static class EnglishStrings
         // About / author (settings)
         ["SettingsAboutRow"] = "Author",
         ["SettingsAboutLabel"] = "Author",
-        ["AuthorName"] = "Bread Jinhwa Jeong",
+        ["AuthorName"] = "Withcube",
         ["AuthorEmail"] = "aracube@gmail.com",
 
         // Tray menu

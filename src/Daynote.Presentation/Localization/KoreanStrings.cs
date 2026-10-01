@@ -224,7 +224,7 @@ internal static class KoreanStrings
         // About / author (settings)
         ["SettingsAboutRow"] = "제작자",
         ["SettingsAboutLabel"] = "제작자",
-        ["AuthorName"] = "Bread Jinhwa Jeong",
+        ["AuthorName"] = "Withcube",
         ["AuthorEmail"] = "aracube@gmail.com",
 
         // Tray menu
