@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!--
-    INTERNET is the only permission Daynote asks for, and only cloud sync uses it. No storage
-    permission: attachments arrive through the document picker, which grants access per file, and no
-    notification permission until there is something to notify about.
+    INTERNET is for cloud sync only. No storage permission: attachments arrive through the document
+    picker, which grants access per file.
   -->
   <uses-permission android:name="android.permission.INTERNET" />
+  <!--
+    To-do reminders (Platform/AndroidReminderScheduler.cs). POST_NOTIFICATIONS is the Android 13
+    runtime permission, asked the first time a to-do has a due date ahead, never at launch.
+    SCHEDULE_EXACT_ALARM lets a reminder fire on the minute where the user allows it (Android 14
+    no longer grants it on install); without it the alarm is inexact. Deliberately not
+    USE_EXACT_ALARM, which Play restricts to alarm-clock and calendar apps.
+    RECEIVE_BOOT_COMPLETED re-arms the alarms after a restart, which clears them all.
+  -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
   <application android:label="Daynote"
                android:icon="@mipmap/ic_launcher"

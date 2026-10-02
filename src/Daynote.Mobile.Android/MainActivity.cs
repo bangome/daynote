@@ -49,6 +49,9 @@ public class MainActivity : AvaloniaMainActivity
         Current = this;
         base.OnCreate(savedInstanceState);
 
+        // Launched by tapping a to-do reminder: the shell opens its note once the day has loaded.
+        OpenReminder(Intent);
+
         // With three-button navigation Android lays a translucent grey scrim over the button bar for
         // contrast, which read as the bottom of the app being dimmed. The app paints that strip in its
         // own background colour (MainView), so the scrim has nothing to add.
@@ -133,9 +136,58 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnNewIntent(Intent? intent)
     {
         base.OnNewIntent(intent);
+        if (OpenReminder(intent))
+        {
+            return;
+        }
+
         if (intent?.Data is { } data)
         {
             Platform.AndroidAuthSession.Complete(new Uri(data.ToString()!));
+        }
+    }
+
+    /// <summary>A tapped to-do reminder carries its note's date and id; hands them to the app.</summary>
+    private static bool OpenReminder(Intent? intent)
+    {
+        if (intent?.GetStringExtra(Platform.AndroidReminderScheduler.ExtraNote) is not { } note)
+        {
+            return false;
+        }
+
+        string? date = intent.GetStringExtra(Platform.AndroidReminderScheduler.ExtraDate);
+        intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraNote);
+        intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraDate);
+        App.OpenReminder(date, note);
+        return true;
+    }
+
+    private const int NotificationPermissionRequest = 7301;
+
+    private TaskCompletionSource<bool>? _notificationPermission;
+
+    /// <summary>
+    /// Shows Android 13's notification prompt and answers whether it was granted. The reminder
+    /// scheduler calls it the first time there is a to-do to remind about.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("android33.0")]
+    internal Task<bool> RequestNotificationPermissionAsync()
+    {
+        _notificationPermission?.TrySetResult(false);
+        var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _notificationPermission = pending;
+        RequestPermissions([global::Android.Manifest.Permission.PostNotifications], NotificationPermissionRequest);
+        return pending.Task;
+    }
+
+    public override void OnRequestPermissionsResult(
+        int requestCode, string[] permissions, [global::Android.Runtime.GeneratedEnum] Permission[] grantResults)
+    {
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NotificationPermissionRequest && _notificationPermission is { } pending)
+        {
+            _notificationPermission = null;
+            pending.TrySetResult(grantResults.Length > 0 && grantResults[0] == Permission.Granted);
         }
     }
 

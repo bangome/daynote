@@ -36,7 +36,8 @@ public static class AndroidPlatformServices
             Identity: CreateIdentity(currentActivity),
             OpenExternal: target => OpenExternal(context, target),
             TopLevel: () => TopLevel.GetTopLevel((currentActivity() as AvaloniaMainActivity)?.Content as Control),
-            OpenFile: (name, bytes) => OpenFileAsync(context, currentActivity, name, bytes));
+            OpenFile: (name, bytes) => OpenFileAsync(context, currentActivity, name, bytes),
+            Reminders: new AndroidReminderScheduler(context, currentActivity));
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public static class AndroidPlatformServices
     /// Android's auto-backup, is wiped on uninstall, and no other app can read it - the same
     /// contract the desktop data root has, so the shared infrastructure needs no special case.
     /// </remarks>
-    private static string ResolveDataRoot(Context context)
+    internal static string ResolveDataRoot(Context context)
     {
         string root = Path.Combine(
             context.FilesDir?.AbsolutePath
