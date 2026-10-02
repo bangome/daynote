@@ -12,9 +12,15 @@ namespace Daynote.Mobile.iOS;
 [Register(nameof(AppDelegate))]
 public partial class AppDelegate : AvaloniaAppDelegate<App>
 {
+    /// <summary>Held here: the notification center keeps only a weak reference to its delegate.</summary>
+    private static readonly IosReminderDelegate ReminderDelegate = new();
+
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
         App.Platform = IosPlatformServices.Create();
+
+        // Before launch finishes, or a tap on a reminder that launched the app never arrives.
+        UserNotifications.UNUserNotificationCenter.Current.Delegate = ReminderDelegate;
 
         // Deactivation is the last moment iOS guarantees the app runs, so the open note is flushed
         // there. WillTerminate is not a substitute: iOS kills a suspended app without calling it.

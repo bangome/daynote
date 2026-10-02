@@ -53,7 +53,8 @@ public static class IosPlatformServices
             PickPhotos: IosFileHandoff.PickPhotosAsync,
             // Constructed here, at launch, so its payment-queue observer is in place before StoreKit
             // delivers anything held for the app (a renewal, an interrupted purchase).
-            Store: new IosStorePurchases());
+            Store: new IosStorePurchases(),
+            Reminders: new IosReminderScheduler());
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.
