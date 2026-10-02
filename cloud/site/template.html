@@ -51,6 +51,7 @@
     </a>
     <nav class="top__nav" aria-label="{{navLabel}}">
       <a href="#features">{{navFeatures}}</a>
+      <a href="#mobile">{{navMobile}}</a>
       <a href="#sync">{{navSync}}</a>
       <a href="#privacy">{{navPrivacy}}</a>
       <a href="#download">{{navDownload}}</a>
@@ -76,6 +77,7 @@
         </a>
         <a class="link-arrow" href="#features">{{heroSecondary}}</a>
       </div>
+      <div class="stores hero__stores" role="group" aria-label="{{mobStoresLabel}}">{{storeBadges}}</div>
       <p class="hero__meta">{{heroMeta}}</p>
     </div>
     <figure class="hero__shot">
@@ -210,6 +212,35 @@
   </div>
 </section>
 
+<!-- ───────── Mobile ───────── -->
+<section class="mobile" id="mobile" aria-labelledby="mobile-title">
+  <div class="wrap mobile__head">
+    <div>
+      <p class="eyebrow">{{mobEyebrow}}</p>
+      <h2 class="h2" id="mobile-title">{{mobTitle}}</h2>
+    </div>
+    <div>
+      <p class="mobile__lede">{{mobLede}}</p>
+      <div class="stores stores--lg" role="group" aria-label="{{mobStoresLabel}}">{{storeBadges}}</div>
+    </div>
+  </div>
+  <div class="phones" role="group" aria-label="{{mobShotsLabel}}" tabindex="0">
+    <figure class="phone"><div class="phone__frame"><img loading="lazy" src="/img/phone-{{lang}}-01-day.webp" width="640" height="1391" alt="{{ph1Alt}}"></div><figcaption>{{ph1}}</figcaption></figure>
+    <figure class="phone"><div class="phone__frame"><img loading="lazy" src="/img/phone-{{lang}}-02-note.webp" width="640" height="1391" alt="{{ph2Alt}}"></div><figcaption>{{ph2}}</figcaption></figure>
+    <figure class="phone"><div class="phone__frame"><img loading="lazy" src="/img/phone-{{lang}}-05-dark.webp" width="640" height="1391" alt="{{ph3Alt}}"></div><figcaption>{{ph3}}</figcaption></figure>
+  </div>
+  <div class="wrap">
+    <ul class="more__list mobile__points">
+      <li><b>{{mp1T}}</b> {{mp1B}}</li>
+      <li><b>{{mp2T}}</b> {{mp2B}}</li>
+      <li><b>{{mp3T}}</b> {{mp3B}}</li>
+      <li><b>{{mp4T}}</b> {{mp4B}}</li>
+      <li><b>{{mp5T}}</b> {{mp5B}}</li>
+      <li><b>{{mp6T}}</b> {{mp6B}}</li>
+    </ul>
+  </div>
+</section>
+
 <!-- ───────── Cloud sync ───────── -->
 <section class="sync" id="sync">
   <div class="wrap sync__grid">
@@ -284,6 +315,7 @@
       <a href="{{altHref}}" lang="{{altLang}}">{{altLabel}}</a>
     </nav>
   </div>
+  <p class="wrap foot__legal">{{tmNote}}</p>
 </footer>
 </body>
 </html>

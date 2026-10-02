@@ -11,6 +11,39 @@ const template = readFileSync(join(here, 'template.html'), 'utf8');
 // listing URL (https://apps.microsoft.com/detail/<ProductId>) once Partner Center assigns one.
 const STORE_URL = 'https://apps.microsoft.com/search?query=Daynote';
 
+// ── Phone stores ──
+// Neither listing is public yet. While a switch is false its badge renders without a link
+// (aria-disabled, not clickable) and with a "Coming soon" caption under it; flip it to true the day
+// the listing goes live and the badge links to the store. One switch per store.
+const APP_STORE_LIVE = false;
+const PLAY_STORE_LIVE = false;
+const APP_STORE_URL = 'https://apps.apple.com/app/id6817146422';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=cc.arachat.daynote';
+
+// The badges are the stores' own artwork, unmodified, in public/img/badges:
+//   app-store-{ko,en}.svg   Apple Marketing Tools, "Download on the App Store", black, ko-kr / en-us
+//   google-play-{ko,en}.png play.google.com/intl/en_us/badges ({ko,en}_badge_web_generic.png), with
+//                           only the transparent padding cropped so both badges can share one height
+// Width/height are the files' own sizes; CSS sets the rendered height (40px minimum, Apple's rule)
+// and the clear space around them (a quarter of the height, both brands' rule).
+const BADGES = {
+  apple: { ko: ['app-store-ko.svg', 130, 40], en: ['app-store-en.svg', 120, 40] },
+  google: { ko: ['google-play-ko.png', 646, 192], en: ['google-play-en.png', 564, 168] },
+};
+function storeBadges(lang) {
+  const t = lang === 'ko'
+    ? { apple: 'App Store에서 다운로드 하기', google: 'Google Play에서 다운로드', soon: '출시 예정' }
+    : { apple: 'Download on the App Store', google: 'Get it on Google Play', soon: 'Coming soon' };
+  const one = (store, live, url) => {
+    const [file, w, h] = BADGES[store][lang];
+    const img = `<img src="/img/badges/${file}" width="${w}" height="${h}" alt="${t[store]}">`;
+    return live
+      ? `<div class="store"><a class="store__badge" href="${url}" rel="noopener">${img}</a></div>`
+      : `<div class="store store--soon"><span class="store__badge" role="link" aria-disabled="true">${img}</span><span class="store__soon">${t.soon}</span></div>`;
+  };
+  return one('apple', APP_STORE_LIVE, APP_STORE_URL) + one('google', PLAY_STORE_LIVE, PLAY_STORE_URL);
+}
+
 // ── Things Paddle's website review looks for. Fill these in before requesting domain approval. ──
 // Who operates the service, as it should appear in the terms and on the support page.
 const OPERATOR = { ko: '위드큐브', en: 'Withcube' };
@@ -59,7 +92,7 @@ const linksEn = {
 };
 
 const ko = {
-  ...common, ...cal, ...linksKo,
+  ...common, ...cal, ...linksKo, storeBadges: storeBadges('ko'),
   lang: 'ko', ogLocale: 'ko_KR', home: '/', canonical: 'https://daynote.arachat.cc/',
   altHref: '/en/', altLang: 'en', altLabel: 'EN',
   title: 'Daynote — 하루를 더 또렷하게 정리하세요',
@@ -100,6 +133,21 @@ const ko = {
   m6T: '라이트와 다크', m6B: 'Windows 테마를 따르거나 한 번의 키로 바꿉니다. 한국어와 영어 UI를 모두 제공합니다.',
   shotsTitle: '화면',
   shot1: '캘린더, 노트 목록, 편집기, 할 일 탭이 한 화면에', shot3: '끌어다 놓은 파일과 본문 링크가 만나는 파일 탭', shot4: '전역 단축키와 앱 내 단축키 설정',
+  navMobile: '모바일',
+  mobEyebrow: 'iPhone · Android', mobTitle: '휴대폰에서도<br>같은 노트.',
+  mobLede: 'Daynote는 휴대폰에서도 날짜로 움직입니다. 오늘을 열면 이번 주 달력 아래에 그날의 노트와 할 일이 모여 있고, 로그인하면 PC에서 쓰던 노트도 그 자리에 있습니다.',
+  mobStoresLabel: '휴대폰용 Daynote 받기',
+  mobShotsLabel: '휴대폰 화면',
+  ph1: '오늘', ph1Alt: 'Daynote 휴대폰 앱의 오늘 화면. 위에 이번 주 달력, 그 아래에 이날의 노트 카드 두 장과 할 일 목록.',
+  ph2: '노트 편집', ph2Alt: '노트 편집 화면. "3분기 계획 회의" 제목 아래에 체크박스 할 일과 메모, 화면 아래에 할 일·날짜·시간 입력 버튼.',
+  ph3: '다크 모드', ph3Alt: '어두운 테마로 본 같은 오늘 화면.',
+  mp1T: 'iPhone과 Android', mp1B: '두 휴대폰 모두에서 같은 앱, 같은 화면입니다.',
+  mp2T: '계정 없이, 오프라인으로', mp2B: '설치하면 바로 씁니다. 로그인하지 않으면 노트는 휴대폰 안에만 있고, 인터넷이 없어도 그대로 동작합니다.',
+  mp3T: '로그인하면 PC와 같은 노트', mp3B: 'PC에서 쓰는 Google 계정으로 로그인하면 휴대폰과 PC에 같은 노트와 할 일이 보입니다. iPhone에서는 Apple로도 로그인할 수 있습니다.',
+  mp4T: '<code>-[]</code> 한 줄이 할 일로', mp4B: '본문에 <code>-[]</code>로 시작하는 줄을 쓰면 체크박스가 되고, 그날의 할 일 목록에 모입니다.',
+  mp5T: '사진과 파일도 그날에', mp5B: '찍은 사진이나 받은 파일을 그 날짜에 붙여 둡니다. 나중에는 날짜만 기억하면 됩니다.',
+  mp6T: '라이트와 다크', mp6B: '밝은 테마와 어두운 테마 가운데 눈에 편한 쪽을 고릅니다.',
+  tmNote: 'Apple, Apple 로고, App Store는 미국 및 기타 국가에서 등록된 Apple Inc.의 상표입니다. Google Play 및 Google Play 로고는 Google LLC의 상표입니다.',
   privEyebrow: '프라이버시',
   privTitle: '기본은 내 PC.<br>나가는 건 내가 켠 것만.',
   privLede: 'Daynote에는 텔레메트리가 없습니다. 노트와 파일은 내 Windows 계정만 읽을 수 있는 로컬 폴더에 저장되고, 로그인하기 전까지 앱은 인터넷 연결을 열지 않습니다. 내용이 이 PC를 벗어나는 길은 두 가지뿐이고, 둘 다 내가 직접 켭니다. 클라우드 동기화와 AI 연동입니다.',
@@ -128,7 +176,7 @@ const ko = {
 };
 
 const en = {
-  ...common, ...cal, ...linksEn,
+  ...common, ...cal, ...linksEn, storeBadges: storeBadges('en'),
   lang: 'en', ogLocale: 'en_US', home: '/en/', canonical: 'https://daynote.arachat.cc/en/',
   altHref: '/', altLang: 'ko', altLabel: '한국어',
   title: 'Daynote — See your day clearly',
@@ -169,6 +217,21 @@ const en = {
   m6T: 'Light and dark', m6B: 'Follow the Windows theme or switch with one key. The UI ships in English and Korean.',
   shotsTitle: 'Screens',
   shot1: 'Calendar, note list, editor, and the To-do tab in one window', shot3: 'The Files tab, where dropped files meet body links', shot4: 'Global and in-app shortcut settings',
+  navMobile: 'Mobile',
+  mobEyebrow: 'iPhone · Android', mobTitle: 'The same notes,<br>on your phone.',
+  mobLede: 'On the phone, Daynote still runs on dates. Open today and that day\'s notes and to-dos sit under a strip of this week. Sign in, and the notes you wrote on your PC are there too.',
+  mobStoresLabel: 'Get Daynote for your phone',
+  mobShotsLabel: 'Phone screens',
+  ph1: 'Today', ph1Alt: 'The Today screen of the Daynote phone app: a strip of this week at the top, then two note cards and the to-do list for the day.',
+  ph2: 'Editing a note', ph2Alt: 'The note editor: under the title "Q3 planning meeting", checkbox to-dos and notes, with To-do, Date and Time buttons along the bottom.',
+  ph3: 'Dark mode', ph3Alt: 'The same Today screen in the dark theme.',
+  mp1T: 'iPhone and Android', mp1B: 'The same app and the same screens on both.',
+  mp2T: 'No account, works offline', mp2B: 'Install it and start writing. Until you sign in, your notes stay on the phone, and it all works without a connection.',
+  mp3T: 'Sign in, see your PC\'s notes', mp3B: 'Sign in with the Google account you use on your PC and the same notes and to-dos show up on both. On iPhone you can also sign in with Apple.',
+  mp4T: 'A <code>-[]</code> line is a to-do', mp4B: 'Start a line with <code>-[]</code> and it becomes a checkbox, gathered into that day\'s to-do list.',
+  mp5T: 'Photos and files, on the day', mp5B: 'Attach a photo you took or a file you received to its date. Later, the date is all you need to remember.',
+  mp6T: 'Light and dark', mp6B: 'Pick the light theme or the dark one, whichever is easier on your eyes.',
+  tmNote: 'Apple, the Apple logo and App Store are trademarks of Apple Inc., registered in the U.S. and other countries. Google Play and the Google Play logo are trademarks of Google LLC.',
   privEyebrow: 'Privacy',
   privTitle: 'Your PC by default.<br>Only what you switch on leaves.',
   privLede: 'Daynote has no telemetry. Notes and files are stored in a local folder only your Windows account can read, and until you sign in the app opens no internet connection. Exactly two things can carry content off this PC, and you switch on both yourself: cloud sync and the AI integration.',

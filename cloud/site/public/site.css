@@ -82,6 +82,21 @@ html[lang="en"] .h2, html[lang="en"] .hero__title, html[lang="en"] .privacy__tit
 .link-arrow--light { color: var(--on-ink); border-color: oklch(0.4 0.05 268); }
 .link-arrow--light::after { color: var(--sun); }
 
+/* ── Store badges ──
+   The stores' own artwork at one shared height. Both brands ask for clear space of a quarter of
+   the badge height on every side and Apple for 40px minimum; the gap and caption offset keep that.
+   Nothing here touches the artwork itself: no radius, filter, opacity or recolouring. */
+.stores { --badge-h: 40px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-3) max(16px, calc(var(--badge-h) / 2)); }
+.stores--lg { --badge-h: 48px; }
+.store { display: grid; justify-items: center; gap: calc(var(--badge-h) / 4); }
+.store__badge { display: block; line-height: 0; border-radius: 9px; }
+.store__badge img { height: var(--badge-h); width: auto; max-width: none; }
+.store--soon .store__badge { cursor: default; }
+.store__soon {
+  font-family: var(--font-display); font-weight: 600; font-size: 11px; line-height: 1; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+
 /* ── Header ── */
 .top { position: sticky; top: 0; z-index: 20; background: oklch(0.975 0.006 75 / .88); backdrop-filter: saturate(1.2) blur(10px); border-bottom: 1px solid var(--rule); }
 .top__row { display: flex; align-items: center; gap: var(--sp-6); height: 64px; }
@@ -104,6 +119,7 @@ html[lang="en"] .h2, html[lang="en"] .hero__title, html[lang="en"] .privacy__tit
 .hero__title em { font-style: normal; color: var(--sun-deep); }
 .hero__lede { margin-top: var(--sp-6); font-size: clamp(17px, 1vw + 10px, 20px); line-height: 1.55; color: var(--ink-soft); max-width: 34ch; }
 .hero__cta { display: flex; align-items: center; gap: var(--sp-6); margin-top: var(--sp-8); flex-wrap: wrap; }
+.hero__stores { margin-top: var(--sp-6); }
 .hero__meta { margin-top: var(--sp-4); font-size: 13px; color: var(--ink-soft); font-family: var(--font-display); letter-spacing: .02em; }
 .hero__shot { position: relative; margin: 0 -12% 0 0; transform: translateY(6%); }
 .hero__shot img { border-radius: 10px 10px 0 0; box-shadow: var(--shadow-win); border: 1px solid oklch(0.24 0.075 268 / .18); border-bottom: 0; }
@@ -152,7 +168,7 @@ html[lang="en"] .h2, html[lang="en"] .hero__title, html[lang="en"] .privacy__tit
 .feat__num { font-family: var(--font-display); font-weight: 300; font-size: 40px; line-height: 1; color: var(--sun-deep); font-variation-settings: "opsz" 96; align-self: start; }
 .feat__copy h3 { font-size: clamp(22px, 1.2vw + 14px, 28px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
 .feat__copy p { margin-top: var(--sp-3); color: var(--ink-2); font-size: 17px; max-width: 46ch; }
-.feat__copy code, .more code, .specs code { font-family: var(--font-mono); font-size: .92em; background: var(--paper-3); padding: 1px 6px; border-radius: 4px; }
+.feat__copy code, .more code, .mobile__points code, .specs code { font-family: var(--font-mono); font-size: .92em; background: var(--paper-3); padding: 1px 6px; border-radius: 4px; }
 .feat__demo { min-width: 0; }
 @media (max-width: 860px) {
   .feat, .feat--flip { grid-template-columns: 1fr; gap: var(--sp-4); }
@@ -232,6 +248,42 @@ kbd {
 .screens__strip img { border-radius: 10px; border: 1px solid oklch(0.24 0.075 268 / .15); box-shadow: 0 20px 40px -28px oklch(0.24 0.075 268 / .5); }
 .screens__strip figcaption { margin-top: var(--sp-3); font-size: 14px; color: var(--ink-soft); }
 
+/* ── Mobile ── */
+.mobile { position: relative; overflow: clip; padding-block: clamp(72px, 10vw, 144px) clamp(56px, 8vw, 112px); border-top: 1px solid var(--rule); }
+.mobile__head { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--sp-8) clamp(32px, 6vw, 96px); align-items: end; }
+.mobile__lede { font-size: 18px; color: var(--ink-2); max-width: 44ch; }
+.mobile .stores { margin-top: var(--sp-8); }
+.phones {
+  position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 272px)); justify-content: center;
+  gap: clamp(20px, 4vw, 64px); margin-top: clamp(48px, 6vw, 88px); padding-inline: clamp(16px, 3vw, 48px);
+}
+.phones::before {
+  /* the sunrise again, risen behind the middle phone */
+  content: ""; position: absolute; inset: 10% -20% -6%; pointer-events: none;
+  background: radial-gradient(ellipse 42% 50% at 50% 62%, oklch(0.85 0.12 60 / .5), transparent 72%);
+}
+.phone { position: relative; --r: clamp(24px, 3.2vw, 40px); --bezel: clamp(5px, .6vw, 7px); }
+.phone:nth-child(odd) { margin-top: clamp(32px, 6vw, 88px); }
+.phone__frame {
+  padding: var(--bezel); border-radius: var(--r); background: oklch(0.2 0.045 268);
+  box-shadow: var(--shadow-win), inset 0 0 0 1px oklch(1 0 0 / .1);
+}
+.phone__frame img { border-radius: calc(var(--r) - var(--bezel)); }
+.phone figcaption { margin-top: var(--sp-4); text-align: center; font-size: 14px; color: var(--ink-soft); }
+.mobile__points { margin-top: clamp(48px, 6vw, 88px); }
+@media (max-width: 800px) { .mobile__head { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  /* three phones side by side would be thumbnails here; swipe them instead, like the screens strip */
+  .phones {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: var(--sp-4);
+    padding: var(--sp-4) 16px var(--sp-8); scroll-padding-inline: 16px;
+    scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+  }
+  .phones::before { inset: 0; background: radial-gradient(ellipse 70% 40% at 50% 60%, oklch(0.85 0.12 60 / .45), transparent 72%); }
+  .phone { flex: 0 0 min(64vw, 260px); scroll-snap-align: center; }
+  .phone:nth-child(odd) { margin-top: 0; }
+}
+
 /* ── Cloud sync ── */
 .sync { padding-block: clamp(72px, 10vw, 144px); border-top: 1px solid var(--rule); }
 .sync__grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
@@ -278,6 +330,7 @@ kbd {
 .foot__row { display: flex; align-items: center; gap: var(--sp-4); }
 .foot nav { margin-left: auto; display: flex; gap: var(--sp-6); }
 .foot nav a:hover { color: var(--ink); }
+.foot__legal { margin-top: var(--sp-6); font-size: 12px; line-height: 1.5; color: var(--ink-soft); opacity: .85; }
 
 /* ── Sub-pages (terms, refund, pricing, support, checkout) ── */
 .page { padding-block: clamp(48px, 6vw, 96px) clamp(72px, 9vw, 128px); }
