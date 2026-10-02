@@ -168,6 +168,10 @@ public sealed partial class MobileShellViewModel
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));
         RebuildCards();
+
+        // Everything that changes a to-do - an edit, a tick, a delete, a sync pull, a language
+        // switch - comes through here, with every note already read.
+        RefreshReminders(notes);
     }
 
     private static string GroupLabel(TodoGroupKind kind) => kind switch

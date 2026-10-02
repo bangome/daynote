@@ -164,6 +164,12 @@ public partial class MainView : UserControl
         // The attachment sheets sit where the month sheet does.
         Bleed(this.FindControl<Border>("AttachSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("FileSheet"), bottom, extra: 6, fallback: 24);
+        Bleed(this.FindControl<Border>("ReminderTimeSheet"), bottom, extra: 6, fallback: 24);
+        if (this.FindControl<Border>("ReminderTimeSheet") is { } timeSheet)
+        {
+            // Taller than a phone on its side: it scrolls, under a sliver of scrim that still closes it.
+            timeSheet.Margin = new Thickness(0, 24, 0, timeSheet.Margin.Bottom);
+        }
 
         // The image viewer's dark ground covers the whole screen, notch and strip included, with its
         // bar and buttons kept inside the safe area.

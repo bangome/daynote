@@ -32,6 +32,13 @@
       <SolidColorBrush x:Key="Mobile.Scrim" Color="#660e1020" />
       <SolidColorBrush x:Key="Mobile.Bar" Color="#ebfffefb" />
       <Color x:Key="SystemAccentColor">#1b2356</Color>
+      <!-- The reminder switch: Fluent's own blue otherwise, which is nowhere else in the app. -->
+      <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#1b2356" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#1b2356" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#2a3470" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#ffffff" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#ffffff" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#ffffff" />
       <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9a9caa" />
       <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#9a9caa" />
       <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#9a9caa" />
@@ -58,6 +65,12 @@
       <SolidColorBrush x:Key="Mobile.Scrim" Color="#8c000000" />
       <SolidColorBrush x:Key="Mobile.Bar" Color="#eb171a2e" />
       <Color x:Key="SystemAccentColor">#ff9a52</Color>
+      <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#ff9a52" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#ff9a52" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#ffb27a" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#1a1206" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#1a1206" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#1a1206" />
       <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6c6f88" />
       <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#6c6f88" />
       <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#6c6f88" />

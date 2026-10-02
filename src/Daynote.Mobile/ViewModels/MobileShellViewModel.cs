@@ -175,7 +175,8 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// The floating tab bar and the new-note button: on every tab, and gone while something covers
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
-    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen;
+    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
+        && !IsReminderTimeSheetOpen;
 
     partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -229,6 +230,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         IsStoreOpen = false;
         IsMonthPickerOpen = false;
         IsAttachSheetOpen = false;
+        IsReminderTimeSheetOpen = false;
         MenuFile = null;
         ViewerFile = null;
         Page = page;
@@ -270,6 +272,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (IsMonthPickerOpen)
         {
             IsMonthPickerOpen = false;
+            return true;
+        }
+
+        if (IsReminderTimeSheetOpen)
+        {
+            IsReminderTimeSheetOpen = false;
             return true;
         }
 
@@ -374,6 +382,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             string? theme = await _settings.GetAsync(ThemeKey, cancellationToken).ConfigureAwait(true);
             IsDark = string.Equals(theme, "dark", StringComparison.Ordinal);
             _themeApplier.Apply(IsDark);
+            await LoadReminderSettingAsync(cancellationToken).ConfigureAwait(true);
         }
         finally
         {
@@ -674,6 +683,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         {
             OnPropertyChanged(nameof(EditorSaveText));
             OnPropertyChanged(nameof(IsEditorSaved));
+
+            // A to-do typed into the open note reminds without waiting for the editor to close.
+            if (Notes.SaveStatus == SaveStatusKind.Saved)
+            {
+                RefreshReminders();
+            }
         }
     }
 
@@ -706,6 +721,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(IsEnglish));
         OnPropertyChanged(nameof(VersionText));
         OnPropertyChanged(nameof(SearchResultCountText));
+        RefreshReminderRow();
         RefreshFilesSyncNote();
         foreach (MobileFileRowViewModel row in DayFiles)
         {

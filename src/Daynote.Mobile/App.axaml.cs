@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
+using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Core.Settings;
 using Daynote.Mobile.Composition;
@@ -132,6 +133,14 @@ public partial class App : Application
                 account.ProfileSwitchRequested -= OnProfileSwitchRequested;
             }
 
+            // The old profile's to-dos must not go on reminding under the new one. The new
+            // composition's first pass would cancel them too (its diff runs against the same
+            // device-level state), but not if the new profile fails to open.
+            if (_provider?.GetService<Reminders.ReminderCoordinator>() is { } reminders)
+            {
+                await reminders.ClearAsync().ConfigureAwait(true);
+            }
+
             if (_provider is { } provider)
             {
                 _provider = null;
@@ -225,6 +234,12 @@ public partial class App : Application
         }
 
         await shell.InitializeAsync().ConfigureAwait(true);
+        _initialised = shell;
+        if (_pendingReminder is { } tapped)
+        {
+            _pendingReminder = null;
+            await shell.OpenReminderAsync(tapped.Date, tapped.NoteId).ConfigureAwait(true);
+        }
 
         if (shell.Account is { } account)
         {
@@ -232,6 +247,33 @@ public partial class App : Application
         }
 
         shell.StartAutoSync();
+    }
+
+    /// <summary>The shell whose day has loaded, so a tapped reminder can be handed straight to it.</summary>
+    private static MobileShellViewModel? _initialised;
+
+    /// <summary>A reminder tapped before the shell was ready, typically the one that launched the app.</summary>
+    private static (LocalDate Date, Guid NoteId)? _pendingReminder;
+
+    /// <summary>
+    /// A to-do reminder was tapped. Each head calls this on the UI thread with the date and note it
+    /// put into the notification; the app opens that day with the note in the editor, now if it is
+    /// running and as soon as the day has loaded if the tap is what launched it.
+    /// </summary>
+    public static void OpenReminder(string? date, string? noteId)
+    {
+        if (LocalDate.Parse(date) is not { IsSuccess: true } day || !Guid.TryParse(noteId, out Guid note))
+        {
+            return;
+        }
+
+        if (Current is App { _shell: { } shell } && ReferenceEquals(shell, _initialised))
+        {
+            _ = shell.OpenReminderAsync(day.Value, note);
+            return;
+        }
+
+        _pendingReminder = (day.Value, note);
     }
 
     /// <summary>

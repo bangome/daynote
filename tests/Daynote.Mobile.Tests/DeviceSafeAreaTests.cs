@@ -51,7 +51,18 @@ public sealed class DeviceSafeAreaTests
         Directory.CreateDirectory(directory);
         var failures = new List<string>();
 
-        TestServices.WithInitialisedShell(width, height, (view, shell) =>
+        // Notifications denied at the prompt the seeded to-dos bring up, so the settings page shows
+        // its tallest reminder row: the denial line and the button to the system settings.
+        var denied = new TestServices.ShellSetup(Platform: platform => platform with
+        {
+            Reminders = new FakeReminderScheduler
+            {
+                Permission = Daynote.Mobile.Reminders.ReminderPermission.NotDetermined,
+                AnswerToRequest = Daynote.Mobile.Reminders.ReminderPermission.Denied,
+            },
+        });
+
+        TestServices.WithInitialisedShell(width, height, denied, (view, shell) =>
         {
             view.PreviewSafeArea = safe;
             LocalDate today = LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
@@ -100,7 +111,13 @@ public sealed class DeviceSafeAreaTests
             Check("search");
 
             shell.GoToPageCommand.Execute(MobilePage.Settings);
+            Settle(view);
+            Assert.IsTrue(shell.IsReminderPermissionDenied, $"{device}: the settings page is not showing the denied reminder row.");
             Check("settings");
+
+            shell.OpenReminderTimeSheetCommand.Execute(null);
+            Check("reminder-time");
+            shell.CloseReminderTimeSheetCommand.Execute(null);
 
             shell.OpenAccountCommand.Execute(null);
             Check("account");

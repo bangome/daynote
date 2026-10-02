@@ -60,6 +60,11 @@ namespace Daynote.Mobile.Platform;
 /// desktop's (App Store guideline 3.1.3(b)). Null elsewhere, and no purchase surface exists then —
 /// Android honours a subscription bought on the desktop and sells nothing.
 /// </param>
+/// <param name="Reminders">
+/// Local notifications for to-dos with a due date: <c>UNUserNotificationCenter</c> on iOS,
+/// <c>AlarmManager</c> on Android. Null (tests, a head without it) leaves the settings row out and
+/// schedules nothing.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
@@ -69,7 +74,8 @@ public sealed record MobilePlatformServices(
     Daynote.Core.Sync.IAppleIdentityProvider? AppleIdentity = null,
     Func<string, byte[], Task<bool>>? OpenFile = null,
     Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null,
-    IStorePurchases? Store = null)
+    IStorePurchases? Store = null,
+    Daynote.Mobile.Reminders.IReminderScheduler? Reminders = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

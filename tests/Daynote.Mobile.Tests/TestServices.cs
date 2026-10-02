@@ -20,9 +20,14 @@ internal static class TestServices
     /// Both are null on purpose: it is the shape a head has before its OAuth client exists, so these
     /// tests cover the state the app actually ships in today (local-only, account section absent).
     /// A null secret protector also keeps the run from touching the machine's real keychain.
+    /// <para>
+    /// Notifications are there, in memory, as on both heads: the settings page carries their rows
+    /// and every edit runs a reminder pass, so the screens and the safe-area checks include them.
+    /// </para>
     /// </remarks>
     internal static MobilePlatformServices PlatformFor(string dataRoot) =>
-        new(dataRoot, SecretProtector: null, Identity: null, OpenExternal: _ => { }, TopLevel: () => null);
+        new(dataRoot, SecretProtector: null, Identity: null, OpenExternal: _ => { }, TopLevel: () => null,
+            Reminders: new FakeReminderScheduler());
 
     internal static ServiceProvider Build(string dataRoot, Application application, ShellSetup? setup = null)
     {
@@ -74,6 +79,9 @@ internal static class TestServices
     /// <summary>The data root of the shell <see cref="WithInitialisedShell(Action{Views.MainView, MobileShellViewModel})"/> is running, for seeding files.</summary>
     internal static string? CurrentDataRoot { get; private set; }
 
+    /// <summary>The service graph behind that shell, for reading what it stored.</summary>
+    internal static ServiceProvider? CurrentProvider { get; private set; }
+
     /// <summary>The same, at another handset's logical size.</summary>
     internal static void WithInitialisedShell(double width, double height, Action<Views.MainView, MobileShellViewModel> body) =>
         WithInitialisedShell(width, height, setup: null, body);
@@ -90,6 +98,7 @@ internal static class TestServices
         {
             Application application = Application.Current!;
             ServiceProvider provider = Build(data.Path, application, setup);
+            CurrentProvider = provider;
             var shell = provider.GetRequiredService<MobileShellViewModel>();
             var view = new Views.MainView { DataContext = shell };
 

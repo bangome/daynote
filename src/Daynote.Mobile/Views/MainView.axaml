@@ -159,6 +159,64 @@
     </Panel>
 
     <!--
+      The default reminder time (settings): the hour from a grid of twenty-four pills, the minute
+      from four, the draft large on top, and nothing kept until 완료. Scrolls like the month sheet
+      when a phone on its side is shorter than it.
+    -->
+    <Panel IsVisible="{Binding IsReminderTimeSheetOpen}">
+      <Button Classes="scrim" Command="{Binding CloseReminderTimeSheetCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
+      <Border x:Name="ReminderTimeSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="16,10,16,0" Spacing="8">
+            <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+            <TextBlock Classes="section" Margin="4,0,0,0" Text="{Binding Strings[ReminderTimeTitle]}" />
+            <TextBlock FontSize="34" FontWeight="ExtraBold" HorizontalAlignment="Center" Margin="0,2,0,4"
+                       Text="{Binding DraftReminderTimeText}" />
+            <TextBlock Classes="subhead" Margin="4,0,0,0" Text="{Binding Strings[ReminderTimeHour]}" />
+            <ItemsControl ItemsSource="{Binding ReminderHourOptions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TimeOption">
+                  <Button Classes="pill time" Classes.on="{Binding IsCurrent}" Margin="3"
+                          Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).PickReminderHourCommand}"
+                          CommandParameter="{Binding Value}">
+                    <TextBlock Text="{Binding Label}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="subhead" Margin="4,4,0,0" Text="{Binding Strings[ReminderTimeMinute]}" />
+            <ItemsControl ItemsSource="{Binding ReminderMinuteOptions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TimeOption">
+                  <Button Classes="pill time" Classes.on="{Binding IsCurrent}" Margin="3"
+                          Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).PickReminderMinuteCommand}"
+                          CommandParameter="{Binding Value}">
+                    <TextBlock Text="{Binding Label}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid ColumnDefinitions="*,10,*" Margin="0,8,0,0">
+              <Button Grid.Column="0" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding CloseReminderTimeSheetCommand}">
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+              </Button>
+              <Button Grid.Column="2" Classes="solid" HorizontalAlignment="Stretch" Command="{Binding CommitReminderTimeCommand}">
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[ReminderTimeDone]}" />
+              </Button>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Panel>
+
+    <!--
       A picture, full screen, over everything. The ground runs under the notch and the home
       indicator (MainView.axaml.cs sets the bleed); the bar and the actions stay inside the safe area.
       A double tap, or a pinch, zooms.

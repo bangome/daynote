@@ -28,7 +28,15 @@ public sealed partial class MobileShellViewModel
     }
 
     /// <summary>The app came back to the foreground.</summary>
-    public void NotifyResumed() => _syncScheduler?.NotifyResumed();
+    /// <remarks>
+    /// Also when reminders are reconciled: some have fired since (iOS then has room for the next
+    /// ones under its 64), and the user may have just allowed notifications in the system settings.
+    /// </remarks>
+    public void NotifyResumed()
+    {
+        _syncScheduler?.NotifyResumed();
+        RefreshReminders();
+    }
 
     private async Task RefreshAfterSyncAsync(SyncReloadResult reload)
     {

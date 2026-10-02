@@ -71,6 +71,49 @@
         </Grid>
       </Border>
 
+      <!--
+        알림: to-do reminders, on by default. When the OS has notifications off for the app the
+        switch alone would do nothing, so the row says so and offers the system page instead.
+      -->
+      <TextBlock Classes="subhead" Margin="0,26,0,4" Text="{Binding Strings[ReminderSettingsSection]}" IsVisible="{Binding HasReminders}" />
+      <Border Classes="rule" MinHeight="56" IsVisible="{Binding HasReminders}">
+        <StackPanel Margin="0,10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+              <TextBlock Classes="line" FontSize="15.5" Text="{Binding Strings[ReminderSettingsTitle]}" />
+              <TextBlock Classes="muted" FontSize="12.5" Margin="0,3,0,0" Text="{Binding ReminderStatusText}" />
+            </StackPanel>
+            <ToggleSwitch Name="RemindersSwitch" Grid.Column="1" VerticalAlignment="Center" MinWidth="0"
+                          OnContent="" OffContent=""
+                          IsChecked="{Binding RemindersEnabled}"
+                          AutomationProperties.Name="{Binding Strings[ReminderSettingsTitle]}" />
+          </Grid>
+          <Button HorizontalAlignment="Left" Height="44" Margin="0,4,0,0"
+                  IsVisible="{Binding IsReminderPermissionDenied}"
+                  Command="{Binding OpenNotificationSettingsCommand}">
+            <TextBlock Classes="line" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
+                       Text="{Binding Strings[ReminderSettingsOpenSystem]}" />
+          </Button>
+        </StackPanel>
+      </Border>
+      <!-- Only while reminders are on: with the switch off there is nothing for the time to apply to. -->
+      <Border Classes="rule" MinHeight="56" IsVisible="{Binding ShowReminderTimeRow}">
+        <Button Name="ReminderTimeRow" Classes="row" MinHeight="56"
+                Command="{Binding OpenReminderTimeSheetCommand}"
+                AutomationProperties.Name="{Binding Strings[ReminderTimeTitle]}">
+          <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,10">
+            <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+              <TextBlock Classes="line" FontSize="15.5" Text="{Binding Strings[ReminderTimeTitle]}" />
+              <TextBlock Classes="muted" FontSize="12.5" Margin="0,3,0,0" Text="{Binding Strings[ReminderTimeHint]}" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="line" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Mobile.SunInk}" Text="{Binding ReminderTimeText}" />
+            <views:Glyph Grid.Column="2" Kind="ChevronRightLarge" Width="11" Height="11" Margin="10,0,0,0" Opacity="0.5"
+                         VerticalAlignment="Center" Foreground="{DynamicResource Mobile.Text2}" />
+          </Grid>
+        </Button>
+      </Border>
+
       <!-- 데이터 -->
       <TextBlock Classes="subhead" Margin="0,26,0,4" Text="{Binding Strings[MobileSettingsData]}" />
       <Border Classes="rule" MinHeight="56">

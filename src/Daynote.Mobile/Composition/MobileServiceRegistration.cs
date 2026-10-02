@@ -111,6 +111,18 @@ public static class MobileServiceRegistration
         services.AddSingleton<IFilePicker>(_ => new MobileFilePicker(topLevel, platform.PickPhotos));
         services.AddSingleton<IThumbnailLoader, MobileThumbnailLoader>();
 
+        // To-do reminders. The state file is per device, in the base folder beside profile.json,
+        // not in the profile: see ReminderStateStore.
+        if (platform.Reminders is { } reminders)
+        {
+            services.AddSingleton(sp => new Reminders.ReminderCoordinator(
+                reminders,
+                sp.GetRequiredService<INoteRepository>(),
+                sp.GetRequiredService<ISettingsStore>(),
+                sp.GetRequiredService<IClock>(),
+                Reminders.ReminderStateStore.InFolder(platform.DataRoot)));
+        }
+
         services.AddSingleton(sp => new MobileShellViewModel(
             sp.GetRequiredService<NoteWorkspaceViewModel>(),
             sp.GetRequiredService<IClock>(),
@@ -127,6 +139,7 @@ public static class MobileServiceRegistration
         {
             Account = sp.GetService<Daynote.App.Account.AccountViewModel>(),
             Store = sp.GetService<MobileStoreViewModel>(),
+            Reminders = sp.GetService<Reminders.ReminderCoordinator>(),
             OpenFileExternally = platform.OpenFile ?? ((name, bytes) => LaunchAsync(topLevel, name, bytes)),
             PendingFileUploads = sp.GetService<ISyncStore>() is SqliteSyncStore syncStore
                 ? async token => await syncStore.ReadQueuedFileIdsAsync(token).ConfigureAwait(false)

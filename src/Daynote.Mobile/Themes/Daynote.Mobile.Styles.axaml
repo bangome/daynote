@@ -168,6 +168,13 @@
     <Setter Property="Padding" Value="13,0" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
+  <!-- An hour or a minute in the reminder time sheet: a full-width cell, 44 points tall to tap. -->
+  <Style Selector="Button.pill.time">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
   <Style Selector="Button.pill.sun">
     <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
     <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
