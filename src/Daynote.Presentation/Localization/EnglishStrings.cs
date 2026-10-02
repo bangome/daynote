@@ -757,6 +757,8 @@ internal static class EnglishStrings
         ["ReminderTimeHour"] = "Hour",
         ["ReminderTimeMinute"] = "Minute",
         ["ReminderTimeDone"] = "Done",
+        ["ReminderPreciseTitle"] = "Precise reminders",
+        ["ReminderPreciseHint"] = "Without it, reminders can arrive up to an hour late",
         ["ReminderBodyFormat"] = "{0} · {1}",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)

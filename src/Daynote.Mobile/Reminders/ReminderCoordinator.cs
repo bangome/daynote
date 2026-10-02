@@ -40,6 +40,7 @@ public sealed class ReminderCoordinator
     private bool _again;
     private IReadOnlyList<NoteSummary>? _latestNotes;
     private bool _closed;
+    private ExactAlarmState? _lastExact;
 
     public ReminderCoordinator(
         IReminderScheduler scheduler, INoteRepository repository, ISettingsStore settings, IClock clock, ReminderStateStore store)
@@ -58,6 +59,11 @@ public sealed class ReminderCoordinator
     public event EventHandler? PermissionChanged;
 
     public void OpenSystemSettings() => _scheduler.OpenSystemSettings();
+
+    /// <summary>Whether reminders fire on the minute; see <see cref="IReminderScheduler.ExactAlarms"/>.</summary>
+    public ExactAlarmState ExactAlarms => _scheduler.ExactAlarms;
+
+    public void OpenExactAlarmSettings() => _scheduler.OpenExactAlarmSettings();
 
     public static async Task<bool> IsEnabledAsync(ISettingsStore settings, CancellationToken cancellationToken = default)
     {
@@ -213,6 +219,16 @@ public sealed class ReminderCoordinator
         string channel = AppStrings.ReminderChannelName;
         string description = AppStrings.ReminderChannelDescription;
         ReminderChanges changes = ReminderPlanner.Diff(state.Scheduled, desired, channel, description);
+
+        // Exact alarms were just allowed: every alarm armed inexact is armed again, now exact. The
+        // platform's own broadcast does this too; this covers a build or OS where it never arrives.
+        ExactAlarmState exact = _scheduler.ExactAlarms;
+        if (_lastExact == ExactAlarmState.NotAllowed && exact == ExactAlarmState.Allowed)
+        {
+            changes = changes with { Schedule = desired };
+        }
+
+        _lastExact = exact;
         if (!changes.IsEmpty || !string.Equals(channel, state.ChannelName, StringComparison.Ordinal))
         {
             await _scheduler.ApplyAsync(changes).ConfigureAwait(true);

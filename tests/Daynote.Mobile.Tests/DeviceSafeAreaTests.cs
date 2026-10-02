@@ -52,13 +52,15 @@ public sealed class DeviceSafeAreaTests
         var failures = new List<string>();
 
         // Notifications denied at the prompt the seeded to-dos bring up, so the settings page shows
-        // its tallest reminder row: the denial line and the button to the system settings.
+        // its tallest reminder rows: the denial line, the button to the system settings and, as on an
+        // Android 14 phone without the grant, the precise-reminders row.
         var denied = new TestServices.ShellSetup(Platform: platform => platform with
         {
             Reminders = new FakeReminderScheduler
             {
                 Permission = Daynote.Mobile.Reminders.ReminderPermission.NotDetermined,
                 AnswerToRequest = Daynote.Mobile.Reminders.ReminderPermission.Denied,
+                ExactAlarms = Daynote.Mobile.Reminders.ExactAlarmState.NotAllowed,
             },
         });
 
@@ -113,6 +115,7 @@ public sealed class DeviceSafeAreaTests
             shell.GoToPageCommand.Execute(MobilePage.Settings);
             Settle(view);
             Assert.IsTrue(shell.IsReminderPermissionDenied, $"{device}: the settings page is not showing the denied reminder row.");
+            Assert.IsTrue(shell.ShowPreciseRemindersRow, $"{device}: the settings page is not showing the precise-reminders row.");
             Check("settings");
 
             shell.OpenReminderTimeSheetCommand.Execute(null);

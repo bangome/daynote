@@ -391,6 +391,62 @@ public sealed class ReminderTests
         });
     }
 
+    [TestMethod]
+    public void The_precise_row_shows_only_while_exact_alarms_are_not_allowed()
+    {
+        var platform = new FakeReminderScheduler { ExactAlarms = ExactAlarmState.NotAllowed };
+        WithShell(platform, (_, shell) =>
+        {
+            Assert.IsTrue(shell.ShowPreciseRemindersRow, "The row is missing while reminders can be an hour late.");
+            Assert.AreEqual("정확한 시각에 알림", WithLanguageResult(AppLanguage.Korean, () => shell.Strings["ReminderPreciseTitle"]));
+
+            shell.OpenExactAlarmSettingsCommand.Execute(null);
+            Assert.AreEqual(1, platform.ExactSettingsOpened);
+            Assert.AreEqual(0, platform.Requests, "The row asked for something by itself.");
+
+            shell.RemindersEnabled = false;
+            Assert.IsFalse(shell.ShowPreciseRemindersRow, "The row stays up with reminders off.");
+            shell.RemindersEnabled = true;
+            Assert.IsTrue(shell.ShowPreciseRemindersRow);
+
+            // Allowed on the system page; coming back to the app is what the row notices.
+            platform.ExactAlarms = ExactAlarmState.Allowed;
+            var changes = new List<string>();
+            shell.PropertyChanged += (_, e) => changes.Add(e.PropertyName ?? string.Empty);
+            shell.NotifyResumed();
+            Assert.Contains(nameof(MobileShellViewModel.ShowPreciseRemindersRow), changes);
+            Assert.IsFalse(shell.ShowPreciseRemindersRow, "The row stays after exact alarms were allowed.");
+        });
+    }
+
+    [TestMethod]
+    public void The_precise_row_never_shows_where_reminders_are_always_exact()
+    {
+        var platform = new FakeReminderScheduler { ExactAlarms = ExactAlarmState.NotApplicable };
+        WithShell(platform, (_, shell) => Assert.IsFalse(shell.ShowPreciseRemindersRow, "iOS shows the Android-only row."));
+    }
+
+    [TestMethod]
+    public void Allowing_exact_alarms_arms_every_reminder_again()
+    {
+        using var harness = new Harness();
+        harness.Platform.ExactAlarms = ExactAlarmState.NotAllowed;
+        harness.Notes.Add(Note("n", "-[] a (10/3 14:00)\n-[] b (10/4)"));
+        harness.Run();
+        Assert.HasCount(2, harness.Platform.Applied.Single().Schedule);
+        harness.Run();
+        int before = harness.Platform.Applied.Count;
+
+        harness.Platform.ExactAlarms = ExactAlarmState.Allowed;
+        harness.Run();
+
+        Assert.AreEqual(before + 1, harness.Platform.Applied.Count, "Nothing was re-armed after exact alarms were allowed.");
+        Assert.HasCount(2, harness.Platform.Applied[^1].Schedule);
+
+        harness.Run();
+        Assert.AreEqual(before + 1, harness.Platform.Applied.Count, "Re-armed again with nothing changed.");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────────
 
     private static IReadOnlyList<Reminder> Plan(params NoteSummary[] notes) =>
@@ -409,6 +465,13 @@ public sealed class ReminderTests
     private static T Wait<T>(Task<T> task) => task.GetAwaiter().GetResult();
 
     private static void Wait(Task task) => task.GetAwaiter().GetResult();
+
+    private static string WithLanguageResult(AppLanguage language, Func<string> read)
+    {
+        string result = string.Empty;
+        WithLanguage(language, () => result = read());
+        return result;
+    }
 
     private static void WithLanguage(AppLanguage language, Action body)
     {
@@ -579,4 +642,11 @@ internal sealed class FakeReminderScheduler : IReminderScheduler
     }
 
     public void OpenSystemSettings() => SettingsOpened++;
+
+    /// <summary>Exact unless a test says otherwise, as on iOS.</summary>
+    public ExactAlarmState ExactAlarms { get; set; } = ExactAlarmState.NotApplicable;
+
+    public int ExactSettingsOpened { get; private set; }
+
+    public void OpenExactAlarmSettings() => ExactSettingsOpened++;
 }

@@ -814,6 +814,8 @@ public static class AppStrings
     public static string ReminderTimeHour => LocalizationService.Instance[nameof(ReminderTimeHour)];
     public static string ReminderTimeMinute => LocalizationService.Instance[nameof(ReminderTimeMinute)];
     public static string ReminderTimeDone => LocalizationService.Instance[nameof(ReminderTimeDone)];
+    public static string ReminderPreciseTitle => LocalizationService.Instance[nameof(ReminderPreciseTitle)];
+    public static string ReminderPreciseHint => LocalizationService.Instance[nameof(ReminderPreciseHint)];
     /// <summary>{0} = note title, {1} = due label ("10/3 14:00").</summary>
     public static string ReminderBodyFormat => LocalizationService.Instance[nameof(ReminderBodyFormat)];
 }

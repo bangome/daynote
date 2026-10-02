@@ -53,9 +53,21 @@ public sealed partial class MobileShellViewModel
     /// <summary>The default time row, which has nothing to apply to while reminders are off.</summary>
     public bool ShowReminderTimeRow => HasReminders && RemindersEnabled;
 
+    /// <summary>
+    /// "정확한 시각에 알림": only on Android 12+ while exact alarms are not allowed, and only while
+    /// reminders are on. Gone once allowed, rather than a row that says all is well.
+    /// </summary>
+    public bool ShowPreciseRemindersRow =>
+        RemindersEnabled && Reminders is { ExactAlarms: ExactAlarmState.NotAllowed };
+
+    /// <summary>Opens the system page for exact alarms. Only ever from the row, never by itself.</summary>
+    [RelayCommand]
+    private void OpenExactAlarmSettings() => Reminders?.OpenExactAlarmSettings();
+
     partial void OnRemindersEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowReminderTimeRow));
+        OnPropertyChanged(nameof(ShowPreciseRemindersRow));
         if (!_loading && Reminders is { } reminders)
         {
             _ = RunQuietlyAsync(() => reminders.SetEnabledAsync(value));
@@ -69,6 +81,7 @@ public sealed partial class MobileShellViewModel
     {
         OnPropertyChanged(nameof(IsReminderPermissionDenied));
         OnPropertyChanged(nameof(ReminderStatusText));
+        OnPropertyChanged(nameof(ShowPreciseRemindersRow));
     }
 
     private async Task LoadReminderSettingAsync(CancellationToken cancellationToken)

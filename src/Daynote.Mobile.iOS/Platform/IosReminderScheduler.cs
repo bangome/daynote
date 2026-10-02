@@ -95,6 +95,13 @@ internal sealed class IosReminderScheduler : IReminderScheduler
         }
     }
 
+    /// <summary>Calendar triggers fire on the minute; there is nothing to ask for.</summary>
+    public ExactAlarmState ExactAlarms => ExactAlarmState.NotApplicable;
+
+    public void OpenExactAlarmSettings()
+    {
+    }
+
     public void OpenSystemSettings()
     {
         // iOS 16 opens the app's notification page directly; before that, the app's settings page.

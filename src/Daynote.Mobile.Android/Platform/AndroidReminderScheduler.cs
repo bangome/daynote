@@ -88,6 +88,37 @@ internal sealed class AndroidReminderScheduler(Context context, Func<Activity?> 
         }
     }
 
+    public ExactAlarmState ExactAlarms =>
+        !OperatingSystem.IsAndroidVersionAtLeast(31) ? ExactAlarmState.NotApplicable
+        : (context.GetSystemService(Context.AlarmService) as AlarmManager)?.CanScheduleExactAlarms() == true
+            ? ExactAlarmState.Allowed
+            : ExactAlarmState.NotAllowed;
+
+    /// <summary>
+    /// The "Alarms &amp; reminders" page for this app. Granting it sends
+    /// SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED, which <see cref="ReminderRescheduleReceiver"/>
+    /// answers by re-arming every alarm exact.
+    /// </summary>
+    public void OpenExactAlarmSettings()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31))
+        {
+            return;
+        }
+
+        try
+        {
+            using var intent = new Intent(
+                global::Android.Provider.Settings.ActionRequestScheduleExactAlarm,
+                global::Android.Net.Uri.Parse("package:" + context.PackageName));
+            intent.AddFlags(ActivityFlags.NewTask);
+            context.StartActivity(intent);
+        }
+        catch (ActivityNotFoundException)
+        {
+        }
+    }
+
     /// <summary>
     /// Granted when notifications are on; on Android 13+ "not determined" while the runtime
     /// permission has not been granted, since the platform cannot say whether it was ever asked.

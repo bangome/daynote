@@ -747,6 +747,8 @@ internal static class KoreanStrings
         ["ReminderTimeHour"] = "시",
         ["ReminderTimeMinute"] = "분",
         ["ReminderTimeDone"] = "완료",
+        ["ReminderPreciseTitle"] = "정확한 시각에 알림",
+        ["ReminderPreciseHint"] = "허용하지 않으면 알림이 최대 1시간 늦게 올 수 있습니다",
         ["ReminderBodyFormat"] = "{0} · {1}",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)

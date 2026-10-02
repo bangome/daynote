@@ -35,6 +35,9 @@ public sealed partial class MobileShellViewModel
     public void NotifyResumed()
     {
         _syncScheduler?.NotifyResumed();
+
+        // The user may be back from the exact-alarm page, so the row reads the platform again.
+        RefreshReminderRow();
         RefreshReminders();
     }
 

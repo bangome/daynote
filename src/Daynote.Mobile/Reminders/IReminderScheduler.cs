@@ -39,6 +39,25 @@ public interface IReminderScheduler
 
     /// <summary>Opens this app's page in the system notification settings.</summary>
     void OpenSystemSettings();
+
+    /// <summary>
+    /// Whether reminders fire on the minute. Android 12+ needs the user's "Alarms &amp; reminders"
+    /// grant for that and is otherwise up to an hour late; iOS and older Android always are exact.
+    /// Read fresh each time, since the user changes it in the system settings.
+    /// </summary>
+    ExactAlarmState ExactAlarms { get; }
+
+    /// <summary>Opens the system page where the user allows exact alarms (Android only).</summary>
+    void OpenExactAlarmSettings();
+}
+
+/// <summary>Whether the platform fires reminders exactly.</summary>
+public enum ExactAlarmState
+{
+    /// <summary>Always exact (iOS, Android before 12): there is nothing to ask for.</summary>
+    NotApplicable,
+    Allowed,
+    NotAllowed,
 }
 
 /// <summary>What the OS allows.</summary>
