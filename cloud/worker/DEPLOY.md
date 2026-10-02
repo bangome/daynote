@@ -263,9 +263,9 @@ Android sells nothing: Google allows an app to honour an entitlement bought else
 What exists in App Store Connect (created 2026-10-02 through the API): subscription group **Daynote
 Cloud** (22432564) with four auto-renewable subscriptions, Premium ranked above Pro —
 `cc.arachat.daynote.premium.annual` (level 1), `.premium.monthly` (2), `.pro.annual` (3),
-`.pro.monthly` (4). KOR base prices ₩48,000 / ₩5,900 / ₩24,000 / ₩2,900, other storefronts
-equalised by Apple (US $29.99 / $3.99 / $14.99 / $1.99 — below Paddle's dollar prices; a pricing
-decision, not a bug). No introductory offer: the server's 14-day trial is the only one. App Store
+`.pro.monthly` (4). KOR base prices ₩48,000 / ₩5,900 / ₩24,000 / ₩2,900. The US prices are set by
+hand to Paddle's ($39.99 / $4.99 / $19.99 / $2.49, since 2026-10-02) so the iPhone is never the
+cheaper place to buy; every other storefront is Apple's equalisation of the KRW base. No introductory offer: the server's 14-day trial is the only one. App Store
 Server Notifications V2 point at `https://daynote.arachat.cc/v1/billing/apple/notifications` for
 both production and sandbox.
 
