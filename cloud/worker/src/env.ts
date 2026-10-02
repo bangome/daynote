@@ -93,6 +93,9 @@ export interface Env {
    */
   APPLE_ROOT_CERTIFICATES?: Uint8Array[];
 
+  /** Test seam: stands in for the waits between asks while Apple has not caught up with a purchase. */
+  APPLE_RETRY_SLEEP?: (ms: number) => Promise<void>;
+
   /**
    * Paddle, the merchant of record for subscriptions (docs/CLOUD_SYNC.md §14). The webhook secret
    * signs incoming events; without it the webhook refuses every delivery rather than granting

@@ -20,6 +20,7 @@ export type ErrorCode =
   | 'subscription_active'
   | 'payload_too_large'
   | 'unavailable'
+  | 'purchase_pending'
   | 'server_error';
 
 const STATUS: Record<ErrorCode, number> = {
@@ -40,6 +41,8 @@ const STATUS: Record<ErrorCode, number> = {
   payload_too_large: 413,
   // Something this server has not been set up for yet; worth trying again later.
   unavailable: 503,
+  // Apple's API has not caught up with a purchase StoreKit just completed: try again shortly.
+  purchase_pending: 503,
   server_error: 500,
 };
 

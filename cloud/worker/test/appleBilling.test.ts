@@ -32,6 +32,9 @@ const DAY = 24 * 60 * 60 * 1000;
 
 let chain: TestChain;
 
+/** The waits the Worker asked for while Apple had not caught up with a purchase. */
+const slept: number[] = [];
+
 beforeAll(async () => {
   chain = await makeAppleChain();
 });
@@ -53,6 +56,10 @@ beforeEach(async () => {
   ].join(',');
   target.APPLE_APP_ID = '6817146422';
   target.APPLE_ROOT_CERTIFICATES = [chain.root.der];
+  slept.length = 0;
+  target.APPLE_RETRY_SLEEP = async (ms: number) => {
+    slept.push(ms);
+  };
   target.PADDLE_PRICE_ID_MONTHLY = 'pri_test_monthly';
   target.PADDLE_PRICE_ID_ANNUAL = 'pri_test_annual';
   target.PADDLE_CHECKOUT_SESSION = async (userId: string) => `https://pay.paddle.test/checkout?user=${userId}`;
@@ -282,6 +289,49 @@ describe('POST /v1/billing/apple/transaction', () => {
       'api.storekit-sandbox.itunes.apple.com',
     ]);
     expect((await row(account.userId))?.environment).toBe('Sandbox');
+  });
+
+  it('waits for Apple to catch up with a purchase made a moment ago', async () => {
+    const account = await signIn();
+    const txn = transaction(account.userId, { environment: 'Sandbox' });
+    const notFound = () => jsonResponse({ errorCode: 4040010, errorMessage: 'Transaction id not found.' }, 404);
+    let sandboxAsks = 0;
+    mockFetch(async (call) => {
+      const url = new URL(call.url);
+      if (!url.host.includes('sandbox')) {
+        return notFound();
+      }
+      if (url.pathname.startsWith('/inApps/v1/transactions/')) {
+        // Apple knows it the third time it is asked.
+        sandboxAsks += 1;
+        return sandboxAsks < 3 ? notFound() : jsonResponse({ signedTransactionInfo: await signJws(chain, txn) });
+      }
+      return jsonResponse({
+        data: [{ lastTransactions: [{
+          originalTransactionId: txn.originalTransactionId,
+          status: 1,
+          signedTransactionInfo: await signJws(chain, txn),
+        }] }],
+      });
+    });
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ provider: 'apple', state: 'active' });
+    expect(slept).toEqual([1000, 2000]);
+  });
+
+  it('answers "not yet", which the app retries, when Apple still does not know the purchase', async () => {
+    const account = await signIn();
+    mockFetch(() => jsonResponse({ errorCode: 4040010, errorMessage: 'Transaction id not found.' }, 404));
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: '2000000000000777' }, { token: account.accessToken });
+
+    expect(response.status).toBe(503);
+    expect(response.body.error).toBe('purchase_pending');
+    expect(slept).toEqual([1000, 2000, 4000]);
+    expect(await row(account.userId)).toBeNull();
   });
 
   it('refuses a purchase made for another account, and writes nothing', async () => {

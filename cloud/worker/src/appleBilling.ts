@@ -6,6 +6,7 @@ import { markDuplicate, ownership, ownershipGuard, statusBody } from './billing'
 import {
   APPLE_PRODUCTS,
   appStoreGet,
+  appStoreGetWhenKnown,
   iapConfigured,
   verifyJws,
   type AppleNotification,
@@ -369,7 +370,7 @@ export async function transaction(request: Request, env: Env, now: Date): Promis
     throw new ApiError('bad_request', 'transaction_id must be the App Store transaction id.');
   }
 
-  const found = await appStoreGet(env, `/inApps/v1/transactions/${transactionId}`, now);
+  const found = await appStoreGetWhenKnown(env, `/inApps/v1/transactions/${transactionId}`, now);
   const purchased = await verifyJws<AppleTransaction>(env, found.body['signedTransactionInfo'], now);
   requireOurs(env, purchased);
 

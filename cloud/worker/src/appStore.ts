@@ -181,8 +181,14 @@ export async function appStoreGet(
     if (response.ok) {
       return { environment: candidate, body };
     }
-    if (response.status === 404 && body['errorCode'] === TRANSACTION_NOT_FOUND && candidate !== order.at(-1)) {
-      continue;
+    if (response.status === 404 && body['errorCode'] === TRANSACTION_NOT_FOUND) {
+      if (candidate !== order.at(-1)) {
+        continue;
+      }
+      // Unknown in every environment asked. For a transaction StoreKit has only just handed the
+      // app, that is Apple's API not having caught up yet — seen with a fresh sandbox purchase — so
+      // it is "not yet", which the app retries, never "no".
+      throw new ApiError('purchase_pending', 'The App Store has not confirmed that purchase yet. It is retried automatically.');
     }
     if (response.status === 404 || response.status === 400) {
       // An id that is not a transaction of this app, in either environment.
@@ -191,7 +197,35 @@ export async function appStoreGet(
     console.error('app store api failed', candidate, path, response.status, JSON.stringify(body).slice(0, 300));
     throw new ApiError('server_error', 'The App Store could not be reached. The purchase is safe; try again.');
   }
-  throw new ApiError('not_found', 'The App Store does not know that purchase.');
+  throw new ApiError('purchase_pending', 'The App Store has not confirmed that purchase yet. It is retried automatically.');
+}
+
+/** How long to wait between asks while Apple has not caught up with a new transaction. */
+const PENDING_RETRY_DELAYS_MS = [1000, 2000, 4000];
+
+/**
+ * `appStoreGet`, asked again after 1, 2 and 4 seconds while Apple answers "not found" in every
+ * environment. A transaction StoreKit has just completed can take a few seconds to reach the App
+ * Store Server API; the waits cost no CPU time, and a request that still finds nothing answers
+ * `purchase_pending` for the app to retry later.
+ */
+export async function appStoreGetWhenKnown(
+  env: Env,
+  path: string,
+  now: Date,
+): Promise<{ environment: AppStoreEnvironment; body: Record<string, unknown> }> {
+  const sleep = env.APPLE_RETRY_SLEEP ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await appStoreGet(env, path, now);
+    } catch (error) {
+      const delay = PENDING_RETRY_DELAYS_MS[attempt];
+      if (!(error instanceof ApiError) || error.code !== 'purchase_pending' || delay === undefined) {
+        throw error;
+      }
+      await sleep(delay);
+    }
+  }
 }
 
 function decodeSegment(segment: string): unknown {
