@@ -36,6 +36,12 @@ public sealed partial class MobileShellViewModel
     {
         _syncScheduler?.NotifyResumed();
 
+        // Back from the App Store sheet, or from Settings: a purchase may be waiting to be confirmed.
+        if (Store is { } store)
+        {
+            _ = RunQuietlyAsync(store.NotifyResumed);
+        }
+
         // The user may be back from the exact-alarm page, so the row reads the platform again.
         RefreshReminderRow();
         RefreshReminders();

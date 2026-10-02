@@ -86,6 +86,22 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     public const string StandardEulaUrl = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
     private readonly Action<string>? _openExternal;
+    private readonly Func<TimeSpan, Task> _delay;
+
+    /// <summary>
+    /// How long to wait between tries while a finished purchase is being confirmed: about 45 seconds
+    /// in all, after which the page says, calmly, that it will finish on its own. A new purchase can
+    /// take a few seconds to reach Apple's server API, and the notification Apple sends may get there
+    /// first; both are tried meanwhile.
+    /// </summary>
+    public static IReadOnlyList<TimeSpan> ConfirmDelays { get; } =
+    [
+        TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15),
+    ];
+
+    /// <summary>The purchase still being confirmed when the tries ran out, picked up again on resume.</summary>
+    private (string ProductId, string TransactionId, BillingTier Tier, bool WasOnApple)? _unconfirmed;
 
     /// <summary>Restored subscriptions the server confirmed during the restore in progress.</summary>
     private int _restoreConfirmed;
@@ -96,7 +112,8 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         Func<CancellationToken, ValueTask<string?>> accountToken,
         Func<string, CancellationToken, ValueTask<(Entitlement Entitlement, BillingLinks Links)>> submit,
         Func<Task>? refreshBilling = null,
-        Action<string>? openExternal = null)
+        Action<string>? openExternal = null,
+        Func<TimeSpan, Task>? delay = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(account);
@@ -106,6 +123,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         _submit = submit;
         _refreshBilling = refreshBilling ?? (() => account.RefreshBillingCommand.ExecuteAsync(null));
         _openExternal = openExternal;
+        _delay = delay ?? (wait => Task.Delay(wait));
 
         account.PropertyChanged += (_, e) =>
         {
@@ -129,6 +147,10 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         // a renewal, an approval that came later, a purchase a crash interrupted — are dealt with
         // as soon as there is an account to record them against.
         _store.TransactionHandler = HandleTransactionAsync;
+
+        // A different App Store account, or a different country: the prices on the page are the old
+        // storefront's, and the sheet would charge the new one's.
+        _store.StorefrontChanged += (_, _) => _ = LoadProductsAsync();
     }
 
     public AccountViewModel Account { get; }
@@ -143,6 +165,10 @@ public sealed partial class MobileStoreViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isLoadingProducts;
+
+    /// <summary>A purchase StoreKit completed, waiting for the server to confirm it.</summary>
+    [ObservableProperty]
+    private bool _isConfirming;
 
     /// <summary>A calm outcome: started, restored, waiting for approval.</summary>
     [ObservableProperty]
@@ -265,7 +291,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 MobileStrings.Get(IsAnnual ? "StoreLengthYear" : "StoreLengthMonth"),
                 priced?.PriceText ?? "—"),
             IsCurrent = current,
-            CanBuy = !current && priced is not null && Billing.AppleCanPurchase && !IsBusy,
+            CanBuy = !current && priced is not null && Billing.AppleCanPurchase && !IsBusy && !IsConfirming,
             ButtonText = current
                 ? AppStrings.PlanInUse
                 : !onApple ? MobileStrings.Get("StoreSubscribe")
@@ -293,12 +319,18 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         await LoadProductsAsync().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Asks StoreKit for every product on sale, each time the page opens and whenever the storefront
+    /// changes. Nothing is kept from an earlier ask: a price read in one storefront and charged in
+    /// another (seen in TestFlight: $2.49 on the card, ₩2,900 on the sheet) is the one thing this
+    /// page must not show.
+    /// </summary>
     private async Task LoadProductsAsync()
     {
-        string[] wanted = [.. (Billing.AppleProducts ?? []).Select(product => product.ProductId)
-            .Where(id => !_products.ContainsKey(id))];
+        string[] wanted = [.. (Billing.AppleProducts ?? []).Select(product => product.ProductId)];
         if (wanted.Length == 0)
         {
+            _products.Clear();
             Refresh();
             return;
         }
@@ -306,7 +338,9 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         IsLoadingProducts = true;
         try
         {
-            foreach (StoreProduct product in await _store.LoadProductsAsync(wanted, CancellationToken.None).ConfigureAwait(true))
+            IReadOnlyList<StoreProduct> loaded = await _store.LoadProductsAsync(wanted, CancellationToken.None).ConfigureAwait(true);
+            _products.Clear();
+            foreach (StoreProduct product in loaded)
             {
                 _products[product.ProductId] = product;
             }
@@ -372,12 +406,15 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             switch (result.Status)
             {
                 case StorePurchaseStatus.Purchased when result.TransactionId is { } id && _confirmed.Contains(id):
-                    StatusMessage = MobileStrings.Format(
-                        wasOnApple ? "StoreChangedFormat" : "StoreDoneFormat",
-                        AccountViewModel.TierName(tier));
+                    StatusMessage = Done(tier, wasOnApple);
+                    break;
+                case StorePurchaseStatus.Purchased when result.TransactionId is { } pendingId:
+                    // StoreKit took the money; the server has not confirmed it yet. Never an error:
+                    // the purchase succeeded, and it is confirmed here, or on its own, shortly.
+                    await ConfirmAsync(product.ProductId, pendingId, tier, wasOnApple).ConfigureAwait(true);
                     break;
                 case StorePurchaseStatus.Purchased:
-                    ErrorMessage ??= MobileStrings.Get("StoreVerifyFailed");
+                    StatusMessage = MobileStrings.Get("StoreConfirmLater");
                     break;
                 case StorePurchaseStatus.Pending:
                     StatusMessage = MobileStrings.Get("StorePending");
@@ -394,6 +431,77 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         {
             IsBusy = false;
             Refresh();
+        }
+    }
+
+    /// <summary>
+    /// Waits for the server to have a purchase StoreKit has completed: sends the held transaction
+    /// again after each delay, and reads the billing state too, which picks up an activation that
+    /// came through Apple's notification instead. After the last try the page says, without alarm,
+    /// that it will finish on its own; the transaction stays with StoreKit, and coming back to the
+    /// app (<see cref="NotifyResumed"/>) tries once more.
+    /// </summary>
+    private async Task ConfirmAsync(string productId, string transactionId, BillingTier tier, bool wasOnApple)
+    {
+        IsConfirming = true;
+        StatusMessage = MobileStrings.Get("StoreConfirming");
+        try
+        {
+            foreach (TimeSpan wait in ConfirmDelays)
+            {
+                await _delay(wait).ConfigureAwait(true);
+                if (await IsConfirmedAsync(productId, transactionId).ConfigureAwait(true))
+                {
+                    _unconfirmed = null;
+                    StatusMessage = Done(tier, wasOnApple);
+                    return;
+                }
+            }
+
+            _unconfirmed = (productId, transactionId, tier, wasOnApple);
+            StatusMessage = MobileStrings.Get("StoreConfirmLater");
+        }
+        finally
+        {
+            IsConfirming = false;
+        }
+    }
+
+    private async Task<bool> IsConfirmedAsync(string productId, string transactionId)
+    {
+        _store.RetryHeld();
+        if (_confirmed.Contains(transactionId))
+        {
+            return true;
+        }
+
+        await _refreshBilling().ConfigureAwait(true);
+        return _confirmed.Contains(transactionId)
+            || (Billing.Provider == BillingProvider.Apple
+                && string.Equals(Billing.AppleProductId, productId, StringComparison.Ordinal)
+                && Account.IsPaying);
+    }
+
+    private static string Done(BillingTier tier, bool wasOnApple) =>
+        MobileStrings.Format(wasOnApple ? "StoreChangedFormat" : "StoreDoneFormat", AccountViewModel.TierName(tier));
+
+    /// <summary>
+    /// The app is back in front: a purchase still unconfirmed is tried once more, and anything
+    /// StoreKit held is sent.
+    /// </summary>
+    public async Task NotifyResumed()
+    {
+        if (!IsSignedIn)
+        {
+            return;
+        }
+
+        _store.RetryHeld();
+        if (_unconfirmed is { } pending && !IsConfirming
+            && await IsConfirmedAsync(pending.ProductId, pending.TransactionId).ConfigureAwait(true))
+        {
+            _unconfirmed = null;
+            StatusMessage = Done(pending.Tier, pending.WasOnApple);
         }
     }
 
@@ -429,7 +537,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             }
             else if (ErrorMessage is null)
             {
-                StatusMessage = MobileStrings.Get(_restoreConfirmed > 0 ? "StoreRestoreDone" : "StoreVerifyFailed");
+                StatusMessage = MobileStrings.Get(_restoreConfirmed > 0 ? "StoreRestoreDone" : "StoreConfirmLater");
             }
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -528,6 +636,8 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     partial void OnIsAnnualChanged(bool value) => Refresh();
 
     partial void OnIsBusyChanged(bool value) => Refresh();
+
+    partial void OnIsConfirmingChanged(bool value) => Refresh();
 
     partial void OnIsLoadingProductsChanged(bool value) => OnPropertyChanged(nameof(HasNoPrices));
 

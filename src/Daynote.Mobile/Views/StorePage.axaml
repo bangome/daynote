@@ -127,7 +127,11 @@
                      Text="{Binding Strings[StorePricesUnavailable]}" />
         </StackPanel>
 
-        <TextBlock FontSize="13" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" Text="{Binding StatusMessage}" />
+        <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasStatus}">
+          <ProgressBar Grid.Column="0" IsIndeterminate="True" Width="28" MinWidth="28" Height="4" Margin="0,0,10,0"
+                       VerticalAlignment="Center" Foreground="{DynamicResource Mobile.Pri}" IsVisible="{Binding IsConfirming}" />
+          <TextBlock Grid.Column="1" FontSize="13" TextWrapping="Wrap" Text="{Binding StatusMessage}" />
+        </Grid>
         <TextBlock FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
                    IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
         <Border Classes="panel" Background="{DynamicResource Mobile.DangerSoft}" IsVisible="{Binding HasDuplicate}">

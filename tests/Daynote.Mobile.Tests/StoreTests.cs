@@ -86,15 +86,74 @@ public sealed class StoreTests
     });
 
     [TestMethod]
-    public void A_purchase_the_server_cannot_confirm_is_left_for_StoreKit_to_deliver_again() => WithStore((store, server, fake, _) =>
+    public void A_purchase_the_server_cannot_confirm_is_kept_and_never_called_an_error() => WithStore((store, server, fake, _) =>
     {
-        server.Failure = new AccountException(AccountFailure.Offline, "offline");
+        server.Failure = new AccountException(AccountFailure.ServerError, "purchase_pending");
 
         Run(store.ProCard.BuyCommand);
 
         Assert.IsEmpty(fake.Finished, "An unconfirmed transaction was finished, so it can never be retried.");
-        Assert.AreEqual(MobileStrings.Get("StoreVerifyFailed"), store.ErrorMessage);
-        Assert.IsNull(store.StatusMessage);
+        Assert.IsNull(store.ErrorMessage, "A successful purchase was shown an error.");
+        Assert.AreEqual(MobileStrings.Get("StoreConfirmLater"), store.StatusMessage);
+        Assert.IsFalse(store.IsConfirming);
+        CollectionAssert.AreEqual(MobileStoreViewModel.ConfirmDelays.ToArray(), Waits, "It did not keep trying for long enough.");
+        Assert.IsGreaterThanOrEqualTo(MobileStoreViewModel.ConfirmDelays.Count + 1, server.Submitted.Count, "The held transaction was not sent again.");
+        Assert.IsGreaterThanOrEqualTo(MobileStoreViewModel.ConfirmDelays.Count, RefreshCount, "The billing state was not polled meanwhile.");
+
+        // Coming back to the app tries once more, and this time the server has it.
+        server.Failure = null;
+        Pump(store.NotifyResumed);
+        Assert.AreEqual("Pro 구독이 시작되었습니다.", store.StatusMessage);
+    });
+
+    [TestMethod]
+    public void A_purchase_confirmed_on_a_retry_says_it_started() => WithStore((store, server, fake, _) =>
+    {
+        server.FailTimes = 1;
+
+        Run(store.ProCard.BuyCommand);
+
+        Assert.AreEqual("Pro 구독이 시작되었습니다.", store.StatusMessage);
+        Assert.IsNull(store.ErrorMessage);
+        CollectionAssert.AreEqual(new[] { MobileStoreViewModel.ConfirmDelays[0] }, Waits);
+        CollectionAssert.AreEqual(new[] { "1000000000000001" }, fake.Finished);
+    });
+
+    [TestMethod]
+    public void A_purchase_activated_by_Apples_notification_is_picked_up_by_polling() => WithStore((store, server, fake, account) =>
+    {
+        server.Failure = new AccountException(AccountFailure.ServerError, "purchase_pending");
+        // The server learns of the purchase from App Store Server Notifications in the meantime: by
+        // the second poll (the first read is the one before the sheet).
+        int start = RefreshCount;
+        RefreshHook = () =>
+        {
+            if (RefreshCount == start + 3)
+            {
+                account.Entitlement = Paid(BillingTier.Pro, BillingPlan.Annual);
+                account.Billing = Selling(BillingProvider.Apple, "cc.arachat.daynote.pro.annual");
+            }
+        };
+
+        Run(store.ProCard.BuyCommand);
+
+        Assert.AreEqual("Pro 구독이 시작되었습니다.", store.StatusMessage);
+        Assert.IsNull(store.ErrorMessage);
+        Assert.HasCount(2, Waits);
+    });
+
+    [TestMethod]
+    public void Prices_are_asked_for_every_time_and_again_when_the_storefront_changes() => WithStore((store, _, fake, _) =>
+    {
+        int asked = fake.LoadCalls;
+        Pump(store.OpenAsync);
+        Assert.AreEqual(asked + 1, fake.LoadCalls, "The page showed prices from an earlier ask.");
+
+        fake.Dollars = true;
+        fake.ChangeStorefront();
+        Pump(() => Task.Delay(1));
+        Assert.AreEqual(asked + 2, fake.LoadCalls);
+        Assert.AreEqual("$19.99 / 년", store.ProCard.PriceText);
     });
 
     [TestMethod]
@@ -105,8 +164,8 @@ public sealed class StoreTests
 
         Run(store.ProCard.BuyCommand);
 
-        Assert.AreEqual(MobileStrings.Get("StoreVerifyFailed"), store.ErrorMessage);
-        Assert.IsNull(store.StatusMessage, "An unrecorded purchase was announced as started.");
+        Assert.IsNull(store.ErrorMessage);
+        Assert.AreEqual(MobileStrings.Get("StoreConfirmLater"), store.StatusMessage, "An unrecorded purchase was announced as started.");
     });
 
     [TestMethod]
@@ -350,6 +409,12 @@ public sealed class StoreTests
 
     private static readonly List<string> Opened = [];
 
+    private static readonly List<TimeSpan> Waits = [];
+
+    private static int RefreshCount;
+
+    private static Action? RefreshHook;
+
     private static bool Pump2(Task<bool> task)
     {
         Pump(() => task);
@@ -369,6 +434,9 @@ public sealed class StoreTests
     {
         LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
         Opened.Clear();
+        Waits.Clear();
+        RefreshCount = 0;
+        RefreshHook = null;
         var fake = new FakeStore();
         var server = new FakeServer();
         using var data = new TempDataRoot();
@@ -380,8 +448,18 @@ public sealed class StoreTests
                     sp.GetRequiredService<AccountViewModel>(),
                     _ => ValueTask.FromResult<string?>(UserId),
                     server.SubmitAsync,
-                    () => Task.CompletedTask,
-                    url => Opened.Add(url)))));
+                    () =>
+                    {
+                        RefreshCount++;
+                        RefreshHook?.Invoke();
+                        return Task.CompletedTask;
+                    },
+                    url => Opened.Add(url),
+                    wait =>
+                    {
+                        Waits.Add(wait);
+                        return Task.CompletedTask;
+                    }))));
             var shell = provider.GetRequiredService<MobileShellViewModel>();
 
             // 390x844 logical, the narrowest mainstream iPhone; scaled as a whole for a store image.
@@ -490,6 +568,9 @@ public sealed class StoreTests
         /// <summary>Fails just this transaction id, as Apple being unreachable for one call would.</summary>
         public string? FailOnly { get; set; }
 
+        /// <summary>Fails the first this many calls, as Apple not yet knowing a new purchase does.</summary>
+        public int FailTimes { get; set; }
+
         public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAsync(string transactionId, CancellationToken token)
         {
             Submitted.Add(transactionId);
@@ -501,6 +582,12 @@ public sealed class StoreTests
             if (FailOnly == transactionId)
             {
                 throw new AccountException(AccountFailure.Offline, "offline");
+            }
+
+            if (FailTimes > 0)
+            {
+                FailTimes--;
+                throw new AccountException(AccountFailure.ServerError, "purchase_pending");
             }
 
             return ValueTask.FromResult(Answer ?? (Paid(BillingTier.Pro, BillingPlan.Annual), Selling(BillingProvider.Apple)));
@@ -530,7 +617,14 @@ public sealed class StoreTests
 
         public Task<IReadOnlyList<StoreProduct>> LoadProductsAsync(IReadOnlyCollection<string> productIds, CancellationToken cancellationToken)
         {
-            var prices = new Dictionary<string, (string Title, string Price)>
+            LoadCalls++;
+            var prices = Dollars ? new Dictionary<string, (string Title, string Price)>
+            {
+                ["cc.arachat.daynote.pro.monthly"] = ("Daynote Pro Monthly", "$2.49"),
+                ["cc.arachat.daynote.pro.annual"] = ("Daynote Pro Annual", "$19.99"),
+                ["cc.arachat.daynote.premium.monthly"] = ("Daynote Premium Monthly", "$4.99"),
+                ["cc.arachat.daynote.premium.annual"] = ("Daynote Premium Annual", "$39.99"),
+            } : new Dictionary<string, (string Title, string Price)>
             {
                 ["cc.arachat.daynote.pro.monthly"] = ("Daynote Pro (월간)", "₩2,900"),
                 ["cc.arachat.daynote.pro.annual"] = ("Daynote Pro (연간)", "₩24,000"),
@@ -549,9 +643,14 @@ public sealed class StoreTests
             {
                 case StorePurchaseStatus.Purchased:
                     string id = $"10000000000000{++serial:00}";
-                    if (await TransactionHandler!(new StoreTransaction(id, productId, IsRestore: false)).ConfigureAwait(true))
+                    var purchased = new StoreTransaction(id, productId, IsRestore: false);
+                    if (await TransactionHandler!(purchased).ConfigureAwait(true))
                     {
                         Finished.Add(id);
+                    }
+                    else
+                    {
+                        held.Add(purchased);
                     }
 
                     // A renewal of something else settles during the sheet, and confirms: the result
@@ -588,6 +687,34 @@ public sealed class StoreTests
 
         public int Retries { get; private set; }
 
-        public void RetryHeld() => Retries++;
+        private readonly List<StoreTransaction> held = [];
+
+        public event EventHandler? StorefrontChanged;
+
+        public int LoadCalls { get; private set; }
+
+        public bool Dollars { get; set; }
+
+        public void ChangeStorefront() => StorefrontChanged?.Invoke(this, EventArgs.Empty);
+
+        /// <summary>As the iOS head does: what the handler declined is held and sent again here.</summary>
+        public void RetryHeld()
+        {
+            Retries++;
+            StoreTransaction[] waiting = [.. held];
+            held.Clear();
+            foreach (StoreTransaction transaction in waiting)
+            {
+                Task<bool> settling = TransactionHandler!(transaction);
+                if (settling.IsCompleted && settling.Result)
+                {
+                    Finished.Add(transaction.TransactionId);
+                }
+                else
+                {
+                    held.Add(transaction);
+                }
+            }
+        }
     }
 }

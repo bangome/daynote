@@ -68,6 +68,8 @@ public sealed class IosStorePurchases : IStorePurchases
 
     public bool CanMakePayments => SKPaymentQueue.CanMakePayments;
 
+    public event EventHandler? StorefrontChanged;
+
     public Func<StoreTransaction, Task<bool>>? TransactionHandler
     {
         get => handler;
@@ -93,21 +95,64 @@ public sealed class IosStorePurchases : IStorePurchases
         }
     }
 
+    /// <summary>
+    /// Asks StoreKit for the products, and asks once more if the prices came back in another
+    /// storefront's locale than the one the payment queue will charge in — the TestFlight build
+    /// showed $2.49 on the card while the sheet charged ₩2,900. The two are logged (country codes and
+    /// a locale identifier, nothing about the person) so a mismatch that persists can be diagnosed.
+    /// </summary>
     public async Task<IReadOnlyList<StoreProduct>> LoadProductsAsync(
         IReadOnlyCollection<string> productIds,
         CancellationToken cancellationToken)
+    {
+        SKProduct[] found = await RequestAsync(productIds, cancellationToken).ConfigureAwait(true);
+        if (Mismatched(found))
+        {
+            found = await RequestAsync(productIds, cancellationToken).ConfigureAwait(true);
+            Mismatched(found);
+        }
+
+        foreach (SKProduct product in found)
+        {
+            products[product.ProductIdentifier] = product;
+        }
+
+        return [.. found.Select(Describe)];
+    }
+
+    /// <summary>
+    /// True when the products' price locale is not the payment queue's storefront. The storefront
+    /// names its country in ISO 3166 alpha-3 ("KOR"), the locale in alpha-2 ("KR").
+    /// </summary>
+    private static bool Mismatched(SKProduct[] found)
+    {
+        string? storefront = SKPaymentQueue.DefaultQueue.Storefront?.CountryCode;
+        string? localeRegion = found.FirstOrDefault()?.PriceLocale?.CountryCode;
+        string? locale = found.FirstOrDefault()?.PriceLocale?.Identifier;
+        Console.WriteLine($"[Daynote IAP] storefront={storefront ?? "?"} priceLocale={locale ?? "?"} products={found.Length}");
+        if (storefront is not { Length: 3 } || localeRegion is not { Length: 2 })
+        {
+            return false;
+        }
+
+        try
+        {
+            string alpha3 = new System.Globalization.RegionInfo(localeRegion).ThreeLetterISORegionName;
+            return !string.Equals(alpha3, storefront, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private async Task<SKProduct[]> RequestAsync(IReadOnlyCollection<string> productIds, CancellationToken cancellationToken)
     {
         var request = new ProductsRequest(productIds);
         requests.Add(request);
         try
         {
-            SKProduct[] found = await request.RunAsync(cancellationToken).ConfigureAwait(true);
-            foreach (SKProduct product in found)
-            {
-                products[product.ProductIdentifier] = product;
-            }
-
-            return [.. found.Select(Describe)];
+            return await request.RunAsync(cancellationToken).ConfigureAwait(true);
         }
         finally
         {
@@ -369,6 +414,9 @@ public sealed class IosStorePurchases : IStorePurchases
 
         public override void RestoreCompletedTransactionsFailedWithError(SKPaymentQueue queue, NSError error) =>
             Dispatcher.UIThread.Post(() => owner.OnRestoreFinished(error));
+
+        public override void DidChangeStorefront(SKPaymentQueue queue) =>
+            Dispatcher.UIThread.Post(() => owner.StorefrontChanged?.Invoke(owner, EventArgs.Empty));
     }
 
     /// <summary>One products request and its delegate, answered once.</summary>

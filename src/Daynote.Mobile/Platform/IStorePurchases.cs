@@ -20,6 +20,12 @@ namespace Daynote.Mobile.Platform;
 /// </remarks>
 public interface IStorePurchases
 {
+    /// <summary>
+    /// The App Store storefront changed — another App Store account, or another country. Prices read
+    /// before it are the old storefront's.
+    /// </summary>
+    event EventHandler? StorefrontChanged;
+
     /// <summary>False when Screen Time or a profile forbids purchases on this device.</summary>
     bool CanMakePayments { get; }
 

@@ -1208,6 +1208,15 @@ decides). With no token (an offer code redeemed outside the app) or the token of
 it can be claimed by the account restoring it. Family Sharing is off for the group, and a
 `FAMILY_SHARED` transaction is refused (it carries no token, and each family member could claim it).
 
+**A purchase Apple's API has not caught up with.** Seen in TestFlight: StoreKit completes a
+sandbox purchase seconds before the App Store Server API knows the transaction. A transaction id
+unknown in every environment is asked again after 1, 2 and 4 seconds, and then answered
+`503 purchase_pending` — "not yet", never "no" — so the app keeps the transaction. The app shows
+"구매를 확인하는 중…", sends it again after 2, 4, 8, 15 and 15 seconds while also reading the
+billing state (which picks up an activation that arrived through a notification first), and after
+that says calmly that the purchase will show on its own; coming back to the app tries again. A
+successful purchase is never shown an error.
+
 **Notifications are read against Apple.** A notification is about one transaction — a refund can
 be of an earlier period while the subscription runs on — so with the In-App Purchase key set the
 Worker re-reads Get All Subscription Statuses for it (in the notification's environment) and writes
