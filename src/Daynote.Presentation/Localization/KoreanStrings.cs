@@ -734,6 +734,21 @@ internal static class KoreanStrings
         ["AccountDeleteAppStoreNote"] = "App Store 구독은 계정을 삭제해도 해지되지 않습니다. 설정 › Apple ID › 구독에서 따로 해지해 주세요.",
         ["BillingAppStoreManaged"] = "App Store에서 구독 중 · iPhone 설정에서 관리",
 
+        // To-do reminders (phone)
+        ["ReminderSettingsSection"] = "알림",
+        ["ReminderSettingsTitle"] = "할 일 알림",
+        ["ReminderSettingsHint"] = "기한이 있는 할 일을 그 시각에 알려 드립니다",
+        ["ReminderSettingsDenied"] = "기기 설정에서 데이노트 알림이 꺼져 있습니다",
+        ["ReminderSettingsOpenSystem"] = "알림 설정 열기",
+        ["ReminderChannelName"] = "할 일 알림",
+        ["ReminderChannelDescription"] = "노트에 적은 할 일의 기한에 맞춰 알려 드립니다.",
+        ["ReminderTimeTitle"] = "기본 알림 시각",
+        ["ReminderTimeHint"] = "날짜만 있고 시각이 없는 할 일을 알릴 시각",
+        ["ReminderTimeHour"] = "시",
+        ["ReminderTimeMinute"] = "분",
+        ["ReminderTimeDone"] = "완료",
+        ["ReminderBodyFormat"] = "{0} · {1}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

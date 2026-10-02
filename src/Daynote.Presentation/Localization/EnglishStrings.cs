@@ -744,6 +744,21 @@ internal static class EnglishStrings
         ["AccountDeleteAppStoreNote"] = "Deleting the account does not cancel an App Store subscription. Cancel it separately in Settings › Apple ID › Subscriptions.",
         ["BillingAppStoreManaged"] = "Subscribed through the App Store · managed in iPhone Settings",
 
+        // To-do reminders (phone)
+        ["ReminderSettingsSection"] = "Notifications",
+        ["ReminderSettingsTitle"] = "To-do reminders",
+        ["ReminderSettingsHint"] = "Reminds you when a to-do with a due date is due",
+        ["ReminderSettingsDenied"] = "Daynote notifications are turned off in system settings",
+        ["ReminderSettingsOpenSystem"] = "Open notification settings",
+        ["ReminderChannelName"] = "To-do reminders",
+        ["ReminderChannelDescription"] = "Reminds you when a to-do in your notes is due.",
+        ["ReminderTimeTitle"] = "Default reminder time",
+        ["ReminderTimeHint"] = "When a to-do with a date but no time reminds you",
+        ["ReminderTimeHour"] = "Hour",
+        ["ReminderTimeMinute"] = "Minute",
+        ["ReminderTimeDone"] = "Done",
+        ["ReminderBodyFormat"] = "{0} · {1}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

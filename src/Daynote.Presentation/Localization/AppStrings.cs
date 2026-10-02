@@ -800,4 +800,20 @@ public static class AppStrings
     public static string SignOutUnsyncedFormatOne => LocalizationService.Instance[nameof(SignOutUnsyncedFormatOne)];
     public static string TabLists => LocalizationService.Instance[nameof(TabLists)];
     public static string TabSearch => LocalizationService.Instance[nameof(TabSearch)];
+
+    // To-do reminders on the phone (Daynote.Mobile/Reminders).
+    public static string ReminderSettingsSection => LocalizationService.Instance[nameof(ReminderSettingsSection)];
+    public static string ReminderSettingsTitle => LocalizationService.Instance[nameof(ReminderSettingsTitle)];
+    public static string ReminderSettingsHint => LocalizationService.Instance[nameof(ReminderSettingsHint)];
+    public static string ReminderSettingsDenied => LocalizationService.Instance[nameof(ReminderSettingsDenied)];
+    public static string ReminderSettingsOpenSystem => LocalizationService.Instance[nameof(ReminderSettingsOpenSystem)];
+    public static string ReminderChannelName => LocalizationService.Instance[nameof(ReminderChannelName)];
+    public static string ReminderChannelDescription => LocalizationService.Instance[nameof(ReminderChannelDescription)];
+    public static string ReminderTimeTitle => LocalizationService.Instance[nameof(ReminderTimeTitle)];
+    public static string ReminderTimeHint => LocalizationService.Instance[nameof(ReminderTimeHint)];
+    public static string ReminderTimeHour => LocalizationService.Instance[nameof(ReminderTimeHour)];
+    public static string ReminderTimeMinute => LocalizationService.Instance[nameof(ReminderTimeMinute)];
+    public static string ReminderTimeDone => LocalizationService.Instance[nameof(ReminderTimeDone)];
+    /// <summary>{0} = note title, {1} = due label ("10/3 14:00").</summary>
+    public static string ReminderBodyFormat => LocalizationService.Instance[nameof(ReminderBodyFormat)];
 }

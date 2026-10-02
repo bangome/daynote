@@ -9,6 +9,8 @@ namespace Daynote.App.Notes;
 /// One parsed todo line from a note body. Mirrors the design's <c>parseTodos()</c> item shape
 /// (calendar-notes.dc.html): a checkbox line <c>-[] task (M/D H:mm)</c> with an optional trailing due
 /// stamp, carrying its origin note so the panel can jump to and rewrite the exact source line.
+/// <see cref="HasDueTime"/> says whether the stamp carried a time, since <see cref="Due"/> fills in
+/// 23:59 for a date alone.
 /// </summary>
 public readonly record struct TodoLine(
     Guid NoteId,
@@ -19,7 +21,8 @@ public readonly record struct TodoLine(
     string Text,
     string DueLabel,
     DateTimeOffset? Due,
-    bool Overdue);
+    bool Overdue,
+    bool HasDueTime = false);
 
 /// <summary>
 /// Pure port of the design's todo logic. The checkbox grammar is
@@ -59,13 +62,14 @@ public static partial class TodoParsing
                 string text = match.Groups[2].Value;
                 DateTimeOffset? due = null;
                 string dueLabel = string.Empty;
+                bool hasTime = false;
 
                 Match dueMatch = DueSuffix().Match(text);
                 if (dueMatch.Success)
                 {
                     int month = int.Parse(dueMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     int day = int.Parse(dueMatch.Groups[2].Value, CultureInfo.InvariantCulture);
-                    bool hasTime = dueMatch.Groups[3].Success;
+                    hasTime = dueMatch.Groups[3].Success;
                     int hour = hasTime ? int.Parse(dueMatch.Groups[3].Value, CultureInfo.InvariantCulture) : 23;
                     int minute = hasTime ? int.Parse(dueMatch.Groups[4].Value, CultureInfo.InvariantCulture) : 59;
                     due = BuildDue(now, month, day, hour, minute);
@@ -86,7 +90,8 @@ public static partial class TodoParsing
                     text.Length == 0 ? Localization.AppStrings.TodoEmptyText : text,
                     dueLabel,
                     due,
-                    due is { } d && !@checked && d < now));
+                    due is { } d && !@checked && d < now,
+                    due is not null && hasTime));
             }
         }
 
