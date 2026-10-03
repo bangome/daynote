@@ -402,21 +402,30 @@ public sealed class IosStorePurchases : IStorePurchases
 
     /// <summary>
     /// The payment-queue observer. StoreKit may call it on any thread; everything it reports is
-    /// handled on the UI thread, where the view models it updates live.
+    /// handled on the main thread, where the view models it updates live.
     /// </summary>
+    /// <remarks>
+    /// Marshalled with UIKit's own main-thread queue, not Avalonia's dispatcher. The observer is added
+    /// before Avalonia starts, and StoreKit can call it straight away (a storefront change, a pending
+    /// transaction) on a background thread: touching <c>Dispatcher.UIThread</c> there created the
+    /// dispatcher on that thread, and Avalonia's own start-up then failed on the main thread, so the
+    /// app crashed at launch. On iOS the main thread is Avalonia's UI thread, so nothing else changes.
+    /// </remarks>
     private sealed class Observer(IosStorePurchases owner) : SKPaymentTransactionObserver
     {
         public override void UpdatedTransactions(SKPaymentQueue queue, SKPaymentTransaction[] transactions) =>
-            Dispatcher.UIThread.Post(() => owner.OnUpdated(transactions));
+            OnMain(() => owner.OnUpdated(transactions));
 
         public override void RestoreCompletedTransactionsFinished(SKPaymentQueue queue) =>
-            Dispatcher.UIThread.Post(() => owner.OnRestoreFinished(null));
+            OnMain(() => owner.OnRestoreFinished(null));
 
         public override void RestoreCompletedTransactionsFailedWithError(SKPaymentQueue queue, NSError error) =>
-            Dispatcher.UIThread.Post(() => owner.OnRestoreFinished(error));
+            OnMain(() => owner.OnRestoreFinished(error));
 
         public override void DidChangeStorefront(SKPaymentQueue queue) =>
-            Dispatcher.UIThread.Post(() => owner.StorefrontChanged?.Invoke(owner, EventArgs.Empty));
+            OnMain(() => owner.StorefrontChanged?.Invoke(owner, EventArgs.Empty));
+
+        private static void OnMain(Action action) => NSRunLoop.Main.BeginInvokeOnMainThread(action);
     }
 
     /// <summary>One products request and its delegate, answered once.</summary>

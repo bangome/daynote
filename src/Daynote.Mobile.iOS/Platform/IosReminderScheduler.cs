@@ -135,7 +135,9 @@ internal sealed class IosReminderDelegate : UNUserNotificationCenterDelegate
         NSDictionary info = response.Notification.Request.Content.UserInfo;
         string? date = info[IosReminderScheduler.DateKey]?.ToString();
         string? note = info[IosReminderScheduler.NoteKey]?.ToString();
-        Avalonia.Threading.Dispatcher.UIThread.Post(() => App.OpenReminder(date, note));
+        // UIKit's main queue rather than Avalonia's dispatcher: a tap that launches the app arrives
+        // before Avalonia has started, and touching Dispatcher.UIThread then crashes its start-up.
+        NSRunLoop.Main.BeginInvokeOnMainThread(() => App.OpenReminder(date, note));
         completionHandler();
     }
 }
