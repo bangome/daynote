@@ -77,11 +77,24 @@ if [[ "$TARGET" == "simulator" ]]; then
 fi
 
 echo "==> publish (ios-arm64, $CONFIG)"
-rm -rf "$ROOT/$OUT"
+# The linker caches its resolved publish graph under obj. Keeping that cache can resurrect an
+# assembly that a newly added packaging target removed, producing an IPA that does not match the
+# current project file. A distribution build must always start from a clean app-head graph.
+rm -rf "$ROOT/$OUT" "$ROOT/src/Daynote.Mobile.iOS/bin" "$ROOT/src/Daynote.Mobile.iOS/obj"
 dotnet publish "$PROJECT" -c "$CONFIG" -r ios-arm64 -o "$ROOT/$OUT" -nologo -v q \
   -p:ArchiveOnBuild=true \
   -p:CodesignKey="${DAYNOTE_IOS_SIGN_IDENTITY:?set DAYNOTE_IOS_SIGN_IDENTITY}" \
   -p:CodesignProvision="${DAYNOTE_IOS_PROVISIONING:?set DAYNOTE_IOS_PROVISIONING}"
 
+IPA="$(find "$ROOT/$OUT" -maxdepth 2 -name '*.ipa' -print -quit)"
+if [[ -z "$IPA" ]]; then
+  echo "error: publish completed without producing an IPA" >&2
+  exit 1
+fi
+if unzip -Z1 "$IPA" | grep -q 'Avalonia\.DesignerSupport'; then
+  echo "error: IPA contains Avalonia.DesignerSupport, which crashes trimmed iOS device builds" >&2
+  exit 1
+fi
+
 echo "==> done: $ROOT/$OUT"
-find "$ROOT/$OUT" -name '*.ipa' -maxdepth 2 || true
+echo "$IPA"

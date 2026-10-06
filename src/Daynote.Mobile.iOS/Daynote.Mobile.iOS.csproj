@@ -13,7 +13,7 @@
     <!-- The same bundle id as the Mac app, which is allowed and is what lets one App Store listing
          carry both. The Mac build is not distributed through the store today, so nothing collides. -->
     <ApplicationId>cc.arachat.daynote</ApplicationId>
-    <ApplicationVersion>12</ApplicationVersion>
+    <ApplicationVersion>14</ApplicationVersion>
     <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
     <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
@@ -85,4 +85,20 @@
     <!-- Copied to the bundle root under exactly this name; App Store Connect looks nowhere else. -->
     <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
   </ItemGroup>
+
+  <!--
+    Avalonia's umbrella package ships Avalonia.DesignerSupport as a runtime asset even though it is
+    only used by the desktop previewer. On a trimmed iOS device build that assembly is AOT-compiled
+    against the pre-trim Avalonia.Base module, while Avalonia.Base itself is rewritten by the iOS
+    linker. Mono then aborts before Main because the module IDs no longer match. Keep the previewer
+    assembly out of the device app; no production code references it.
+  -->
+  <Target Name="RemoveAvaloniaDesignerSupportFromIosApp"
+          BeforeTargets="_ComputeLinkerInputs;PrepareForILLink"
+          DependsOnTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(Filename)' == 'Avalonia.DesignerSupport'" />
+    </ItemGroup>
+  </Target>
 </Project>
