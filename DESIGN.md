@@ -624,6 +624,8 @@ The gate passes only after fresh actual-WPF screenshots, motion frame sequences,
 
 ### Interaction rules
 
+- On the mobile home screen, a horizontal swipe across the Sunday-to-Saturday week strip pages by one week: left moves to the next week and right moves to the previous week. The gesture is discrete and immediate, preserves the selected weekday by shifting the selected date exactly seven days, and never claims vertical movement from the page scroll owner. The visible previous/next-week buttons remain the accessible non-gesture alternative.
+
 - Animate only `Opacity` and `TranslateTransform`. Never animate Grid length, width, height, margin, padding, border thickness, font size, scroll offset, or content measurement.
 - Brush changes for hover, active, selection, validation, and focus are immediate state changes, not color animations.
 - Motion must explain scope change, overlay relationship, or completion. There is no scroll-entry reveal, staggered list mounting, ambient movement, hover lift, scale pulse, shimmer, or decorative loop.

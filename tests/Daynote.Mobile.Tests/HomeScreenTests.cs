@@ -1,9 +1,13 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.App.Notes;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Mobile.ViewModels;
+using Daynote.Mobile.Views;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Daynote.Mobile.Tests;
@@ -35,6 +39,43 @@ public sealed class HomeScreenTests
             Assert.IsFalse(shell.Week.Any(d => d.IsTodayRing), "Next week does not contain today.");
 
             Pump(() => shell.PreviousWeekCommand.ExecuteAsync(null));
+            Assert.AreEqual(before, shell.SelectedDate);
+        });
+    }
+
+    [TestMethod]
+    public void A_horizontal_week_strip_swipe_pages_exactly_one_week()
+    {
+        TestServices.WithInitialisedShell((_, shell) =>
+        {
+            var page = new DayPage { DataContext = shell };
+            Grid strip = page.FindControl<Grid>("WeekStrip")!;
+            LocalDate before = shell.SelectedDate;
+
+            // Avalonia reports content delta (previous pointer minus current pointer), so a finger
+            // moving left produces a positive X delta and SwipeDirection.Left.
+            strip.RaiseEvent(new SwipeGestureEventArgs(1, new Vector(80, 0), new Vector(500, 0))
+            {
+                RoutedEvent = InputElement.SwipeGestureEvent,
+            });
+            Pump(() => shell.NextWeekCommand.ExecutionTask ?? Task.CompletedTask);
+            Assert.AreEqual(LocalDates.AddDays(before, 7), shell.SelectedDate);
+
+            strip.RaiseEvent(new SwipeGestureEventArgs(1, new Vector(20, 0), new Vector(200, 0))
+            {
+                RoutedEvent = InputElement.SwipeGestureEvent,
+            });
+            Assert.AreEqual(LocalDates.AddDays(before, 7), shell.SelectedDate, "One swipe paged more than once.");
+
+            strip.RaiseEvent(new SwipeGestureEndedEventArgs(1, new Vector(500, 0))
+            {
+                RoutedEvent = InputElement.SwipeGestureEndedEvent,
+            });
+            strip.RaiseEvent(new SwipeGestureEventArgs(2, new Vector(-80, 0), new Vector(-500, 0))
+            {
+                RoutedEvent = InputElement.SwipeGestureEvent,
+            });
+            Pump(() => shell.PreviousWeekCommand.ExecutionTask ?? Task.CompletedTask);
             Assert.AreEqual(before, shell.SelectedDate);
         });
     }

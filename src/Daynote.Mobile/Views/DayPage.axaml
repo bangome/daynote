@@ -49,7 +49,11 @@
       </StackPanel>
 
       <!-- The week strip. -->
-      <Grid ColumnDefinitions="24,*,24" Margin="-8,0,-8,22">
+      <Grid x:Name="WeekStrip" ColumnDefinitions="24,*,24" Margin="-8,0,-8,22"
+            SwipeGesture="OnWeekStripSwipe" SwipeGestureEnded="OnWeekStripSwipeEnded">
+        <Grid.GestureRecognizers>
+          <SwipeGestureRecognizer CanHorizontallySwipe="True" CanVerticallySwipe="False" />
+        </Grid.GestureRecognizers>
         <Button Grid.Column="0" Height="60" CornerRadius="0" Command="{Binding PreviousWeekCommand}"
                 AutomationProperties.Name="{Binding Strings[MobilePreviousWeek]}">
           <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text3}" />
