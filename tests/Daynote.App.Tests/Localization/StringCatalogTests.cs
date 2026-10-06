@@ -109,10 +109,12 @@ public sealed partial class StringCatalogTests
             nameof(AppStrings.PlanPremiumName),
             nameof(AppStrings.AccountPlanPremium),
 
-            // A size and two pure format strings: there is nothing in them to translate.
+            // A size and three pure format strings: there is nothing in them to translate. The
+            // reminder body is the to-do text and its time joined by a separator.
             nameof(AppStrings.PlanStoragePro),
             nameof(AppStrings.StorageUsageFormat),
             nameof(AppStrings.CheckoutPlanLabelFormat),
+            nameof(AppStrings.ReminderBodyFormat),
         };
 
         string[] untranslated = [.. korean
