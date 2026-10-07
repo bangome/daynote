@@ -19,4 +19,10 @@
     -->
     <RuntimeIdentifiers>$(RuntimeIdentifiers);android-arm64;android-x64</RuntimeIdentifiers>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The sync payload codecs are internal because nothing outside this assembly may write the
+         wire format, and that is exactly what needs a test of its own. -->
+    <InternalsVisibleTo Include="Daynote.Core.Tests" />
+  </ItemGroup>
 </Project>

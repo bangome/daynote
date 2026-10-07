@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 
 namespace Daynote.Core.Sync;
@@ -6,6 +7,12 @@ public enum SyncEntityKind
 {
     Note,
     File,
+
+    /// <summary>A to-do or an event. A series and each of its overrides are separate entities.</summary>
+    AgendaItem,
+
+    /// <summary>A to-do container. See <see cref="AgendaList"/>.</summary>
+    AgendaList,
 }
 
 public readonly record struct SyncEntityRef(SyncEntityKind Kind, string Id);
@@ -37,6 +44,25 @@ public sealed record SyncTombstone(SyncEntityKind Kind, string Id, DateTimeOffse
 public sealed record PendingNote(SyncNote Note, DateTimeOffset QueuedUtc);
 
 public sealed record PendingFile(SyncFile File, DateTimeOffset QueuedUtc);
+
+/// <summary>
+/// A to-do or event awaiting push. Carries the domain record itself rather than a parallel DTO:
+/// unlike a note, an <see cref="AgendaItem"/> is already the whole thing the server has to carry,
+/// and a second copy of the shape is a second place to forget a field.
+/// </summary>
+public sealed record PendingAgendaItem(AgendaItem Item, DateTimeOffset QueuedUtc);
+
+public sealed record PendingAgendaList(AgendaList List, DateTimeOffset QueuedUtc);
+
+/// <summary>
+/// What applying a page of pulled agenda rows did. No displaced-version list, unlike
+/// <see cref="MergeOutcome"/>: a to-do is a handful of fields the user can see and re-enter, not a
+/// page of prose, so the conflicts folder would collect noise nobody reads.
+/// </summary>
+public sealed record AgendaMergeOutcome(int Applied, int Ignored, int Deleted)
+{
+    public static AgendaMergeOutcome Empty { get; } = new(0, 0, 0);
+}
 
 public readonly record struct PendingAck(SyncEntityKind Kind, string Id, DateTimeOffset QueuedUtc);
 

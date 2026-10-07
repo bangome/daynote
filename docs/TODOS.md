@@ -1,7 +1,11 @@
 # To-dos and events as entities (design)
 
-> **Status 2026-10-07: the store is built; nothing reads it.** Migration 005 creates the tables,
-> `Daynote.Core.Agenda` holds the model and `SqliteAgendaRepository` reads and writes it. Every
+> **Status 2026-10-08: the store and its sync bookkeeping are built; nothing reads them.**
+> Migration 005 creates the tables, `Daynote.Core.Agenda` holds the model and
+> `SqliteAgendaRepository` reads and writes it. Migration 006 makes every agenda edit queue —
+> triggers, tombstones, and two new entities on the outbox — and `SqliteSyncStore.Agenda.cs`
+> drains and merges them against `AgendaPayload`'s wire format. The engine does not call any of
+> it yet and the Worker has no tables for it, so nothing leaves the device. Every
 > panel still parses `-[ ]` out of note bodies through
 > [`TodoParsing`](../src/Daynote.Presentation/Notes/TodoParsing.cs), the `@` command does not exist,
 > and the one-time migration of §8 has not been written — §12 requires desktop and phone to cut
@@ -223,6 +227,26 @@ depend on**. A device that applies items before lists would show tasks with no c
 first, and on an item whose `list_id` is unknown, fall back to the default list rather than dropping
 it.
 
+**Built, as of migration 006:** the outbox and tombstone tables carry `agenda_item` and
+`agenda_list`, triggers on both tables queue every write, `AgendaPayloadCodec` is the wire format
+(iCalendar's names wherever iCalendar has one, so the `.ics` feed and CalDAV are built from the
+same shape), and `SqliteSyncStore.Agenda.cs` holds the two merges. Three rules it settles that the
+prose above only implies:
+
+- A series is pushed, and applied, **before any override of it** — an override is a foreign key
+  onto the row carrying the rule, so the order a page happens to be in must not decide whether it
+  lands.
+- `is_default` is **derived from the fixed id, never taken from the wire**. The column is unique,
+  so honouring a remote claim would make applying a page depend on arrival order and fail outright
+  when two rows claim it. A remote delete of the default list is refused for the same reason: it
+  is where everything else lands.
+- Agenda `_utc` columns were writing a second timestamp format. 006 normalises them to
+  `DateTimeOffset.ToString("O")` like every other table, because `AcknowledgePushAsync` matches
+  `queued_utc` as an exact string and a second format would leave every agenda row queued forever.
+
+**Not built:** the engine does not call any of it, and the Worker has no `agenda_items` or
+`agenda_lists` table. Until both exist the queue simply fills and is never drained.
+
 ## 10. Integrations, in order
 
 **Build one export shape and one sync client, not N integrations.** The long tail arrives through
@@ -340,7 +364,8 @@ exists twice and reminds twice.
 
 The order that makes that safe:
 
-1. Entities, lists and their sync land first, with nothing reading them yet.
+1. Entities, lists and their sync land first, with nothing reading them yet. *(The local half is
+   done — migrations 005 and 006. The Worker half is not.)*
 2. The migration runs once per device and is **idempotent and recorded** — a `schema_versions` row,
    not a flag in settings — because two devices will both try it.
 3. Desktop and phone switch their readers in the same version, and `TodoParsing` stops feeding

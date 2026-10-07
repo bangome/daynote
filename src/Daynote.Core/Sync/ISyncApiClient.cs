@@ -1,3 +1,5 @@
+using Daynote.Core.Agenda;
+
 namespace Daynote.Core.Sync;
 
 /// <summary>A note as it travels: an opaque envelope plus the clock the server orders it by.</summary>
@@ -168,6 +170,31 @@ public interface ISyncStore
 
     ValueTask<MergeOutcome> MergeNotesAsync(
         IReadOnlyList<SyncNote> notes,
+        IReadOnlyList<SyncTombstone> tombstones,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// To-do containers awaiting push. Drained before <see cref="ReadPendingAgendaItemsAsync"/>:
+    /// items depend on their list, and a device that received the item first would show a task
+    /// with nowhere to live (docs/TODOS.md §9).
+    /// </summary>
+    ValueTask<IReadOnlyList<PendingAgendaList>> ReadPendingAgendaListsAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>To-dos and events awaiting push, each series ahead of any override of it.</summary>
+    ValueTask<IReadOnlyList<PendingAgendaItem>> ReadPendingAgendaItemsAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Applies pulled lists. Call before <see cref="MergeAgendaItemsAsync"/>.</summary>
+    ValueTask<AgendaMergeOutcome> MergeAgendaListsAsync(
+        IReadOnlyList<AgendaList> lists,
+        IReadOnlyList<SyncTombstone> tombstones,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<AgendaMergeOutcome> MergeAgendaItemsAsync(
+        IReadOnlyList<AgendaItem> items,
         IReadOnlyList<SyncTombstone> tombstones,
         CancellationToken cancellationToken = default);
 

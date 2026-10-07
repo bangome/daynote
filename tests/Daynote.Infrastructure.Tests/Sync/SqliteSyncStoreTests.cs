@@ -137,7 +137,9 @@ public sealed class SqliteSyncStoreTests
 
         int queued = await store.EnrollExistingContentAsync();
 
-        Assert.AreEqual(1, queued);
+        // Two: the note, and the built-in default to-do list that migration 005 inserted before
+        // any trigger existed (docs/TODOS.md §9).
+        Assert.AreEqual(2, queued);
         Assert.AreEqual(id.ToString(), (await store.ReadPendingNotesAsync(50)).Single().Note.Id);
     }
 

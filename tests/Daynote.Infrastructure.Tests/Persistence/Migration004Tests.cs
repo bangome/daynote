@@ -25,7 +25,7 @@ public sealed class Migration004Tests
         // migrating, so a user who never signs in gets no sync bookkeeping churn.
         await using Upgraded upgraded = await UpgradeFromV3();
 
-        Assert.AreEqual(5, upgraded.SchemaVersion);
+        Assert.AreEqual(6, upgraded.SchemaVersion);
         using SqliteConnection connection = upgraded.Database.OpenReadConnection();
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM notes;"));
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM day_files;"));
@@ -54,9 +54,12 @@ public sealed class Migration004Tests
 
         int queued = await store.EnrollExistingContentAsync();
 
-        Assert.AreEqual(2, queued);
+        // Three: the note, the attachment, and the built-in default to-do list that migration 005
+        // inserted before any trigger existed.
+        Assert.AreEqual(3, queued);
         Assert.AreEqual(1, (await store.ReadPendingNotesAsync(50)).Count);
         Assert.AreEqual(1, (await store.ReadPendingFilesAsync(50)).Count);
+        Assert.AreEqual(1, (await store.ReadPendingAgendaListsAsync(50)).Count);
     }
 
     [TestMethod]
@@ -70,7 +73,7 @@ public sealed class Migration004Tests
         Assert.AreEqual(0, await store.EnrollExistingContentAsync());
 
         using SqliteConnection connection = upgraded.Database.OpenReadConnection();
-        Assert.AreEqual(2L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM sync_outbox;"));
+        Assert.AreEqual(3L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM sync_outbox;"));
     }
 
     [TestMethod]

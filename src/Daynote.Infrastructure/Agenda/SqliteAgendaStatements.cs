@@ -208,6 +208,56 @@ internal static class SqliteAgendaStatements
         return command.ExecuteNonQuery() > 0;
     }
 
+    // ── Merge ────────────────────────────────────────────────────────────────────────────────
+    //
+    // What cloud sync needs on top of the repository: last-write-wins needs to read one timestamp
+    // without hydrating a row, and a list arriving from another device is an upsert rather than
+    // the create/rename pair the UI offers.
+
+    public static DateTimeOffset? ReadUpdatedUtc(
+        SqliteConnection connection, SqliteTransaction? transaction, string table, Guid id)
+    {
+        using SqliteCommand command = Create(
+            connection, transaction, $"SELECT updated_utc FROM {table} WHERE id=$id;");
+        command.Parameters.AddWithValue("$id", Format(id));
+        return command.ExecuteScalar() is string value ? ParseUtc(value) : null;
+    }
+
+    /// <summary>
+    /// Writes a list as it arrived from another device. <c>is_default</c> is derived from the id
+    /// and the incoming flag is ignored: the column is unique, so honouring a remote claim would
+    /// make applying a page depend on the order its rows happen to arrive in — and fail outright
+    /// when two of them claim it.
+    /// </summary>
+    public static void SaveList(
+        SqliteConnection connection, SqliteTransaction transaction, AgendaList list)
+    {
+        using SqliteCommand command = Create(
+            connection,
+            transaction,
+            "INSERT INTO agenda_lists(id,name,sort_order,is_default,created_utc,updated_utc) " +
+            "VALUES ($id,$name,$order,$default,$created,$updated) " +
+            "ON CONFLICT(id) DO UPDATE SET name=excluded.name,sort_order=excluded.sort_order," +
+            "updated_utc=excluded.updated_utc;");
+        command.Parameters.AddWithValue("$id", Format(list.Id));
+        command.Parameters.AddWithValue("$name", list.Name);
+        command.Parameters.AddWithValue("$order", list.SortOrder);
+        command.Parameters.AddWithValue("$default", list.Id == AgendaList.DefaultId ? 1 : 0);
+        command.Parameters.AddWithValue("$created", FormatUtc(list.CreatedUtc));
+        command.Parameters.AddWithValue("$updated", FormatUtc(list.UpdatedUtc));
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>Whether a list exists, so an item naming an unknown one can fall back (§9).</summary>
+    public static bool ListExists(
+        SqliteConnection connection, SqliteTransaction? transaction, Guid id)
+    {
+        using SqliteCommand command = Create(
+            connection, transaction, "SELECT 1 FROM agenda_lists WHERE id=$id;");
+        command.Parameters.AddWithValue("$id", Format(id));
+        return command.ExecuteScalar() is not null;
+    }
+
     // ── Plumbing ─────────────────────────────────────────────────────────────────────────────
 
     private static void ReplaceChildren(
@@ -366,8 +416,14 @@ internal static class SqliteAgendaStatements
 
     public static string Format(Guid id) => id.ToString("D", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// The one <c>_utc</c> format this database uses, app-wide: <c>DateTimeOffset.ToString("O")</c>
+    /// in UTC. Not cosmetic — sync compares <c>queued_utc</c> against
+    /// <c>SyncTimestamps.ToLocal</c> as an exact string, so a second format here would leave every
+    /// agenda row queued forever (migration 004's header, docs/CLOUD_SYNC.md §7.3).
+    /// </summary>
     public static string FormatUtc(DateTimeOffset value) =>
-        value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
+        value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
 
     private static DateTimeOffset ParseUtc(string text) =>
         DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);

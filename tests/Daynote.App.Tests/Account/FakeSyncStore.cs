@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using Daynote.Core.Sync;
 
 namespace Daynote.App.Tests.Account;
@@ -60,6 +61,18 @@ internal sealed class FakeSyncStore : ISyncStore
 
     public ValueTask<FileMergeOutcome> MergeFilesAsync(IReadOnlyList<SyncFile> files, IReadOnlyList<SyncTombstone> tombstones, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(FileMergeOutcome.Empty);
+
+    public ValueTask<IReadOnlyList<PendingAgendaList>> ReadPendingAgendaListsAsync(int limit, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<IReadOnlyList<PendingAgendaList>>([]);
+
+    public ValueTask<IReadOnlyList<PendingAgendaItem>> ReadPendingAgendaItemsAsync(int limit, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult<IReadOnlyList<PendingAgendaItem>>([]);
+
+    public ValueTask<AgendaMergeOutcome> MergeAgendaListsAsync(IReadOnlyList<AgendaList> lists, IReadOnlyList<SyncTombstone> tombstones, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(AgendaMergeOutcome.Empty);
+
+    public ValueTask<AgendaMergeOutcome> MergeAgendaItemsAsync(IReadOnlyList<AgendaItem> items, IReadOnlyList<SyncTombstone> tombstones, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(AgendaMergeOutcome.Empty);
 
     public ValueTask<IReadOnlyList<string>> ReadAssetQueueAsync(AssetDirection direction, int limit, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult<IReadOnlyList<string>>([]);

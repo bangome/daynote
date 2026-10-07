@@ -61,6 +61,24 @@ public sealed partial class SqliteSyncStore : ISyncStore
                     INSERT OR IGNORE INTO sync_outbox(entity, entity_id, queued_utc)
                     SELECT 'file', id, created_utc FROM day_files;
                     """);
+                // Lists before items, the same order a pull applies them in (docs/TODOS.md §9):
+                // items depend on their container, and a device that saw the item first would show
+                // a task with nowhere to live. The built-in default list is included — it was
+                // inserted by migration 005, before any trigger existed, and it is renameable.
+                queued += Execute(
+                    connection,
+                    transaction,
+                    """
+                    INSERT OR IGNORE INTO sync_outbox(entity, entity_id, queued_utc)
+                    SELECT 'agenda_list', id, updated_utc FROM agenda_lists;
+                    """);
+                queued += Execute(
+                    connection,
+                    transaction,
+                    """
+                    INSERT OR IGNORE INTO sync_outbox(entity, entity_id, queued_utc)
+                    SELECT 'agenda_item', id, updated_utc FROM agenda_items;
+                    """);
                 return queued;
             },
             cancellationToken);
@@ -967,13 +985,23 @@ public sealed partial class SqliteSyncStore : ISyncStore
             ? parsed
             : throw new InvalidOperationException($"A stored timestamp could not be read: '{value}'.");
 
-    private static string WireKind(SyncEntityKind kind) => kind == SyncEntityKind.Note ? "note" : "file";
+    private static string WireKind(SyncEntityKind kind) =>
+        kind switch
+        {
+            SyncEntityKind.Note => "note",
+            SyncEntityKind.File => "file",
+            SyncEntityKind.AgendaItem => "agenda_item",
+            SyncEntityKind.AgendaList => "agenda_list",
+            _ => throw new InvalidOperationException($"Unknown sync entity '{kind}'."),
+        };
 
     private static SyncEntityKind ParseKind(string value) =>
         value switch
         {
             "note" => SyncEntityKind.Note,
             "file" => SyncEntityKind.File,
+            "agenda_item" => SyncEntityKind.AgendaItem,
+            "agenda_list" => SyncEntityKind.AgendaList,
             _ => throw new InvalidOperationException($"Unknown sync entity '{value}'."),
         };
 

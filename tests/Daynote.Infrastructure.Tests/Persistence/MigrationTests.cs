@@ -16,7 +16,7 @@ public sealed class MigrationTests
         var initialized = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(5, initialized.SchemaVersion);
+        Assert.AreEqual(6, initialized.SchemaVersion);
         using var connection = fixture.Database.OpenReadConnection();
         var objects = ReadSchemaObjects(connection);
         CollectionAssert.AreEquivalent(
@@ -32,10 +32,14 @@ public sealed class MigrationTests
                 "table:sync_tombstones",
                 "trigger:sync_files_ad", "trigger:sync_files_ai",
                 "trigger:sync_notes_ad", "trigger:sync_notes_ai", "trigger:sync_notes_au",
-                // To-dos and events (005). No triggers yet: nothing reads these, and the sync
-                // bookkeeping they will need arrives with the readers (docs/TODOS.md §12).
+                // To-dos and events (005), and their sync bookkeeping (006). Still nothing
+                // reads them; the triggers only make their edits queue (docs/TODOS.md §12).
                 "table:agenda_alarms", "table:agenda_exdates", "table:agenda_external_refs",
                 "table:agenda_items", "table:agenda_lists",
+                "trigger:sync_agenda_items_ad", "trigger:sync_agenda_items_ai",
+                "trigger:sync_agenda_items_au",
+                "trigger:sync_agenda_lists_ad", "trigger:sync_agenda_lists_ai",
+                "trigger:sync_agenda_lists_au",
             },
             objects.Where(static value => !value.Contains("search_fts_", StringComparison.Ordinal)).ToArray());
         CollectionAssert.AreEqual(
@@ -93,9 +97,9 @@ public sealed class MigrationTests
         var reopened = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(5, reopened.SchemaVersion);
+        Assert.AreEqual(6, reopened.SchemaVersion);
         using var verification = fixture.Database.OpenReadConnection();
-        Assert.AreEqual(5L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
+        Assert.AreEqual(6L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM settings WHERE key='sentinel' AND value='preserved';"));
     }
 

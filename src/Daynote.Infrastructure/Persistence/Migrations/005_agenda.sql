@@ -36,8 +36,11 @@ VALUES (
     '',
     0,
     1,
-    strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
-    strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+    -- DateTimeOffset.ToString("O") in UTC, which is what every other _utc column in this
+    -- database holds. Sync compares these as strings, so a second format is a correctness bug
+    -- rather than a cosmetic one (migration 004's header).
+    strftime('%Y-%m-%dT%H:%M:%f', 'now') || '0000+00:00',
+    strftime('%Y-%m-%dT%H:%M:%f', 'now') || '0000+00:00');
 
 -- One table for both kinds: a to-do and an event differ by whether a time range is set, and
 -- splitting them would double every query the day panel and the Timeline make.
