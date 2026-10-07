@@ -25,7 +25,7 @@ public sealed class Migration004Tests
         // migrating, so a user who never signs in gets no sync bookkeeping churn.
         await using Upgraded upgraded = await UpgradeFromV3();
 
-        Assert.AreEqual(4, upgraded.SchemaVersion);
+        Assert.AreEqual(5, upgraded.SchemaVersion);
         using SqliteConnection connection = upgraded.Database.OpenReadConnection();
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM notes;"));
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM day_files;"));

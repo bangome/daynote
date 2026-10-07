@@ -1,11 +1,12 @@
 # To-dos and events as entities (design)
 
-> **Status 2026-10-07: design only. Nothing here is built.** Today a to-do is a line of note body
-> text parsed by [`TodoParsing`](../src/Daynote.Presentation/Notes/TodoParsing.cs); this document
-> proposes separating to-dos and events out of the body into their own entity, and says what the
-> entity has to look like so that integrating with other apps later is a mapping rather than a
-> rewrite. It supersedes nothing yet. [CLOUD_SYNC.md](CLOUD_SYNC.md) describes the sync engine this
-> would add an entity to.
+> **Status 2026-10-07: the store is built; nothing reads it.** Migration 005 creates the tables,
+> `Daynote.Core.Agenda` holds the model and `SqliteAgendaRepository` reads and writes it. Every
+> panel still parses `-[ ]` out of note bodies through
+> [`TodoParsing`](../src/Daynote.Presentation/Notes/TodoParsing.cs), the `@` command does not exist,
+> and the one-time migration of §8 has not been written — §12 requires desktop and phone to cut
+> over in the same release, so the store lands first and unused. [CLOUD_SYNC.md](CLOUD_SYNC.md)
+> describes the sync engine §9 would add entities to; that part is not built either.
 
 ## 1. Decisions taken
 
