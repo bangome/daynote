@@ -194,11 +194,11 @@ leaving the note.
 - **With no list given, it lands in the default list.** Choosing a list is never required to capture
   something.
 
-**The design is [`Daynote B Tasks - Events.dc.html`](design-renewal/Daynote%20B%20Tasks%20-%20Events.dc.html)**,
-imported from the design project. It keeps Desktop B's shell — navy sidebar, big date plus week
-strip, note tabs, orange accent — and changes four places: this popup, the creation confirmation
-below, the sidebar's lists, and the day panel. Its reference moment is Wednesday 7 October 2026 at
-14:30, which half its examples turn on.
+**The design is the `Daynote B Tasks - Events` set** and its phone counterpart, one file per
+section — see [design-renewal/README.md](design-renewal/README.md). It keeps the Desktop B shell
+that shipped and changes four places: this popup, the creation confirmation below, the sidebar's
+lists, and the day panel. Both documents share a reference moment, Wednesday 7 October 2026 at
+14:30, which half their examples turn on.
 
 **Built, as `AgendaPhraseParser`.** The reading half only; the popup and the editor hook are not.
 What it settles, beyond what the prose above says:
@@ -480,6 +480,23 @@ The order that makes that safe:
 
 Until step 3 ships on both, the migration must not run anywhere.
 
+## 12.1 What the design asks of the other shell
+
+The phone document ends with a list of every concept that exists on one side only, because both
+switch in the same release. Transcribed in
+[design-renewal/99-divergences.md](design-renewal/99-divergences.md); the two that are work on
+the desktop:
+
+- **"이 노트의 항목 N".** Built for the phone, where the to-do list is on another tab and the
+  slide-in cannot play the part of "the object appeared". The desktop needs the same count and
+  list beside its note-tab row.
+- **The 알림 field in the desktop popover.** The desktop never rings. Relabel it 휴대폰 알림, and
+  show the same unsupported notice on a repeating item that the phone shows.
+
+And one that is neither shell's feature but both shells' copy: the desktop's empty-state still
+tells the user to type `-[] 할 일`, and the phone toolbar still has a button that inserts one.
+Both go when step 3 switches the readers.
+
 ## 13. Open questions
 
 - **Drag to reschedule in the Timeline** (§11): worth doing, but it needs its own interaction pass
@@ -492,5 +509,10 @@ Until step 3 ships on both, the migration must not run anywhere.
   can read a series row and draw a repeat mark without it, but reminders cannot: a repeating to-do
   is silent until there is an expander (§12 step 4). It needs `EXDATE`, overrides and a horizon,
   and it is the last thing between the entity model and parity with what `-[ ]` could never do.
-- **Whether a dated to-do should be allowed no reminder at all.** Today it cannot: an empty alarm
-  list means the default one. The entity can express "none" and the UI has nowhere to say it.
+- ~~**Whether a dated to-do should be allowed no reminder at all.**~~ Settled by the phone's §06.
+  A dated item is *created* carrying one alert, which the user can remove, so the behaviour every
+  dated to-do has had since reminders shipped survives as a visible default and an empty list now
+  means exactly what it says. The planner used to read empty as "the usual one" because there was
+  nowhere to say otherwise; it no longer guesses. The sheet offers 정각 / 5 / 10 / 30분 전 / 1시간
+  전 / 하루 전 오전 9:00 / 직접 설정, and the last of those is a lead like any other — iCalendar
+  has one kind of trigger, a duration before the item, so it depends on the item's own time.

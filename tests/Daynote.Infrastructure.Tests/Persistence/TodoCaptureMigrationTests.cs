@@ -54,6 +54,12 @@ public sealed class TodoCaptureMigrationTests
         Assert.IsNotNull(receipts.CompletedUtc);
         Assert.AreEqual(new WallClock(new DateTime(2026, 8, 25, 23, 59, 0)), receipts.DueAt);
 
+        // Exactly what these lines did as text: the one with a (M/D) stamp reminded, the one
+        // without never did. Giving every migrated row the default alert instead would start
+        // pinging people about undated checkboxes that have sat in today's note for months.
+        CollectionAssert.AreEqual(AgendaAlert.Default.ToArray(), receipts.AlarmLeadMinutes.ToArray());
+        Assert.IsEmpty(draft.AlarmLeadMinutes);
+
         // §8: the body is the user's own writing and the migration does not rewrite it. Afterwards
         // these lines are text that looks like a checkbox, and nothing parses them.
         NoteSummary note = (await notes.GetAllNotesAsync()).Single();

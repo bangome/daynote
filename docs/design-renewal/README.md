@@ -11,30 +11,34 @@ Open one by loading the `.dc.html` in a browser from this directory, so the rela
 | `Calendar Notes.dc.html`, `Calendar Notes v2.dc.html` | The original product design |
 | `Daynote v3.dc.html` | The v3 palette and shell, shipped 2026-08-31 |
 | `Daynote Account.dc.html` | The account window |
-| `Daynote B Tasks - Events.dc.html` | To-dos and events on the desktop (docs/TODOS.md §7, §11) |
-| `Daynote Mobile B Tasks - Events.dc.html` | The same on the phone |
 
-## The two Tasks · Events files are incomplete
+## To-dos and events
 
-**Both are exactly 262,144 bytes — 256 KiB — and end in the middle of a tag.** That is the cap on
-the tool that reads a file out of the design project, not the end of the document. They are
-truncated imports, and anything past the cut is simply not here.
+One document per section, because the tool that reads a file out of the design project caps at
+256 KiB and the originals were larger — they arrived cut in the middle of a tag, with no sign that
+anything was missing. The split set below is complete; the two truncated originals were deleted
+once it landed.
 
-What survived, as of 2026-10-08:
+Desktop (`Daynote B Tasks - Events …`), on the Desktop B shell that shipped:
 
-- **`Daynote B Tasks - Events`** — the heading, §01 "@ 커맨드 팝업" in full (1a–1d: desktop light
-  and dark, Korean and English, and all seven states), and §02 "생성 확인 = 객체가 나타남" up to
-  the middle of its slide-in frames. The intro says four areas change; the sidebar's lists and the
-  day panel are only visible inside the full-screen mocks, and whatever §03 and §04 would have
-  said is past the cut.
-- **`Daynote Mobile B Tasks - Events`** — the heading and §01 "@ 팝업 → 키보드 위에 붙는 바",
-  Korean states ①–⑦ in full with the "정한 것" notes, and the English set cut during state ⑦. The
-  intro promises answers to six phone-specific problems and a closing list of where the phone
-  diverges from the desktop; **only the first of the six is here, and the divergence list is
-  not.** The five that are missing are the ones that decide real structure: what plays the part of
-  "the object appearing" when the to-do list is on another tab, how the Lists tab nests to-do lists
-  under a segmented control that is already spoken for, where events live on a phone with no
-  timeline, and how alarms are set.
+| § | Covers |
+| --- | --- |
+| `01 - Command` | The `@` popup: the readback, Tab, and all seven states |
+| `02 Creation Feedback` | The body chip, the slide-in into the day panel, the other-date notice |
+| `03 Timeline` | Notes and events in one column, and what becomes editable |
+| `04 Day Panel - Lists` | 이 날의 할 일, and the lists in the sidebar |
+| `05 Phone Width` | The sidebar collapsing when the window is narrow |
 
-To get the rest, each document has to come over as several files under the cap. Until then, do not
-read the absence of a section as a decision not to have one.
+Phone (`Daynote Mobile B Tasks - Events …`):
+
+| § | Covers |
+| --- | --- |
+| `01a`, `01b - Bar` | The `@` bar in the keyboard accessory slot, in two parts |
+| `02 Creation Feedback` | What stands in for "the object appeared" when the list is another tab |
+| `03 Lists` | To-do lists as a chip row under the segmented control |
+| `04 Day - Events` | Where events live on a phone with no timeline |
+| `06 Alerts` | The alert stack, the default, "알림 없음", and the repeating-to-do notice |
+| `99 Divergences` | Transcribed to [`99-divergences.md`](99-divergences.md) — it is small enough that the tool returns it inline rather than as a file |
+
+Both documents share a reference moment, Wednesday 7 October 2026 at 14:30. Half their examples
+turn on what has already passed that day, so a mock drawn at any other time would not line up.

@@ -153,14 +153,17 @@ public static partial class ReminderPlanner
     }
 
     /// <summary>
-    /// The alarms to honour. An empty list is not "no reminder": it is the default single one at
-    /// the item's own time, which is what every dated to-do has done since reminders shipped and
-    /// what every row the §8 migration writes will have. An event is the other way round — a block
-    /// of time is not something to be nagged about unless the user asked.
+    /// The alarms to honour, and nothing else.
     /// </summary>
-    private static IReadOnlyList<int> LeadsFor(AgendaItem item) => item.AlarmLeadMinutes.Count > 0
-        ? item.AlarmLeadMinutes
-        : item.Kind == AgendaKind.Task ? [0] : [];
+    /// <remarks>
+    /// An empty list means no alert. It used to mean "the usual single one", because there was
+    /// nowhere in the product to say otherwise and every dated to-do had reminded since reminders
+    /// shipped. The alerts design (Mobile §06) replaced that guess with something honest: a dated
+    /// item is *created* carrying one alert and the user can remove it. The default survives where
+    /// it is decided — AgendaCapture for a new item, the §8 migration for an old one — and the
+    /// planner is left reading what the item actually says.
+    /// </remarks>
+    private static IReadOnlyList<int> LeadsFor(AgendaItem item) => item.AlarmLeadMinutes;
 
     private static string BodyFor(
         AgendaItem item,

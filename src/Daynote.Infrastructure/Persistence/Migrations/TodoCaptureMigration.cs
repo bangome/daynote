@@ -94,7 +94,11 @@ public static class TodoCaptureMigration
         // to dangle, so deleting the note later does not take the task with it.
         SourceNoteId: note.Id,
         ExceptionDates: [],
-        AlarmLeadMinutes: [],
+        // Exactly what this line did as text: a checkbox with a `(M/D)` stamp reminded, one
+        // without never did. Writing the default alert onto every migrated row instead would
+        // start pinging people about undated checkboxes they have had sitting in today's note for
+        // months — the migration is not the place to change what the app does.
+        AlarmLeadMinutes: todo.DueAt is null ? AgendaAlert.None : AgendaAlert.Default,
         note.UpdatedUtc,
         note.UpdatedUtc);
 

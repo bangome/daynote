@@ -107,24 +107,16 @@ public sealed class AgendaReminderTests
     }
 
     [TestMethod]
-    public void A_task_with_no_alarm_set_still_reminds_and_an_event_does_not()
+    public void An_item_with_no_alert_is_silent()
     {
-        // Parity with the behaviour every dated to-do has had since reminders shipped, and with
-        // every row the §8 migration writes — it sets no alarms. An event is the other way round:
-        // a block of time is not something to be nagged about unless the user asked.
-        AgendaItem task = Task(1) with
-        {
-            DueAt = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
-            HasDueTime = true,
-        };
-        AgendaItem meeting = Task(2) with
-        {
-            Kind = AgendaKind.Event,
-            StartsAt = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
-            DueAt = null,
-        };
+        // This used to be the opposite for a to-do: an empty list meant "the usual single alert",
+        // because the product had nowhere to say otherwise. Mobile §06 gives it somewhere — a
+        // dated item is created carrying one alert and the user can remove it — so the planner
+        // reads what the item says instead of guessing what it meant.
+        AgendaItem silenced = Dated(1) with { AlarmLeadMinutes = AgendaAlert.None };
 
-        Assert.HasCount(1, ReminderPlanner.Plan([task, meeting], Now, 10, Nine));
+        Assert.IsEmpty(ReminderPlanner.Plan([silenced], Now, 10, Nine));
+        Assert.HasCount(1, ReminderPlanner.Plan([Dated(1)], Now, 10, Nine));
     }
 
     [TestMethod]
@@ -275,6 +267,14 @@ public sealed class AgendaReminderTests
         Assert.AreEqual(new DateTime(2026, 10, 4, 9, 0, 0), plan[1].At);
     }
 
+    /// <summary>A to-do that is due and carries the one alert a new one is created with.</summary>
+    private static AgendaItem Dated(int suffix) => Task(suffix) with
+    {
+        DueAt = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
+        HasDueTime = true,
+        AlarmLeadMinutes = AgendaAlert.Default,
+    };
+
     private static AgendaItem Task(int suffix) => new(
         Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}"),
         AgendaList.DefaultId,
@@ -295,7 +295,7 @@ public sealed class AgendaReminderTests
         TimelineVisibility.Auto,
         SourceNoteId: Guid.Parse("33333333-3333-4333-8333-333333333333"),
         ExceptionDates: [],
-        AlarmLeadMinutes: [],
+        AgendaAlert.Default,
         Now,
         Now);
 }
