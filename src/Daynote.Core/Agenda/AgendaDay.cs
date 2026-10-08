@@ -113,5 +113,5 @@ public static class AgendaDay
     /// start with no clock.
     /// </remarks>
     private static WallClock? Clock(AgendaItem item, WallClock anchor) =>
-        item.Kind == AgendaKind.Event || item.HasDueTime ? anchor : null;
+        item.HasClockTime ? anchor : null;
 }

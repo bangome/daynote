@@ -457,11 +457,14 @@ The order that makes that safe:
          shells lay them out differently (§99 calls that intended) but *which* rows there are is
          one decision: two implementations of "what is due today" is how the same to-do ends up on
          one screen and not the other.
-   - [ ] Desktop day panel and the 할 일 tab read it.
+   - [x] `AgendaOutstanding` — the cross-date 할 일 list. A repeating to-do appears once, as its
+         next outstanding occurrence: listing every occurrence would bury everything else under
+         one daily rule, and §5 reaches the same answer from the export end.
+   - [x] `ToggleAgendaItem` — ticking an occurrence writes an override against its
+         `RECURRENCE-ID`, never a status on the rule.
+   - [ ] Desktop day panel and the 할 일 tab read them.
    - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
-   - [ ] Ticking a row writes the entity's status — and, on an occurrence, an override against its
-         `RECURRENCE-ID` rather than the series, or "I did it this Monday" becomes "I did it every
-         Monday". Today both shells rewrite the note body instead.
+   - [ ] Both shells call it instead of rewriting the note body.
    - [ ] Phone Day screen (phone §04) and the `@` bar (phone §01).
    - [ ] `ReminderCoordinator` reads entities rather than note bodies.
    - [ ] Register `TodoCaptureMigration`, with the automatic backup §8 requires in front of it.

@@ -97,12 +97,18 @@ public static class AgendaCapture
             state.Title,
             string.Empty,
             AgendaZone.Local(),
-            // A repeating to-do anchors on DTSTART, the way a VTODO with an RRULE does; a one-off
-            // one carries only DUE, so the day panel finds it on the day it is owed rather than
-            // the day it was typed.
+            // A repeating to-do anchors on DTSTART, the way a VTODO with an RRULE does, and
+            // carries DUE as well: each occurrence is due at the moment it starts. A one-off one
+            // carries only DUE, so the day panel finds it on the day it is owed rather than the
+            // day it was typed.
+            //
+            // Both, and not just DTSTART, because `due_at` is the clock-bearing field for a
+            // to-do — the schema says so (`has_due_time = 0 OR due_at IS NOT NULL`) and the
+            // reminder planner and the day projection read it. Anchoring a rule is DTSTART's
+            // separate job.
             StartsAt: kind == AgendaKind.Event || repeats ? reading.At : null,
             EndsAt: kind == AgendaKind.Event ? AgendaPhraseParser.EventEnd(reading) : null,
-            DueAt: kind == AgendaKind.Task && !repeats ? reading.At : null,
+            DueAt: kind == AgendaKind.Task ? reading.At : null,
             // Whichever field carries the wall clock, this is the one flag that says a clock
             // was given — a repeating to-do keeps its time in DTSTART because that is what an
             // RRULE anchors on, and it still has to ring at that time rather than the default.

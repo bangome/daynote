@@ -76,8 +76,7 @@ public static partial class ReminderPlanner
         // Reading the flag rather than the field is what keeps "@매주 월 7시" ringing at seven —
         // the obvious version of this looked at DUE, found none, and quietly moved every repeating
         // to-do to the default hour.
-        bool hasClock = item.Kind == AgendaKind.Event || item.HasDueTime;
-        DateTime wall = hasClock ? anchor.Value : anchor.Value.Date + dateOnlyTime;
+        DateTime wall = item.HasClockTime ? anchor.Value : anchor.Value.Date + dateOnlyTime;
         return DateTime.SpecifyKind(wall, DateTimeKind.Unspecified).AddMinutes(-leadMinutes);
     }
 
@@ -215,7 +214,7 @@ public static partial class ReminderPlanner
         // The occurrence's own time, not the moment this alarm fires: a reminder 30 minutes early
         // still has to say when the thing actually is.
         DateTime at = FireTime(item, anchor, dateOnlyTime, 0);
-        string when = item.Kind == AgendaKind.Event || item.HasDueTime
+        string when = item.HasClockTime
             ? string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day} {at:HH\\:mm}")
             : string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day}");
 

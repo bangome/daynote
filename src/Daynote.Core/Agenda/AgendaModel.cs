@@ -136,6 +136,18 @@ public sealed record AgendaItem(
     public WallClock? Anchor => StartsAt ?? DueAt;
 
     /// <summary>
+    /// True when a clock was given, rather than only a day.
+    /// </summary>
+    /// <remarks>
+    /// For a to-do the clock always lives in <see cref="DueAt"/>, which is what
+    /// <see cref="HasDueTime"/> reports on and what the schema ties it to; a repeating one carries
+    /// the same instant in <see cref="StartsAt"/> as well, because that is what its rule anchors
+    /// on. An event is the other way round and always has one: a block of time with no time is a
+    /// contradiction, and all-day is modelled as a start with no end.
+    /// </remarks>
+    public bool HasClockTime => Kind == AgendaKind.Event || HasDueTime;
+
+    /// <summary>
     /// Whether this shows in the Timeline, resolving <see cref="TimelineVisibility.Auto"/>.
     /// </summary>
     public bool ShowsInTimeline => TimelineVisibility switch

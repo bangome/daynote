@@ -116,13 +116,14 @@ public sealed class AgendaCaptureTests
         AgendaItem made = Compose("주간 보고 작성 @매주 월 7시", AgendaKind.Task);
 
         Assert.AreEqual("FREQ=WEEKLY;BYDAY=MO", made.Rrule);
+        // DTSTART anchors the rule and DUE carries the clock, both at the first occurrence: each
+        // occurrence is due at the moment it starts. Writing only DTSTART fails the schema's own
+        // check that nothing claims a time without a DUE to hold it — which is exactly how an
+        // earlier version of this was caught, by the database rather than by a test.
         Assert.AreEqual(new WallClock(new DateTime(2026, 10, 12, 7, 0, 0)), made.StartsAt);
-        // A rule has a next occurrence, not a deadline.
-        Assert.IsNull(made.DueAt);
-        // But it does carry a clock, and `has_due_time` is the one field that says so — whichever
-        // field is holding the wall clock. The reminder planner reads this rather than looking in
-        // DUE, which is what keeps "매주 월 7시" ringing at seven.
+        Assert.AreEqual(new WallClock(new DateTime(2026, 10, 12, 7, 0, 0)), made.DueAt);
         Assert.IsTrue(made.HasDueTime);
+        Assert.IsTrue(made.HasClockTime);
         Assert.IsTrue(made.IsSeries);
     }
 

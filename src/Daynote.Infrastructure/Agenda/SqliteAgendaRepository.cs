@@ -94,6 +94,14 @@ public sealed class SqliteAgendaRepository : IAgendaRepository
             SqliteAgendaStatements.ReadForDate(connection, localDate));
     }
 
+    public ValueTask<IReadOnlyList<AgendaItem>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using SqliteConnection connection = database.OpenReadConnection();
+        return ValueTask.FromResult<IReadOnlyList<AgendaItem>>(
+            SqliteAgendaStatements.ReadAll(connection));
+    }
+
     public ValueTask<IReadOnlyList<AgendaItem>> GetSeriesAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -51,6 +51,17 @@ public interface IAgendaRepository
     /// </summary>
     ValueTask<IReadOnlyList<AgendaItem>> GetSeriesAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Everything, across every date and list. What the cross-date 할 일 view reads.
+    /// </summary>
+    /// <remarks>
+    /// Whole rather than paged, and that is a deliberate bet on scale: a to-do is a title and a
+    /// handful of fields, and someone with ten thousand of them has a problem this app is not the
+    /// answer to. Notes are read the same way for the same reason
+    /// (<c>INoteRepository.GetAllNotesAsync</c>).
+    /// </remarks>
+    ValueTask<IReadOnlyList<AgendaItem>> GetAllAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Everything in one list, for the cross-date view.</summary>
     ValueTask<IReadOnlyList<AgendaItem>> GetForListAsync(
         Guid listId,

@@ -130,6 +130,13 @@ internal static class SqliteAgendaStatements
         return HydrateAll(connection, command);
     }
 
+    public static List<AgendaItem> ReadAll(SqliteConnection connection)
+    {
+        using SqliteCommand command = Create(
+            connection, null, ItemColumns + " ORDER BY COALESCE(due_at,starts_at),title;");
+        return HydrateAll(connection, command);
+    }
+
     public static List<AgendaItem> ReadSeries(SqliteConnection connection)
     {
         using SqliteCommand command = Create(
