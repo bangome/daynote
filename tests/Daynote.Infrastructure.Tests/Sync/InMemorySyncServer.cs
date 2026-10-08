@@ -63,6 +63,13 @@ internal sealed class InMemorySyncServer
     /// </summary>
     internal bool SupportsAttachments { get; set; } = true;
 
+    /// <summary>
+    /// Removes the to-do routes, as a service deployed before docs/TODOS.md §9 has them. Not a 404:
+    /// the Worker answers the same endpoint and simply says nothing about the new arrays, which is
+    /// the case the client has to read correctly.
+    /// </summary>
+    internal bool SupportsAgenda { get; set; } = true;
+
     internal ISyncApiClient ClientFor(string label) => new Client(this, label);
 
     /// <summary>
@@ -84,6 +91,10 @@ internal sealed class InMemorySyncServer
         var rejectedNotes = new List<string>();
         var acceptedTombstones = new List<string>();
         var rejectedTombstones = new List<string>();
+        var acceptedLists = new List<string>();
+        var rejectedLists = new List<string>();
+        var acceptedItems = new List<string>();
+        var rejectedItems = new List<string>();
 
         foreach (EncryptedNote note in request.Notes)
         {
@@ -102,14 +113,40 @@ internal sealed class InMemorySyncServer
             acceptedNotes.Add(note.Id);
         }
 
+        // Lists before items, which is the order the Worker writes its batch in, so a list takes
+        // the lower sequence and a device pulling from zero meets it first.
+        foreach ((SyncEntityKind kind, IReadOnlyList<EncryptedAgenda> batch) in new[]
+        {
+            (SyncEntityKind.AgendaList, request.AgendaLists),
+            (SyncEntityKind.AgendaItem, request.AgendaItems),
+        })
+        {
+            List<string> accepted = kind == SyncEntityKind.AgendaList ? acceptedLists : acceptedItems;
+            List<string> rejected = kind == SyncEntityKind.AgendaList ? rejectedLists : rejectedItems;
+
+            foreach (EncryptedAgenda entry in SupportsAgenda ? batch : [])
+            {
+                var key = new SyncEntityRef(kind, entry.Id);
+                if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc >= entry.UpdatedUtc)
+                {
+                    rejected.Add(entry.Id);
+                    continue;
+                }
+
+                rows[key] = new Row(entry.Payload, entry.UpdatedUtc, null, null);
+                Append(key);
+                accepted.Add(entry.Id);
+            }
+        }
+
         foreach (EncryptedTombstone tombstone in request.Tombstones)
         {
-            if (tombstone.Kind != SyncEntityKind.Note)
+            if (tombstone.Kind == SyncEntityKind.File)
             {
                 throw new InvalidOperationException("Attachment tombstones go to /v1/files/push.");
             }
 
-            var key = new SyncEntityRef(SyncEntityKind.Note, tombstone.Id);
+            var key = new SyncEntityRef(tombstone.Kind, tombstone.Id);
             if (rows.TryGetValue(key, out Row stored) && stored.UpdatedUtc >= tombstone.DeletedUtc)
             {
                 rejectedTombstones.Add(tombstone.Id);
@@ -129,7 +166,13 @@ internal sealed class InMemorySyncServer
             acceptedTombstones,
             rejectedTombstones,
             sequence,
-            UtcNow());
+            UtcNow(),
+            // Null, not empty, when the deployment predates to-dos: the client has to tell "the
+            // server said no" from "the server has never heard of these" and keep the queue.
+            SupportsAgenda ? acceptedLists : null,
+            SupportsAgenda ? rejectedLists : null,
+            SupportsAgenda ? acceptedItems : null,
+            SupportsAgenda ? rejectedItems : null);
     }
 
     /// <summary>
@@ -203,7 +246,7 @@ internal sealed class InMemorySyncServer
         foreach ((SyncEntityRef key, long seq) in newest.OrderBy(pair => pair.Value).Take(limit))
         {
             Row row = rows[key];
-            // Notes and files share one page and one cursor, as the Worker's pull does.
+            // Notes, files and agenda rows share one page and one cursor, as the Worker's pull does.
             changes.Add(new PullChange(seq, key.Kind, key.Id, row.Payload, row.UpdatedUtc, row.DeletedUtc));
         }
 

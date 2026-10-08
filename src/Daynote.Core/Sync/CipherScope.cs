@@ -36,6 +36,17 @@ public readonly record struct CipherScope
 
     public static CipherScope File(string userId, string fileId) => Entity("file", userId, fileId);
 
+    /// <summary>
+    /// A to-do or event. Separate from <see cref="AgendaList"/> on purpose, even though both sit in
+    /// one server table: the kind is part of the slot, so a list's ciphertext cannot be served back
+    /// as the item of the same id.
+    /// </summary>
+    public static CipherScope AgendaItem(string userId, string itemId) =>
+        Entity("agenda_item", userId, itemId);
+
+    public static CipherScope AgendaList(string userId, string listId) =>
+        Entity("agenda_list", userId, listId);
+
     public static CipherScope Asset(string userId, string contentHash) =>
         Entity("asset", userId, contentHash);
 

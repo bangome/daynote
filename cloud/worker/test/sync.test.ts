@@ -309,3 +309,145 @@ describe('what the server can see', () => {
     expect(JSON.stringify(pushed.body)).not.toContain(payload);
   });
 });
+
+/**
+ * To-dos, events and their lists (docs/TODOS.md §9). They ride the notes' endpoint and the notes'
+ * cursor, and the server treats them exactly as it treats a note: an opaque blob, a clock, an id,
+ * and now the one word saying which of the two kinds it is.
+ */
+describe('agenda', () => {
+  it('accepts lists and items and pulls them back as their own kinds', async () => {
+    const { token } = await signedIn();
+
+    const pushed = await post(
+      '/v1/sync/push',
+      {
+        agenda_lists: [{ id: noteId(1), payload: envelope('list'), updated_utc: stamp(0) }],
+        agenda_items: [{ id: noteId(2), payload: envelope('item'), updated_utc: stamp(1) }],
+      },
+      { token },
+    );
+
+    expect(pushed.body.accepted_agenda_lists).toEqual([noteId(1)]);
+    expect(pushed.body.accepted_agenda_items).toEqual([noteId(2)]);
+
+    const pulled = await get('/v1/sync/pull?since=0', { token });
+    expect(pulled.body.changes.map((change: any) => [change.entity, change.id])).toEqual([
+      ['agenda_list', noteId(1)],
+      ['agenda_item', noteId(2)],
+    ]);
+  });
+
+  it('gives a list the lower sequence, whatever order the client listed them in', async () => {
+    const { token } = await signedIn();
+
+    // A device pulling from zero meets the container before the things in it. The client sorts the
+    // page it has been handed, but it cannot conjure a list that is still two pages away.
+    await post(
+      '/v1/sync/push',
+      {
+        agenda_items: [{ id: noteId(2), payload: envelope(), updated_utc: stamp(1) }],
+        agenda_lists: [{ id: noteId(1), payload: envelope(), updated_utc: stamp(0) }],
+      },
+      { token },
+    );
+
+    const pulled = await get('/v1/sync/pull?since=0', { token });
+    expect(pulled.body.changes.map((change: any) => change.entity)).toEqual([
+      'agenda_list',
+      'agenda_item',
+    ]);
+  });
+
+  it('keeps an item and a list that share an id apart', async () => {
+    const { token } = await signedIn();
+
+    // Nothing stops a client from reusing a uuid across kinds, and the primary key is (user, kind,
+    // id). If the last-write-wins lookup were keyed on the id alone, pushing one would reject the
+    // other as stale.
+    await post(
+      '/v1/sync/push',
+      { agenda_lists: [{ id: noteId(1), payload: envelope('list'), updated_utc: stamp(9) }] },
+      { token },
+    );
+
+    const response = await post(
+      '/v1/sync/push',
+      { agenda_items: [{ id: noteId(1), payload: envelope('item'), updated_utc: stamp(1) }] },
+      { token },
+    );
+
+    expect(response.body.accepted_agenda_items).toEqual([noteId(1)]);
+    expect(response.body.rejected_agenda_items).toEqual([]);
+  });
+
+  it('orders a delete against an edit the same way a note does', async () => {
+    const { token } = await signedIn();
+    await post(
+      '/v1/sync/push',
+      { agenda_items: [{ id: noteId(1), payload: envelope(), updated_utc: stamp(5) }] },
+      { token },
+    );
+
+    const stale = await post(
+      '/v1/sync/push',
+      { tombstones: [{ entity: 'agenda_item', id: noteId(1), deleted_utc: stamp(1) }] },
+      { token },
+    );
+    expect(stale.body.rejected_tombstones).toEqual([noteId(1)]);
+
+    const deleted = await post(
+      '/v1/sync/push',
+      { tombstones: [{ entity: 'agenda_item', id: noteId(1), deleted_utc: stamp(9) }] },
+      { token },
+    );
+    expect(deleted.body.accepted_tombstones).toEqual([noteId(1)]);
+
+    const pulled = await get('/v1/sync/pull?since=0', { token });
+    expect(pulled.body.changes[0].payload).toBeNull();
+    expect(pulled.body.changes[0].deleted_utc).toBe(stamp(9));
+  });
+
+  it('is free, like every other kind of text', async () => {
+    // No entitlement check anywhere on this path. A lapsed account that could not sync its to-dos
+    // would be an account whose deletions never reach its other devices.
+    const { token } = await signedIn();
+
+    const response = await post(
+      '/v1/sync/push',
+      { agenda_items: [{ id: noteId(1), payload: envelope(), updated_utc: stamp(0) }] },
+      { token },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it('stores only the blob, the clock, the id and the kind', async () => {
+    const { token } = await signedIn();
+    await post(
+      '/v1/sync/push',
+      { agenda_items: [{ id: noteId(1), payload: envelope(), updated_utc: stamp(0) }] },
+      { token },
+    );
+
+    const row = await env.DB.prepare('SELECT * FROM agenda LIMIT 1').first<Record<string, unknown>>();
+
+    // The title, the due date, the repeat rule and which list it belongs to are all inside the
+    // payload. A column added here is a column that could hold something readable.
+    expect(Object.keys(row!)).toEqual([
+      'user_id', 'entity', 'id', 'payload', 'updated_utc', 'deleted_utc',
+    ]);
+  });
+
+  it('refuses an entity it has no table for', async () => {
+    const { token } = await signedIn();
+
+    const response = await post(
+      '/v1/sync/push',
+      { tombstones: [{ entity: 'agenda_whatever', id: noteId(1), deleted_utc: stamp(0) }] },
+      { token },
+    );
+
+    expect(response.status).toBe(400);
+  });
+});

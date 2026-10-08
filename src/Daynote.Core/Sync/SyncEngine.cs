@@ -67,7 +67,14 @@ public sealed record SyncReport(
     /// apart from <see cref="FileSyncBlocked"/> because the user's response differs: there is
     /// nothing to buy and nothing to fix, and the client simply carries on syncing text.
     /// </summary>
-    bool FileSyncUnsupported = false)
+    bool FileSyncUnsupported = false,
+    /// <summary>
+    /// To-dos, events and lists sent this run. Counted apart from <see cref="Pushed"/> because they
+    /// are a separate queue with a separate failure mode, and a status line saying "3 notes" while
+    /// three to-dos were stuck would be a lie by omission.
+    /// </summary>
+    int AgendaPushed = 0,
+    int AgendaPulled = 0)
 {
     public static SyncReport For(SyncOutcome outcome, long cursor = 0) =>
         new(outcome, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cursor);
@@ -80,6 +87,12 @@ public sealed record SyncReport(
     /// device, a delete, or attachment bytes. Only then do the open views need re-reading.
     /// </summary>
     public bool ChangedLocalData => Applied > 0 || Deleted > 0 || AssetsDownloaded > 0;
+
+    /// <summary>
+    /// True when this build is talking to a service with no to-do routes. Nothing is lost: the
+    /// queue keeps them, and the first run after the service is updated sends them.
+    /// </summary>
+    public bool AgendaSyncUnsupported { get; init; }
 }
 
 /// <summary>The signed-in account and the key that opens its content, for one sync run.</summary>
@@ -202,6 +215,14 @@ public sealed partial class SyncEngine
             return tally.ToReport(SyncOutcome.ClockSkew);
         }
 
+        // To-dos after the notes. An item can name the note it was captured from (source_note_id),
+        // and the jump back from the item to that note should not be dangling on another device for
+        // the length of a sync.
+        if (!await PushAgendaAsync(session, tally, cancellationToken).ConfigureAwait(false))
+        {
+            return tally.ToReport(SyncOutcome.ClockSkew);
+        }
+
         // Attachments after the notes, and for one reason: a note's body can reference a file, so
         // the file row should not arrive at another device ahead of the note that explains it.
         if (!await PushFilesAsync(session, tally, cancellationToken).ConfigureAwait(false))
@@ -234,12 +255,16 @@ public sealed partial class SyncEngine
                 return true;
             }
 
-            // One queue holds both kinds, so a page can come back all files. Those go to
+            // One queue holds every kind, so a page can come back all files. Those go to
             // /v1/files/push (SyncEngine.Files.cs) later in this same run, which clears them — so a
-            // large backlog of attachment deletes slows the note deletes behind it by a run or two
+            // large backlog of attachment deletes slows the deletes behind it by a run or two
             // rather than blocking them.
-            var notes = pending.Where(static t => t.Kind == SyncEntityKind.Note).ToArray();
-            if (notes.Length == 0)
+            //
+            // Notes and agenda rows share this one call. A delete is a delete, the server orders
+            // them all against the same clock, and splitting them would be two round trips saying
+            // the same thing.
+            var textual = pending.Where(static t => t.Kind != SyncEntityKind.File).ToArray();
+            if (textual.Length == 0)
             {
                 return true;
             }
@@ -248,7 +273,7 @@ public sealed partial class SyncEngine
                 .PushAsync(
                     new PushRequest(
                         [],
-                        [.. notes.Select(t => new EncryptedTombstone(t.Kind, t.Id, t.DeletedUtc))]),
+                        [.. textual.Select(t => new EncryptedTombstone(t.Kind, t.Id, t.DeletedUtc))]),
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -262,7 +287,7 @@ public sealed partial class SyncEngine
             // the same rejection forever.
             var settled = new HashSet<string>(result.AcceptedTombstoneIds, StringComparer.Ordinal);
             settled.UnionWith(result.RejectedTombstoneIds);
-            var acknowledged = notes.Where(t => settled.Contains(t.Id)).ToArray();
+            var acknowledged = textual.Where(t => settled.Contains(t.Id)).ToArray();
 
             tally.TombstonesPushed += result.AcceptedTombstoneIds.Count;
 
@@ -273,7 +298,7 @@ public sealed partial class SyncEngine
             }
 
             await store.AcknowledgeTombstonesAsync(acknowledged, cancellationToken).ConfigureAwait(false);
-            if (notes.Length < PushBatch)
+            if (textual.Length < PushBatch)
             {
                 return true;
             }
@@ -363,11 +388,18 @@ public sealed partial class SyncEngine
             var notes = new List<SyncNote>();
             var tombstones = new List<SyncTombstone>();
             var fileChanges = new List<PullChange>();
+            var agendaChanges = new List<PullChange>();
             foreach (PullChange change in result.Changes)
             {
                 if (change.Kind == SyncEntityKind.File)
                 {
                     fileChanges.Add(change);
+                    continue;
+                }
+
+                if (change.Kind is SyncEntityKind.AgendaItem or SyncEntityKind.AgendaList)
+                {
+                    agendaChanges.Add(change);
                     continue;
                 }
 
@@ -424,6 +456,8 @@ public sealed partial class SyncEngine
                 }
             }
 
+            await MergeAgendaAsync(session, tally, agendaChanges, cancellationToken).ConfigureAwait(false);
+
             await MergeFilesAsync(session, tally, fileChanges, cancellationToken).ConfigureAwait(false);
 
             // Only a pull moves the cursor, and only forwards. The push response also carries a
@@ -463,6 +497,9 @@ public sealed partial class SyncEngine
         internal int AssetsDownloaded;
         internal bool FileSyncBlocked;
         internal bool FileSyncUnsupported;
+        internal int AgendaPushed;
+        internal int AgendaPulled;
+        internal bool AgendaUnsupported;
         internal long Cursor;
 
         internal SyncReport ToReport(SyncOutcome outcome) => new(
@@ -483,6 +520,11 @@ public sealed partial class SyncEngine
             AssetsUploaded,
             AssetsDownloaded,
             FileSyncBlocked,
-            FileSyncUnsupported);
+            FileSyncUnsupported,
+            AgendaPushed,
+            AgendaPulled)
+        {
+            AgendaSyncUnsupported = AgendaUnsupported,
+        };
     }
 }

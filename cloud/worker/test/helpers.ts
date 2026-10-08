@@ -25,8 +25,8 @@ export const REDIRECT_URI = 'http://127.0.0.1:53219/';
 
 export async function resetDatabase(): Promise<void> {
   for (const table of [
-    'change_log', 'files', 'assets', 'notes', 'billing_events', 'subscriptions', 'refresh_tokens',
-    'users', 'rate_limits',
+    'change_log', 'files', 'assets', 'notes', 'agenda', 'billing_events', 'subscriptions',
+    'refresh_tokens', 'users', 'rate_limits',
   ]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }

@@ -7,9 +7,27 @@ public sealed record EncryptedNote(string Id, string Payload, DateTimeOffset Upd
 
 public sealed record EncryptedTombstone(SyncEntityKind Kind, string Id, DateTimeOffset DeletedUtc);
 
+/// <summary>
+/// A to-do, an event or a list as it travels. The same three fields as a note, and deliberately a
+/// separate type rather than a reuse: the kind decides the AAD it was sealed under
+/// (<see cref="CipherScope.AgendaItem"/>), so letting one stand in for the other would be a
+/// compile-time invitation to decrypt a row in the wrong slot.
+/// </summary>
+public sealed record EncryptedAgenda(string Id, string Payload, DateTimeOffset UpdatedUtc);
+
 public sealed record PushRequest(
     IReadOnlyList<EncryptedNote> Notes,
-    IReadOnlyList<EncryptedTombstone> Tombstones);
+    IReadOnlyList<EncryptedTombstone> Tombstones,
+    IReadOnlyList<EncryptedAgenda> AgendaLists,
+    IReadOnlyList<EncryptedAgenda> AgendaItems)
+{
+    public PushRequest(
+        IReadOnlyList<EncryptedNote> notes,
+        IReadOnlyList<EncryptedTombstone> tombstones)
+        : this(notes, tombstones, [], [])
+    {
+    }
+}
 
 /// <summary>
 /// What the server did with a push. Rejections are ordinary, not errors: they mean the server holds
@@ -21,7 +39,26 @@ public sealed record PushResult(
     IReadOnlyList<string> AcceptedTombstoneIds,
     IReadOnlyList<string> RejectedTombstoneIds,
     long Cursor,
-    DateTimeOffset ServerUtc);
+    DateTimeOffset ServerUtc,
+    IReadOnlyList<string>? AcceptedAgendaListIds = null,
+    IReadOnlyList<string>? RejectedAgendaListIds = null,
+    IReadOnlyList<string>? AcceptedAgendaItemIds = null,
+    IReadOnlyList<string>? RejectedAgendaItemIds = null)
+{
+    /// <summary>
+    /// Null, not empty, when the service predates to-dos. The difference matters once: a deployment
+    /// that never answers about them must not have its silence read as "all rejected", which would
+    /// clear the queue and lose the push.
+    /// </summary>
+    public bool AgendaSupported =>
+        AcceptedAgendaListIds is not null || AcceptedAgendaItemIds is not null;
+
+    public IReadOnlyList<string> SettledAgendaListIds =>
+        [.. AcceptedAgendaListIds ?? [], .. RejectedAgendaListIds ?? []];
+
+    public IReadOnlyList<string> SettledAgendaItemIds =>
+        [.. AcceptedAgendaItemIds ?? [], .. RejectedAgendaItemIds ?? []];
+}
 
 /// <summary>
 /// One entity's current state. <see cref="Payload"/> is null exactly when

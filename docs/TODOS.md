@@ -1,11 +1,12 @@
 # To-dos and events as entities (design)
 
-> **Status 2026-10-08: the store and its sync bookkeeping are built; nothing reads them.**
+> **Status 2026-10-08: to-dos and events sync end to end; nothing reads them.**
 > Migration 005 creates the tables, `Daynote.Core.Agenda` holds the model and
 > `SqliteAgendaRepository` reads and writes it. Migration 006 makes every agenda edit queue —
 > triggers, tombstones, and two new entities on the outbox — and `SqliteSyncStore.Agenda.cs`
-> drains and merges them against `AgendaPayload`'s wire format. The engine does not call any of
-> it yet and the Worker has no tables for it, so nothing leaves the device. Every
+> drains and merges them against `AgendaPayload`'s wire format. Migration 0013 on the Worker and
+> `SyncEngine.Agenda.cs` close the loop: a to-do made on one device is on the other after a sync,
+> and the server sees only the envelope. What is still missing is every reader. Every
 > panel still parses `-[ ]` out of note bodies through
 > [`TodoParsing`](../src/Daynote.Presentation/Notes/TodoParsing.cs), the `@` command does not exist,
 > and the one-time migration of §8 has not been written — §12 requires desktop and phone to cut
@@ -244,8 +245,22 @@ prose above only implies:
   `DateTimeOffset.ToString("O")` like every other table, because `AcknowledgePushAsync` matches
   `queued_utc` as an exact string and a second format would leave every agenda row queued forever.
 
-**Not built:** the engine does not call any of it, and the Worker has no `agenda_items` or
-`agenda_lists` table. Until both exist the queue simply fills and is never drained.
+**Built, as of Worker migration 0013:** one `agenda` table holds both kinds — an agenda row
+carries nothing a note row does not, so two tables would be the same five columns twice and a
+fourth join in the pull — and `change_log` was rebuilt to allow the two new entities, copying
+`seq` verbatim so no client's cursor moved. They ride `/v1/sync/push` and the notes' cursor, and
+they are **free**: the paywall is on attachment bytes and nothing else. `SyncEngine.Agenda.cs`
+pushes lists before items in one request, so a list takes the lower `seq` and a device pulling
+from zero meets the container before its contents.
+
+One thing the client has to get right about an old deployment: a Worker that predates this
+answers the push without the new arrays at all. That silence is read as *unsupported*, not as
+*rejected* — reading it as a rejection would clear the queue and lose the to-dos. The run reports
+`AgendaSyncUnsupported` and the next run after the service is updated sends them.
+
+**Not built:** nothing reads any of this. No panel, no Timeline, no `@` command, and the one-time
+`-[ ]` migration of §8 has not been written, so the queue fills, drains, converges, and is
+invisible.
 
 ## 10. Integrations, in order
 
@@ -364,8 +379,8 @@ exists twice and reminds twice.
 
 The order that makes that safe:
 
-1. Entities, lists and their sync land first, with nothing reading them yet. *(The local half is
-   done — migrations 005 and 006. The Worker half is not.)*
+1. Entities, lists and their sync land first, with nothing reading them yet. *(Done: migrations
+   005 and 006 locally, 0013 on the Worker, and the engine drives both ends.)*
 2. The migration runs once per device and is **idempotent and recorded** — a `schema_versions` row,
    not a flag in settings — because two devices will both try it.
 3. Desktop and phone switch their readers in the same version, and `TodoParsing` stops feeding

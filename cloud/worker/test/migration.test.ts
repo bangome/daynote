@@ -12,8 +12,9 @@ import { env } from './helpers';
  */
 
 const TABLES = [
-  'change_log', 'files', 'assets', 'notes', 'billing_events', 'subscriptions', 'refresh_tokens',
-  'reset_tokens', 'rate_limits', 'users', 'users_new', 'd1_migrations',
+  'change_log', 'change_log_new', 'files', 'assets', 'notes', 'agenda', 'billing_events',
+  'subscriptions', 'refresh_tokens', 'reset_tokens', 'rate_limits', 'users', 'users_new',
+  'd1_migrations',
 ];
 
 async function windBackTo0008(): Promise<void> {

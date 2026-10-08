@@ -455,7 +455,7 @@ The order is what makes a half-way failure safe and a retry correct:
 3. **R2.** Every object under the account's prefix, including uploads whose row never arrived.
    First, because no transaction covers it: a failure after this leaves an intact, still
    authenticated account for the retry to finish.
-4. **D1, one batch.** `change_log`, `notes`, `files`, `assets`, `refresh_tokens`, `subscriptions`,
+4. **D1, one batch.** `change_log`, `notes`, `agenda`, `files`, `assets`, `refresh_tokens`, `subscriptions`,
    the account's `rate_limits` buckets, then `users`. Each table is named explicitly rather than
    left to ON DELETE CASCADE, so a future table without a cascade cannot quietly survive.
    `billing_events` keeps its rows as payment records, with `user_id` cleared.
@@ -538,16 +538,34 @@ CREATE TABLE assets (
     PRIMARY KEY (user_id, blinded_key)
 );
 
+-- To-dos, events and their lists (docs/TODOS.md §9), added by migration 0013. One table for both
+-- kinds: an agenda row carries nothing a note row does not, so two would be the same five columns
+-- twice and a fourth join in the pull. The kind is plaintext because the client is what orders a
+-- page — lists before items, a series before its overrides — and it cannot sort what it cannot see.
+CREATE TABLE agenda (
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    entity      TEXT NOT NULL CHECK (entity IN ('agenda_item','agenda_list')),
+    id          TEXT NOT NULL,
+    payload     TEXT,                         -- v1.<nonce>.<ct>; NULL once deleted
+    updated_utc TEXT NOT NULL,                -- PLAINTEXT: the LWW clock
+    deleted_utc TEXT,
+    PRIMARY KEY (user_id, entity, id)
+);
+
 -- Monotonic pull cursor. AUTOINCREMENT is strictly increasing per D1 database.
 CREATE TABLE change_log (
     seq         INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     TEXT NOT NULL,
-    entity      TEXT NOT NULL CHECK (entity IN ('note','file')),
+    entity      TEXT NOT NULL CHECK (entity IN ('note','file','agenda_item','agenda_list')),
     entity_id   TEXT NOT NULL,
     written_utc TEXT NOT NULL
 );
 CREATE INDEX change_log_user_seq ON change_log(user_id, seq);
 ```
+
+Migration 0013 rebuilt `change_log` to widen that CHECK, copying `seq` verbatim so every cursor a
+client holds keeps pointing at the same row. 0002 had reserved `'file'` ahead of time precisely to
+avoid a rebuild; two entities that were not a design then are what it did not reserve enough for.
 
 ### 5.1 What the note payload contains
 
@@ -652,6 +670,7 @@ object body is `nonce || AES-256-GCM(k_asset, plaintext_bytes)`.
 -- What still needs pushing. Replaced on each further edit, so a note edited fifty times between
 -- syncs is pushed once.
 CREATE TABLE sync_outbox (
+    -- Widened to ('note', 'file', 'agenda_item', 'agenda_list') by migration 006 (docs/TODOS.md §9).
     entity     TEXT NOT NULL CHECK (entity IN ('note', 'file')),
     entity_id  TEXT NOT NULL,
     queued_utc TEXT NOT NULL,
@@ -660,6 +679,7 @@ CREATE TABLE sync_outbox (
 
 -- Deletes must survive as tombstones or a delete on device A resurrects from device B.
 CREATE TABLE sync_tombstones (
+    -- Widened the same way by 006.
     entity      TEXT NOT NULL CHECK (entity IN ('note', 'file')),
     entity_id   TEXT NOT NULL,
     deleted_utc TEXT NOT NULL,

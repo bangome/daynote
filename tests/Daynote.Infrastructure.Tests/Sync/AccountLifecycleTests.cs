@@ -204,7 +204,9 @@ public sealed class AccountLifecycleTests
 
         Assert.AreEqual(SyncOutcome.Completed, report.Outcome);
         Assert.IsTrue(authServer.RefreshCalls > 0);
-        Assert.AreEqual(1, syncServer.StoredBlobs.Count);
+        // Two, not one: the note, and the built-in to-do list every database is created with.
+        // It is an ordinary row, so signing in enrols it and the first sync pushes it.
+        Assert.AreEqual(2, syncServer.StoredBlobs.Count);
     }
 
     [TestMethod]

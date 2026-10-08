@@ -55,6 +55,7 @@ export async function remove(request: Request, env: Env, now: Date): Promise<Res
   await env.DB.batch([
     env.DB.prepare('DELETE FROM change_log WHERE user_id = ?1').bind(user.id),
     env.DB.prepare('DELETE FROM notes WHERE user_id = ?1').bind(user.id),
+    env.DB.prepare('DELETE FROM agenda WHERE user_id = ?1').bind(user.id),
     env.DB.prepare('DELETE FROM files WHERE user_id = ?1').bind(user.id),
     env.DB.prepare('DELETE FROM assets WHERE user_id = ?1').bind(user.id),
     env.DB.prepare('DELETE FROM refresh_tokens WHERE user_id = ?1').bind(user.id),

@@ -51,9 +51,11 @@ public sealed partial class HttpSyncApiClient : ISyncApiClient
                 note.Payload,
                 SyncTimestamps.ToWire(note.UpdatedUtc)))],
             [.. request.Tombstones.Select(tombstone => new TombstoneBody(
-                tombstone.Kind == SyncEntityKind.Note ? "note" : "file",
+                WireKind(tombstone.Kind),
                 tombstone.Id,
-                SyncTimestamps.ToWire(tombstone.DeletedUtc)))]);
+                SyncTimestamps.ToWire(tombstone.DeletedUtc)))],
+            [.. request.AgendaLists.Select(ToBody)],
+            [.. request.AgendaItems.Select(ToBody)]);
 
         PushBodyResponse response = await SendAsync<PushBodyResponse>(
             () => new HttpRequestMessage(HttpMethod.Post, "v1/sync/push")
@@ -68,7 +70,14 @@ public sealed partial class HttpSyncApiClient : ISyncApiClient
             response.AcceptedTombstones ?? [],
             response.RejectedTombstones ?? [],
             response.Cursor,
-            RequireTimestamp(response.ServerUtc));
+            RequireTimestamp(response.ServerUtc),
+            // Left null when the field is absent, which is how a deployment that predates to-dos
+            // answers. Defaulting to empty here would read that silence as "nothing settled" in one
+            // place and as "all settled" in another; null makes the caller say which it means.
+            response.AcceptedAgendaLists,
+            response.RejectedAgendaLists,
+            response.AcceptedAgendaItems,
+            response.RejectedAgendaItems);
     }
 
     public async ValueTask<PullResult> PullAsync(
@@ -92,7 +101,7 @@ public sealed partial class HttpSyncApiClient : ISyncApiClient
         {
             changes.Add(new PullChange(
                 change.Seq,
-                change.Entity == "file" ? SyncEntityKind.File : SyncEntityKind.Note,
+                ParseKind(change.Entity),
                 change.Id,
                 change.Payload,
                 RequireTimestamp(change.UpdatedUtc),
@@ -178,7 +187,37 @@ public sealed partial class HttpSyncApiClient : ISyncApiClient
             : throw new SyncTransportException($"The sync service sent an unreadable timestamp: '{value}'.");
     }
 
-    private sealed record PushBody(IReadOnlyList<NoteBody> Notes, IReadOnlyList<TombstoneBody> Tombstones);
+    private static NoteBody ToBody(EncryptedAgenda entry) =>
+        new(entry.Id, entry.Payload, SyncTimestamps.ToWire(entry.UpdatedUtc));
+
+    private static string WireKind(SyncEntityKind kind) => kind switch
+    {
+        SyncEntityKind.Note => "note",
+        SyncEntityKind.File => "file",
+        SyncEntityKind.AgendaItem => "agenda_item",
+        SyncEntityKind.AgendaList => "agenda_list",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
+    /// <summary>
+    /// An entity this build does not know is reported, not guessed at. Falling back to
+    /// <see cref="SyncEntityKind.Note"/> would hand a newer server's row to the note decryptor,
+    /// where it fails the AAD check and is counted as tampering.
+    /// </summary>
+    private static SyncEntityKind ParseKind(string? entity) => entity switch
+    {
+        "note" => SyncEntityKind.Note,
+        "file" => SyncEntityKind.File,
+        "agenda_item" => SyncEntityKind.AgendaItem,
+        "agenda_list" => SyncEntityKind.AgendaList,
+        _ => throw new SyncTransportException($"The sync service sent an unknown entity: '{entity}'."),
+    };
+
+    private sealed record PushBody(
+        IReadOnlyList<NoteBody> Notes,
+        IReadOnlyList<TombstoneBody> Tombstones,
+        IReadOnlyList<NoteBody> AgendaLists,
+        IReadOnlyList<NoteBody> AgendaItems);
 
     private sealed record NoteBody(string Id, string Payload, string UpdatedUtc);
 
@@ -190,7 +229,11 @@ public sealed partial class HttpSyncApiClient : ISyncApiClient
         IReadOnlyList<string>? AcceptedTombstones,
         IReadOnlyList<string>? RejectedTombstones,
         long Cursor,
-        string? ServerUtc);
+        string? ServerUtc,
+        IReadOnlyList<string>? AcceptedAgendaLists = null,
+        IReadOnlyList<string>? RejectedAgendaLists = null,
+        IReadOnlyList<string>? AcceptedAgendaItems = null,
+        IReadOnlyList<string>? RejectedAgendaItems = null);
 
     private sealed record PullBodyResponse(
         IReadOnlyList<ChangeBody>? Changes,
