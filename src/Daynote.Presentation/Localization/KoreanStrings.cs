@@ -713,6 +713,45 @@ internal static class KoreanStrings
         ["ReminderPreciseHint"] = "허용하지 않으면 알림이 최대 1시간 늦게 올 수 있습니다",
         ["ReminderBodyFormat"] = "{0} · {1}",
 
+        // The @ command's readback (docs/TODOS.md §7), worded as the design mocks show it.
+        // The punctuation and the ordering live here rather than in code: Korean joins a date
+        // to a time with a space and says the meridiem first, English joins with "·" and says
+        // it last. Each language also declares how it formats the two ends of a time range,
+        // so "오후 3:00–4:00" and "3:00–4:00 PM" come out of one join with the same two
+        // arguments — which keeps the placeholders identical across the pair, as every other
+        // format here is. The patterns at the end are .NET date and time formats, translated
+        // because the order of month and day is not universal either.
+        ["AgendaPhraseEmpty"] = "날짜·시간·반복을 입력하세요",
+        ["AgendaPhraseEmptyPickable"] = "날짜·시간·반복을 입력하거나 고르세요",
+        ["AgendaPhraseExampleToday"] = "오늘",
+        ["AgendaPhraseExampleTomorrow"] = "내일",
+        ["AgendaPhraseExampleWeekdayTime"] = "금요일 3시",
+        ["AgendaPhraseExampleRepeat"] = "매주 월",
+        ["AgendaReadbackDue"] = "{0} 마감",
+        ["AgendaReadbackAllDay"] = "{0} · 하루 종일",
+        ["AgendaReadbackDateAtTime"] = "{0} {1}",
+        ["AgendaReadbackDateAndRange"] = "{0} {1}",
+        ["AgendaReadbackAtTime"] = "{0} {1}",
+        ["AgendaReadbackRange"] = "{0}–{1}",
+        ["AgendaReadbackRangeShort"] = "{0}–{1}시",
+        ["AgendaReadbackEveryDay"] = "매일",
+        ["AgendaReadbackEveryWeekday"] = "매주 {0}",
+        ["AgendaReadbackTomorrowPrefix"] = "내일 {0}",
+        ["AgendaReadbackRolledNote"] = "{0}시가 지나 내일로 읽었어요. 오늘 밤이면 ‘{1}’로 입력하세요.",
+        ["AgendaReadbackRolledNoteShort"] = "{0}시가 지나 내일로 읽었어요. 오늘 밤이면 ‘{1}’.",
+        ["AgendaReadbackRepeatNoAlert"] = "반복 할 일은 아직 알림이 오지 않아요.",
+        ["AgendaReadbackDateLong"] = "M월 d일 (ddd)",
+        ["AgendaReadbackDateLongPrefixed"] = "M월 d일 (ddd)",
+        ["AgendaReadbackDateShort"] = "M'/'d (ddd)",
+        ["AgendaReadbackWeekday"] = "dddd",
+        ["AgendaReadbackTime"] = "tt h:mm",
+        ["AgendaReadbackHour"] = "tt h",
+        ["AgendaReadbackRangeStart"] = "tt h:mm",
+        ["AgendaReadbackRangeEnd"] = "h:mm",
+        ["AgendaReadbackRangeStartHour"] = "tt h",
+        ["AgendaReadbackRangeEndHour"] = "%h",
+        ["AgendaReadbackEveningHint"] = "H'시'",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

@@ -587,7 +587,6 @@ public static class AppStrings
     public static string AccountErrorOffline => LocalizationService.Instance[nameof(AccountErrorOffline)];
     public static string AccountErrorServer => LocalizationService.Instance[nameof(AccountErrorServer)];
 
-
     /// <summary>Win32 file-dialog filter for backup archives.</summary>
     public static string BackupZipFilter => LocalizationService.Instance[nameof(BackupZipFilter)];
 
@@ -818,4 +817,74 @@ public static class AppStrings
     public static string ReminderPreciseHint => LocalizationService.Instance[nameof(ReminderPreciseHint)];
     /// <summary>{0} = note title, {1} = due label ("10/3 14:00").</summary>
     public static string ReminderBodyFormat => LocalizationService.Instance[nameof(ReminderBodyFormat)];
+
+    /// <summary>Before anything is typed after the @.</summary>
+    public static string AgendaPhraseEmpty => LocalizationService.Instance[nameof(AgendaPhraseEmpty)];
+    /// <summary>The same on the phone, where the examples are tappable.</summary>
+    public static string AgendaPhraseEmptyPickable => LocalizationService.Instance[nameof(AgendaPhraseEmptyPickable)];
+    public static string AgendaPhraseExampleToday => LocalizationService.Instance[nameof(AgendaPhraseExampleToday)];
+    public static string AgendaPhraseExampleTomorrow => LocalizationService.Instance[nameof(AgendaPhraseExampleTomorrow)];
+    public static string AgendaPhraseExampleWeekdayTime => LocalizationService.Instance[nameof(AgendaPhraseExampleWeekdayTime)];
+    public static string AgendaPhraseExampleRepeat => LocalizationService.Instance[nameof(AgendaPhraseExampleRepeat)];
+    /// <summary>{0} = when. The 할 일 line.</summary>
+    public static string AgendaReadbackDue => LocalizationService.Instance[nameof(AgendaReadbackDue)];
+    /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>
+    public static string AgendaReadbackAllDay => LocalizationService.Instance[nameof(AgendaReadbackAllDay)];
+    /// <summary>{0} = date, {1} = time. Korean joins with a space, English with "at".</summary>
+    public static string AgendaReadbackDateAtTime => LocalizationService.Instance[nameof(AgendaReadbackDateAtTime)];
+    /// <summary>{0} = date or repeat, {1} = time range. Korean joins with a space, English with "·".</summary>
+    public static string AgendaReadbackDateAndRange => LocalizationService.Instance[nameof(AgendaReadbackDateAndRange)];
+    /// <summary>{0} = a repeat, {1} = time.</summary>
+    public static string AgendaReadbackAtTime => LocalizationService.Instance[nameof(AgendaReadbackAtTime)];
+    /// <summary>{0} = start, {1} = end, each already carrying the meridiem its language puts there.</summary>
+    public static string AgendaReadbackRange => LocalizationService.Instance[nameof(AgendaReadbackRange)];
+    /// <summary>The same, as hours only, for the phone bar.</summary>
+    public static string AgendaReadbackRangeShort => LocalizationService.Instance[nameof(AgendaReadbackRangeShort)];
+    public static string AgendaReadbackEveryDay => LocalizationService.Instance[nameof(AgendaReadbackEveryDay)];
+    /// <summary>{0} = the weekday, named by AgendaReadbackWeekday.</summary>
+    public static string AgendaReadbackEveryWeekday => LocalizationService.Instance[nameof(AgendaReadbackEveryWeekday)];
+    /// <summary>{0} = the date. Used when a bare time was read as tomorrow.</summary>
+    public static string AgendaReadbackTomorrowPrefix => LocalizationService.Instance[nameof(AgendaReadbackTomorrowPrefix)];
+    /// <summary>{0} = the hour as read, {1} = what to type for tonight instead.</summary>
+    public static string AgendaReadbackRolledNote => LocalizationService.Instance[nameof(AgendaReadbackRolledNote)];
+    /// <summary>The same, for the phone bar.</summary>
+    public static string AgendaReadbackRolledNoteShort => LocalizationService.Instance[nameof(AgendaReadbackRolledNoteShort)];
+    /// <summary>Repeating to-dos have no reminder yet (docs/TODOS.md §13).</summary>
+    public static string AgendaReadbackRepeatNoAlert => LocalizationService.Instance[nameof(AgendaReadbackRepeatNoAlert)];
+    /// <summary>A .NET date pattern, not prose: neither the order of month and day nor the punctuation is universal.</summary>
+    public static string AgendaReadbackDateLong => LocalizationService.Instance[nameof(AgendaReadbackDateLong)];
+    /// <summary>The same, after "Tomorrow," — English drops the comma it would otherwise carry.</summary>
+    public static string AgendaReadbackDateLongPrefixed => LocalizationService.Instance[nameof(AgendaReadbackDateLongPrefixed)];
+    /// <summary>The same, for the phone bar.</summary>
+    public static string AgendaReadbackDateShort => LocalizationService.Instance[nameof(AgendaReadbackDateShort)];
+    /// <summary>How a weekday is named in a repeat: spelled out in Korean, abbreviated in English.</summary>
+    public static string AgendaReadbackWeekday => LocalizationService.Instance[nameof(AgendaReadbackWeekday)];
+    /// <summary>A .NET time pattern. Korean puts the meridiem first, English last.</summary>
+    public static string AgendaReadbackTime => LocalizationService.Instance[nameof(AgendaReadbackTime)];
+    /// <summary>The same, hour only.</summary>
+    public static string AgendaReadbackHour => LocalizationService.Instance[nameof(AgendaReadbackHour)];
+    /// <summary>The start of a range: it carries the meridiem in Korean and not in English.</summary>
+    public static string AgendaReadbackRangeStart => LocalizationService.Instance[nameof(AgendaReadbackRangeStart)];
+    /// <summary>The end of a range: the other way round.</summary>
+    public static string AgendaReadbackRangeEnd => LocalizationService.Instance[nameof(AgendaReadbackRangeEnd)];
+    /// <summary>The same pair, hours only, for the phone bar.</summary>
+    public static string AgendaReadbackRangeStartHour => LocalizationService.Instance[nameof(AgendaReadbackRangeStartHour)];
+    public static string AgendaReadbackRangeEndHour => LocalizationService.Instance[nameof(AgendaReadbackRangeEndHour)];
+    /// <summary>What to type for tonight instead: Korean counts to 24, English says pm.</summary>
+    public static string AgendaReadbackEveningHint => LocalizationService.Instance[nameof(AgendaReadbackEveningHint)];
+
+    /// <summary>{0} = the date and time. The 할 일 line.</summary>
+    /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>
+    /// <summary>{0} = date, {1} = time.</summary>
+    /// <summary>{0} = a repeat ("매주 월요일"), {1} = time.</summary>
+    /// <summary>{0} = start, {1} = end.</summary>
+    /// <summary>{0} = start hour, {1} = end hour. The phone bar.</summary>
+    /// <summary>Prepended when a bare time was read as tomorrow.</summary>
+    /// <summary>{0} = the time as read, {1} = what to type for tonight.</summary>
+    /// <summary>{0} = the 24-hour hour.</summary>
+    /// <summary>Repeating to-dos have no reminder yet (docs/TODOS.md §13).</summary>
+    /// <summary>Date format. A .NET custom format string, not prose.</summary>
+    /// <summary>Date format for the phone bar.</summary>
+    /// <summary>Time format.</summary>
+    /// <summary>Hour-only format, for the compact range.</summary>
 }

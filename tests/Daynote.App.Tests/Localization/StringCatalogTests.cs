@@ -115,6 +115,11 @@ public sealed partial class StringCatalogTests
             nameof(AppStrings.StorageUsageFormat),
             nameof(AppStrings.CheckoutPlanLabelFormat),
             nameof(AppStrings.ReminderBodyFormat),
+
+            // An en dash between two times that each language has already formatted its
+            // own way. Every other readback format differs, because Korean and English
+            // disagree about where the meridiem and the separators go.
+            nameof(AppStrings.AgendaReadbackRange),
         };
 
         string[] untranslated = [.. korean

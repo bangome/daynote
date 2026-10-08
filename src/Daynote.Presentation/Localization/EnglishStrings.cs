@@ -723,6 +723,45 @@ internal static class EnglishStrings
         ["ReminderPreciseHint"] = "Without it, reminders can arrive up to an hour late",
         ["ReminderBodyFormat"] = "{0} · {1}",
 
+        // The @ command's readback (docs/TODOS.md §7), worded as the design mocks show it.
+        // The punctuation and the ordering live here rather than in code: Korean joins a date
+        // to a time with a space and says the meridiem first, English joins with "·" and says
+        // it last. Each language also declares how it formats the two ends of a time range,
+        // so "오후 3:00–4:00" and "3:00–4:00 PM" come out of one join with the same two
+        // arguments — which keeps the placeholders identical across the pair, as every other
+        // format here is. The patterns at the end are .NET date and time formats, translated
+        // because the order of month and day is not universal either.
+        ["AgendaPhraseEmpty"] = "Type a date, time or repeat",
+        ["AgendaPhraseEmptyPickable"] = "Type or pick a date, time or repeat",
+        ["AgendaPhraseExampleToday"] = "today",
+        ["AgendaPhraseExampleTomorrow"] = "tomorrow",
+        ["AgendaPhraseExampleWeekdayTime"] = "fri 3pm",
+        ["AgendaPhraseExampleRepeat"] = "every mon",
+        ["AgendaReadbackDue"] = "Due {0}",
+        ["AgendaReadbackAllDay"] = "{0} · All day",
+        ["AgendaReadbackDateAtTime"] = "{0} at {1}",
+        ["AgendaReadbackDateAndRange"] = "{0} · {1}",
+        ["AgendaReadbackAtTime"] = "{0} at {1}",
+        ["AgendaReadbackRange"] = "{0}–{1}",
+        ["AgendaReadbackRangeShort"] = "{0}–{1}",
+        ["AgendaReadbackEveryDay"] = "Every day",
+        ["AgendaReadbackEveryWeekday"] = "Every {0}",
+        ["AgendaReadbackTomorrowPrefix"] = "Tomorrow, {0}",
+        ["AgendaReadbackRolledNote"] = "{0} has passed, so this reads as tomorrow. Type ‘{1}’ for tonight.",
+        ["AgendaReadbackRolledNoteShort"] = "{0} has passed, so this reads as tomorrow. Type ‘{1}’.",
+        ["AgendaReadbackRepeatNoAlert"] = "Repeating to-dos don’t send alerts yet.",
+        ["AgendaReadbackDateLong"] = "ddd, MMM d",
+        ["AgendaReadbackDateLongPrefixed"] = "ddd MMM d",
+        ["AgendaReadbackDateShort"] = "MMM d",
+        ["AgendaReadbackWeekday"] = "ddd",
+        ["AgendaReadbackTime"] = "h:mm tt",
+        ["AgendaReadbackHour"] = "h tt",
+        ["AgendaReadbackRangeStart"] = "h:mm",
+        ["AgendaReadbackRangeEnd"] = "h:mm tt",
+        ["AgendaReadbackRangeStartHour"] = "%h",
+        ["AgendaReadbackRangeEndHour"] = "h tt",
+        ["AgendaReadbackEveningHint"] = "h'pm'",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };
