@@ -125,6 +125,17 @@ public sealed record AgendaItem(
     public bool IsOverride => SeriesId is not null;
 
     /// <summary>
+    /// The wall clock everything about this item hangs off: its start, or its deadline when it has
+    /// no start. Null when it has neither, which a to-do captured without a date can be.
+    /// </summary>
+    /// <remarks>
+    /// A recurrence rule is read from here, as <c>DTSTART</c> — a task created by the @ command
+    /// carries its rule's anchor in <see cref="StartsAt"/> and nothing in <see cref="DueAt"/>, the
+    /// way a VTODO with an RRULE does, while a one-off task is the other way round.
+    /// </remarks>
+    public WallClock? Anchor => StartsAt ?? DueAt;
+
+    /// <summary>
     /// Whether this shows in the Timeline, resolving <see cref="TimelineVisibility.Auto"/>.
     /// </summary>
     public bool ShowsInTimeline => TimelineVisibility switch

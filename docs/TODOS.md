@@ -505,10 +505,14 @@ Both go when step 3 switches the readers.
   per-list `.ics` would cover the user who wants their work tasks visible but not writable.
 - **What the `@` popover offers for list choice** when the user has many. A recent-first short list
   is probably right, but it is the one part of the capture flow that can get slow.
-- **Expanding `RRULE` into occurrences**, which nothing does yet. The day panel and the Timeline
-  can read a series row and draw a repeat mark without it, but reminders cannot: a repeating to-do
-  is silent until there is an expander (§12 step 4). It needs `EXDATE`, overrides and a horizon,
-  and it is the last thing between the entity model and parity with what `-[ ]` could never do.
+- ~~**Expanding `RRULE` into occurrences**~~ — built, as `AgendaRecurrence`. `FREQ=DAILY` and
+  `FREQ=WEEKLY` with `INTERVAL`, `BYDAY`, `COUNT` and `UNTIL`, honouring `EXDATE` and overrides.
+  Anything else — monthly, yearly, `BYSETPOS` — is reported unreadable and expands to nothing,
+  because a rule half-understood puts occurrences on the wrong days and a to-do that silently
+  appears on the wrong day is worse than one that visibly does not appear.
+  **Still open: who calls it.** The reminder planner can now close the gap of §12 step 4, but the
+  phone's §06 draws a notice that says a repeating to-do will not remind yet — behaviour and copy
+  have to change together, so the notice is a design decision before it is a code one.
 - ~~**Whether a dated to-do should be allowed no reminder at all.**~~ Settled by the phone's §06.
   A dated item is *created* carrying one alert, which the user can remove, so the behaviour every
   dated to-do has had since reminders shipped survives as a visible default and an empty list now
