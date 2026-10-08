@@ -115,7 +115,11 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
     /// The highlight layer redraws with the body. The character and line count beside it is the
     /// shell's CharLineText, bound in the markup, so it is counted once for both Windows shells.
     /// </summary>
-    private void OnBodyTextChanged(object sender, TextChangedEventArgs e) => RebuildHighlight(BodyBox.Text);
+    private void OnBodyTextChanged(object sender, TextChangedEventArgs e)
+    {
+        RebuildHighlight(BodyBox.Text);
+        RefreshCapture();
+    }
 
     private void RebuildHighlight(string text)
     {

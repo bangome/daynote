@@ -1,0 +1,209 @@
+<UserControl
+    x:Class="Daynote.App.Shell.Product.AgendaCapturePopupView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:notes="clr-namespace:Daynote.App.Notes;assembly=Daynote.Presentation"
+    xmlns:loc="clr-namespace:Daynote.App.Localization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance notes:AgendaCaptureViewModel}">
+
+    <!--
+      The @ command's popup (docs/TODOS.md §7, design §01). An input accelerator, not a dialog:
+      it has no focusable control of its own, because taking focus would stop the user typing the
+      very thing it is reading. Every key it answers to is handled by the editor beneath it.
+
+      340 wide, as the design draws it — wide enough for the longest readback, a dated event with
+      a time range, to sit on one line. A sentence that wraps is scanned rather than read, and
+      being read before Enter is the entire job of this popup.
+    -->
+    <Border Width="340" Background="{DynamicResource Daynote.Product.Brush.Card}"
+            BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1"
+            CornerRadius="14" SnapsToDevicePixels="True"
+            Effect="{DynamicResource Daynote.Desk.Shadow.Pop}">
+        <StackPanel>
+            <!-- The title is already typed; this shows it rather than asking for it again (§7). -->
+            <StackPanel Orientation="Horizontal" Margin="12,11,12,6">
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11" FontWeight="Bold"
+                           VerticalAlignment="Center" Text="{loc:Tr AgendaCaptureTitleLabel}" />
+                <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="ExtraBold" TextTrimming="CharacterEllipsis"
+                           MaxWidth="270" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text}"
+                           Text="{Binding Title}" />
+            </StackPanel>
+
+            <!-- Nothing typed after the @ yet: an invitation and four examples, not an error. -->
+            <StackPanel Margin="12,0,12,10"
+                        Visibility="{Binding IsPrompting, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="12"
+                           TextWrapping="Wrap" Text="{Binding Prompt}" />
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Examples}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,6,6" CornerRadius="6" Padding="7,2"
+                                    Background="{DynamicResource Daynote.Product.Brush.Seg}">
+                                <TextBlock FontSize="11.5" Text="{Binding}"
+                                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!--
+              The two readings, side by side. They describe the same phrase in the two shapes it
+              could take, which is what makes Tab a cheap thing to press: the user is choosing a
+              shape, not re-entering a date.
+            -->
+            <StackPanel Margin="6,0,6,6"
+                        Visibility="{Binding IsPrompting, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}">
+                <Border x:Name="TaskRow" MinHeight="38" CornerRadius="10" Padding="10,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTaskSelected}" Value="True">
+                                    <Setter Property="Background"
+                                            Value="{DynamicResource Daynote.Product.Brush.CaptureSelected}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="46" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontSize="12" FontWeight="ExtraBold" VerticalAlignment="Center"
+                                   Text="{loc:Tr AgendaCaptureTask}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTaskSelected}" Value="True">
+                                            <Setter Property="Foreground"
+                                                    Value="{DynamicResource Daynote.Product.Brush.CaptureText}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Text="{Binding TaskLine}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                    <Setter Property="FontWeight" Value="Medium" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTaskSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="5" Padding="5,0"
+                                BorderThickness="1" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
+                                Background="{DynamicResource Daynote.Product.Brush.Hover}"
+                                Visibility="{Binding IsTaskSelected, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                            <TextBlock FontSize="10.5" Text="&#x21B5;"
+                                       Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border x:Name="EventRow" MinHeight="38" CornerRadius="10" Padding="10,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEventSelected}" Value="True">
+                                    <Setter Property="Background"
+                                            Value="{DynamicResource Daynote.Product.Brush.CaptureSelected}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="46" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontSize="12" FontWeight="ExtraBold" VerticalAlignment="Center"
+                                   Text="{loc:Tr AgendaCaptureEvent}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEventSelected}" Value="True">
+                                            <Setter Property="Foreground"
+                                                    Value="{DynamicResource Daynote.Product.Brush.CaptureText}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Text="{Binding EventLine}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                    <Setter Property="FontWeight" Value="Medium" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEventSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="5" Padding="5,0"
+                                BorderThickness="1" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}"
+                                Background="{DynamicResource Daynote.Product.Brush.Hover}"
+                                Visibility="{Binding IsEventSelected, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                            <TextBlock FontSize="10.5" Text="&#x21B5;"
+                                       Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!--
+              The one thing worth saying out loud: a time read as tomorrow, or a repeat that will
+              not remind yet. Collapsed when there is nothing to warn about, so its presence is
+              itself the signal.
+            -->
+            <Border Padding="12,8" BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Note}" Value="">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock FontSize="11.5" TextWrapping="Wrap" Text="{Binding Note}"
+                           Foreground="{DynamicResource Daynote.Product.Brush.CaptureText}" />
+            </Border>
+
+            <Border Padding="12,9" BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}">
+                <TextBlock FontSize="11" TextWrapping="Wrap" Text="{Binding KeyHints}"
+                           Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

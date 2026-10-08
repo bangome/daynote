@@ -873,6 +873,12 @@ public static class AppStrings
     /// <summary>What to type for tonight instead: Korean counts to 24, English says pm.</summary>
     public static string AgendaReadbackEveningHint => LocalizationService.Instance[nameof(AgendaReadbackEveningHint)];
 
+    public static string AgendaCaptureTitleLabel => LocalizationService.Instance[nameof(AgendaCaptureTitleLabel)];
+    public static string AgendaCaptureTask => LocalizationService.Instance[nameof(AgendaCaptureTask)];
+    public static string AgendaCaptureEvent => LocalizationService.Instance[nameof(AgendaCaptureEvent)];
+    /// <summary>The footer under the two readback lines. Names real keys.</summary>
+    public static string AgendaCaptureKeyHints => LocalizationService.Instance[nameof(AgendaCaptureKeyHints)];
+
     /// <summary>{0} = the date and time. The 할 일 line.</summary>
     /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>
     /// <summary>{0} = date, {1} = time.</summary>

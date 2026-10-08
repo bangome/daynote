@@ -988,6 +988,9 @@ At Cloudflare's current published tiers — verify against the live pricing page
 
 ## 14. Subscriptions — BUILT 2026-09-02
 
+> What the tiers are meant to grow into, and the rules a new paid feature has to pass, are in
+> [SUBSCRIPTION_POLICY.md](SUBSCRIPTION_POLICY.md) (proposed 2026-10-08, not built).
+
 **Text sync is free; image and file sync is paid** (decided 2026-09-07; before that the whole of
 sync was paid). Notes, to-dos, tags and favorites sync for every signed-in account with no time
 limit. The subscription gates the Phase 7 attachment endpoints only, and since 2026-09-30 comes in

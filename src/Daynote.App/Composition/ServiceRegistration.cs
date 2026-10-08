@@ -87,6 +87,12 @@ public static class ServiceRegistration
         services.AddSingleton(sp => new ToggleNoteFavorite(sp.GetRequiredService<INoteRepository>()));
         services.AddSingleton(sp => new SetNoteTags(sp.GetRequiredService<INoteRepository>()));
 
+        // To-dos and events (docs/TODOS.md). Only the @ command writes through this so far;
+        // every panel still parses `-[ ]` out of note bodies until §12 step 3 switches the
+        // readers on both shells at once.
+        services.AddSingleton<Daynote.Core.Agenda.IAgendaRepository>(sp =>
+            new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(sp.GetRequiredService<SqliteDatabase>()));
+
         services.AddSingleton(sp => new NoteWorkspaceDependencies(
             sp.GetRequiredService<INoteRepository>(),
             sp.GetRequiredService<GetDayWorkspace>(),
@@ -95,7 +101,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<DeleteNote>(),
             sp.GetRequiredService<Func<NoteId>>(),
             toggleFavorite: sp.GetRequiredService<ToggleNoteFavorite>(),
-            setTags: sp.GetRequiredService<SetNoteTags>()));
+            setTags: sp.GetRequiredService<SetNoteTags>(),
+            agenda: sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>()));
         services.AddSingleton(sp => new NoteWorkspaceViewModel(sp.GetRequiredService<NoteWorkspaceDependencies>()));
         services.AddSingleton(sp => new MainWindowViewModel(
             sp.GetRequiredService<NoteWorkspaceViewModel>(),

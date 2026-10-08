@@ -752,6 +752,12 @@ internal static class KoreanStrings
         ["AgendaReadbackRangeEndHour"] = "%h",
         ["AgendaReadbackEveningHint"] = "H'시'",
 
+        // The @ popup itself (docs/design-renewal/… 01 - Command).
+        ["AgendaCaptureTitleLabel"] = "제목",
+        ["AgendaCaptureTask"] = "할 일",
+        ["AgendaCaptureEvent"] = "일정",
+        ["AgendaCaptureKeyHints"] = "Enter 만들기 · Tab 종류 전환 · Esc 취소",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

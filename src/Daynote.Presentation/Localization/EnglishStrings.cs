@@ -762,6 +762,12 @@ internal static class EnglishStrings
         ["AgendaReadbackRangeEndHour"] = "h tt",
         ["AgendaReadbackEveningHint"] = "h'pm'",
 
+        // The @ popup itself (docs/design-renewal/… 01 - Command).
+        ["AgendaCaptureTitleLabel"] = "Title",
+        ["AgendaCaptureTask"] = "To-do",
+        ["AgendaCaptureEvent"] = "Event",
+        ["AgendaCaptureKeyHints"] = "Enter Create · Tab Switch type · Esc Cancel",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

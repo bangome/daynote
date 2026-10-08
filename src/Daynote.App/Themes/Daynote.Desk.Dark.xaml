@@ -28,6 +28,10 @@
     <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionBg" Color="#FFFFAD72" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.SelectionText" Color="#FF0E1020" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Extras" Color="#FFFF9A52" po:Freeze="True" />
+    <!-- The @ popup's selected row: the orange accent at the weight the design uses for a
+         chosen line, and the readable text on top of it. -->
+    <SolidColorBrush x:Key="Daynote.Product.Brush.CaptureSelected" Color="#2EFF9A52" po:Freeze="True" />
+    <SolidColorBrush x:Key="Daynote.Product.Brush.CaptureText" Color="#FFFFB375" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sun" Color="#FFFF8076" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Weekend.Sat" Color="#FF6C6F88" po:Freeze="True" />
     <SolidColorBrush x:Key="Daynote.Product.Brush.Ok" Color="#FF2FB574" po:Freeze="True" />
