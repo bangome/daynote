@@ -119,7 +119,10 @@ public sealed class AgendaCaptureTests
         Assert.AreEqual(new WallClock(new DateTime(2026, 10, 12, 7, 0, 0)), made.StartsAt);
         // A rule has a next occurrence, not a deadline.
         Assert.IsNull(made.DueAt);
-        Assert.IsFalse(made.HasDueTime);
+        // But it does carry a clock, and `has_due_time` is the one field that says so — whichever
+        // field is holding the wall clock. The reminder planner reads this rather than looking in
+        // DUE, which is what keeps "매주 월 7시" ringing at seven.
+        Assert.IsTrue(made.HasDueTime);
         Assert.IsTrue(made.IsSeries);
     }
 

@@ -103,7 +103,10 @@ public static class AgendaCapture
             StartsAt: kind == AgendaKind.Event || repeats ? reading.At : null,
             EndsAt: kind == AgendaKind.Event ? AgendaPhraseParser.EventEnd(reading) : null,
             DueAt: kind == AgendaKind.Task && !repeats ? reading.At : null,
-            HasDueTime: kind == AgendaKind.Task && !repeats && reading.HasTime,
+            // Whichever field carries the wall clock, this is the one flag that says a clock
+            // was given — a repeating to-do keeps its time in DTSTART because that is what an
+            // RRULE anchors on, and it still has to ring at that time rather than the default.
+            HasDueTime: kind == AgendaKind.Task && reading.HasTime,
             reading.Rrule,
             SeriesId: null,
             RecurrenceId: null,

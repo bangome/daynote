@@ -473,10 +473,20 @@ The order that makes that safe:
      line-based planner used. An entity's context is its list; the note it happened to be typed
      into is a jump target, not a label.
 
-   **Not built: a repeating to-do does not remind.** Expanding `RRULE` into occurrences is its own
-   piece of work (§5) and nothing does it yet, so a series is skipped — its overrides, which are
-   ordinary rows with concrete times, are not. This is the one visible gap step 3 opens, because
-   the `@` command can create `매주 월 7시` from the first day it ships.
+   **Built: a repeating to-do reminds**, on every occurrence inside a sixty-day horizon, honouring
+   `EXDATE` and overrides. Sixty days and not a year because iOS holds 64 pending notifications
+   and the set is topped up on every run, so computing further buys nothing.
+
+   Turning the expander on exposed a reading that had been wrong since this file was written. A
+   repeating to-do keeps its clock in `DTSTART`, because that is what an `RRULE` anchors on, and
+   `FireTime` looked for it in `DUE`, found none, and quietly moved every repeating to-do to the
+   default hour. `has_due_time` now means "this to-do carries a clock reading" whichever field is
+   holding the wall clock, which is one field doing one job rather than two fields that have to
+   agree.
+
+   **Still not built: a rule the expander cannot read** — monthly, yearly, a positional `BYDAY`.
+   Those are silent, deliberately: a to-do that reminds on the wrong day is worse than one that
+   does not remind.
 
 Until step 3 ships on both, the migration must not run anywhere.
 
@@ -510,9 +520,11 @@ Both go when step 3 switches the readers.
   Anything else — monthly, yearly, `BYSETPOS` — is reported unreadable and expands to nothing,
   because a rule half-understood puts occurrences on the wrong days and a to-do that silently
   appears on the wrong day is worse than one that visibly does not appear.
-  **Still open: who calls it.** The reminder planner can now close the gap of §12 step 4, but the
-  phone's §06 draws a notice that says a repeating to-do will not remind yet — behaviour and copy
-  have to change together, so the notice is a design decision before it is a code one.
+  The reminder planner now uses it, so §12 step 4's gap is closed.
+  **Still open: the copy.** The phone's §06 draws "반복 할 일은 아직 알림이 오지 않아요" and the
+  @ bar repeats it. Both are now wrong for a rule the expander can read, and still right for one
+  it cannot — monthly, yearly, a positional BYDAY. The honest notice is narrower than the one
+  drawn, and which words it uses is the designer's call.
 - ~~**Whether a dated to-do should be allowed no reminder at all.**~~ Settled by the phone's §06.
   A dated item is *created* carrying one alert, which the user can remove, so the behaviour every
   dated to-do has had since reminders shipped survives as a visible default and an empty list now

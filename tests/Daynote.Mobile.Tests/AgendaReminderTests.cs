@@ -138,28 +138,104 @@ public sealed class AgendaReminderTests
     }
 
     [TestMethod]
-    public void A_repeating_task_does_not_remind_yet_but_an_override_of_one_does()
+    public void A_repeating_task_reminds_on_every_occurrence_in_the_horizon()
     {
-        // Expanding RRULE into occurrences is its own piece of work (§5) and is not built. Said
-        // out loud here rather than left to be discovered: a weekly to-do is silent until it is.
-        AgendaItem series = Task(1) with
+        AgendaItem series = Repeating("FREQ=WEEKLY;BYDAY=FR", new DateTime(2026, 10, 3, 14, 0, 0));
+
+        IReadOnlyList<Reminder> plan = ReminderPlanner.Plan([series], Now, 10, Nine);
+
+        // Friday 3 October is behind "now"; the rule carries on weekly from there.
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                new DateTime(2026, 10, 9, 14, 0, 0),
+                new DateTime(2026, 10, 16, 14, 0, 0),
+                new DateTime(2026, 10, 23, 14, 0, 0),
+                new DateTime(2026, 10, 30, 14, 0, 0),
+            },
+            plan.Take(4).Select(static r => r.At).ToArray());
+    }
+
+    [TestMethod]
+    public void A_repeating_task_rings_at_its_own_hour_and_not_the_default()
+    {
+        // The reading that was wrong until the expander was turned on. A repeating to-do keeps
+        // its clock in DTSTART, because that is what an RRULE anchors on; looking for it in DUE
+        // found none and quietly moved every one of them to nine in the morning.
+        AgendaItem weekly = Repeating("FREQ=WEEKLY;BYDAY=MO", new DateTime(2026, 10, 5, 7, 0, 0));
+
+        Assert.AreEqual(new DateTime(2026, 10, 5, 7, 0, 0), ReminderPlanner.FireTime(weekly, Nine));
+    }
+
+    [TestMethod]
+    public void A_repeating_task_with_no_clock_still_reminds_at_the_default_hour()
+    {
+        AgendaItem weekly = Repeating("FREQ=WEEKLY;BYDAY=MO", new DateTime(2026, 10, 5, 0, 0, 0))
+            with
+            { HasDueTime = false };
+
+        Assert.AreEqual(new DateTime(2026, 10, 5, 9, 0, 0), ReminderPlanner.FireTime(weekly, Nine));
+    }
+
+    [TestMethod]
+    public void An_override_replaces_its_occurrence_rather_than_adding_one()
+    {
+        AgendaItem series = Repeating("FREQ=WEEKLY;BYDAY=FR", new DateTime(2026, 10, 3, 14, 0, 0));
+        AgendaItem moved = series with
         {
-            Rrule = "FREQ=WEEKLY;BYDAY=FR",
-            DueAt = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
-            HasDueTime = true,
-        };
-        AgendaItem moved = Task(2) with
-        {
+            Id = Id(2),
             SeriesId = series.Id,
-            RecurrenceId = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
-            DueAt = new WallClock(new DateTime(2026, 10, 3, 16, 0, 0)),
-            HasDueTime = true,
+            RecurrenceId = new WallClock(new DateTime(2026, 10, 9, 14, 0, 0)),
+            StartsAt = new WallClock(new DateTime(2026, 10, 9, 16, 0, 0)),
+            Rrule = null,
         };
 
         IReadOnlyList<Reminder> plan = ReminderPlanner.Plan([series, moved], Now, 10, Nine);
 
-        Assert.HasCount(1, plan);
-        Assert.AreEqual(new DateTime(2026, 10, 3, 16, 0, 0), plan[0].At);
+        // One reminder for that Friday, at the moved hour — not two, and not the original.
+        Assert.AreEqual(new DateTime(2026, 10, 9, 16, 0, 0), plan[0].At);
+        Assert.AreEqual(1, plan.Count(static r => r.At.Day == 9));
+        // Keyed on the series and the original start, so moving an occurrence replaces its
+        // notification rather than leaving the old one scheduled beside it.
+        Assert.AreEqual(
+            ReminderPlanner.IdFor(series.Id, new WallClock(new DateTime(2026, 10, 9, 14, 0, 0)), 0),
+            plan[0].Id);
+    }
+
+    [TestMethod]
+    public void A_skipped_occurrence_is_silent()
+    {
+        AgendaItem series = Repeating("FREQ=WEEKLY;BYDAY=FR", new DateTime(2026, 10, 3, 14, 0, 0)) with
+        {
+            ExceptionDates = [new WallClock(new DateTime(2026, 10, 9, 14, 0, 0))],
+        };
+
+        IReadOnlyList<Reminder> plan = ReminderPlanner.Plan([series], Now, 10, Nine);
+
+        Assert.IsEmpty(plan.Where(static r => r.At.Day == 9));
+    }
+
+    [TestMethod]
+    public void A_rule_this_build_cannot_read_is_silent_rather_than_wrong()
+    {
+        // AgendaRecurrence refuses monthly and yearly rather than guessing. A to-do that silently
+        // reminds on the wrong day is worse than one that visibly does not remind at all.
+        AgendaItem monthly = Repeating("FREQ=MONTHLY;BYMONTHDAY=3", new DateTime(2026, 10, 3, 14, 0, 0));
+
+        Assert.IsEmpty(ReminderPlanner.Plan([monthly], Now, 10, Nine));
+    }
+
+    [TestMethod]
+    public void An_override_whose_series_was_not_loaded_still_reminds()
+    {
+        // An orphan is a data problem, not a reason to stop telling the user about their to-do.
+        AgendaItem orphan = Dated(1) with
+        {
+            SeriesId = Id(99),
+            RecurrenceId = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
+        };
+
+        Assert.HasCount(1, ReminderPlanner.Plan([orphan], Now, 10, Nine));
     }
 
     [TestMethod]
@@ -266,6 +342,18 @@ public sealed class AgendaReminderTests
         Assert.AreEqual(new DateTime(2026, 10, 3, 9, 0, 0), plan[0].At);
         Assert.AreEqual(new DateTime(2026, 10, 4, 9, 0, 0), plan[1].At);
     }
+
+    private static Guid Id(int suffix) => Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}");
+
+    /// <summary>A repeating to-do, anchored on DTSTART the way a VTODO with an RRULE is.</summary>
+    private static AgendaItem Repeating(string rrule, DateTime anchor) => Task(1) with
+    {
+        Rrule = rrule,
+        StartsAt = new WallClock(anchor),
+        DueAt = null,
+        HasDueTime = true,
+        AlarmLeadMinutes = AgendaAlert.Default,
+    };
 
     /// <summary>A to-do that is due and carries the one alert a new one is created with.</summary>
     private static AgendaItem Dated(int suffix) => Task(suffix) with

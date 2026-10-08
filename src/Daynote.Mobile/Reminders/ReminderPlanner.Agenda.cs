@@ -16,16 +16,16 @@ namespace Daynote.Mobile.Reminders;
 /// because §12 requires desktop and phone to switch their readers in the same release and the
 /// desktop half is not built. Step 3 swaps the call; the shape below is already what it needs.
 /// <para>
-/// <see cref="FireTime(TodoLine, TimeSpan)"/> keeps its shape and its two rules — a date and a time
-/// remind at that time, a date alone at the settings page's default reminder time. What the entity
-/// adds is the lead the old comment promised: <c>VALARM</c> triggers arrive as
-/// <see cref="AgendaItem.AlarmLeadMinutes"/> and are subtracted here, so one item can hold several
-/// reminders.
+/// <see cref="FireTime(TodoLine, TimeSpan)"/> keeps its shape and its two rules — a to-do that
+/// carries a clock reminds at it, one that carries only a day reminds at the settings page's
+/// default reminder time. What the entity adds is the lead the old comment promised:
+/// <c>VALARM</c> triggers arrive as <see cref="AgendaItem.AlarmLeadMinutes"/> and are subtracted
+/// here, so one item can hold several reminders.
 /// </para>
 /// <para>
-/// <b>Reminder ids change at the cutover</b>, from a hash of the note and the line's text to a hash
-/// of the item's own id. That is the point of the entity: a line of prose has no identity, so the
-/// old id had to be reconstructed from its text and had to move whenever the text did.
+/// <b>Reminder ids change at the cutover</b>, from a hash of the note and the line's text to a
+/// hash of the item's own id. That is the point of the entity: a line of prose has no identity, so
+/// the old id had to be reconstructed from its text and had to move whenever the text did.
 /// <see cref="Diff"/> handles the changeover without special-casing — every old id is absent from
 /// the new set and is cancelled, every new one is scheduled — so the first run after the upgrade
 /// re-registers the lot and nothing fires twice.
@@ -33,6 +33,16 @@ namespace Daynote.Mobile.Reminders;
 /// </remarks>
 public static partial class ReminderPlanner
 {
+    /// <summary>
+    /// How far ahead a repeating item is expanded.
+    /// </summary>
+    /// <remarks>
+    /// Two months, not a year. iOS holds 64 pending notifications and the set is topped up every
+    /// time the app runs, so computing further buys nothing — and without a bound a daily rule
+    /// would generate thousands of occurrences to sort and throw away.
+    /// </remarks>
+    public const int HorizonDays = 60;
+
     /// <summary>
     /// When one alarm on <paramref name="item"/> fires, in local wall-clock time; null when the
     /// item has no time to hang an alarm off.
@@ -44,35 +54,30 @@ public static partial class ReminderPlanner
     public static DateTime? FireTime(AgendaItem item, TimeSpan dateOnlyTime, int leadMinutes = 0)
     {
         ArgumentNullException.ThrowIfNull(item);
+        return item.Anchor is { } anchor ? FireTime(item, anchor, dateOnlyTime, leadMinutes) : null;
+    }
 
-        DateTime wall;
-        if (item.Kind == AgendaKind.Event)
-        {
-            // An event is a block of time; its start is a real clock reading and the default
-            // reminder time has nothing to say about it.
-            if (item.StartsAt is not { } start)
-            {
-                return null;
-            }
-
-            wall = start.Value;
-        }
-        else if (item.DueAt is { } due)
-        {
-            wall = item.HasDueTime ? due.Value : due.Value.Date + dateOnlyTime;
-        }
-        else if (item.StartsAt is { } start)
-        {
-            // A task's DTSTART is a day placement, not a clock reading — the migration of §8 sets
-            // it to midnight of the note's date — so it reminds at the default time like any other
-            // dated-but-untimed to-do.
-            wall = start.Value.Date + dateOnlyTime;
-        }
-        else
-        {
-            return null;
-        }
-
+    /// <summary>
+    /// The same, for one occurrence of a repeating item: <paramref name="anchor"/> is where that
+    /// occurrence falls rather than where the rule started.
+    /// </summary>
+    private static DateTime FireTime(
+        AgendaItem item,
+        WallClock anchor,
+        TimeSpan dateOnlyTime,
+        int leadMinutes)
+    {
+        // An event is a block of time; its start is a real clock reading and the default reminder
+        // time has nothing to say about it.
+        //
+        // For a to-do, `has_due_time` is the one field that says whether a clock was given, and it
+        // answers for whichever field is carrying the wall clock. A one-off to-do keeps its time
+        // in DUE; a repeating one keeps it in DTSTART, because that is what an RRULE anchors on.
+        // Reading the flag rather than the field is what keeps "@매주 월 7시" ringing at seven —
+        // the obvious version of this looked at DUE, found none, and quietly moved every repeating
+        // to-do to the default hour.
+        bool hasClock = item.Kind == AgendaKind.Event || item.HasDueTime;
+        DateTime wall = hasClock ? anchor.Value : anchor.Value.Date + dateOnlyTime;
         return DateTime.SpecifyKind(wall, DateTimeKind.Unspecified).AddMinutes(-leadMinutes);
     }
 
@@ -80,6 +85,11 @@ public static partial class ReminderPlanner
     /// The reminders <paramref name="items"/> call for at <paramref name="now"/>, nearest first, at
     /// most <paramref name="capacity"/> of them.
     /// </summary>
+    /// <param name="items">
+    /// Everything loaded: one-off items, series, and the overrides belonging to them. An override
+    /// is planned as part of its series rather than on its own, unless its series is not here — an
+    /// orphan still reminds, because the alternative is a to-do that silently stops.
+    /// </param>
     /// <param name="listNames">
     /// List id to display name, for the notification's second line. A list that is not here — the
     /// built-in one, whose stored name is empty — contributes nothing and the body is the time
@@ -98,35 +108,38 @@ public static partial class ReminderPlanner
             return [];
         }
 
+        AgendaItem[] all = [.. items.OrderBy(static i => i.Id)];
+        var known = new HashSet<Guid>(all.Where(static i => i.IsSeries).Select(static i => i.Id));
+
         DateTime localNow = DateTime.SpecifyKind(now.DateTime, DateTimeKind.Unspecified);
+        DateOnly today = DateOnly.FromDateTime(localNow);
         var planned = new List<Reminder>();
 
-        foreach (AgendaItem item in items.OrderBy(static i => i.Id))
+        foreach (AgendaItem item in all)
         {
-            if (item.Status != AgendaStatus.NeedsAction || item.IsSeries)
+            if (item.IsSeries)
             {
-                // A series carries a rule, not a time. Expanding RRULE into occurrences is its own
-                // piece of work (§5) and is not built, so a repeating to-do does not remind yet —
-                // its overrides, which are ordinary rows with concrete times, do.
+                AgendaItem[] overrides = [.. all.Where(other => other.SeriesId == item.Id)];
+                foreach (AgendaOccurrence occurrence in
+                    AgendaRecurrence.Expand(item, overrides, today, today.AddDays(HorizonDays)))
+                {
+                    Add(planned, occurrence.Item, item.Id, occurrence.RecurrenceId, occurrence.Start,
+                        localNow, dateOnlyTime, listNames);
+                }
+
                 continue;
             }
 
-            foreach (int lead in LeadsFor(item))
+            if (item.IsOverride && known.Contains(item.SeriesId!.Value))
             {
-                if (FireTime(item, dateOnlyTime, lead) is not { } at || at <= localNow)
-                {
-                    continue;
-                }
+                // Already emitted by its series, with the occurrence in its id.
+                continue;
+            }
 
-                planned.Add(new Reminder(
-                    IdFor(item.Id, lead),
-                    at,
-                    item.Title,
-                    BodyFor(item, dateOnlyTime, listNames),
-                    DayOf(item, dateOnlyTime),
-                    // What a tap opens. Empty when the to-do was never captured from a note, which
-                    // is ordinary: the shell then selects the day and opens no editor.
-                    item.SourceNoteId ?? Guid.Empty));
+            if (item.Anchor is { } anchor)
+            {
+                Add(planned, item, item.Id, occurrence: null, anchor,
+                    localNow, dateOnlyTime, listNames);
             }
         }
 
@@ -136,49 +149,75 @@ public static partial class ReminderPlanner
             .Take(capacity)];
     }
 
-    /// <summary>"todo-" and 16 hex digits over the item's id and this alarm's lead.</summary>
+    private static void Add(
+        List<Reminder> planned,
+        AgendaItem item,
+        Guid identity,
+        WallClock? occurrence,
+        WallClock anchor,
+        DateTime localNow,
+        TimeSpan dateOnlyTime,
+        IReadOnlyDictionary<Guid, string>? listNames)
+    {
+        if (item.Status != AgendaStatus.NeedsAction)
+        {
+            return;
+        }
+
+        foreach (int lead in item.AlarmLeadMinutes)
+        {
+            DateTime at = FireTime(item, anchor, dateOnlyTime, lead);
+            if (at <= localNow)
+            {
+                continue;
+            }
+
+            planned.Add(new Reminder(
+                IdFor(identity, occurrence, lead),
+                at,
+                item.Title,
+                BodyFor(item, anchor, dateOnlyTime, listNames),
+                DayOf(item, anchor, dateOnlyTime),
+                // What a tap opens. Empty when the to-do was never captured from a note, which is
+                // ordinary: the shell then selects the day and opens no editor.
+                item.SourceNoteId ?? Guid.Empty));
+        }
+    }
+
+    /// <summary>"todo-" and 16 hex digits over what the reminder is for and when it fires.</summary>
     /// <remarks>
     /// Keeps the shape the heads already parse — <see cref="RequestCodeFor"/> reads the last eight
-    /// digits — while the input becomes the one thing that is genuinely stable about a to-do. The
-    /// lead is in it because an item with two alarms is two notifications, and they must not
-    /// replace each other.
+    /// digits — while the input becomes the one thing that is genuinely stable about a to-do.
+    /// <para>
+    /// For an occurrence the identity is the series plus the original start, not the row that
+    /// happens to carry it. Moving one occurrence to another hour then replaces its notification
+    /// rather than adding a second, which is the same thing <c>RECURRENCE-ID</c> does everywhere
+    /// else. The lead is in it because an item with two alarms is two notifications.
+    /// </para>
     /// </remarks>
-    public static string IdFor(Guid itemId, int leadMinutes)
+    public static string IdFor(Guid identity, WallClock? occurrence, int leadMinutes)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(
-            itemId.ToString("N"),
+            identity.ToString("N"),
+            "\n",
+            occurrence?.ToString() ?? string.Empty,
             "\n",
             leadMinutes.ToString(CultureInfo.InvariantCulture))));
         return "todo-" + Convert.ToHexStringLower(hash, 0, 8);
     }
 
-    /// <summary>
-    /// The alarms to honour, and nothing else.
-    /// </summary>
-    /// <remarks>
-    /// An empty list means no alert. It used to mean "the usual single one", because there was
-    /// nowhere in the product to say otherwise and every dated to-do had reminded since reminders
-    /// shipped. The alerts design (Mobile §06) replaced that guess with something honest: a dated
-    /// item is *created* carrying one alert and the user can remove it. The default survives where
-    /// it is decided — AgendaCapture for a new item, the §8 migration for an old one — and the
-    /// planner is left reading what the item actually says.
-    /// </remarks>
-    private static IReadOnlyList<int> LeadsFor(AgendaItem item) => item.AlarmLeadMinutes;
-
     private static string BodyFor(
         AgendaItem item,
+        WallClock anchor,
         TimeSpan dateOnlyTime,
         IReadOnlyDictionary<Guid, string>? listNames)
     {
-        // The item's own time, not the moment this alarm fires: a reminder 30 minutes early still
-        // has to say when the thing actually is.
-        string when = string.Empty;
-        if (FireTime(item, dateOnlyTime) is { } at)
-        {
-            when = HasClockTime(item)
-                ? string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day} {at:HH\\:mm}")
-                : string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day}");
-        }
+        // The occurrence's own time, not the moment this alarm fires: a reminder 30 minutes early
+        // still has to say when the thing actually is.
+        DateTime at = FireTime(item, anchor, dateOnlyTime, 0);
+        string when = item.Kind == AgendaKind.Event || item.HasDueTime
+            ? string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day} {at:HH\\:mm}")
+            : string.Create(CultureInfo.InvariantCulture, $"{at.Month}/{at.Day}");
 
         if (listNames is not null
             && listNames.TryGetValue(item.ListId, out string? list)
@@ -190,12 +229,9 @@ public static partial class ReminderPlanner
         return when;
     }
 
-    private static bool HasClockTime(AgendaItem item) =>
-        item.Kind == AgendaKind.Event || (item.DueAt is not null && item.HasDueTime);
-
-    private static LocalDate DayOf(AgendaItem item, TimeSpan dateOnlyTime)
+    private static LocalDate DayOf(AgendaItem item, WallClock anchor, TimeSpan dateOnlyTime)
     {
-        DateTime at = FireTime(item, dateOnlyTime) ?? DateTime.Today;
+        DateTime at = FireTime(item, anchor, dateOnlyTime, 0);
         return LocalDate.Parse(at.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Value;
     }
 }
