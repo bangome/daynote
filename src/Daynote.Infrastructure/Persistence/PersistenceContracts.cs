@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Data.Sqlite;
 
 namespace Daynote.Infrastructure.Persistence;
 
@@ -52,6 +53,18 @@ public sealed class MigrationException : Exception
     public int Version { get; }
 }
 
+/// <summary>
+/// One step in the schema's history: either a .sql file or, where SQL cannot express it, a piece
+/// of code.
+/// </summary>
+/// <remarks>
+/// A code step exists for data migrations that need something SQLite has not got — the <c>-[ ]</c>
+/// walk of docs/TODOS.md §8 needs a regex, line splitting and a derived uuid. Putting it here
+/// rather than in startup is what gives it the three properties §12 asks for: it runs inside the
+/// same transaction as the schema change it belongs with, it is recorded as a
+/// <c>schema_versions</c> row rather than a flag somewhere, and it therefore runs exactly once per
+/// device no matter how often the app is opened.
+/// </remarks>
 public sealed class SqliteMigration
 {
     private static readonly Regex ValidName = new(
@@ -59,6 +72,20 @@ public sealed class SqliteMigration
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
     public SqliteMigration(int version, string name, string sql)
+        : this(version, name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+        Sql = sql;
+    }
+
+    public SqliteMigration(int version, string name, Action<SqliteConnection, SqliteTransaction> apply)
+        : this(version, name)
+    {
+        ArgumentNullException.ThrowIfNull(apply);
+        Apply = apply;
+    }
+
+    private SqliteMigration(int version, string name)
     {
         if (version <= 0)
         {
@@ -66,7 +93,6 @@ public sealed class SqliteMigration
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
         if (!ValidName.IsMatch(name))
         {
             throw new ArgumentException("Migration name is invalid.", nameof(name));
@@ -74,14 +100,17 @@ public sealed class SqliteMigration
 
         Version = version;
         Name = name;
-        Sql = sql;
     }
 
     public int Version { get; }
 
     public string Name { get; }
 
-    public string Sql { get; }
+    /// <summary>The statements to run, or null when this step is code.</summary>
+    public string? Sql { get; }
+
+    /// <summary>The code to run, or null when this step is SQL.</summary>
+    public Action<SqliteConnection, SqliteTransaction>? Apply { get; }
 }
 
 public readonly record struct DatabaseInitializationResult(

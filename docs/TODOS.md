@@ -9,8 +9,8 @@
 > and the server sees only the envelope. What is still missing is every reader. Every
 > panel still parses `-[ ]` out of note bodies through
 > [`TodoParsing`](../src/Daynote.Presentation/Notes/TodoParsing.cs), the `@` command does not exist,
-> and the one-time migration of §8 has not been written — §12 requires desktop and phone to cut
-> over in the same release, so the store lands first and unused. [CLOUD_SYNC.md](CLOUD_SYNC.md)
+> the one-time migration of §8 is written but deliberately not registered — §12 requires desktop
+> and phone to cut over in the same release, so the store lands first and unused. [CLOUD_SYNC.md](CLOUD_SYNC.md)
 > describes the sync engine §9 would add entities to; that part is not built either.
 
 ## 1. Decisions taken
@@ -208,6 +208,38 @@ to avoid, so `-[ ]` has to stop being a source.
 1. **One-time migration.** Walk every note, create an entity per `-[ ]` line, carry `[x]` across as
    completed. **Leave the body text exactly as it is** — deleting it would be the app rewriting the
    user's own writing. Take an automatic backup first; this is not reversible.
+
+   **Built, as `TodoCaptureMigration` (version 7), and not registered.**
+   `MigrationRunner.FromEmbeddedResources()` still stops at 6, so no database runs it; step 3 adds
+   it to the set and that is the whole change. What it settles:
+
+   - **Ids are derived, not generated.** Both devices run this offline against bodies that already
+     synced, so random ids would hand the user every task twice. The id is a UUIDv5 over the note
+     id, the task text, and how many identical texts precede it in that note — so a line moving up
+     or down the note keeps its id, two genuinely identical lines stay two tasks, and both devices
+     land on the same row. The failure window is an edit made on one device between the two
+     migrations; that duplicates, and no keying avoids every case.
+   - **Timestamps come from the note, not the clock.** `created_utc`, `updated_utc` and the
+     `completed_utc` of a `[x]` line are all the note's own `updated_utc`: deterministic across
+     devices, so the two migrations do not flap against last-write-wins, and the best evidence
+     there is of when the line was last touched.
+   - **A task with no due stamp starts on its note's date, not today.** §7's "starts today" rule is
+     for live capture. Applied to history it would empty years of notes onto this morning's panel.
+   - **A `(M/D)` stamp takes its year from the note it was written in.** Today's year would be
+     wrong for every note older than January.
+   - **A bare `- []` is skipped.** It is formatting the user left behind, not a task, and an
+     untitled row in the panel is something nobody can act on. Something that only looks like a due
+     stamp — `(13/40)` — stays in the title rather than being dropped.
+   - **The grammar moved to `Daynote.Core.Agenda.TodoBodyScan`** and `TodoParsing` now reads it
+     from there. The migration has to find exactly the lines the panel has been showing; two copies
+     that drifted by one character would leave some of them behind as plain text.
+   - **`MigrationRunner` gained code steps** so this runs in the same transaction as a schema
+     change, is recorded as a `schema_versions` row rather than a flag, and therefore runs once per
+     device — the three properties §12 asks for. A code step that throws rolls the whole thing back
+     and stays unrecorded, so the next launch retries against an untouched database.
+
+   Still owed by step 3: the automatic backup before it runs, which belongs with the startup call
+   that registers it.
 2. **Keep the keystroke, change what it does.** Typing `-[]` at the start of a line opens the same
    popup as `@`. Muscle memory survives; the model does not fork. Afterwards `-[ ]` in a body is
    just text that looks like a checkbox.
@@ -382,7 +414,8 @@ The order that makes that safe:
 1. Entities, lists and their sync land first, with nothing reading them yet. *(Done: migrations
    005 and 006 locally, 0013 on the Worker, and the engine drives both ends.)*
 2. The migration runs once per device and is **idempotent and recorded** — a `schema_versions` row,
-   not a flag in settings — because two devices will both try it.
+   not a flag in settings — because two devices will both try it. *(Done: `TodoCaptureMigration`,
+   version 7, written and tested but not yet in the runner's set. See §8.)*
 3. Desktop and phone switch their readers in the same version, and `TodoParsing` stops feeding
    panels on both at once.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.

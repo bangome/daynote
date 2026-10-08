@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 
@@ -31,16 +32,16 @@ public readonly record struct TodoLine(
 /// to 23:59 when no time is given, matching the design). Items sort unchecked-first, then by due time with
 /// undated items last. <see cref="ToggleLine"/> rewrites a single body line's checkbox in place.
 /// </summary>
-public static partial class TodoParsing
+public static class TodoParsing
 {
-    [GeneratedRegex(@"^\s*-\s?\[( |x|X)?\]\s*(.*)$")]
-    private static partial Regex CheckboxLine();
+    // The grammar itself lives in Daynote.Core.Agenda.TodoBodyScan, because the one-time migration
+    // of docs/TODOS.md §8 has to find exactly the lines this panel has been showing. Two copies
+    // that drifted by one character would leave some of them behind as plain text.
+    private static Regex CheckboxLine() => TodoBodyScan.CheckboxLine();
 
-    [GeneratedRegex(@"\((\d{1,2})/(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?\)\s*$")]
-    private static partial Regex DueSuffix();
+    private static Regex DueSuffix() => TodoBodyScan.DueSuffix();
 
-    [GeneratedRegex(@"^(\s*-\s?\[)( |x|X)?(\].*)$")]
-    private static partial Regex ToggleTarget();
+    private static Regex ToggleTarget() => TodoBodyScan.ToggleTarget();
 
     /// <summary>Parses and sorts todos across the given notes, oldest-relative ordering per the design.</summary>
     public static IReadOnlyList<TodoLine> Parse(IEnumerable<NoteSummary> notes, DateTimeOffset now)

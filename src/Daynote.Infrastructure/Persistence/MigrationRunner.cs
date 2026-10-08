@@ -120,10 +120,17 @@ public sealed class MigrationRunner
         using var transaction = connection.BeginTransaction();
         try
         {
-            using var migrationCommand = connection.CreateCommand();
-            migrationCommand.Transaction = transaction;
-            migrationCommand.CommandText = migration.Sql;
-            migrationCommand.ExecuteNonQuery();
+            if (migration.Sql is { } sql)
+            {
+                using var migrationCommand = connection.CreateCommand();
+                migrationCommand.Transaction = transaction;
+                migrationCommand.CommandText = sql;
+                migrationCommand.ExecuteNonQuery();
+            }
+            else
+            {
+                migration.Apply!(connection, transaction);
+            }
 
             using var versionCommand = connection.CreateCommand();
             versionCommand.Transaction = transaction;
@@ -136,6 +143,14 @@ public sealed class MigrationRunner
         }
         catch (SqliteException)
         {
+            transaction.Rollback();
+            throw new MigrationException(migration.Version);
+        }
+        catch (Exception)
+        {
+            // A code step can fail for reasons SQLite never sees — a bad parse, a derived id that
+            // collides. The row stays unwritten, so the next launch tries again against a database
+            // the rollback has put back exactly as it was.
             transaction.Rollback();
             throw new MigrationException(migration.Version);
         }
