@@ -15,7 +15,7 @@ namespace Daynote.Mobile.Reminders;
 /// The to-do grammar is <see cref="TodoParsing"/>'s, so a line the Lists tab shows with a due date is
 /// exactly a line that can remind. Only unchecked lines whose fire time is still ahead are planned.
 /// </remarks>
-public static class ReminderPlanner
+public static partial class ReminderPlanner
 {
     /// <summary>When a to-do with a date and no time reminds unless the user picked another time: 09:00.</summary>
     public static readonly TimeSpan DefaultDateOnlyTime = new(9, 0, 0);

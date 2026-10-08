@@ -421,6 +421,32 @@ The order that makes that safe:
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 
+   **Built, as `ReminderPlanner.Agenda.cs`, and not called.** `ReminderCoordinator` still reads
+   note bodies; step 3 swaps the call. What it settles:
+
+   - **A lead is subtracted, so one item can hold several reminders.**
+     `AlarmLeadMinutes` is the `VALARM` trigger list, and the id carries the lead so two alarms on
+     one item do not replace each other.
+   - **An empty alarm list is not "no reminder"** for a task: it is one reminder at the item's own
+     time, which is what every dated to-do has done since reminders shipped and what every row the
+     §8 migration writes. An **event** with no alarm is silent — a block of time is not something
+     to be nagged about unless the user asked for it.
+   - **A task's `DTSTART` is a day, not a clock reading.** The migration sets it to midnight of the
+     note's date; taking that literally would remind everyone at 00:00, so a task with no `DUE`
+     reminds at the default time. An event's start is taken literally.
+   - **Reminder ids follow the item, not its text.** Renaming a to-do used to cancel its reminder
+     and schedule a different one, because a line of prose has no identity and the id had to be
+     rebuilt from its text. `Diff` needs no special case for the changeover: every old id is
+     absent from the new set and is cancelled in the first pass after the upgrade.
+   - **The body names the list** when it is not the built-in one, in place of the note title the
+     line-based planner used. An entity's context is its list; the note it happened to be typed
+     into is a jump target, not a label.
+
+   **Not built: a repeating to-do does not remind.** Expanding `RRULE` into occurrences is its own
+   piece of work (§5) and nothing does it yet, so a series is skipped — its overrides, which are
+   ordinary rows with concrete times, are not. This is the one visible gap step 3 opens, because
+   the `@` command can create `매주 월 7시` from the first day it ships.
+
 Until step 3 ships on both, the migration must not run anywhere.
 
 ## 13. Open questions
@@ -431,3 +457,9 @@ Until step 3 ships on both, the migration must not run anywhere.
   per-list `.ics` would cover the user who wants their work tasks visible but not writable.
 - **What the `@` popover offers for list choice** when the user has many. A recent-first short list
   is probably right, but it is the one part of the capture flow that can get slow.
+- **Expanding `RRULE` into occurrences**, which nothing does yet. The day panel and the Timeline
+  can read a series row and draw a repeat mark without it, but reminders cannot: a repeating to-do
+  is silent until there is an expander (§12 step 4). It needs `EXDATE`, overrides and a horizon,
+  and it is the last thing between the entity model and parity with what `-[ ]` could never do.
+- **Whether a dated to-do should be allowed no reminder at all.** Today it cannot: an empty alarm
+  list means the default one. The entity can express "none" and the UI has nowhere to say it.
