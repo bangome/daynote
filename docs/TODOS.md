@@ -194,6 +194,37 @@ leaving the note.
 - **With no list given, it lands in the default list.** Choosing a list is never required to capture
   something.
 
+**The design is [`Daynote B Tasks - Events.dc.html`](design-renewal/Daynote%20B%20Tasks%20-%20Events.dc.html)**,
+imported from the design project. It keeps Desktop B's shell — navy sidebar, big date plus week
+strip, note tabs, orange accent — and changes four places: this popup, the creation confirmation
+below, the sidebar's lists, and the day panel. Its reference moment is Wednesday 7 October 2026 at
+14:30, which half its examples turn on.
+
+**Built, as `AgendaPhraseParser`.** The reading half only; the popup and the editor hook are not.
+What it settles, beyond what the prose above says:
+
+- **Both languages at once.** A Korean UI does not stop someone typing `tomorrow`, and the
+  vocabulary is small enough that recognising both costs nothing. Parsing in the UI language would
+  fail the bilingual user in the one place where failing means the popup silently does not appear.
+- **A small bare hour is the afternoon.** `3시` and `3:30` are 15:00, because nobody schedules a
+  meeting for three in the morning; 7 and later are left as typed. This is a guess, and the
+  readback line is what makes it visible before Enter — which is the whole reason the readback is
+  a sentence rather than a field.
+- **A one-character Korean weekday only counts after `매주`.** On its own it is far too eager:
+  `@일정 잡기` would be Sunday and `@수정 필요` Wednesday.
+- **An alphabetic word has to end where it says it does**, or `@everyone` is a weekly rule.
+- **The longest readable prefix wins and trailing text is ignored.** Requiring the whole remainder
+  to parse makes the popup flicker away on every half-typed word — `내일 오` is not a date and
+  `내일 오전 9시` is. What the *first* token cannot start is no match at all, and that is what keeps
+  `자료는 @지원 님께` an ordinary sentence.
+- **No year is ever typed**, so `@1/3` in October is next January rather than ten months ago, and
+  a weekday means the next one — a day that has already started is not what someone is scheduling.
+- **An event made from a bare time runs an hour**, and from a bare day is all day. The popup reads
+  both lines back side by side, which is what makes Tab cheap.
+
+Not built here: `FREQ=MONTHLY` and anything with a count or an until. The design shows neither, and
+a rule the readback cannot state in one line is a rule the user cannot check.
+
 **Confirmation is the object appearing, not a toast.** The day panel is already on screen; the new
 item sliding into it is the honest signal that something was created. For another date, one
 transient line in the panel — "10/8에 추가됨 · 보기" — is enough. Silent creation with no visible
