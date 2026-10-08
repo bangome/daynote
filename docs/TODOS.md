@@ -520,11 +520,12 @@ Both go when step 3 switches the readers.
   Anything else — monthly, yearly, `BYSETPOS` — is reported unreadable and expands to nothing,
   because a rule half-understood puts occurrences on the wrong days and a to-do that silently
   appears on the wrong day is worse than one that visibly does not appear.
-  The reminder planner now uses it, so §12 step 4's gap is closed.
-  **Still open: the copy.** The phone's §06 draws "반복 할 일은 아직 알림이 오지 않아요" and the
-  @ bar repeats it. Both are now wrong for a rule the expander can read, and still right for one
-  it cannot — monthly, yearly, a positional BYDAY. The honest notice is narrower than the one
-  drawn, and which words it uses is the designer's call.
+  The reminder planner uses it, so §12 step 4's gap is closed, and §06 was redrawn to match: the
+  unsupported-alert notice now appears only for a rule the expander refuses, and names it —
+  "이 반복(매월 25일)은 아직 알림을 보내지 않아요. 매일·매주 반복은 알림이 옵니다." Naming a rule
+  and scheduling one are separate jobs with different standards, so `AgendaRecurrence.Summarize`
+  will name what `Expand` refuses: putting an occurrence on the wrong day is a broken to-do, while
+  calling a rule by a slightly wrong name is cosmetic and saying nothing at all is worse.
 - ~~**Whether a dated to-do should be allowed no reminder at all.**~~ Settled by the phone's §06.
   A dated item is *created* carrying one alert, which the user can remove, so the behaviour every
   dated to-do has had since reminders shipped survives as a visible default and an empty list now

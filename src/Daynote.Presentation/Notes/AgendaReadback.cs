@@ -125,9 +125,11 @@ public static class AgendaReadback
                 At(phrase.At.Value.AddHours(12), AppStrings.AgendaReadbackEveningHint));
         }
 
-        // Not built: expanding RRULE into occurrences (docs/TODOS.md §12 step 4, §13). Saying so
-        // here costs one line and is cheaper than a user discovering it by missing something.
-        return phrase.Rrule is not null ? AppStrings.AgendaReadbackRepeatNoAlert : string.Empty;
+        // Only for a rule the expander cannot read. Daily and weekly ones — intervals, named
+        // days, a count, an end date — alert like any other to-do, and a blanket "repeats do not
+        // alert" would be a lie the user could disprove in a minute. The notice names the rule so
+        // the sentence is about something they can see.
+        return AgendaRuleText.AlertsUnsupportedNotice(phrase.Rrule);
     }
 
     /// <summary>"매주 월요일" / "Every Mon", or the daily form.</summary>

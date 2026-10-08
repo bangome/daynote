@@ -739,7 +739,6 @@ internal static class KoreanStrings
         ["AgendaReadbackTomorrowPrefix"] = "내일 {0}",
         ["AgendaReadbackRolledNote"] = "{0}시가 지나 내일로 읽었어요. 오늘 밤이면 ‘{1}’로 입력하세요.",
         ["AgendaReadbackRolledNoteShort"] = "{0}시가 지나 내일로 읽었어요. 오늘 밤이면 ‘{1}’.",
-        ["AgendaReadbackRepeatNoAlert"] = "반복 할 일은 아직 알림이 오지 않아요.",
         ["AgendaReadbackDateLong"] = "M월 d일 (ddd)",
         ["AgendaReadbackDateLongPrefixed"] = "M월 d일 (ddd)",
         ["AgendaReadbackDateShort"] = "M'/'d (ddd)",
@@ -757,6 +756,30 @@ internal static class KoreanStrings
         ["AgendaCaptureTask"] = "할 일",
         ["AgendaCaptureEvent"] = "일정",
         ["AgendaCaptureKeyHints"] = "Enter 만들기 · Tab 종류 전환 · Esc 취소",
+
+        // What a recurrence rule is called (design §06 6i/6j). Short labels for a row or a
+        // card; the @ popup's readback is a sentence and lives above. These name rules this
+        // build cannot schedule as well as ones it can, because the unsupported-alert notice
+        // puts the name in its sentence.
+        ["AgendaRuleDaily"] = "매일",
+        ["AgendaRuleEveryNDays"] = "{0}일마다",
+        ["AgendaRuleWeekly"] = "매주",
+        ["AgendaRuleWeeklyOn"] = "매주 {0}",
+        ["AgendaRuleEveryNWeeks"] = "{0}주마다",
+        ["AgendaRuleEveryNWeeksOn"] = "{0}주마다 {1}",
+        ["AgendaRuleMonthly"] = "매월",
+        ["AgendaRuleMonthlyOnDay"] = "매월 {0}일",
+        ["AgendaRuleMonthlyOnNthWeekday"] = "매월 {0} {1}요일",
+        ["AgendaRuleYearly"] = "매년",
+        ["AgendaRuleRepeats"] = "반복",
+        ["AgendaRuleDayJoin"] = "·",
+        ["AgendaRuleOrdinalLast"] = "마지막",
+        ["AgendaRuleOrdinal1"] = "첫째 주",
+        ["AgendaRuleOrdinal2"] = "둘째 주",
+        ["AgendaRuleOrdinal3"] = "셋째 주",
+        ["AgendaRuleOrdinal4"] = "넷째 주",
+        ["AgendaRuleOrdinalN"] = "{0}째 주",
+        ["AgendaRuleNoAlerts"] = "이 반복({0})은 아직 알림을 보내지 않아요. 매일·매주 반복은 알림이 옵니다.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",

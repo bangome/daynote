@@ -749,7 +749,6 @@ internal static class EnglishStrings
         ["AgendaReadbackTomorrowPrefix"] = "Tomorrow, {0}",
         ["AgendaReadbackRolledNote"] = "{0} has passed, so this reads as tomorrow. Type ‘{1}’ for tonight.",
         ["AgendaReadbackRolledNoteShort"] = "{0} has passed, so this reads as tomorrow. Type ‘{1}’.",
-        ["AgendaReadbackRepeatNoAlert"] = "Repeating to-dos don’t send alerts yet.",
         ["AgendaReadbackDateLong"] = "ddd, MMM d",
         ["AgendaReadbackDateLongPrefixed"] = "ddd MMM d",
         ["AgendaReadbackDateShort"] = "MMM d",
@@ -767,6 +766,30 @@ internal static class EnglishStrings
         ["AgendaCaptureTask"] = "To-do",
         ["AgendaCaptureEvent"] = "Event",
         ["AgendaCaptureKeyHints"] = "Enter Create · Tab Switch type · Esc Cancel",
+
+        // What a recurrence rule is called (design §06 6i/6j). Short labels for a row or a
+        // card; the @ popup's readback is a sentence and lives above. These name rules this
+        // build cannot schedule as well as ones it can, because the unsupported-alert notice
+        // puts the name in its sentence.
+        ["AgendaRuleDaily"] = "Daily",
+        ["AgendaRuleEveryNDays"] = "Every {0} days",
+        ["AgendaRuleWeekly"] = "Weekly",
+        ["AgendaRuleWeeklyOn"] = "Weekly on {0}",
+        ["AgendaRuleEveryNWeeks"] = "Every {0} weeks",
+        ["AgendaRuleEveryNWeeksOn"] = "Every {0} weeks on {1}",
+        ["AgendaRuleMonthly"] = "Monthly",
+        ["AgendaRuleMonthlyOnDay"] = "Monthly on the {0}th",
+        ["AgendaRuleMonthlyOnNthWeekday"] = "Monthly on the {0} {1}",
+        ["AgendaRuleYearly"] = "Yearly",
+        ["AgendaRuleRepeats"] = "Repeats",
+        ["AgendaRuleDayJoin"] = ", ",
+        ["AgendaRuleOrdinalLast"] = "last",
+        ["AgendaRuleOrdinal1"] = "first",
+        ["AgendaRuleOrdinal2"] = "second",
+        ["AgendaRuleOrdinal3"] = "third",
+        ["AgendaRuleOrdinal4"] = "fourth",
+        ["AgendaRuleOrdinalN"] = "{0}th",
+        ["AgendaRuleNoAlerts"] = "Alerts aren’t available for this repeat ({0}) yet. Daily and weekly repeats send alerts.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",

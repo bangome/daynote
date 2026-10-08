@@ -22,6 +22,35 @@ public readonly record struct AgendaOccurrence(
     public bool IsOverride => Item.IsOverride;
 }
 
+/// <summary>How often a rule repeats, as far as naming it is concerned.</summary>
+public enum RecurrenceFrequency
+{
+    /// <summary>Not an RRULE this build recognises at all, so there is nothing to call it.</summary>
+    Unknown,
+    Daily,
+    Weekly,
+    Monthly,
+    Yearly,
+}
+
+/// <summary>
+/// A rule reduced to what it takes to say its name out loud.
+/// </summary>
+/// <param name="Days">The weekdays it names, if any.</param>
+/// <param name="MonthDay">The day of the month, for a monthly rule that names one.</param>
+/// <param name="Ordinal">Which occurrence of the weekday — 2 for "the second Monday", -1 for the last.</param>
+/// <param name="CanExpand">
+/// Whether <see cref="AgendaRecurrence.Expand"/> can turn this one into dates. False is the case
+/// the phone's alert notice exists for.
+/// </param>
+public readonly record struct RecurrenceSummary(
+    RecurrenceFrequency Frequency,
+    int Interval,
+    IReadOnlyList<DayOfWeek> Days,
+    int? MonthDay,
+    int? Ordinal,
+    bool CanExpand);
+
 /// <summary>
 /// Turns a rule into dates (docs/TODOS.md §5).
 /// </summary>
@@ -45,6 +74,101 @@ public static class AgendaRecurrence
 
     /// <summary>True when this build can turn the rule into dates.</summary>
     public static bool CanExpand(string? rrule) => Rule.TryParse(rrule, out _);
+
+    /// <summary>
+    /// Enough of a rule to name it, whether or not this build can expand it.
+    /// </summary>
+    /// <remarks>
+    /// Naming and scheduling are deliberately different jobs with different standards. Putting an
+    /// occurrence on the wrong day is a broken to-do, so <see cref="Expand"/> refuses anything it
+    /// is not sure of; calling a rule by the wrong name is a cosmetic error, and saying nothing at
+    /// all is worse than saying "매월 25일" about a rule that turns out to be subtler. The phone's
+    /// unsupported-alert notice puts the name in the sentence precisely so the user can see what
+    /// it is talking about.
+    /// </remarks>
+    public static RecurrenceSummary? Summarize(string? rrule)
+    {
+        if (string.IsNullOrWhiteSpace(rrule))
+        {
+            return null;
+        }
+
+        var frequency = RecurrenceFrequency.Unknown;
+        int interval = 1;
+        List<DayOfWeek> days = [];
+        int? monthDay = null;
+        int? ordinal = null;
+
+        foreach (string part in rrule.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] pair = part.Split('=', 2);
+            if (pair.Length != 2)
+            {
+                continue;
+            }
+
+            string value = pair[1].Trim();
+            switch (pair[0].Trim().ToUpperInvariant())
+            {
+                case "FREQ":
+                    frequency = value.ToUpperInvariant() switch
+                    {
+                        "DAILY" => RecurrenceFrequency.Daily,
+                        "WEEKLY" => RecurrenceFrequency.Weekly,
+                        "MONTHLY" => RecurrenceFrequency.Monthly,
+                        "YEARLY" => RecurrenceFrequency.Yearly,
+                        _ => RecurrenceFrequency.Unknown,
+                    };
+                    break;
+
+                case "INTERVAL":
+                    if (int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed > 0)
+                    {
+                        interval = parsed;
+                    }
+
+                    break;
+
+                case "BYMONTHDAY":
+                    if (int.TryParse(value.Split(',')[0], CultureInfo.InvariantCulture, out int day))
+                    {
+                        monthDay = day;
+                    }
+
+                    break;
+
+                case "BYDAY":
+                    foreach (string entry in value.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        string token = entry.Trim();
+                        // "2MO" — the second Monday — is a position this cannot schedule but can
+                        // perfectly well name.
+                        int cut = 0;
+                        while (cut < token.Length && (char.IsAsciiDigit(token[cut]) || token[cut] is '-' or '+'))
+                        {
+                            cut += 1;
+                        }
+
+                        if (cut > 0 && int.TryParse(token[..cut], CultureInfo.InvariantCulture, out int position))
+                        {
+                            ordinal = position;
+                        }
+
+                        if (Rule.ParseDay(token[cut..]) is { } weekday)
+                        {
+                            days.Add(weekday);
+                        }
+                    }
+
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return new RecurrenceSummary(frequency, interval, days, monthDay, ordinal, CanExpand(rrule));
+    }
 
     /// <summary>
     /// Every occurrence of <paramref name="series"/> that falls between <paramref name="from"/> and
@@ -320,7 +444,7 @@ public static class AgendaRecurrence
         /// <summary>Days from Monday, because ISO weeks start there and so does iCalendar's WKST default.</summary>
         private static int DayOffset(DayOfWeek day) => ((int)day + 6) % 7;
 
-        private static DayOfWeek? ParseDay(string value) => value.ToUpperInvariant() switch
+        internal static DayOfWeek? ParseDay(string value) => value.ToUpperInvariant() switch
         {
             "MO" => DayOfWeek.Monday,
             "TU" => DayOfWeek.Tuesday,

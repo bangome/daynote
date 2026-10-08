@@ -849,8 +849,6 @@ public static class AppStrings
     public static string AgendaReadbackRolledNote => LocalizationService.Instance[nameof(AgendaReadbackRolledNote)];
     /// <summary>The same, for the phone bar.</summary>
     public static string AgendaReadbackRolledNoteShort => LocalizationService.Instance[nameof(AgendaReadbackRolledNoteShort)];
-    /// <summary>Repeating to-dos have no reminder yet (docs/TODOS.md §13).</summary>
-    public static string AgendaReadbackRepeatNoAlert => LocalizationService.Instance[nameof(AgendaReadbackRepeatNoAlert)];
     /// <summary>A .NET date pattern, not prose: neither the order of month and day nor the punctuation is universal.</summary>
     public static string AgendaReadbackDateLong => LocalizationService.Instance[nameof(AgendaReadbackDateLong)];
     /// <summary>The same, after "Tomorrow," — English drops the comma it would otherwise carry.</summary>
@@ -878,6 +876,36 @@ public static class AppStrings
     public static string AgendaCaptureEvent => LocalizationService.Instance[nameof(AgendaCaptureEvent)];
     /// <summary>The footer under the two readback lines. Names real keys.</summary>
     public static string AgendaCaptureKeyHints => LocalizationService.Instance[nameof(AgendaCaptureKeyHints)];
+
+    public static string AgendaRuleDaily => LocalizationService.Instance[nameof(AgendaRuleDaily)];
+    /// <summary>{0} = the interval in days.</summary>
+    public static string AgendaRuleEveryNDays => LocalizationService.Instance[nameof(AgendaRuleEveryNDays)];
+    public static string AgendaRuleWeekly => LocalizationService.Instance[nameof(AgendaRuleWeekly)];
+    /// <summary>{0} = the weekdays, already joined.</summary>
+    public static string AgendaRuleWeeklyOn => LocalizationService.Instance[nameof(AgendaRuleWeeklyOn)];
+    /// <summary>{0} = the interval in weeks.</summary>
+    public static string AgendaRuleEveryNWeeks => LocalizationService.Instance[nameof(AgendaRuleEveryNWeeks)];
+    /// <summary>{0} = the interval, {1} = the weekdays.</summary>
+    public static string AgendaRuleEveryNWeeksOn => LocalizationService.Instance[nameof(AgendaRuleEveryNWeeksOn)];
+    public static string AgendaRuleMonthly => LocalizationService.Instance[nameof(AgendaRuleMonthly)];
+    /// <summary>{0} = the day of the month.</summary>
+    public static string AgendaRuleMonthlyOnDay => LocalizationService.Instance[nameof(AgendaRuleMonthlyOnDay)];
+    /// <summary>{0} = which one ("둘째"), {1} = the weekday.</summary>
+    public static string AgendaRuleMonthlyOnNthWeekday => LocalizationService.Instance[nameof(AgendaRuleMonthlyOnNthWeekday)];
+    public static string AgendaRuleYearly => LocalizationService.Instance[nameof(AgendaRuleYearly)];
+    /// <summary>An RRULE with no frequency this build knows. A vague true word beats a precise false one.</summary>
+    public static string AgendaRuleRepeats => LocalizationService.Instance[nameof(AgendaRuleRepeats)];
+    /// <summary>Between weekdays in a list.</summary>
+    public static string AgendaRuleDayJoin => LocalizationService.Instance[nameof(AgendaRuleDayJoin)];
+    public static string AgendaRuleOrdinalLast => LocalizationService.Instance[nameof(AgendaRuleOrdinalLast)];
+    public static string AgendaRuleOrdinal1 => LocalizationService.Instance[nameof(AgendaRuleOrdinal1)];
+    public static string AgendaRuleOrdinal2 => LocalizationService.Instance[nameof(AgendaRuleOrdinal2)];
+    public static string AgendaRuleOrdinal3 => LocalizationService.Instance[nameof(AgendaRuleOrdinal3)];
+    public static string AgendaRuleOrdinal4 => LocalizationService.Instance[nameof(AgendaRuleOrdinal4)];
+    /// <summary>{0} = the position, past the fourth.</summary>
+    public static string AgendaRuleOrdinalN => LocalizationService.Instance[nameof(AgendaRuleOrdinalN)];
+    /// <summary>{0} = the rule's name. Only for a rule the expander cannot read; daily and weekly ones alert normally.</summary>
+    public static string AgendaRuleNoAlerts => LocalizationService.Instance[nameof(AgendaRuleNoAlerts)];
 
     /// <summary>{0} = the date and time. The 할 일 line.</summary>
     /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>

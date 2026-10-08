@@ -68,16 +68,12 @@ public sealed class AgendaReadbackTests
     }
 
     [TestMethod]
-    public void A_repeat_says_that_it_will_not_remind_yet()
+    public void A_repeat_the_app_can_schedule_says_nothing_about_alerts()
     {
-        // The phone mock's ③. Not a polish item: the phone is where reminders live, and a user who
-        // only finds out by missing one has been let down by the app, not by the feature.
-        Assert.AreEqual(
-            AppStrings.AgendaReadbackRepeatNoAlert,
-            Describe("매주 월 7시", AppLanguage.Korean).Note);
-        Assert.AreEqual(
-            "Repeating to-dos don’t send alerts yet.",
-            Describe("every mon 7am", AppLanguage.English).Note);
+        // It used to say "repeating to-dos don't send alerts yet" about every rule. Daily and
+        // weekly ones do now, and a blanket warning is a lie the user could disprove in a minute.
+        Assert.AreEqual(string.Empty, Describe("매주 월 7시", AppLanguage.Korean).Note);
+        Assert.AreEqual(string.Empty, Describe("every mon 7am", AppLanguage.English).Note);
     }
 
     [TestMethod]
