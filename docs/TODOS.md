@@ -449,6 +449,24 @@ The order that makes that safe:
    version 7, written and tested but not yet in the runner's set. See §8.)*
 3. Desktop and phone switch their readers in the same version, and `TodoParsing` stops feeding
    panels on both at once.
+
+   **In progress.** The order below keeps `main` buildable at every step; nothing user-visible
+   changes until the last two, which go together.
+
+   - [x] `AgendaDay` — which rows a day has and in what order, shared by both panels. The two
+         shells lay them out differently (§99 calls that intended) but *which* rows there are is
+         one decision: two implementations of "what is due today" is how the same to-do ends up on
+         one screen and not the other.
+   - [ ] Desktop day panel and the 할 일 tab read it.
+   - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
+   - [ ] Ticking a row writes the entity's status — and, on an occurrence, an override against its
+         `RECURRENCE-ID` rather than the series, or "I did it this Monday" becomes "I did it every
+         Monday". Today both shells rewrite the note body instead.
+   - [ ] Phone Day screen (phone §04) and the `@` bar (phone §01).
+   - [ ] `ReminderCoordinator` reads entities rather than note bodies.
+   - [ ] Register `TodoCaptureMigration`, with the automatic backup §8 requires in front of it.
+   - [ ] `TodoParsing` stops feeding panels; the desktop's empty-state copy and the phone
+         toolbar's `-[]` button go with it (§99).
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 
