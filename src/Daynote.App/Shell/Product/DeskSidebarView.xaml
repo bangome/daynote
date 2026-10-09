@@ -113,6 +113,63 @@
                                    Text="{Binding Todo.OpenCount}" />
                     </Grid>
                 </Button>
+                <!--
+                  The lists, under the to-do entry (§04). A list is a filter rather than a
+                  destination, so selecting one narrows the cross-date view and leaves the
+                  navigation where it is; the count beside each is the same number the phone's
+                  chips show.
+                -->
+                <ItemsControl ItemsSource="{Binding Todo.Lists}" Margin="14,0,0,1">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pvm:AgendaListRowViewModel}">
+                            <Button Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
+                                    product:DeskVisual.IsActive="{Binding IsSelected}"
+                                    Command="{Binding SelectCommand}">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{loc:Tr AgendaListRename}" Command="{Binding RenameCommand}" />
+                                        <!-- No delete on the built-in list: §04 leaves the item out
+                                             rather than greying it, because there is nowhere for
+                                             its contents to go and the question should not be put. -->
+                                        <MenuItem Header="{loc:Tr AgendaListDelete}" Command="{Binding DeleteCommand}"
+                                                  Visibility="{Binding CanDelete, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" Text="{Binding Name}"
+                                               Visibility="{Binding IsRenaming, Converter={StaticResource Daynote.Convert.InverseBoolToVisibility}}" />
+                                    <!-- In place, the way a note's title renames: the box appears
+                                         where the name is, so nothing has to say what is being
+                                         changed. -->
+                                    <TextBox Grid.Column="0" VerticalAlignment="Center"
+                                             Style="{DynamicResource Daynote.Desk.TextBox.TagEntry}"
+                                             Text="{Binding DraftName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Visibility="{Binding IsRenaming, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding CommitRenameCommand}" />
+                                            <KeyBinding Key="Esc" Command="{Binding CancelRenameCommand}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                    <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                               Style="{DynamicResource Daynote.Desk.Text.NavCount}"
+                                               Text="{Binding CountText}" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="14,0,0,1"
+                        Command="{Binding NewAgendaListCommand}">
+                    <TextBlock VerticalAlignment="Center" Style="{DynamicResource Daynote.Desk.Text.Faint}"
+                               Text="{loc:Tr AgendaListNew}" />
+                </Button>
+
                 <Button x:Name="TutTabFavorites" Style="{DynamicResource Daynote.Desk.Button.NavItem}" Margin="0,0,0,1"
                         product:DeskVisual.IsActive="{Binding IsNavFavorites}"
                         Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">

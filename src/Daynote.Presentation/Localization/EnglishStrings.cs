@@ -799,6 +799,15 @@ internal static class EnglishStrings
         ["DeskDayTodoRemainingFormat"] = "{0} left",
         ["DeskDayTodoDoneFormat"] = "Done {0}",
 
+        // The built-in to-do list stores no name, so that it reads in whichever language
+        // the app is in. A rename writes a real one and it stops being translated.
+        ["AgendaListDefaultName"] = "My tasks",
+
+        ["AgendaListNew"] = "+ New list",
+        ["AgendaListRename"] = "Rename",
+        ["AgendaListDelete"] = "Delete list",
+        ["AgendaListNewName"] = "New list",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

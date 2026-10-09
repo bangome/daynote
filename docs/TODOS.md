@@ -478,7 +478,17 @@ The order that makes that safe:
          copying the .db alone would miss exactly the work somebody would be recovering. Skipped
          when there are no notes — a copy of nothing is a file to wonder about later — and never
          overwritten, because the useful copy is the first one.
-   - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
+   - [x] Sidebar lists (§04). `AgendaListCounts` counts them from the outstanding view rather
+         than the raw rows, because phone §03 says a chip's number is the same number the sidebar
+         shows and the only way to be sure is to count the same thing. A list is a filter and not
+         a destination, so selecting one narrows the cross-date view and selecting it again takes
+         the filter off — which is the only affordance the phone's chip row will have. The
+         heading keeps counting everything owed: narrowing the view does not make seventeen
+         things into seven. Renaming happens in place, the way a note's title does; deleting is
+         not confirmed, because the to-dos move to the built-in list rather than going with it.
+   - [ ] The phone's Lists tab (phone §03) — the same rows as chips.
+   - [ ] Colour, and connecting a list to Reminders. Both are in §04's menu and neither exists:
+         the schema has no colour column and the integration is §10.
    - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).
    - [x] The copy and the buttons stopped pointing at a syntax the app no longer reads (§99).
          The empty state says to type `@`; the phone toolbar's `-[]` button is gone, because the

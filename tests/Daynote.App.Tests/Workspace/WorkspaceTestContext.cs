@@ -190,13 +190,18 @@ internal sealed class WorkspaceTestContext : IAsyncDisposable
     /// view has none.
     /// </summary>
     internal async Task<Guid> StoreTodoAsync(
-        LocalDate day, string title, TimeOnly? at = null, bool done = false, Guid? note = null)
+        LocalDate day,
+        string title,
+        TimeOnly? at = null,
+        bool done = false,
+        Guid? note = null,
+        Guid? list = null)
     {
         AgendaRepository ??= new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(_database);
         Guid id = Guid.NewGuid();
         await AgendaRepository.SaveAsync(new Daynote.Core.Agenda.AgendaItem(
             id,
-            Daynote.Core.Agenda.AgendaList.DefaultId,
+            list ?? Daynote.Core.Agenda.AgendaList.DefaultId,
             Daynote.Core.Agenda.AgendaKind.Task,
             title,
             string.Empty,

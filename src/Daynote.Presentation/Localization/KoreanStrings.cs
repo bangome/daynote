@@ -789,6 +789,15 @@ internal static class KoreanStrings
         ["DeskDayTodoRemainingFormat"] = "남은 {0}",
         ["DeskDayTodoDoneFormat"] = "완료 {0}",
 
+        // The built-in to-do list stores no name, so that it reads in whichever language
+        // the app is in. A rename writes a real one and it stops being translated.
+        ["AgendaListDefaultName"] = "내 할 일",
+
+        ["AgendaListNew"] = "+ 새 리스트",
+        ["AgendaListRename"] = "이름 변경",
+        ["AgendaListDelete"] = "리스트 삭제",
+        ["AgendaListNewName"] = "새 리스트",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

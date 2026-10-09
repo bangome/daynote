@@ -57,6 +57,23 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
     /// <summary>List id to display name, for a row's label and for the sidebar's counts.</summary>
     public IReadOnlyDictionary<Guid, string> ListNames => listNames;
 
+    /// <summary>
+    /// The lists, with how much is owed in each. The sidebar's rows and the phone's chips, from
+    /// one count so the two screens cannot disagree (phone §03).
+    /// </summary>
+    public ObservableCollection<AgendaListRowViewModel> Lists { get; } = [];
+
+    /// <summary>
+    /// Which list the cross-date view is narrowed to, or null for all of them.
+    /// </summary>
+    /// <remarks>
+    /// A list is a filter, not a destination (§04, phone §03). Selecting one narrows what is
+    /// already on screen rather than navigating anywhere, which is why the same list can be
+    /// selected from either shell's very different furniture.
+    /// </remarks>
+    [ObservableProperty]
+    private Guid? _selectedListId;
+
     [ObservableProperty]
     private int _openCount;
 
@@ -92,25 +109,100 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
 
         AgendaOutstandingView owed = AgendaOutstanding.For(DateOnly.FromDateTime(now.DateTime), All);
 
+        // The lists first, because selecting one that has since been deleted has to fall back to
+        // "all" before the rows below are filtered by it.
+        Lists.Clear();
+        foreach (AgendaListRow list in AgendaListCounts.For(lists, owed))
+        {
+            Lists.Add(new AgendaListRowViewModel(
+                list,
+                list.List.Id == SelectedListId,
+                SelectListAsync,
+                RenameListAsync,
+                async row => await DeleteListAsync(row.Id).ConfigureAwait(true)));
+        }
+
+        if (SelectedListId is { } selected && lists.All(list => list.Id != selected))
+        {
+            SelectedListId = null;
+        }
+
+        AgendaOutstandingView shown = SelectedListId is { } only ? Only(owed, only) : owed;
+
         TodayItems.Clear();
         Items.Clear();
-        foreach (AgendaDayRow row in owed.Today)
+        foreach (AgendaDayRow row in shown.Today)
         {
             TodayItems.Add(Row(row, now.DateTime));
         }
 
         // Later and then undated, in that order: the design puts "날짜 없음" last because a to-do
         // with no day is the one you are least likely to be looking for.
-        foreach (AgendaDayRow row in owed.Later.Concat(owed.Undated))
+        foreach (AgendaDayRow row in shown.Later.Concat(shown.Undated))
         {
             Items.Add(Row(row, now.DateTime));
         }
 
-        OpenCount = owed.Count;
+        // The heading counts everything owed, not what the filter leaves: "할 일 17" is how much
+        // there is, and narrowing the view does not make seventeen things into seven.
+        OpenCount = AgendaListCounts.Total(owed);
         HasToday = TodayItems.Count > 0;
         IsEmpty = TodayItems.Count == 0 && Items.Count == 0;
         Refreshed?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Narrows the view to one list, or widens it again when given the selected one.</summary>
+    /// <remarks>
+    /// Tapping the list you are already in is how a filter is taken off everywhere else, and
+    /// there is no other affordance for it on the phone's chip row.
+    /// </remarks>
+    public async Task SelectListAsync(Guid? id)
+    {
+        SelectedListId = id == SelectedListId ? null : id;
+        await RefreshAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Makes a list and selects it, so the next thing filed goes where it was just made.</summary>
+    public async Task<AgendaList> CreateListAsync(string name, CancellationToken cancellationToken = default)
+    {
+        AgendaList made = await agenda
+            .CreateListAsync(Guid.NewGuid(), name, cancellationToken)
+            .ConfigureAwait(true);
+
+        SelectedListId = made.Id;
+        await RefreshAsync(cancellationToken).ConfigureAwait(true);
+        return made;
+    }
+
+    public async Task RenameListAsync(Guid id, string name, CancellationToken cancellationToken = default)
+    {
+        await agenda.RenameListAsync(id, name, cancellationToken).ConfigureAwait(true);
+        await RefreshAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Deletes a list. Its to-dos move to the built-in one rather than going with it — a
+    /// container is not a reason to lose a task (§3).
+    /// </summary>
+    public async Task<int> DeleteListAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        int moved = await agenda.DeleteListAsync(id, cancellationToken).ConfigureAwait(true) ?? 0;
+        if (SelectedListId == id)
+        {
+            SelectedListId = null;
+        }
+
+        await RefreshAsync(cancellationToken).ConfigureAwait(true);
+        return moved;
+    }
+
+    /// <summary>Only the rows in one list, in the three bands they were already sorted into.</summary>
+    private static AgendaOutstandingView Only(AgendaOutstandingView owed, Guid list) => new(
+        [.. owed.Today.Where(row => row.Item.ListId == list)],
+        [.. owed.Later.Where(row => row.Item.ListId == list)],
+        [.. owed.Undated.Where(row => row.Item.ListId == list)]);
+
+    private Task RenameListAsync(Guid id, string name) => RenameListAsync(id, name, CancellationToken.None);
 
     /// <summary>Builds one row, in whichever scope the caller is showing.</summary>
     public TodoItemViewModel Row(AgendaDayRow row, DateTime now, TodoRowScope scope = TodoRowScope.AllDates) =>

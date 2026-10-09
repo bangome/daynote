@@ -876,6 +876,14 @@ public static class AppStrings
     /// <summary>The footer under the two readback lines. Names real keys.</summary>
     public static string AgendaCaptureKeyHints => LocalizationService.Instance[nameof(AgendaCaptureKeyHints)];
 
+    /// <summary>What the built-in list is called on screen; it stores no name of its own.</summary>
+    public static string AgendaListDefaultName => LocalizationService.Instance[nameof(AgendaListDefaultName)];
+
+    public static string AgendaListNew => LocalizationService.Instance[nameof(AgendaListNew)];
+    public static string AgendaListRename => LocalizationService.Instance[nameof(AgendaListRename)];
+    public static string AgendaListDelete => LocalizationService.Instance[nameof(AgendaListDelete)];
+    public static string AgendaListNewName => LocalizationService.Instance[nameof(AgendaListNewName)];
+
     public static string AgendaRuleDaily => LocalizationService.Instance[nameof(AgendaRuleDaily)];
     /// <summary>{0} = the interval in days.</summary>
     public static string AgendaRuleEveryNDays => LocalizationService.Instance[nameof(AgendaRuleEveryNDays)];

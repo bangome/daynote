@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.Core.Agenda;
@@ -33,6 +34,18 @@ public sealed partial class ProductShellViewModel
 
     [ObservableProperty]
     private bool _hasDayDone;
+
+    /// <summary>
+    /// Makes a list and selects it, so the next thing filed lands where it was just made.
+    /// </summary>
+    /// <remarks>
+    /// Named rather than prompted for. The row renames in place, so a list starts with a
+    /// placeholder the user types over — which is one step fewer than a dialog that asks for a
+    /// name before there is anything to put in it.
+    /// </remarks>
+    [RelayCommand]
+    private async Task NewAgendaList() =>
+        await Todo.CreateListAsync(AppStrings.AgendaListNewName).ConfigureAwait(true);
 
     private void RefreshDayTodos()
     {
