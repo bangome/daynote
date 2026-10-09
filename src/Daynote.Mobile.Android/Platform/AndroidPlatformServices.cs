@@ -38,8 +38,13 @@ public static class AndroidPlatformServices
             TopLevel: () => TopLevel.GetTopLevel((currentActivity() as AvaloniaMainActivity)?.Content as Control),
             OpenFile: (name, bytes) => OpenFileAsync(context, currentActivity, name, bytes),
             Reminders: new AndroidReminderScheduler(context, currentActivity),
-            AgendaChanged: () => Widgets.DaynoteWidgets.RequestUpdate(context));
+            AgendaChanged: () => Widgets.DaynoteWidgets.RequestUpdate(context),
+            Motion: new AndroidMotionPlatform(context, currentActivity),
+            Device: DeviceShape);
     }
+
+    /// <summary>The one hinge-and-keyboard source, which the activity attaches to its window.</summary>
+    internal static AndroidDeviceShape DeviceShape { get; } = new();
 
     /// <summary>
     /// The app's private files directory: <c>/data/data/cc.arachat.daynote/files/Daynote</c>.

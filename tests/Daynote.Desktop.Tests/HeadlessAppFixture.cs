@@ -53,6 +53,10 @@ internal static class HeadlessAppFixture
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
                 .SetupWithoutStarting();
 
+            // Headless draws no frames between layout passes; overlays and ticks land on their end
+            // state at once, as the Mac's would once they have played. The Mac's values are read.
+            Daynote.Motion.MotionEnvironment.Instant = true;
+            Daynote.Motion.MotionEnvironment.Flavor = Daynote.Motion.MotionFlavor.Desktop;
             _started = true;
         }
     }

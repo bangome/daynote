@@ -121,8 +121,18 @@ public partial class App : Application
         // Quit tears the resident lifecycle down and ends the lifetime; the status item goes with it.
         desktop.Exit += (_, _) => _menuBar?.Dispose();
 
-        // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile.
-        window.Activated += (_, _) => shell.NotifyActivated();
+        // The desktops read the motion spec's Mac/Win values, with reduced motion from the OS.
+        var motion = new Platform.DesktopMotionPlatform();
+        Daynote.Motion.MotionEnvironment.Flavor = Daynote.Motion.MotionFlavor.Desktop;
+        Daynote.Motion.MotionEnvironment.Platform = motion;
+
+        // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile,
+        // and a reduced-motion setting changed in System Settings meanwhile.
+        window.Activated += (_, _) =>
+        {
+            shell.NotifyActivated();
+            motion.Recheck();
+        };
 
         window.Show();
         _ = InitializeAsync(shell);

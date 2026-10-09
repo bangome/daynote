@@ -4,6 +4,7 @@
         xmlns:notes="using:Daynote.App.Notes"
         xmlns:pvm="using:Daynote.App.Shell.Product"
         xmlns:views="using:Daynote.Desktop.Views"
+        xmlns:motion="using:Daynote.Motion"
         xmlns:account="using:Daynote.App.Account"
         x:Class="Daynote.Desktop.Views.MainWindow"
         x:DataType="vm:DesktopShellViewModel"
@@ -139,7 +140,7 @@
               <TextBlock Text="{Binding Strings.WeekdayFri}" />
               <TextBlock Text="{Binding Strings.WeekdaySat}" />
             </UniformGrid>
-            <ItemsControl ItemsSource="{Binding Calendar.Cells}">
+            <ItemsControl x:Name="MiniCalendar" ItemsSource="{Binding Calendar.Cells}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
@@ -327,7 +328,7 @@
           </Border>
 
           <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->
-          <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" MaxWidth="760" IsVisible="{Binding !IsDayEmpty}">
+          <Grid x:Name="NoteColumn" Grid.Row="1" RowDefinitions="Auto,*,Auto" MaxWidth="760" IsVisible="{Binding !IsDayEmpty}">
             <StackPanel Grid.Row="0" Margin="48,35,48,0">
               <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
                 <!-- The heading is a label until it is clicked (or a tab's Rename is picked); then the
@@ -488,15 +489,16 @@
             <StackPanel IsVisible="{Binding TabIsTodo}">
               <StackPanel.Resources>
                 <DataTemplate x:Key="TodoListRow" x:DataType="pvm:TodoItemViewModel">
-                  <Border BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+                  <Border Classes="todorow" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
                     <Button Classes="row" CornerRadius="0" Padding="18,14" Command="{Binding JumpCommand}">
                       <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Button Grid.Column="0" Classes="check large" Classes.checked="{Binding Checked}" Margin="0,0,14,0"
-                                Command="{Binding ToggleCommand}">
-                          <Path Classes="icon" StrokeThickness="1.8" Data="{StaticResource Daynote.Desk.Geo.Check}" />
-                        </Button>
+                        <views:DeskTodoCheck Grid.Column="0" Classes="large" Margin="0,0,14,0"
+                                             IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" />
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                          <TextBlock FontSize="14" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                          <Panel HorizontalAlignment="Left">
+                            <TextBlock FontSize="14" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                            <Border Classes="strike" Margin="0,9.5,0,0" />
+                          </Panel>
                           <TextBlock Classes="faint" FontSize="12" Margin="0,2,0,0" Text="{Binding NoteLabel}" />
                         </StackPanel>
                         <Border Grid.Column="2" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="6" Padding="8,3"
@@ -640,27 +642,32 @@
                 BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0"
                 IsVisible="{Binding !RightCollapsed}" DragDrop.AllowDrop="True">
           <ScrollViewer>
-            <StackPanel>
+            <StackPanel x:Name="DayPanelContent">
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,20,20,10">
                 <TextBlock FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Strings[DeskDayTodoTitle]}" />
                 <TextBlock Classes="faint" FontSize="12" VerticalAlignment="Bottom" Margin="0,0,0,1" Text="{Binding DayTodoCountText}" />
               </StackPanel>
-              <ItemsControl ItemsSource="{Binding DayTodos}" Margin="10,0">
+              <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
+              <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0"
+                            motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:TodoItemViewModel">
-                    <Button Classes="row" Padding="10,9" Command="{Binding JumpCommand}">
-                      <Grid ColumnDefinitions="Auto,*">
-                        <Button Grid.Column="0" Classes="check" Classes.checked="{Binding Checked}" Margin="0,1,11,0"
-                                Command="{Binding ToggleCommand}">
-                          <Path Classes="icon" StrokeThickness="1.8" Data="{StaticResource Daynote.Desk.Geo.Check}" RenderTransform="scale(0.9)" />
-                        </Button>
-                        <StackPanel Grid.Column="1">
-                          <TextBlock FontSize="13" LineHeight="18.85" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
-                          <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,2,0,0"
-                                     Text="{Binding DueLabel}" IsVisible="{Binding HasDue}" />
-                        </StackPanel>
-                      </Grid>
-                    </Button>
+                    <Panel Classes="todorow">
+                      <Border Classes="rowflash" />
+                      <Button Classes="row rowcontent" Padding="10,9" Command="{Binding JumpCommand}">
+                        <Grid ColumnDefinitions="Auto,*">
+                          <views:DeskTodoCheck Grid.Column="0" Margin="0,1,11,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" />
+                          <StackPanel Grid.Column="1">
+                            <Panel HorizontalAlignment="Left">
+                              <TextBlock FontSize="13" LineHeight="18.85" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                              <Border Classes="strike" Margin="0,9.4,0,0" />
+                            </Panel>
+                            <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,2,0,0"
+                                       Text="{Binding DueLabel}" IsVisible="{Binding HasDue}" />
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                    </Panel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -720,13 +727,14 @@
     <!-- ── Overlays ──────────────────────────────────────────────────────────────────────── -->
 
     <!-- Settings: a 760x560 dialog with the four sections down its left. -->
-    <Border Grid.ColumnSpan="2" Classes="scrim" ZIndex="20" IsVisible="{Binding IsSettingsOpen}"
+    <!-- Each overlay opens and closes as the motion spec's desktop M6 has it (Popover). -->
+    <Border Grid.ColumnSpan="2" Classes="scrim" ZIndex="20" IsVisible="False" motion:Popover.IsOpen="{Binding IsSettingsOpen}"
             PointerPressed="OnSettingsScrimPressed">
       <views:SettingsPanel x:Name="SettingsDialog" MaxWidth="760" MaxHeight="560" Margin="24" />
     </Border>
 
     <!-- Account: the cloud account card (sign-in, lock, subscription), opened from the popover or settings. -->
-    <Border Grid.ColumnSpan="2" Classes="scrim" ZIndex="25" IsVisible="{Binding IsAccountOpen}">
+    <Border Grid.ColumnSpan="2" Classes="scrim" ZIndex="25" IsVisible="False" motion:Popover.IsOpen="{Binding IsAccountOpen}">
       <Border Classes="modal" Width="560" MaxHeight="680" Margin="24" Padding="28,24"
               VerticalAlignment="Center" HorizontalAlignment="Center">
         <Grid RowDefinitions="Auto,*">
@@ -765,9 +773,10 @@
                            IsVisible="{Binding IsOpen, FallbackValue=False}" />
 
     <!-- The ⌘K palette: quick actions until something is typed, then the unified search's results. -->
-    <Border x:Name="PaletteScrim" Grid.ColumnSpan="2" Classes="scrim" ZIndex="40" IsVisible="{Binding IsPaletteOpen}"
+    <Border x:Name="PaletteScrim" Grid.ColumnSpan="2" Classes="scrim" ZIndex="40" IsVisible="False" motion:Popover.IsOpen="{Binding IsPaletteOpen}"
             PointerPressed="OnPaletteScrimPressed">
       <Border x:Name="Palette" Classes="modal" Background="{DynamicResource Daynote.Product.Brush.Card}" CornerRadius="16"
+              RenderTransformOrigin="50%,0%"
               Width="620" Margin="24,0" VerticalAlignment="Top" HorizontalAlignment="Center" ClipToBounds="True">
         <StackPanel>
           <Grid ColumnDefinitions="Auto,*,Auto" Height="60" Margin="18,0">

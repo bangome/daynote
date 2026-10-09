@@ -230,6 +230,19 @@ public class MainActivity : AvaloniaMainActivity
     ///
     /// It is also the moment to pick up what other devices wrote while this one was away.
     /// </remarks>
+    protected override void OnStart()
+    {
+        base.OnStart();
+        Platform.AndroidPlatformServices.DeviceShape.Attach(this);
+    }
+
+    /// <summary>A keyboard attached or detached (tablet §02): the @ input changes shape.</summary>
+    public override void OnConfigurationChanged(global::Android.Content.Res.Configuration newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+        Platform.AndroidPlatformServices.DeviceShape.Refresh();
+    }
+
     protected override void OnResume()
     {
         base.OnResume();
@@ -251,6 +264,7 @@ public class MainActivity : AvaloniaMainActivity
             app.FlushAsync().GetAwaiter().GetResult();
         }
 
+        Platform.AndroidPlatformServices.DeviceShape.Detach();
         base.OnStop();
     }
 

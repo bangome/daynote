@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
              xmlns:views="using:Daynote.Mobile.Views"
+             xmlns:motion="using:Daynote.Motion"
              x:Class="Daynote.Mobile.Views.DayPage"
              x:DataType="vm:MobileShellViewModel">
   <!--
@@ -176,8 +177,8 @@
           <TextBlock Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
         </StackPanel>
         <!-- A row made since the list was last seen arrives (motion spec M2); a tick draws itself (M3). -->
-        <ItemsControl ItemsSource="{Binding DayTodos}" views:RowArrivals.IsEnabled="True"
-                      views:RowArrivals.Context="{Binding SelectedDate}">
+        <ItemsControl ItemsSource="{Binding DayTodos}" motion:RowArrivals.IsEnabled="True"
+                      motion:RowArrivals.Context="{Binding SelectedDate}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>

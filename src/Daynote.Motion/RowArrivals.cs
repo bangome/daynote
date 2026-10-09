@@ -3,11 +3,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Daynote.App.Shell.Product;
-using Daynote.Motion;
-using Daynote.Mobile.ViewModels;
 
-namespace Daynote.Mobile.Views;
+namespace Daynote.Motion;
 
 /// <summary>
 /// Plays M2 on a to-do list: a row that was not there before slides into a room it opens, and its
@@ -16,9 +13,13 @@ namespace Daynote.Mobile.Views;
 /// <remarks>
 /// <para>
 /// The lists are rebuilt whole on every change, so "new" cannot be read off the collection; it is
-/// a key (<see cref="TodoItemViewModel.Key"/>) that was not among the keys the list showed last
-/// time. Only on the same date (<see cref="ContextProperty"/>): moving to another day replaces
+/// a key (<see cref="RegisterKey{T}"/>; the to-do view models' <c>Key</c>) that was not among the
+/// keys the list showed last time. Only on the same date (<see cref="ContextProperty"/>): moving to another day replaces
 /// every row, and that is M5's to show, not a dozen arrivals.
+/// </para>
+/// <para>
+/// The row's template marks its parts by class: <c>rowcontent</c> slides, <c>rowflash</c> is the
+/// orange background.
 /// </para>
 /// <para>
 /// A list that is out of sight (the day screen behind the editor on a phone) builds no rows, so
@@ -66,13 +67,25 @@ public static class RowArrivals
 
     public static void SetContext(ItemsControl list, object? value) => list.SetValue(ContextProperty, value);
 
-    /// <summary>The key a row is known by, for the item types the lists show.</summary>
-    internal static string? KeyOf(object? item) => item switch
+    private static readonly List<Func<object?, string?>> KeyReaders = [];
+
+    /// <summary>Tells the lists how a row of type <typeparamref name="T"/> is known across rebuilds.</summary>
+    public static void RegisterKey<T>(Func<T, string> key)
     {
-        TodoRowViewModel row => row.Item.Key,
-        TodoItemViewModel todo => todo.Key,
-        _ => null,
-    };
+        ArgumentNullException.ThrowIfNull(key);
+        lock (KeyReaders)
+        {
+            KeyReaders.Add(item => item is T typed ? key(typed) : null);
+        }
+    }
+
+    private static string? KeyOf(object? item)
+    {
+        lock (KeyReaders)
+        {
+            return KeyReaders.Select(key => key(item)).FirstOrDefault(static k => k is not null);
+        }
+    }
 
     private static void OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
     {

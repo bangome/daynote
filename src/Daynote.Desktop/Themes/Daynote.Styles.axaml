@@ -668,6 +668,35 @@
   <Style Selector="Button.check.checked Path">
     <Setter Property="IsVisible" Value="True" />
   </Style>
+  <!--
+    The animated check (DeskTodoCheck): the ring turns primary while ticked, and the fill and the
+    stroke are its own shapes, so the tick can grow one and draw the other (motion spec M3).
+  -->
+  <Style Selector="Button.check:checked">
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+  </Style>
+  <Style Selector="Button.check Ellipse.checkfill">
+    <Setter Property="Fill" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+  </Style>
+  <Style Selector="Button.check Path.mark">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <!-- The strikethrough the tick draws across a row; at rest the text's own decoration does it. -->
+  <Style Selector="Border.strike">
+    <Setter Property="Height" Value="1.2" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="RenderTransformOrigin" Value="0%,50%" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <!-- M2's held orange: a new to-do arriving in the day panel. -->
+  <Style Selector="Border.rowflash">
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SunSoft}" />
+  </Style>
 
   <Style Selector="TextBlock.done">
     <Setter Property="TextDecorations" Value="Strikethrough" />

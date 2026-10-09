@@ -50,7 +50,7 @@ fi
 # asks for it. Only the net10.0 flavour: Infrastructure also has a net10.0-windows one, which has
 # no Android target at all.
 echo "==> shared libraries ($RID, $CONFIG)"
-for project in Daynote.Core Daynote.Infrastructure Daynote.Presentation Daynote.Mobile; do
+for project in Daynote.Core Daynote.Infrastructure Daynote.Presentation Daynote.Motion Daynote.Mobile; do
   dotnet build "$ROOT/src/$project/$project.csproj" -c "$CONFIG" -f net10.0 \
     -p:RuntimeIdentifier="$RID" -p:SelfContained=true -nologo -v q
 done

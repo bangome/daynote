@@ -64,5 +64,6 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Xamarin.AndroidX.Browser" />
+    <PackageReference Include="Xamarin.AndroidX.Window.WindowJava" />
   </ItemGroup>
 </Project>

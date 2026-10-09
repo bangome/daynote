@@ -40,6 +40,7 @@ SHARED_LOCKS=(
   "$ROOT/src/Daynote.Core/packages.lock.json"
   "$ROOT/src/Daynote.Infrastructure/packages.lock.json"
   "$ROOT/src/Daynote.Presentation/packages.lock.json"
+  "$ROOT/src/Daynote.Motion/packages.lock.json"
   "$ROOT/src/Daynote.Mobile/packages.lock.json"
 )
 LOCK_BACKUP="$(mktemp -d)"

@@ -37,6 +37,9 @@ internal static class TestServices
     internal static void WithInitialisedShell(Action<MainWindow, DesktopShellViewModel> body) =>
         WithInitialisedShell(1256, 788, body);
 
+    /// <summary>The service graph behind the shell that is running, for seeding what it reads.</summary>
+    internal static ServiceProvider? CurrentProvider { get; private set; }
+
     /// <summary>
     /// The same, at a chosen size. The Store wants listing images of at least 1366x768, which is
     /// larger than the window every other test renders at.
@@ -52,6 +55,7 @@ internal static class TestServices
         {
             Application application = Application.Current!;
             ServiceProvider provider = TestServices.Build(data.Path, application);
+            CurrentProvider = provider;
             var shell = provider.GetRequiredService<DesktopShellViewModel>();
             var window = new MainWindow { DataContext = shell, Width = width, Height = height };
             try

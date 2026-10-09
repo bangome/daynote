@@ -14,6 +14,13 @@ namespace Daynote.Mobile.Views;
 /// </summary>
 public partial class MainView : UserControl
 {
+    /// <summary>How the to-do lists know a row across rebuilds, for the arrival in M2.</summary>
+    static MainView()
+    {
+        Daynote.Motion.RowArrivals.RegisterKey<ViewModels.TodoRowViewModel>(static row => row.Item.Key);
+        Daynote.Motion.RowArrivals.RegisterKey<Daynote.App.Shell.Product.TodoItemViewModel>(static todo => todo.Key);
+    }
+
     public MainView() => InitializeComponent();
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

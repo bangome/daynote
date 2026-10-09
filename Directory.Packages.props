@@ -42,6 +42,11 @@
     <PackageVersion Include="Avalonia.iOS" Version="12.1.2" />
     <!-- Custom Tabs, for Google sign-in on Android. Not a web view: Google refuses sign-in from one. -->
     <PackageVersion Include="Xamarin.AndroidX.Browser" Version="1.9.0.2" />
+    <!--
+      Jetpack WindowManager's Java callback adapter, for a foldable's hinge (Daynote Mobile B
+      Foldables §01). The version Avalonia.Android already brings WindowManager itself in at.
+    -->
+    <PackageVersion Include="Xamarin.AndroidX.Window.WindowJava" Version="1.5.1.2" />
     <!-- Velopack: the Windows installer and the auto-updater the Store used to provide
          (docs/WINDOWS_ON_AVALONIA.md §5). Windows-only in practice; the Mac bundle is signed and
          notarized instead. -->

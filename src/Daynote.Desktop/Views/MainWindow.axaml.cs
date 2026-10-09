@@ -42,6 +42,7 @@ public partial class MainWindow : Window
             }
 
             AttachTutorialStickyDemo(_shell);
+            AttachMotion(_shell);
             AttachPalette(_shell);
             AttachChrome(_shell);
 

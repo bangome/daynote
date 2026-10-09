@@ -54,7 +54,9 @@ public static class IosPlatformServices
             // Constructed here, at launch, so its payment-queue observer is in place before StoreKit
             // delivers anything held for the app (a renewal, an interrupted purchase).
             Store: new IosStorePurchases(),
-            Reminders: new IosReminderScheduler());
+            Reminders: new IosReminderScheduler(),
+            Motion: new IosMotionPlatform(),
+            Device: new IosDeviceShape());
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.
