@@ -90,7 +90,8 @@ public enum AgendaPhraseParser {
             if (start > 0 && !isWhite(sentence[start - 1])) || isWhite(sentence[start]) { continue }
             let phrase = dropConnector(Array(sentence[start...]))
             let phraseText = String(decoding: phrase, as: UTF16.self)
-            if let reading = parse(phraseText, now: now), reading.length == trimEnd(phrase).count {
+            if let reading = parse(phraseText, now: now), reading.length == trimEnd(phrase).count,
+               !phrase.allSatisfy({ (0x30...0x39).contains($0) || isWhite($0) }) {
                 let title = trimConnectorAtEnd(trimEnd(Array(sentence[..<start])))
                 return title.isEmpty ? nil : (String(decoding: title, as: UTF16.self), reading)
             }
@@ -100,6 +101,9 @@ public enum AgendaPhraseParser {
     }
 
     // MARK: - Grammar
+
+    // A bare trailing number ("아이폰 15", "Review PR 12") is not a time when spoken: see
+    // `IsBareNumber` in the C# parser, which this mirrors in `parseTrailing` above.
 
     private static let utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)

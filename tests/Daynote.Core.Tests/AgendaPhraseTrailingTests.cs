@@ -58,6 +58,14 @@ public sealed class AgendaPhraseTrailingTests
 
         // A date at the front is not at the end: "9시 회의 준비" is a title with no date.
         Assert.IsNull(AgendaPhraseParser.ParseTrailing("9시 회의 준비", Now));
+
+        // A bare number at the end is part of what was said, not a time: it needs a unit.
+        foreach (string spoken in new[] { "아이폰 15", "Review PR 12", "Read chapter 3" })
+        {
+            Assert.IsNull(AgendaPhraseParser.ParseTrailing(spoken, Now), spoken);
+        }
+
+        Assert.AreEqual(new DateTime(2026, 10, 7, 17, 0, 0), Trailing("회의 5시").Phrase.At.Value);
     }
 
     /// <summary>

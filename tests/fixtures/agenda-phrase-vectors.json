@@ -507,6 +507,59 @@
       "mode": "trailing",
       "text": "",
       "expect": null
+    },
+    {
+      "mode": "trailing",
+      "text": "아이폰 15",
+      "expect": null
+    },
+    {
+      "mode": "trailing",
+      "text": "Review PR 12",
+      "expect": null
+    },
+    {
+      "mode": "trailing",
+      "text": "Read chapter 3",
+      "expect": null
+    },
+    {
+      "mode": "trailing",
+      "text": "Meet at 3",
+      "expect": null
+    },
+    {
+      "mode": "trailing",
+      "text": "회의 5시",
+      "expect": {
+        "at": "2026-10-07T17:00",
+        "hasTime": true,
+        "rrule": null,
+        "rolled": false,
+        "title": "회의"
+      }
+    },
+    {
+      "mode": "trailing",
+      "text": "Call mom 3pm",
+      "expect": {
+        "at": "2026-10-07T15:00",
+        "hasTime": true,
+        "rrule": null,
+        "rolled": false,
+        "title": "Call mom"
+      }
+    },
+    {
+      "mode": "trailing",
+      "text": "보고서 3:30",
+      "expect": {
+        "at": "2026-10-07T15:30",
+        "hasTime": true,
+        "rrule": null,
+        "rolled": false,
+        "title": "보고서"
+      }
     }
   ]
 }

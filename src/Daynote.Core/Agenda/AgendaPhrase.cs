@@ -170,7 +170,8 @@ public static class AgendaPhraseParser
             }
 
             string phrase = DropConnector(sentence[start..]);
-            if (Parse(phrase, now) is { } reading && reading.Length == phrase.TrimEnd().Length)
+            if (Parse(phrase, now) is { } reading && reading.Length == phrase.TrimEnd().Length
+                && !IsBareNumber(phrase))
             {
                 string title = TrimConnectorAtEnd(sentence[..start].TrimEnd());
                 return title.Length == 0 ? null : (title, reading);
@@ -179,6 +180,14 @@ public static class AgendaPhraseParser
 
         return null;
     }
+
+    /// <summary>
+    /// "아이폰 15", "Review PR 12", "Read chapter 3": a number at the end of a sentence is far more
+    /// often part of what is being said than a time. Typed after an <c>@</c> it is a time, because
+    /// the <c>@</c> said so; spoken, it needs a unit or a day word around it to be one.
+    /// </summary>
+    private static bool IsBareNumber(string phrase) =>
+        phrase.All(static c => char.IsAsciiDigit(c) || char.IsWhiteSpace(c));
 
     /// <summary>A particle a spoken Korean sentence leaves on its last word: "5시에", "내일까지".</summary>
     private static readonly string[] TrailingParticles = ["까지", "에"];
