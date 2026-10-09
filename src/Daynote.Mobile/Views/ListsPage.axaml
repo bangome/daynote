@@ -85,20 +85,18 @@
                 <ItemsControl ItemsSource="{Binding Items}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TodoRowViewModel">
-                      <Border Classes="rule" Padding="0,11">
+                      <Border Classes="rule todorow" Padding="0,11">
                         <Grid ColumnDefinitions="22,*,Auto">
-                          <Button Grid.Column="0" Classes="check" VerticalAlignment="Top" Margin="-11,-10,-11,-12"
-                                  Command="{Binding Item.ToggleCommand}">
-                            <Border Classes="checkbox" Classes.checked="{Binding Item.Checked}">
-                              <views:Glyph Kind="Check" Width="11" Height="11" Foreground="{DynamicResource Mobile.OnPri}"
-                                           IsVisible="{Binding Item.Checked}" />
-                            </Border>
-                          </Button>
+                          <views:TodoCheck Grid.Column="0" VerticalAlignment="Top" Margin="-11,-10,-11,-12"
+                                           IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
                           <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" HorizontalContentAlignment="Left"
                                   Command="{Binding Item.JumpCommand}">
                             <StackPanel>
-                              <TextBlock Classes="todo" Classes.done="{Binding Item.Checked}" FontSize="15.5" LineHeight="21.7"
-                                         Text="{Binding Item.Text}" />
+                              <Panel HorizontalAlignment="Left">
+                                <TextBlock Classes="todo" Classes.done="{Binding Item.Checked}" FontSize="15.5" LineHeight="21.7"
+                                           Text="{Binding Item.Text}" />
+                                <Border Classes="strike" VerticalAlignment="Top" Margin="0,10.5,0,0" />
+                              </Panel>
                               <TextBlock Classes="faint line" FontSize="12.5" Margin="0,3,0,0" Text="{Binding NoteCaption}" />
                             </StackPanel>
                           </Button>

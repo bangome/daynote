@@ -39,6 +39,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daynote.Mobile", "src\Dayno
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daynote.Mobile.Tests", "tests\Daynote.Mobile.Tests\Daynote.Mobile.Tests.csproj", "{E10C1DCF-5456-4B24-96BD-8DFBFF8A9FA8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Daynote.Motion", "src\Daynote.Motion\Daynote.Motion.csproj", "{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -229,6 +231,18 @@ Global
 		{E10C1DCF-5456-4B24-96BD-8DFBFF8A9FA8}.Release|x64.Build.0 = Release|Any CPU
 		{E10C1DCF-5456-4B24-96BD-8DFBFF8A9FA8}.Release|x86.ActiveCfg = Release|Any CPU
 		{E10C1DCF-5456-4B24-96BD-8DFBFF8A9FA8}.Release|x86.Build.0 = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|x64.Build.0 = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Debug|x86.Build.0 = Debug|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|x64.ActiveCfg = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|x64.Build.0 = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|x86.ActiveCfg = Release|Any CPU
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -243,5 +257,6 @@ Global
 		{5258A0F9-2512-4F61-BD0B-D2D2A398F172} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{19274F0A-875E-4AD8-A4A1-BFC46E1AE98F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{E10C1DCF-5456-4B24-96BD-8DFBFF8A9FA8} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{3E608CED-458F-4D93-8F1A-FEF1813DFAEB} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

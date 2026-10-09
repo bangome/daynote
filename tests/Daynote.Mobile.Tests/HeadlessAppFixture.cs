@@ -46,6 +46,9 @@ internal static class HeadlessAppFixture
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
                 .SetupWithoutStarting();
 
+            // No frames are drawn between two headless layout passes, so a storyboard would be
+            // captured half-played; the motion tests seek their storyboards frame by frame instead.
+            Daynote.Motion.MotionEnvironment.Instant = true;
             _started = true;
         }
     }

@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Daynote.Mobile.ViewModels;
+using Daynote.Motion;
 
 namespace Daynote.Mobile.Views;
 
@@ -43,6 +44,8 @@ public partial class EditorPage : UserControl
         {
             previous.TitleRenameStarted -= OnTitleRenameStarted;
             previous.CaptureRequested -= OnCaptureRequested;
+            previous.PropertyChanged -= OnShellPropertyChanged;
+            previous.Capture.PropertyChanged -= OnCapturePropertyChanged;
         }
 
         _observed = DataContext as MobileShellViewModel;
@@ -50,6 +53,93 @@ public partial class EditorPage : UserControl
         {
             shell.TitleRenameStarted += OnTitleRenameStarted;
             shell.CaptureRequested += OnCaptureRequested;
+            shell.PropertyChanged += OnShellPropertyChanged;
+            shell.Capture.PropertyChanged += OnCapturePropertyChanged;
+            PlaceCaptureHighlight();
+        }
+    }
+
+    // ── Motion (spec M1, M2) ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// M1: the bar rises out of the toolbar's bottom edge the moment it opens, and the highlight
+    /// slides between the two readings when the kind changes. The text itself never moves.
+    /// </summary>
+    private void OnCapturePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_observed is not { } shell || this.FindControl<StackPanel>("CaptureBar") is not { } bar)
+        {
+            return;
+        }
+
+        if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.IsOpen) && shell.Capture.IsOpen)
+        {
+            PlaceCaptureHighlight();
+            bar.Opacity = 0;
+            Dispatcher.UIThread.Post(() =>
+            {
+                bar.Opacity = 1;
+                _ = MotionPlayer.Play(bar, "m1", Choreography.AtBarRise(bar, bar.Bounds.Height + 8));
+            }, DispatcherPriority.Loaded);
+        }
+        else if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.Kind) &&
+                 this.FindControl<Border>("CapHighlight") is { } highlight)
+        {
+            double to = HighlightY(shell.Capture.IsTaskSelected);
+            _ = MotionPlayer.Play(highlight, "m1", Choreography.AtBarSwitch(highlight, HighlightY(!shell.Capture.IsTaskSelected), to));
+        }
+    }
+
+    /// <summary>The highlight under the task line, or under the event line one row (44 and the 2 between) down.</summary>
+    private static double HighlightY(bool task) => task ? 0 : 46;
+
+    private void PlaceCaptureHighlight()
+    {
+        if (_observed is { } shell && this.FindControl<Border>("CapHighlight") is { } highlight)
+        {
+            MotionTransform.For(highlight).Y = HighlightY(shell.Capture.IsTaskSelected);
+        }
+    }
+
+    /// <summary>The ×: down and out (220 ms ease-in), and only then closed (M1).</summary>
+    private async void OnDismissCapture(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MobileShellViewModel shell)
+        {
+            return;
+        }
+
+        if (this.FindControl<StackPanel>("CaptureBar") is { } bar)
+        {
+            await MotionPlayer.Play(bar, "m1", Choreography.AtBarDismiss(bar, bar.Bounds.Height + 8)).ConfigureAwait(true);
+            MotionTransform.For(bar).Reset();
+            bar.Opacity = 1;
+        }
+
+        shell.DismissCaptureCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// What was just made opens its row in place; when it settles back into the count, the count
+    /// swells once (M2 on the phone's editor, where the day is out of sight).
+    /// </summary>
+    private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MobileShellViewModel.JustMade) || _observed is not { } shell)
+        {
+            return;
+        }
+
+        if (shell.JustMade is not null && this.FindControl<Grid>("JustMadeRow") is { } row)
+        {
+            row.Opacity = 0;
+            Dispatcher.UIThread.Post(() =>
+                _ = MotionPlayer.Play(row, "m2", Choreography.NoticeOpen(row, row.Bounds.Height)), DispatcherPriority.Loaded);
+        }
+        else if (shell.JustMade is null && this.FindControl<Button>("NoteItemsButton") is { } count)
+        {
+            Dispatcher.UIThread.Post(() =>
+                _ = MotionPlayer.Play(count, "m2", Choreography.CountBump(count)), DispatcherPriority.Loaded);
         }
     }
 

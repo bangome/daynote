@@ -551,6 +551,12 @@
           "ModelContextProtocol": "[2.0.0, )"
         }
       },
+      "daynote.motion": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )"
+        }
+      },
       "daynote.presentation": {
         "type": "Project",
         "dependencies": {

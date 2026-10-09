@@ -56,6 +56,10 @@ public partial class App : Application
         MobilePlatformServices platform = Platform
             ?? throw new InvalidOperationException("App.Platform must be set by the head before the app starts.");
 
+        // The phones read the spec's touch values; the head reports reduced motion and plays haptics.
+        Daynote.Motion.MotionEnvironment.Flavor = Daynote.Motion.MotionFlavor.Touch;
+        Daynote.Motion.MotionEnvironment.Platform = platform.Motion;
+
         singleView.MainView = _host;
         Compose(platform);
 

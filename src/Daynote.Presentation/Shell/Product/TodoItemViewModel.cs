@@ -60,6 +60,14 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public string Text => row.Item.Title;
 
+    /// <summary>
+    /// Which line this is across rebuilds: the item, or the series and the occurrence. The lists
+    /// are rebuilt whole on every change, and a view that wants to know which row is new (the
+    /// motion spec's M2) compares these rather than the view models, which are new every time.
+    /// </summary>
+    public string Key => string.Create(
+        CultureInfo.InvariantCulture, $"{row.Item.SeriesId ?? row.Item.Id:N}/{row.RecurrenceId?.Value:O}");
+
     /// <summary>True for an occurrence of a rule, which the design marks with ↻ and nothing else.</summary>
     public bool IsRepeat => row.IsOccurrence;
 

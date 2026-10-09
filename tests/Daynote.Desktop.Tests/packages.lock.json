@@ -577,6 +577,7 @@
           "Daynote.Core": "[1.0.0, )",
           "Daynote.Infrastructure": "[1.0.0, )",
           "Daynote.Mcp": "[1.0.0, )",
+          "Daynote.Motion": "[1.0.0, )",
           "Daynote.Presentation": "[1.0.0, )",
           "Microsoft.Extensions.Hosting": "[10.0.9, )",
           "Velopack": "[1.2.0, )"
@@ -598,6 +599,12 @@
           "Daynote.Infrastructure": "[1.0.0, )",
           "Microsoft.Extensions.Hosting": "[10.0.9, )",
           "ModelContextProtocol": "[2.0.0, )"
+        }
+      },
+      "daynote.motion": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )"
         }
       },
       "daynote.presentation": {

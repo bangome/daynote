@@ -33,6 +33,7 @@
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
     <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
     <ProjectReference Include="..\Daynote.Presentation\Daynote.Presentation.csproj" />
+    <ProjectReference Include="..\Daynote.Motion\Daynote.Motion.csproj" />
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Fonts.Inter" />

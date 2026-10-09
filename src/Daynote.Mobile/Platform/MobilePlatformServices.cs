@@ -69,6 +69,15 @@ namespace Daynote.Mobile.Platform;
 /// Redraws the home-screen widgets, on Android; called whenever the to-dos may have changed. Null
 /// on a head without widgets.
 /// </param>
+/// <param name="Motion">
+/// Reduced motion and haptics (motion spec §04, M1-M3): UIAccessibility and the feedback generators
+/// on iOS, the animator duration scale and <c>performHapticFeedback</c> on Android. Null (tests)
+/// animates at full motion with no haptics.
+/// </param>
+/// <param name="Device">
+/// What the window cannot say about itself: a hinge across it, and whether a hardware keyboard is
+/// attached (tablet §02). Null reads as no hinge and no keyboard.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
@@ -80,7 +89,9 @@ public sealed record MobilePlatformServices(
     Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null,
     IStorePurchases? Store = null,
     Daynote.Mobile.Reminders.IReminderScheduler? Reminders = null,
-    Action? AgendaChanged = null)
+    Action? AgendaChanged = null,
+    Daynote.Motion.IMotionPlatform? Motion = null,
+    IDeviceShape? Device = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

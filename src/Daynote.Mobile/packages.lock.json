@@ -113,6 +113,12 @@
           "System.Security.Cryptography.ProtectedData": "[10.0.9, )"
         }
       },
+      "daynote.motion": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )"
+        }
+      },
       "daynote.presentation": {
         "type": "Project",
         "dependencies": {

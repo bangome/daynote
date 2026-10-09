@@ -280,8 +280,15 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Daynote.Core": "[1.0.0, )",
           "Daynote.Infrastructure": "[1.0.0, )",
+          "Daynote.Motion": "[1.0.0, )",
           "Daynote.Presentation": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.9, )"
+        }
+      },
+      "daynote.motion": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )"
         }
       },
       "daynote.presentation": {

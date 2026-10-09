@@ -52,9 +52,16 @@ public sealed class Glyph : Control
     public static readonly StyledProperty<IBrush?> FillProperty =
         AvaloniaProperty.Register<Glyph, IBrush?>(nameof(Fill));
 
+    /// <summary>
+    /// How much of the stroke is drawn, 0 to 1: the check drawing itself in when a to-do is ticked
+    /// (motion spec M3). Only the stroked marks follow it.
+    /// </summary>
+    public static readonly StyledProperty<double> DrawProperty =
+        AvaloniaProperty.Register<Glyph, double>(nameof(Draw), 1);
+
     static Glyph()
     {
-        AffectsRender<Glyph>(KindProperty, ForegroundProperty, FillProperty);
+        AffectsRender<Glyph>(KindProperty, ForegroundProperty, FillProperty, DrawProperty);
     }
 
     public GlyphKind Kind
@@ -75,16 +82,27 @@ public sealed class Glyph : Control
         set => SetValue(FillProperty, value);
     }
 
+    public double Draw
+    {
+        get => GetValue(DrawProperty);
+        set => SetValue(DrawProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         (double box, double stroke, Action<DrawingContext, Pen, IBrush?> draw) = Spec(Kind);
         double scale = Math.Min(Bounds.Width, Bounds.Height) / box;
-        if (scale <= 0)
+        if (scale <= 0 || Draw <= 0)
         {
             return;
         }
 
-        var pen = new Pen(Foreground, stroke, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        // A partly drawn stroke is a dash as long as the path, offset so only the first part shows.
+        // Dashes are in stroke widths; the length is the longest of the stroked marks, so a shorter
+        // path is simply drawn a little sooner.
+        IDashStyle? dash = Draw >= 1 ? null : new DashStyle(
+            [StrokeLength / stroke, StrokeLength / stroke], (1 - Draw) * StrokeLength / stroke);
+        var pen = new Pen(Foreground, stroke, dash, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         double dx = (Bounds.Width - (box * scale)) / 2;
         double dy = (Bounds.Height - (box * scale)) / 2;
         using (context.PushTransform(Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(dx, dy)))
@@ -154,6 +172,9 @@ public sealed class Glyph : Control
             c.DrawGeometry(null, p, G("M6 2.5 H12.5 L17 7 V18 A1.5 1.5 0 0 1 15.5 19.5 H6 A1.5 1.5 0 0 1 4.5 18 V4 A1.5 1.5 0 0 1 6 2.5 Z M12.5 2.5 V7 H17 M8 11.5 H13.5 M8 15 H13.5"))),
         _ => (1, 1, (_, _, _) => { }),
     };
+
+    /// <summary>The check's length in its own view box units (two segments, 3.5 and 7.1).</summary>
+    private const double StrokeLength = 10.7;
 
     private const string StarPath = "M6 0.8 L7.5 4.2 L11.2 4.6 L8.4 7 L9.2 10.7 L6 8.8 L2.8 10.7 L3.6 7 L0.8 4.6 L4.5 4.2 Z";
 

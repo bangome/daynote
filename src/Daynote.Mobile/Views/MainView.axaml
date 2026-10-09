@@ -85,8 +85,11 @@
       The month sheet: the whole calendar, which the home screen gave up for the week strip. A scrim
       that closes on a tap rather than a cancel button, because there is nothing to confirm - the day
       tapped in the grid is the choice, and it closes the sheet itself.
+
+      Every sheet here is a SheetLayer: it rises and closes as the motion spec's M6 has it, and its
+      top strip can be dragged down to close it.
     -->
-    <Panel IsVisible="{Binding IsMonthPickerOpen}">
+    <views:SheetLayer IsOpen="{Binding IsMonthPickerOpen}">
       <Button Classes="scrim" Command="{Binding CloseMonthPickerCommand}"
               AutomationProperties.Name="{Binding Strings[WindowClose]}" />
       <Border x:Name="Sheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -156,14 +159,14 @@
         </StackPanel>
         </ScrollViewer>
       </Border>
-    </Panel>
+    </views:SheetLayer>
 
     <!--
       The default reminder time (settings): the hour from a grid of twenty-four pills, the minute
       from four, the draft large on top, and nothing kept until 완료. Scrolls like the month sheet
       when a phone on its side is shorter than it.
     -->
-    <Panel IsVisible="{Binding IsReminderTimeSheetOpen}">
+    <views:SheetLayer IsOpen="{Binding IsReminderTimeSheetOpen}">
       <Button Classes="scrim" Command="{Binding CloseReminderTimeSheetCommand}"
               AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
       <Border x:Name="ReminderTimeSheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -214,7 +217,7 @@
           </StackPanel>
         </ScrollViewer>
       </Border>
-    </Panel>
+    </views:SheetLayer>
 
     <!--
       A picture, full screen, over everything. The ground runs under the notch and the home
@@ -254,7 +257,7 @@
       delete question in place. One sheet with three faces rather than three sheets, because only one
       is ever up and they share the scrim and the bleed.
     -->
-    <Panel IsVisible="{Binding IsAttachSheetOpen}">
+    <views:SheetLayer IsOpen="{Binding IsAttachSheetOpen}">
       <Button Classes="scrim" Command="{Binding CloseAttachSheetCommand}"
               AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
       <Border x:Name="AttachSheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -288,9 +291,9 @@
           </Button>
         </StackPanel>
       </Border>
-    </Panel>
+    </views:SheetLayer>
 
-    <Panel IsVisible="{Binding IsFileMenuOpen}">
+    <views:SheetLayer IsOpen="{Binding IsFileMenuOpen}">
       <Button Classes="scrim" Command="{Binding CloseFileMenuCommand}"
               AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
       <Border x:Name="FileSheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -321,7 +324,7 @@
           </Button>
         </StackPanel>
       </Border>
-    </Panel>
+    </views:SheetLayer>
 
     <!--
       A list's menu, and the one field that both makes and renames one. Two faces of a sheet rather
@@ -329,7 +332,7 @@
       desktop sidebar does. Colour and connecting a list to Reminders are in the design's menu and
       are not built yet, so they are absent rather than disabled.
     -->
-    <Panel IsVisible="{Binding IsAgendaListSheetOpen}">
+    <views:SheetLayer IsOpen="{Binding IsAgendaListSheetOpen}">
       <Button Classes="scrim" Command="{Binding CloseAgendaListSheetCommand}"
               AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
       <Border x:Name="ListSheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -378,14 +381,14 @@
           </Button>
         </StackPanel>
       </Border>
-    </Panel>
+    </views:SheetLayer>
 
     <!--
       What this note made (phone §02). Behind the toolbar's count, because that is where the user
       was told the number: a sheet opened from the number it explains needs no title to say what it
       is a list of.
     -->
-    <Panel IsVisible="{Binding IsNoteItemsSheetOpen}">
+    <views:SheetLayer IsOpen="{Binding IsNoteItemsSheetOpen}">
       <Button Classes="scrim" Command="{Binding CloseNoteItemsCommand}"
               AutomationProperties.Name="{Binding Strings[MobileClose]}" />
       <Border x:Name="NoteItemsSheet" Classes="sheet" VerticalAlignment="Bottom">
@@ -422,7 +425,7 @@
           </StackPanel>
         </ScrollViewer>
       </Border>
-    </Panel>
+    </views:SheetLayer>
   </Panel>
 
   <UserControl.Styles>

@@ -15,6 +15,7 @@
     <ProjectReference Include="..\Daynote.Core\Daynote.Core.csproj" />
     <ProjectReference Include="..\Daynote.Infrastructure\Daynote.Infrastructure.csproj" />
     <ProjectReference Include="..\Daynote.Presentation\Daynote.Presentation.csproj" />
+    <ProjectReference Include="..\Daynote.Motion\Daynote.Motion.csproj" />
     <!-- Same reasoning as Daynote.App: the MCP server ships next to the app, so both resolve one graph. -->
     <ProjectReference Include="..\Daynote.Mcp\Daynote.Mcp.csproj" />
     <PackageReference Include="Avalonia" />

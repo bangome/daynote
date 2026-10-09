@@ -140,8 +140,9 @@
       </ScrollViewer>
     </Border>
 
+    <!-- Clipped, so the @ bar rises out of its bottom edge - from behind the keyboard (motion spec M1). -->
     <Border Grid.Row="4" x:Name="Toolbar" Background="{DynamicResource Mobile.Panel}"
-            BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0">
+            BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0" ClipToBounds="True">
       <!--
         No `-[]` button. It wrote the syntax the panels used to read; a to-do is its own row now,
         so the only thing it could insert is text that looks like a checkbox. The phone's own @
@@ -156,7 +157,7 @@
             confirmation appears where the object actually lives — the note's own collection — and
             a row rising there is the thing arriving rather than a toast claiming it did.
           -->
-          <Grid ColumnDefinitions="40,*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNull}}">
+          <Grid x:Name="NoteItemsRow" ColumnDefinitions="40,*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNull}}">
             <!-- The @ itself, two keyboard layers away on a Korean keyboard, and the only
                  discoverable way in now that the `-[]` button is gone. -->
             <Button Grid.Column="0" Classes="attool" Focusable="False" Click="OnInsertAt">
@@ -164,14 +165,15 @@
             </Button>
             <TextBlock Grid.Column="1" Classes="faint" FontSize="12.5" FontWeight="SemiBold" Margin="10,0,0,0"
                        VerticalAlignment="Center" TextWrapping="NoWrap" Text="{Binding Strings[MobileCaptureKinds]}" />
-            <Button Grid.Column="2" Classes="noteitems" Focusable="False" IsVisible="{Binding HasNoteItems}"
+            <Button Grid.Column="2" x:Name="NoteItemsButton" Classes="noteitems" Focusable="False" IsVisible="{Binding HasNoteItems}"
+                    RenderTransformOrigin="50%,50%"
                     Command="{Binding OpenNoteItemsCommand}">
               <TextBlock Text="{Binding NoteItemCountText}" />
             </Button>
           </Grid>
 
           <!-- The row that rises in its place, then settles back into the count. -->
-          <Grid ColumnDefinitions="*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <Grid x:Name="JustMadeRow" ColumnDefinitions="*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNotNull}}">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
               <Border Width="6" Height="6" CornerRadius="3" VerticalAlignment="Center"
                       Background="{DynamicResource Mobile.Sun}" />
@@ -214,14 +216,14 @@
           Nothing here is focusable. Taking focus would close the keyboard and move the caret, and
           the whole bar exists to be read while the phrase after the @ is still being typed.
         -->
-        <StackPanel Margin="12,8,12,0" Spacing="6" IsVisible="{Binding Capture.IsOpen}">
+        <StackPanel x:Name="CaptureBar" Margin="12,8,12,0" Spacing="6" IsVisible="{Binding Capture.IsOpen}">
           <Grid ColumnDefinitions="Auto,*,36">
             <TextBlock Grid.Column="0" Classes="faint" FontSize="11.5" FontWeight="Bold" VerticalAlignment="Center"
                        Text="{Binding Strings[AgendaCaptureTitleLabel]}" />
             <!-- The title is already typed; the bar shows it rather than asking for it again (§7). -->
             <TextBlock Grid.Column="1" Classes="line" Margin="8,0,0,0" FontSize="13.5" FontWeight="ExtraBold"
                        VerticalAlignment="Center" Text="{Binding Capture.Title}" />
-            <Button Grid.Column="2" Classes="capclose" Focusable="False" Command="{Binding DismissCaptureCommand}"
+            <Button Grid.Column="2" Classes="capclose" Focusable="False" Click="OnDismissCapture"
                     AutomationProperties.Name="{Binding Strings[MobileCancel]}">
               <views:Glyph Kind="Close" Width="13" Height="13" Foreground="{DynamicResource Mobile.Text2}" />
             </Button>
@@ -252,7 +254,10 @@
               row is its own tap target: a phone has no Tab key, and a swipe nobody can see is not
               an affordance.
             -->
-            <StackPanel Spacing="2" IsVisible="{Binding !IsCaptureBarCompact}">
+            <!-- The selected reading's background is one shape under both lines, so a switch slides it (M1). -->
+            <Panel IsVisible="{Binding !IsCaptureBarCompact}">
+            <Border x:Name="CapHighlight" Classes="caphighlight" VerticalAlignment="Top" />
+            <StackPanel Spacing="2">
               <Button Classes="capline" Classes.on="{Binding Capture.IsTaskSelected}" Focusable="False"
                       Command="{Binding SelectCaptureKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
                 <Grid ColumnDefinitions="46,*,Auto">
@@ -276,6 +281,7 @@
                 </Grid>
               </Button>
             </StackPanel>
+            </Panel>
 
             <!--
               Too little room above the keyboard for two lines (§01 ⑤): the kind becomes a pair of
@@ -422,7 +428,9 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Button.capline.on">
+    <Style Selector="Border.caphighlight">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
     </Style>
     <Style Selector="TextBlock.capkind">

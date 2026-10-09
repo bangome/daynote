@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The motion spec (Daynote Motion Spec): the four spring tokens as Avalonia easings, the player
+      that runs them, and the nine interactions built out of them. Shared by the Mac app and the
+      phones so a curve is defined once; nothing in a screen makes its own. Avalonia only - no
+      Java, no UIKit, no AppKit - so it builds and is tested on any machine, and the few things
+      that need the OS (reduced motion, haptics) arrive through MotionEnvironment.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Daynote.Motion</RootNamespace>
+    <AssemblyName>Daynote.Motion</AssemblyName>
+    <!-- The Mac RIDs and the Android ones, for the reasons Daynote.Presentation gives for each. -->
+    <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64;android-arm64;android-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+</Project>

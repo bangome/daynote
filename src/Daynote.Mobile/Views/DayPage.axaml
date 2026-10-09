@@ -58,28 +58,49 @@
                 AutomationProperties.Name="{Binding Strings[MobilePreviousWeek]}">
           <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text3}" />
         </Button>
-        <ItemsControl Grid.Column="1" ItemsSource="{Binding Week}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:WeekDayViewModel">
-              <Button Classes="weekday" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsTodayRing}"
-                      Classes.sunday="{Binding IsSunday}" Command="{Binding SelectCommand}">
-                <StackPanel Spacing="4" VerticalAlignment="Center">
-                  <TextBlock Classes="wd" Text="{Binding WeekdayLabel}" />
-                  <TextBlock Classes="num" Text="{Binding DayText}" />
-                  <Ellipse Classes="dot" Classes.has="{Binding HasNotes}" Width="4" Height="4" HorizontalAlignment="Center" />
-                </StackPanel>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!--
+          The days, over the selected day's pill. The pill is its own shape rather than the selected
+          button's background so it can travel between days (motion spec M5); a week change slides
+          the whole strip, pill and all, over a still of the week it leaves (DayPage.axaml.cs).
+        -->
+        <Panel Grid.Column="1" x:Name="WeekTrack" ClipToBounds="True">
+          <Image x:Name="WeekGhost" IsVisible="False" IsHitTestVisible="False" Stretch="Fill"
+                 HorizontalAlignment="Left" VerticalAlignment="Top" />
+          <Panel x:Name="WeekLive">
+            <Border x:Name="Pill" Classes="weekpill" HorizontalAlignment="Left" />
+            <ItemsControl x:Name="WeekDays" ItemsSource="{Binding Week}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:WeekDayViewModel">
+                  <Button Classes="weekday" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsTodayRing}"
+                          Classes.sunday="{Binding IsSunday}" Command="{Binding SelectCommand}">
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
+                      <TextBlock Classes="wd" Text="{Binding WeekdayLabel}" />
+                      <TextBlock Classes="num" Text="{Binding DayText}" />
+                      <Ellipse Classes="dot" Classes.has="{Binding HasNotes}" Width="4" Height="4" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
+        </Panel>
         <Button Grid.Column="2" Height="60" CornerRadius="0" Command="{Binding NextWeekCommand}"
                 AutomationProperties.Name="{Binding Strings[MobileNextWeek]}">
           <views:Glyph Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text3}" />
         </Button>
       </Grid>
+
+      <!--
+        Everything that belongs to the day, as one block: on a date change it is pushed a little in
+        the direction of travel and cross-faded with a still of the day it replaces (M5).
+      -->
+      <Panel x:Name="DayBody">
+      <Image x:Name="DayGhost" IsVisible="False" IsHitTestVisible="False" Stretch="Fill"
+             HorizontalAlignment="Left" VerticalAlignment="Top" />
+      <StackPanel x:Name="DayContent">
 
       <!-- 노트 n -->
       <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
@@ -154,26 +175,29 @@
           <TextBlock Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
           <TextBlock Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
         </StackPanel>
-        <ItemsControl ItemsSource="{Binding DayTodos}">
+        <!-- A row made since the list was last seen arrives (motion spec M2); a tick draws itself (M3). -->
+        <ItemsControl ItemsSource="{Binding DayTodos}" views:RowArrivals.IsEnabled="True"
+                      views:RowArrivals.Context="{Binding SelectedDate}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TodoRowViewModel">
-              <Grid ColumnDefinitions="22,*,Auto" MinHeight="44">
-                <Button Grid.Column="0" Classes="check" Command="{Binding Item.ToggleCommand}">
-                  <Border Classes="checkbox" Classes.checked="{Binding Item.Checked}">
-                    <views:Glyph Kind="Check" Width="11" Height="11" Foreground="{DynamicResource Mobile.OnPri}"
-                                 IsVisible="{Binding Item.Checked}" />
-                  </Border>
-                </Button>
-                <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
-                        Command="{Binding Item.JumpCommand}">
-                  <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
-                </Button>
-                <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
-                           VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
-              </Grid>
+              <Panel Classes="todorow">
+                <Border Classes="rowflash" />
+                <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44">
+                  <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
+                  <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
+                          Command="{Binding Item.JumpCommand}">
+                    <Panel HorizontalAlignment="Left">
+                      <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
+                      <Border Classes="strike" />
+                    </Panel>
+                  </Button>
+                  <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
+                             VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
+                </Grid>
+              </Panel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -237,6 +261,8 @@
                  IsVisible="{Binding HasFilesSyncNote}" />
       <TextBlock FontSize="12.5" LineHeight="18" Margin="4,8,4,0" Foreground="{DynamicResource Mobile.Danger}"
                  Text="{Binding FilesNotice}" IsVisible="{Binding HasFilesNotice}" />
+      </StackPanel>
+      </Panel>
     </StackPanel>
   </ScrollViewer>
 
@@ -289,7 +315,10 @@
       <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
       <Setter Property="BorderThickness" Value="1.5" />
     </Style>
-    <Style Selector="Button.weekday.selected">
+    <!-- The selected day's fill: drawn by the pill under the strip, so the button itself stays clear. -->
+    <Style Selector="Border.weekpill">
+      <Setter Property="Height" Value="62" />
+      <Setter Property="CornerRadius" Value="14" />
       <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
     </Style>
     <Style Selector="Button.weekday.selected TextBlock">
