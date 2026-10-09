@@ -50,6 +50,41 @@ public sealed class SqliteDatabase : IAsyncDisposable
     }
 
     /// <summary>
+    /// Opens a database the app keeps current, without changing its schema: no backup, no
+    /// migration, no integrity or capability check. False when the schema is not current yet,
+    /// and the database then stays unopened.
+    /// </summary>
+    /// <remarks>
+    /// For a reader that runs beside the app rather than as it — Android's home-screen widgets,
+    /// which can start in the same moment as the app's own <see cref="Initialize"/> after an
+    /// update. Two migrations racing on one file is how the loser throws; the one that owns
+    /// the schema is the app, so everything else waits for it.
+    /// </remarks>
+    public bool TryOpenCurrent()
+    {
+        lock (_lifecycleLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_initialization is not null)
+            {
+                return true;
+            }
+
+            using (var connection = _connectionFactory.OpenReadConnection())
+            {
+                if (!_migrationRunner.IsCurrent(connection))
+                {
+                    return false;
+                }
+            }
+
+            _writer = new SerializedWriter(_connectionFactory, _options.WriterCapacity);
+            _initialization = new DatabaseInitializationResult(_migrationRunner.LatestVersion, true, true);
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Copies the database aside when a step that cannot be undone is about to run
     /// (docs/TODOS.md §8).
     /// </summary>

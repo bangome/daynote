@@ -82,6 +82,14 @@ public sealed class MigrationRunner
             ?.Name;
     }
 
+    /// <summary>True when every step this build ships has already been applied.</summary>
+    public bool IsCurrent(SqliteConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        var applied = ReadAppliedVersions(connection);
+        return _migrations.All(migration => applied.Contains(migration.Version));
+    }
+
     public int Apply(SqliteConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
