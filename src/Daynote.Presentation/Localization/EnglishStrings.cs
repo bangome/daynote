@@ -809,6 +809,33 @@ internal static class EnglishStrings
         ["AgendaListDelete"] = "Delete list",
         ["AgendaListNewName"] = "New list",
 
+        // The menu bar popover and the tray flyout (menu bar design §01).
+        ["MenuBarHeaderFormat"] = "'Today · 'ddd, MMM d",
+        ["MenuBarCapturePlaceholder"] = "Quick capture… @ for to-do or event",
+        ["MenuBarAppendHintFormat"] = "Enter: append to today’s note · {0}: new note",
+        ["MenuBarUpNext"] = "Up next",
+        ["MenuBarTodosFormat"] = "To-dos · {0} left",
+        ["MenuBarTodosEmpty"] = "Nothing left for today",
+        ["MenuBarJustNow"] = "Just now",
+        ["MenuBarAddedToFormat"] = "Added to {0}",
+        ["MenuBarNoticeDateFormat"] = "MMM d",
+        ["MenuBarAppended"] = "Added to today’s note",
+        ["MenuBarAppendedNewNote"] = "Added to a new note for today",
+        ["MenuBarAppendFailed"] = "Couldn’t add to the note. Try again.",
+        ["MenuBarView"] = "View",
+        ["MenuBarOpenApp"] = "Open Daynote",
+        ["MenuBarSettings"] = "Settings",
+        ["MenuBarEventInFormat"] = "in {0}",
+        ["MenuBarEventNow"] = "Now",
+        ["MenuBarHoursMinutesFormat"] = "{0} h {1} min",
+        ["MenuBarHoursFormat"] = "{0} h",
+        ["MenuBarMinutesFormat"] = "{0} min",
+        ["MenuBarStatusTooltipFormat"] = "Daynote · {0} to-dos left today",
+        ["SettingsMenuBarLabel"] = "Show in menu bar",
+        ["SettingsMenuBarDesc"] = "Shows how many to-dos are left today; click it for quick capture. Daynote stays in the menu bar when the window is closed.",
+        ["SettingsCaptureHotkeyLabel"] = "Quick capture",
+        ["SettingsCaptureHotkeyDesc"] = "Opens quick capture from anywhere. Change it if another app uses it.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

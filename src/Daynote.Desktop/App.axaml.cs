@@ -24,6 +24,7 @@ public partial class App : Application
 {
     private ServiceProvider? _provider;
     private ResidentLifecycle? _lifecycle;
+    private MenuBarController? _menuBar;
 
     /// <summary>Set when a restore was staged: Program relaunches the process after the lifetime ends.</summary>
     internal static bool RelaunchAfterExit { get; private set; }
@@ -114,6 +115,9 @@ public partial class App : Application
 
         window.AttachShortcuts(_provider.GetRequiredService<Daynote.App.Input.ConfigurableShortcuts>());
 
+        // The menu bar status item (Mac) or the tray flyout (Windows): today's count and quick capture.
+        _menuBar = CreateMenuBar(shell, hotkeys);
+
         // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile.
         window.Activated += (_, _) => shell.NotifyActivated();
 
@@ -155,6 +159,12 @@ public partial class App : Application
             if (shell.SettingsViewModel is { } settings)
             {
                 await settings.LoadSummonHotkeyAsync().ConfigureAwait(true);
+                await settings.LoadMenuBarAsync().ConfigureAwait(true);
+            }
+
+            if (_menuBar is { } menuBar)
+            {
+                await menuBar.InitializeAsync().ConfigureAwait(true);
             }
 
             if (shell.Account is { } account)
@@ -185,6 +195,46 @@ public partial class App : Application
             // settings/diagnostics work in the next phase.
             System.Diagnostics.Trace.TraceError(exception.ToString());
         }
+    }
+
+    private MenuBarController? CreateMenuBar(DesktopShellViewModel shell, Daynote.App.Input.IGlobalHotkeyService hotkeys)
+    {
+        if (_provider is null || _lifecycle is not { } lifecycle)
+        {
+            return null;
+        }
+
+        var append = new AppendNoteLine(
+            _provider.GetRequiredService<INoteRepository>(),
+            _provider.GetRequiredService<Func<Core.Domain.Notes.NoteId>>());
+        MenuBarController? controller = null;
+        var model = new MenuBarViewModel(
+            _provider.GetRequiredService<Core.Agenda.IAgendaRepository>(),
+            _provider.GetRequiredService<Core.Time.IClock>(),
+            (line, newNote) => shell.AppendLineToTodayAsync(append, line, newNote),
+            date =>
+            {
+                controller?.HideNow();
+                lifecycle.ShowWindow();
+                if (date is { } day)
+                {
+                    _ = shell.ShowDateFromMenuBarAsync(day);
+                }
+            },
+            () =>
+            {
+                controller?.HideNow();
+                lifecycle.ShowWindow();
+                shell.OpenSettingsFromMenuBar();
+            });
+
+        controller = new MenuBarController(this, model, lifecycle, hotkeys, shell.SettingsViewModel);
+
+        // Two ways round: what the popover makes shows in the window's panels, and what the window
+        // changes moves the count beside the status item.
+        model.AgendaChanged += (_, _) => _ = shell.Todo.RefreshAsync();
+        shell.Todo.Refreshed += (_, _) => controller.NotifyAgendaChanged();
+        return controller;
     }
 
     private static WindowIcon LoadTrayIcon()

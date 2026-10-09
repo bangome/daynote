@@ -50,7 +50,17 @@ public sealed class ResidentLifecycle : IDisposable
             ToolTipText = "Daynote",
             Menu = new NativeMenu { Items = { _showItem, new NativeMenuItemSeparator(), _quitItem } },
         };
-        _tray.Clicked += (_, _) => ShowWindow();
+        _tray.Clicked += (_, _) =>
+        {
+            if (TrayClicked is { } clicked)
+            {
+                clicked();
+            }
+            else
+            {
+                ShowWindow();
+            }
+        };
         TrayIcon.SetIcons(application, [_tray]);
 
         // The red close button hides; the process stays resident.
@@ -78,6 +88,22 @@ public sealed class ResidentLifecycle : IDisposable
 
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
+
+    /// <summary>
+    /// What a click on the tray icon does instead of showing the window: the tray flyout, once
+    /// <see cref="MenuBarController"/> has taken the icon over. The menu keeps Show and Quit.
+    /// </summary>
+    public Action? TrayClicked { get; set; }
+
+    public void SetTrayIcon(WindowIcon icon) => _tray.Icon = icon;
+
+    public void SetTrayToolTip(string text) => _tray.ToolTipText = text;
+
+    /// <summary>
+    /// Hides the icon. On the Mac the menu bar's own status item stands in for it, and one app
+    /// with two items in the bar would be one too many.
+    /// </summary>
+    public void SetTrayVisible(bool visible) => _tray.IsVisible = visible;
 
     public void ShowWindow()
     {

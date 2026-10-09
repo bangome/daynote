@@ -58,6 +58,19 @@
                 </Grid>
               </Border>
 
+              <!-- The menu bar's status item (Mac). Closing the window leaves Daynote running there. -->
+              <Border Classes="setrow" IsVisible="{x:Static vm:DesktopSettingsViewModel.ShowsMenuBarRow}">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Classes="label" Text="{Binding MenuBarLabel}" />
+                    <TextBlock Classes="desc" TextWrapping="Wrap" Text="{Binding MenuBarDesc}" />
+                  </StackPanel>
+                  <ToggleButton Grid.Column="1" Classes="switch" VerticalAlignment="Center"
+                                IsChecked="{Binding MenuBarVisible, Mode=OneWay}"
+                                Command="{Binding ToggleMenuBarCommand}" AutomationProperties.Name="{Binding MenuBarLabel}" />
+                </Grid>
+              </Border>
+
               <Border Classes="setrow">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0">
@@ -122,6 +135,26 @@
                   </Grid>
                   <TextBlock Classes="muted" FontSize="11.5" Text="{Binding HotkeyStatusText}"
                              IsVisible="{Binding HotkeyStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+
+              <!-- The second global chord: quick capture in the menu bar popover / tray flyout. -->
+              <Border Background="{DynamicResource Daynote.Desk.Brush.SunSoft}" CornerRadius="12" Padding="16" Margin="0,0,0,10">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                      <TextBlock FontSize="13.5" FontWeight="Bold" Text="{Binding CaptureHotkeyLabel}" />
+                      <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" Text="{Binding CaptureHotkeyDesc}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="combo" Classes.capturing="{Binding IsCapturingCaptureHotkey}" FontSize="12" FontWeight="Bold"
+                            Padding="9,4" Background="{DynamicResource Daynote.Product.Brush.Card}" VerticalAlignment="Center"
+                            Content="{Binding CaptureHotkeyDisplay}" Command="{Binding StartCaptureHotkeyCaptureCommand}"
+                            ToolTip.Tip="{Binding #Root.Strings[DeskShortcutChangeTip]}" />
+                    <Button Grid.Column="2" Classes="link faint" FontSize="11.5" Margin="10,0,0,0" VerticalAlignment="Center"
+                            Content="{Binding HotkeyReset}" Command="{Binding ResetCaptureHotkeyCommand}" />
+                  </Grid>
+                  <TextBlock Classes="muted" FontSize="11.5" Text="{Binding CaptureHotkeyStatusText}"
+                             IsVisible="{Binding CaptureHotkeyStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
               </Border>
 

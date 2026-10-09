@@ -28,7 +28,7 @@ public sealed partial class DesktopSettingsViewModel
     [ObservableProperty]
     private string? _hotkeyStatusText;
 
-    public bool IsCapturing => IsCapturingHotkey || _capturingRow is not null;
+    public bool IsCapturing => IsCapturingHotkey || IsCapturingCaptureHotkey || _capturingRow is not null;
 
     public string ShortcutsLabel => AppStrings.SettingsShortcutsRow;
     public string SummonHotkeyLabel => AppStrings.SettingsSummonHotkeyLabel;
@@ -95,6 +95,10 @@ public sealed partial class DesktopSettingsViewModel
         if (IsCapturingHotkey)
         {
             await ApplySummonHotkeyAsync(hotkey).ConfigureAwait(true);
+        }
+        else if (IsCapturingCaptureHotkey)
+        {
+            await ApplyCaptureHotkeyAsync(hotkey).ConfigureAwait(true);
         }
         else if (_capturingRow is { } row)
         {
@@ -168,6 +172,8 @@ public sealed partial class DesktopSettingsViewModel
     {
         IsCapturingHotkey = false;
         HotkeyStatusText = null;
+        IsCapturingCaptureHotkey = false;
+        CaptureHotkeyStatusText = null;
         if (_capturingRow is { } row)
         {
             row.IsCapturing = false;

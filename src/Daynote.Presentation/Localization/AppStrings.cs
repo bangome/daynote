@@ -887,6 +887,44 @@ public static class AppStrings
     public static string AgendaListDelete => LocalizationService.Instance[nameof(AgendaListDelete)];
     public static string AgendaListNewName => LocalizationService.Instance[nameof(AgendaListNewName)];
 
+    // The menu bar popover and the tray flyout (menu bar design §01).
+    /// <summary>The popover's heading. A .NET date format with the word for today quoted.</summary>
+    public static string MenuBarHeaderFormat => LocalizationService.Instance[nameof(MenuBarHeaderFormat)];
+    public static string MenuBarCapturePlaceholder => LocalizationService.Instance[nameof(MenuBarCapturePlaceholder)];
+    /// <summary>{0} = the new-note chord (⌘Enter on the Mac, Ctrl+Enter elsewhere).</summary>
+    public static string MenuBarAppendHintFormat => LocalizationService.Instance[nameof(MenuBarAppendHintFormat)];
+    public static string MenuBarUpNext => LocalizationService.Instance[nameof(MenuBarUpNext)];
+    /// <summary>{0} = how many of today's to-dos are left.</summary>
+    public static string MenuBarTodosFormat => LocalizationService.Instance[nameof(MenuBarTodosFormat)];
+    public static string MenuBarTodosEmpty => LocalizationService.Instance[nameof(MenuBarTodosEmpty)];
+    /// <summary>The badge on a row the popover has just made.</summary>
+    public static string MenuBarJustNow => LocalizationService.Instance[nameof(MenuBarJustNow)];
+    /// <summary>{0} = the date the item went to, in MenuBarNoticeDateFormat.</summary>
+    public static string MenuBarAddedToFormat => LocalizationService.Instance[nameof(MenuBarAddedToFormat)];
+    /// <summary>Date format for that line.</summary>
+    public static string MenuBarNoticeDateFormat => LocalizationService.Instance[nameof(MenuBarNoticeDateFormat)];
+    public static string MenuBarAppended => LocalizationService.Instance[nameof(MenuBarAppended)];
+    public static string MenuBarAppendedNewNote => LocalizationService.Instance[nameof(MenuBarAppendedNewNote)];
+    /// <summary>The line could not be written; the text stays in the box.</summary>
+    public static string MenuBarAppendFailed => LocalizationService.Instance[nameof(MenuBarAppendFailed)];
+    public static string MenuBarView => LocalizationService.Instance[nameof(MenuBarView)];
+    public static string MenuBarOpenApp => LocalizationService.Instance[nameof(MenuBarOpenApp)];
+    public static string MenuBarSettings => LocalizationService.Instance[nameof(MenuBarSettings)];
+    /// <summary>{0} = a duration until the event starts.</summary>
+    public static string MenuBarEventInFormat => LocalizationService.Instance[nameof(MenuBarEventInFormat)];
+    /// <summary>The event has started and not yet ended.</summary>
+    public static string MenuBarEventNow => LocalizationService.Instance[nameof(MenuBarEventNow)];
+    /// <summary>{0} hours and {1} minutes.</summary>
+    public static string MenuBarHoursMinutesFormat => LocalizationService.Instance[nameof(MenuBarHoursMinutesFormat)];
+    public static string MenuBarHoursFormat => LocalizationService.Instance[nameof(MenuBarHoursFormat)];
+    public static string MenuBarMinutesFormat => LocalizationService.Instance[nameof(MenuBarMinutesFormat)];
+    /// <summary>{0} = to-dos left today, beside the status item.</summary>
+    public static string MenuBarStatusTooltipFormat => LocalizationService.Instance[nameof(MenuBarStatusTooltipFormat)];
+    public static string SettingsMenuBarLabel => LocalizationService.Instance[nameof(SettingsMenuBarLabel)];
+    public static string SettingsMenuBarDesc => LocalizationService.Instance[nameof(SettingsMenuBarDesc)];
+    public static string SettingsCaptureHotkeyLabel => LocalizationService.Instance[nameof(SettingsCaptureHotkeyLabel)];
+    public static string SettingsCaptureHotkeyDesc => LocalizationService.Instance[nameof(SettingsCaptureHotkeyDesc)];
+
     public static string AgendaRuleDaily => LocalizationService.Instance[nameof(AgendaRuleDaily)];
     /// <summary>{0} = the interval in days.</summary>
     public static string AgendaRuleEveryNDays => LocalizationService.Instance[nameof(AgendaRuleEveryNDays)];

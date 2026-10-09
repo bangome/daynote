@@ -1,0 +1,385 @@
+<!--
+  The menu bar popover (Mac) and the tray flyout (Windows): menu bar design §01, B1–B7.
+
+  Its own colours rather than the app's palette, for one reason: it follows the system's light or
+  dark, not the app's theme switch (Motion M9 — it sits in the menu bar beside everything else
+  there), so it needs both sets whatever the main window is showing. The values are the design's.
+-->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Daynote.Desktop.ViewModels"
+        x:Class="Daynote.Desktop.Views.MenuBarPopover"
+        x:DataType="vm:MenuBarViewModel"
+        Title="Daynote"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        CanMaximize="False"
+        SizeToContent="WidthAndHeight">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="MenuBar.Bg" Color="#FFFFFEFB" />
+          <SolidColorBrush x:Key="MenuBar.Stroke" Color="#FFE6E3DA" />
+          <SolidColorBrush x:Key="MenuBar.Divider" Color="#FFEFECE5" />
+          <SolidColorBrush x:Key="MenuBar.Field" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="MenuBar.FieldStroke" Color="#FFE6E3DA" />
+          <SolidColorBrush x:Key="MenuBar.Readback" Color="#FFEFEDE6" />
+          <SolidColorBrush x:Key="MenuBar.ReadbackSelected" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="MenuBar.Text" Color="#FF161A36" />
+          <SolidColorBrush x:Key="MenuBar.Text2" Color="#FF62667D" />
+          <SolidColorBrush x:Key="MenuBar.Text3" Color="#FF9A9CAA" />
+          <SolidColorBrush x:Key="MenuBar.Sun" Color="#FFEE7F35" />
+          <SolidColorBrush x:Key="MenuBar.SunInk" Color="#FFB4531A" />
+          <SolidColorBrush x:Key="MenuBar.SunSoft" Color="#21EE7F35" />
+          <SolidColorBrush x:Key="MenuBar.Overdue" Color="#FFCF4A3F" />
+          <SolidColorBrush x:Key="MenuBar.Hover" Color="#0B161A36" />
+          <SolidColorBrush x:Key="MenuBar.OnTone" Color="#FFFFFFFF" />
+          <!-- List colours: the built-in list takes the sun, the others follow (design B1). -->
+          <SolidColorBrush x:Key="MenuBar.Tone0" Color="#FFEE7F35" />
+          <SolidColorBrush x:Key="MenuBar.Tone1" Color="#FF5A64C4" />
+          <SolidColorBrush x:Key="MenuBar.Tone2" Color="#FF2FA36B" />
+          <BoxShadows x:Key="MenuBar.Shadow">0 18 48 0 #2E000000</BoxShadows>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="MenuBar.Bg" Color="#FF171A2E" />
+          <SolidColorBrush x:Key="MenuBar.Stroke" Color="#FF2A2E48" />
+          <SolidColorBrush x:Key="MenuBar.Divider" Color="#FF262A42" />
+          <SolidColorBrush x:Key="MenuBar.Field" Color="#FF1C1F35" />
+          <SolidColorBrush x:Key="MenuBar.FieldStroke" Color="#FF2A2E48" />
+          <SolidColorBrush x:Key="MenuBar.Readback" Color="#FF22253C" />
+          <SolidColorBrush x:Key="MenuBar.ReadbackSelected" Color="#FF1C1F35" />
+          <SolidColorBrush x:Key="MenuBar.Text" Color="#FFECEAF2" />
+          <SolidColorBrush x:Key="MenuBar.Text2" Color="#FF9A9CB3" />
+          <SolidColorBrush x:Key="MenuBar.Text3" Color="#FF6C6F88" />
+          <SolidColorBrush x:Key="MenuBar.Sun" Color="#FFFF9A52" />
+          <SolidColorBrush x:Key="MenuBar.SunInk" Color="#FFFFB27A" />
+          <SolidColorBrush x:Key="MenuBar.SunSoft" Color="#29FF9A52" />
+          <SolidColorBrush x:Key="MenuBar.Overdue" Color="#FFFF8076" />
+          <SolidColorBrush x:Key="MenuBar.Hover" Color="#0DFFFFFF" />
+          <SolidColorBrush x:Key="MenuBar.OnTone" Color="#FF171A2E" />
+          <SolidColorBrush x:Key="MenuBar.Tone0" Color="#FFFF9A52" />
+          <SolidColorBrush x:Key="MenuBar.Tone1" Color="#FF9CA1C6" />
+          <SolidColorBrush x:Key="MenuBar.Tone2" Color="#FF3DD68C" />
+          <BoxShadows x:Key="MenuBar.Shadow">0 18 48 0 #80000000</BoxShadows>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text}" />
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text3}" />
+    </Style>
+
+    <!-- The capture box: white on the card, the sun's ring while it has focus (B2, B5). -->
+    <Style Selector="TextBox.capture">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Field}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.FieldStroke}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="11,8" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text}" />
+      <Setter Property="CaretBrush" Value="{DynamicResource MenuBar.Sun}" />
+      <Setter Property="AcceptsReturn" Value="False" />
+      <Setter Property="AcceptsTab" Value="False" />
+    </Style>
+    <Style Selector="TextBox.capture:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Field}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.FieldStroke}" />
+    </Style>
+    <Style Selector="TextBox.capture:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Field}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.Sun}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="TextBox.capture /template/ TextBlock#PART_Watermark">
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text3}" />
+    </Style>
+
+    <!-- Every button here is text or a ring: no chrome of its own, a faint wash on hover. -->
+    <Style Selector="Button.mb">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Focusable" Value="False" />
+    </Style>
+    <Style Selector="Button.mb:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.mb:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.mb.row:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Hover}" />
+    </Style>
+
+    <!-- The readback's two lines (B2, B6): the chosen one lifted onto the card's white. -->
+    <Style Selector="Border.reading">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.reading.selected">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.ReadbackSelected}" />
+    </Style>
+    <Style Selector="Border.reading TextBlock.kind">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
+    </Style>
+    <Style Selector="Border.reading.selected TextBlock.kind">
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.SunInk}" />
+    </Style>
+    <Style Selector="Border.reading TextBlock.line">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
+    </Style>
+    <Style Selector="Border.reading.selected TextBlock.line">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text}" />
+    </Style>
+    <Style Selector="Border.reading TextBlock.enter">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.SunInk}" />
+    </Style>
+    <Style Selector="Border.reading.selected TextBlock.enter">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+
+    <!--
+      The check ring in the list's colour (M3, desktop variant): it fills from the centre without
+      overshoot, 200 ms ease-out, and the check is drawn on the fill.
+    -->
+    <Style Selector="Border.ring">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.Tone0}" />
+    </Style>
+    <Style Selector="Border.ring.tone1">
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.Tone1}" />
+    </Style>
+    <Style Selector="Border.ring.tone2">
+      <Setter Property="BorderBrush" Value="{DynamicResource MenuBar.Tone2}" />
+    </Style>
+    <Style Selector="Border.fill">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Tone0}" />
+      <Setter Property="RenderTransform" Value="scale(0)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.fill.tone1">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Tone1}" />
+    </Style>
+    <Style Selector="Border.fill.tone2">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.Tone2}" />
+    </Style>
+    <Style Selector="Border.fill.done">
+      <Setter Property="RenderTransform" Value="scale(1)" />
+    </Style>
+    <!-- A row; the one just made or just ticked keeps the sun's wash (B3, B7). -->
+    <Style Selector="Border.todorow">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.todorow.fresh">
+      <Setter Property="Background" Value="{DynamicResource MenuBar.SunSoft}" />
+    </Style>
+    <Style Selector="TextBlock.todo">
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.todo.done">
+      <Setter Property="TextDecorations" Value="Strikethrough" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text3}" />
+    </Style>
+    <Style Selector="TextBlock.time">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontFeatures" Value="+tnum" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
+    </Style>
+    <Style Selector="TextBlock.time.overdue">
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Overdue}" />
+    </Style>
+  </Window.Styles>
+
+  <!-- Room around the card for its shadow; the host places the window by the card, not the margin. -->
+  <Panel x:Name="Frame" Margin="24,8,24,40">
+    <Border x:Name="Card" Width="340" CornerRadius="14" ClipToBounds="True"
+            Background="{DynamicResource MenuBar.Bg}"
+            BorderBrush="{DynamicResource MenuBar.Stroke}" BorderThickness="1"
+            BoxShadow="{DynamicResource MenuBar.Shadow}"
+            RenderTransformOrigin="50%,0%">
+      <StackPanel>
+        <!-- The date and the box. Focus lands in the box the moment the popover opens. -->
+        <Border Padding="14,12,14,10" BorderBrush="{DynamicResource MenuBar.Divider}" BorderThickness="0,0,0,1">
+          <StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Image Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center"
+                     Source="avares://Daynote.Desktop/Assets/daynote-favicon-v1.png" />
+              <TextBlock Grid.Column="1" Margin="8,0" FontSize="14" FontWeight="ExtraBold" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" Text="{Binding HeaderText}" />
+              <TextBlock Grid.Column="2" FontSize="12" VerticalAlignment="Center"
+                         Foreground="{DynamicResource MenuBar.Text3}" Text="{Binding ChordText}" />
+            </Grid>
+
+            <TextBox x:Name="Box" Classes="capture" Margin="0,10,0,0"
+                     PlaceholderText="{Binding Placeholder}" Text="{Binding Draft}" />
+
+            <!-- @ read as a date: the editor's two lines, Enter / Tab / Esc as in a note. -->
+            <Border Margin="0,6,0,0" CornerRadius="10" Padding="4" Background="{DynamicResource MenuBar.Readback}"
+                    IsVisible="{Binding IsReadbackVisible}">
+              <StackPanel>
+                <Button Classes="mb" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        Command="{Binding SelectTaskCommand}">
+                  <Border Classes="reading" Classes.selected="{Binding Capture.IsTaskSelected}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                      <TextBlock Grid.Column="0" Classes="kind" VerticalAlignment="Center" Text="{Binding TaskLabel}" />
+                      <TextBlock Grid.Column="1" Classes="line" Margin="10,0" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" Text="{Binding Capture.TaskLine}" />
+                      <TextBlock Grid.Column="2" Classes="enter" VerticalAlignment="Center" Text="↵" />
+                    </Grid>
+                  </Border>
+                </Button>
+                <Button Classes="mb" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        Command="{Binding SelectEventCommand}">
+                  <Border Classes="reading" Classes.selected="{Binding Capture.IsEventSelected}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                      <TextBlock Grid.Column="0" Classes="kind" VerticalAlignment="Center" Text="{Binding EventLabel}" />
+                      <TextBlock Grid.Column="1" Classes="line" Margin="10,0" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" Text="{Binding Capture.EventLine}" />
+                      <TextBlock Grid.Column="2" Classes="enter" VerticalAlignment="Center" Text="↵" />
+                    </Grid>
+                  </Border>
+                </Button>
+                <TextBlock Margin="10,4,10,2" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MenuBar.SunInk}"
+                           IsVisible="{Binding Capture.HasNote}" Text="{Binding Capture.Note}" />
+                <TextBlock Margin="10,4,10,2" FontSize="11" Foreground="{DynamicResource MenuBar.Text3}"
+                           Text="{Binding Capture.KeyHints}" />
+              </StackPanel>
+            </Border>
+
+            <!-- An @ with nothing after it yet: what to type, not an error. -->
+            <Border Margin="0,6,0,0" CornerRadius="10" Padding="10,8" Background="{DynamicResource MenuBar.Readback}"
+                    IsVisible="{Binding IsPromptVisible}">
+              <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource MenuBar.Text2}"
+                         Text="{Binding Capture.Prompt}" />
+            </Border>
+
+            <!-- Plain text: where Enter will put it (B5). -->
+            <TextBlock Margin="2,6,2,0" FontSize="11.5" Foreground="{DynamicResource MenuBar.Text3}"
+                       IsVisible="{Binding IsAppendHintVisible}" Text="{Binding AppendHint}" />
+          </StackPanel>
+        </Border>
+
+        <!-- What was just made or added, said in place rather than as a toast (B4, M4). -->
+        <Border Margin="14,10,14,0" MinHeight="32" Padding="11,0" CornerRadius="9"
+                Background="{DynamicResource MenuBar.SunSoft}" IsVisible="{Binding HasNotice}">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock FontSize="12.5" VerticalAlignment="Center" Text="{Binding NoticeText}" />
+            <StackPanel Orientation="Horizontal" IsVisible="{Binding HasNoticeAction}">
+              <TextBlock FontSize="12.5" VerticalAlignment="Center" Text=" · " />
+              <Button Classes="mb" VerticalAlignment="Center" Command="{Binding ViewNoticeCommand}">
+                <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource MenuBar.SunInk}"
+                           Text="{Binding ViewLabel}" />
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- The next event today. -->
+        <StackPanel Margin="14,12,14,4" IsVisible="{Binding HasNextEvent}">
+          <TextBlock Classes="label" Margin="0,0,0,6" Text="{Binding UpNextLabel}" />
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Grid.Column="0" Width="3.5" CornerRadius="2" Background="{DynamicResource MenuBar.Sun}" />
+            <StackPanel Grid.Column="1" Margin="9,0,0,0">
+              <TextBlock FontSize="14" FontWeight="ExtraBold" TextTrimming="CharacterEllipsis" Text="{Binding NextEventTitle}" />
+              <TextBlock Margin="0,1,0,0" FontSize="12" Foreground="{DynamicResource MenuBar.Text2}" Text="{Binding NextEventDetail}" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
+        <!-- Today's to-dos: timed, then untimed; anything made here on top as 방금. -->
+        <StackPanel Margin="6,8,6,6">
+          <TextBlock Classes="label" Margin="8,0,8,2" Text="{Binding TodosHeader}" />
+          <TextBlock Margin="8,6,8,6" FontSize="12.5" Foreground="{DynamicResource MenuBar.Text3}"
+                     IsVisible="{Binding HasNoTodos}" Text="{Binding TodosEmpty}" />
+          <ItemsControl ItemsSource="{Binding Todos}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MenuBarTodoRowViewModel">
+                <Border Classes="todorow" Classes.fresh="{Binding IsHighlighted}">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                    <Button Grid.Column="0" Classes="mb" VerticalAlignment="Center" Command="{Binding ToggleCommand}"
+                            AutomationProperties.Name="{Binding Title}">
+                      <Panel>
+                        <Border Classes="fill" Classes.tone1="{Binding IsToneIndigo}" Classes.tone2="{Binding IsToneGreen}"
+                                Classes.done="{Binding IsDone}" />
+                        <Border Classes="ring" Classes.tone1="{Binding IsToneIndigo}" Classes.tone2="{Binding IsToneGreen}" />
+                        <Path HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsDone}"
+                              Stroke="{DynamicResource MenuBar.OnTone}" StrokeThickness="1.8"
+                              StrokeLineCap="Round" StrokeJoin="Round"
+                              Data="M0,2.3 L2.3,4.6 L6.3,0" />
+                      </Panel>
+                    </Button>
+                    <TextBlock Grid.Column="1" Classes="todo" Classes.done="{Binding IsDone}" Margin="9,0,0,0"
+                               Text="{Binding Title}" />
+                    <Path Grid.Column="2" Width="10" Height="10" Margin="6,0,0,0" VerticalAlignment="Center"
+                          Stretch="Uniform" IsVisible="{Binding IsRepeat}"
+                          Stroke="{DynamicResource MenuBar.Text3}" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round"
+                          Data="M10.2,6 A4.2,4.2 0 1 1 8.7,2.8 M9.4,0.8 L9.1,3.3 L6.6,3.1" />
+                    <TextBlock Grid.Column="3" Margin="8,0,0,0" FontSize="11" FontWeight="ExtraBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MenuBar.SunInk}" IsVisible="{Binding IsJustAdded}"
+                               Text="{Binding $parent[ItemsControl].((vm:MenuBarViewModel)DataContext).JustNowLabel}" />
+                    <TextBlock Grid.Column="4" Classes="time" Classes.overdue="{Binding ShowsOverdue}" Margin="8,0,0,0"
+                               IsVisible="{Binding HasTime}" Text="{Binding TimeText}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- The way out to the app. -->
+        <Border Padding="14,9" BorderBrush="{DynamicResource MenuBar.Divider}" BorderThickness="0,1,0,0">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Classes="mb" Command="{Binding OpenAppCommand}">
+              <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource MenuBar.Text2}" Text="{Binding OpenAppLabel}" />
+            </Button>
+            <Button Grid.Column="2" Classes="mb" Command="{Binding OpenSettingsCommand}">
+              <TextBlock FontSize="12.5" Foreground="{DynamicResource MenuBar.Text2}" Text="{Binding SettingsLabel}" />
+            </Button>
+          </Grid>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Panel>
+</Window>

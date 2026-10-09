@@ -799,6 +799,33 @@ internal static class KoreanStrings
         ["AgendaListDelete"] = "리스트 삭제",
         ["AgendaListNewName"] = "새 리스트",
 
+        // The menu bar popover and the tray flyout (menu bar design §01).
+        ["MenuBarHeaderFormat"] = "'오늘 · 'M월 d일 dddd",
+        ["MenuBarCapturePlaceholder"] = "빠른 기록… @로 할 일·일정",
+        ["MenuBarAppendHintFormat"] = "Enter: 오늘 노트에 추가 · {0}: 새 노트",
+        ["MenuBarUpNext"] = "다음 일정",
+        ["MenuBarTodosFormat"] = "할 일 · 남은 {0}",
+        ["MenuBarTodosEmpty"] = "오늘 남은 할 일이 없어요",
+        ["MenuBarJustNow"] = "방금",
+        ["MenuBarAddedToFormat"] = "{0}에 추가됨",
+        ["MenuBarNoticeDateFormat"] = "M'/'d",
+        ["MenuBarAppended"] = "오늘 노트에 추가됨",
+        ["MenuBarAppendedNewNote"] = "오늘 새 노트에 추가됨",
+        ["MenuBarAppendFailed"] = "노트에 추가하지 못했어요. 다시 시도해 주세요.",
+        ["MenuBarView"] = "보기",
+        ["MenuBarOpenApp"] = "Daynote 열기",
+        ["MenuBarSettings"] = "설정",
+        ["MenuBarEventInFormat"] = "{0} 후",
+        ["MenuBarEventNow"] = "진행 중",
+        ["MenuBarHoursMinutesFormat"] = "{0}시간 {1}분",
+        ["MenuBarHoursFormat"] = "{0}시간",
+        ["MenuBarMinutesFormat"] = "{0}분",
+        ["MenuBarStatusTooltipFormat"] = "Daynote · 오늘 남은 할 일 {0}",
+        ["SettingsMenuBarLabel"] = "메뉴 막대에 표시",
+        ["SettingsMenuBarDesc"] = "오늘 남은 할 일 수를 보여 주고, 누르면 빠른 기록이 열립니다. 창을 닫아도 메뉴 막대에 남아 있습니다.",
+        ["SettingsCaptureHotkeyLabel"] = "빠른 기록",
+        ["SettingsCaptureHotkeyDesc"] = "어디서든 빠른 기록 창을 엽니다. 다른 앱과 겹치면 바꾸세요.",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };
