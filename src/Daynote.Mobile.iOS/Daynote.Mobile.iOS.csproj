@@ -13,8 +13,8 @@
     <!-- The same bundle id as the Mac app, which is allowed and is what lets one App Store listing
          carry both. The Mac build is not distributed through the store today, so nothing collides. -->
     <ApplicationId>cc.arachat.daynote</ApplicationId>
-    <ApplicationVersion>14</ApplicationVersion>
-    <ApplicationDisplayVersion>1.5.0</ApplicationDisplayVersion>
+    <ApplicationVersion>15</ApplicationVersion>
+    <ApplicationDisplayVersion>1.6.0</ApplicationDisplayVersion>
     <!-- iOS 15: the floor Avalonia supports, and the oldest release still receiving security fixes. -->
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
     <!--
