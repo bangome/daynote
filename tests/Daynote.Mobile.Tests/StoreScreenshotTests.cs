@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
+using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Mobile.ViewModels;
@@ -129,12 +130,16 @@ public sealed class StoreScreenshotTests
                 host.Show();
 
                 Wait(shell.InitializeAsync());
-                Seed(shell, language);
+                // The Tablet layout shows whole note previews, the day's files and a to-do panel
+                // where a phone's first screen shows a few lines, so it gets a fuller day written
+                // as prose, with its to-dos put straight into the agenda rather than written as
+                // checkbox lines a store visitor would read as markup.
+                bool tablet = target.LogicalWidth >= MobileLayouts.TabletWidth;
+                Seed(shell, language, tablet);
                 ScreenshotTests.CaptureSeededTodos(provider);
-                if (target.LogicalWidth >= MobileLayouts.TabletWidth)
+                if (tablet)
                 {
-                    // The Tablet layout shows the day's files under its notes, where a phone's
-                    // first screen never reaches.
+                    SeedTodos(provider, language);
                     SeedFiles(shell, language);
                 }
 
@@ -190,20 +195,32 @@ public sealed class StoreScreenshotTests
         }
     }
 
-    private static void Seed(MobileShellViewModel shell, AppLanguage language)
+    private static void Seed(MobileShellViewModel shell, AppLanguage language, bool tablet)
     {
         bool korean = language == AppLanguage.Korean;
         LocalDate today = LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
 
         // Earlier days first, so the calendar shows a month with a history in it.
-        foreach (Entry entry in korean ? KoreanHistory : EnglishHistory)
+        foreach (Entry entry in (korean, tablet) switch
+        {
+            (true, true) => TabletKoreanHistory,
+            (true, false) => KoreanHistory,
+            (false, true) => TabletEnglishHistory,
+            (false, false) => EnglishHistory,
+        })
         {
             Wait(shell.SelectDateAsync(LocalDates.AddDays(today, -entry.DaysAgo)));
             WriteNote(shell, entry.Title, entry.Body);
         }
 
         Wait(shell.SelectDateAsync(today));
-        foreach (Entry entry in korean ? KoreanToday : EnglishToday)
+        foreach (Entry entry in (korean, tablet) switch
+        {
+            (true, true) => TabletKoreanToday,
+            (true, false) => KoreanToday,
+            (false, true) => TabletEnglishToday,
+            (false, false) => EnglishToday,
+        })
         {
             WriteNote(shell, entry.Title, entry.Body);
         }
@@ -219,10 +236,44 @@ public sealed class StoreScreenshotTests
         Pump();
     }
 
+    private static void SeedTodos(IServiceProvider provider, AppLanguage language)
+    {
+        var agenda = provider.GetRequiredService<IAgendaRepository>();
+        LocalDate today = LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
+        foreach (Todo todo in language == AppLanguage.Korean ? TabletKoreanTodos : TabletEnglishTodos)
+        {
+            LocalDate day = LocalDates.AddDays(today, -todo.DaysAgo);
+            Wait(agenda.SaveAsync(new AgendaItem(
+                Guid.NewGuid(),
+                AgendaList.DefaultId,
+                AgendaKind.Task,
+                todo.Title,
+                string.Empty,
+                "Asia/Seoul",
+                StartsAt: null,
+                EndsAt: null,
+                DueAt: new WallClock(new DateTime(day.Year, day.Month, day.Day, 0, 0, 0)),
+                HasDueTime: false,
+                Rrule: null,
+                SeriesId: null,
+                RecurrenceId: null,
+                todo.Done ? AgendaStatus.Completed : AgendaStatus.NeedsAction,
+                CompletedUtc: todo.Done ? DateTimeOffset.UtcNow : null,
+                Priority: 0,
+                TimelineVisibility.Auto,
+                SourceNoteId: null,
+                ExceptionDates: [],
+                AgendaAlert.None,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow)).AsTask());
+        }
+    }
+
     private static void SeedFiles(MobileShellViewModel shell, AppLanguage language)
     {
         bool korean = language == AppLanguage.Korean;
         Wait(AddFile(shell, korean ? "회의실 화이트보드.png" : "Whiteboard.png", ScreenshotTests.SamplePng(320, 240)));
+        Wait(AddFile(shell, korean ? "온보딩 시안 B.png" : "Onboarding mockup B.png", ScreenshotTests.SamplePng(240, 320)));
         Wait(AddFile(shell, korean ? "3분기 예산안.pdf" : "Q3 budget draft.pdf", new byte[184_320]));
         Wait(shell.Files.RefreshAsync());
     }
@@ -295,6 +346,8 @@ public sealed class StoreScreenshotTests
 
     private readonly record struct Entry(int DaysAgo, string Title, string Body);
 
+    private readonly record struct Todo(int DaysAgo, string Title, bool Done = false);
+
     private static readonly Entry[] KoreanHistory =
     [
         new(9, "주간 회고", "이번 주에 끝낸 것\n- 온보딩 화면 세 가지 시안\n- 검색 속도 개선\n\n-[x] 회고 정리해서 공유"),
@@ -323,5 +376,67 @@ public sealed class StoreScreenshotTests
     [
         new(0, "Q3 planning meeting", "Attending: product 2, design 1, engineering 3\n\n-[x] Last quarter's numbers\n-[] Share the budget draft\n-[] Book the design review\n\nDecided\n- Ship the new onboarding flow this month.\n- Search first has to find two-letter words."),
         new(0, "Today", "-[] Send the meeting notes\n-[] Check the budget figures\n-[x] Stand-up"),
+    ];
+
+    private static readonly Entry[] TabletKoreanHistory =
+    [
+        new(9, "주간 회고", "이번 주에 끝낸 것\n- 온보딩 화면 세 가지 시안\n- 검색 속도 개선\n\n다음 주에는 스프린트를 조금 짧게 잡아 보기로."),
+        new(6, "장보기", "커피 원두, 우유, 세제\n주말 장은 토요일 오전에 한 번에."),
+        new(4, "읽을거리", "저장해 둔 링크들\n\n- 타이포그래피 기초\n- 좋은 회의록 쓰는 법"),
+        new(2, "면담 준비", "물어볼 것: 온보딩 일정, 팀 구성\n이력서와 포트폴리오는 미리 정리해 두기."),
+        new(1, "운동 기록", "러닝 5km · 28분\n다음 주 목표: 주 3회"),
+    ];
+
+    private static readonly Entry[] TabletKoreanToday =
+    [
+        new(0, "3분기 계획 회의", "지난 분기 지표는 목표를 조금 넘겼고, 신규 온보딩 흐름은 이달 안에 내보내기로 했습니다.\n참석: 기획 2, 디자인 1, 개발 3\n\n정한 것\n- 온보딩은 이달 셋째 주에 출시\n- 검색은 두 글자로도 찾히게 하는 것이 먼저\n- 예산안은 금요일까지 공유\n\n다음 회의는 디자인 리뷰가 끝난 뒤에."),
+        new(0, "디자인 리뷰 메모", "온보딩 시안은 B안으로 결정. 첫 화면 문구는 한 줄로 줄이고, 버튼 색은 브랜드 남색으로 통일하기로.\n\n빈 화면에는 예시 노트를 하나 보여 주자는 의견도 나왔다."),
+        new(0, "독서 메모", "『깊은 일』 3장까지 읽었다.\n한 번에 한 가지 일만, 알림은 정해 둔 시간에만 확인하기. 오후에 한 시간 해 보니 확실히 덜 지친다."),
+        new(0, "오늘의 일기", "아침에 비가 그쳐서 걸어서 출근했다. 점심은 팀과 새로 생긴 국숫집에서. 회의가 길었지만 결정할 것은 다 정했다. 오늘은 일찍 자기."),
+    ];
+
+    private static readonly Todo[] TabletKoreanTodos =
+    [
+        new(9, "회고 정리해서 공유", Done: true),
+        new(6, "세제 사기"),
+        new(2, "이력서 최신화"),
+        new(2, "포트폴리오 정리"),
+        new(0, "지난 분기 지표 정리", Done: true),
+        new(0, "스탠드업", Done: true),
+        new(0, "예산안 초안 공유"),
+        new(0, "온보딩 문구 수정 요청"),
+        new(0, "회의록 정리해서 공유"),
+        new(0, "예산안 숫자 확인"),
+    ];
+
+    private static readonly Entry[] TabletEnglishHistory =
+    [
+        new(9, "Weekly review", "Finished this week\n- Three onboarding mockups\n- Faster search\n\nNext week we try a slightly shorter sprint."),
+        new(6, "Groceries", "Coffee beans, milk, detergent\nOne big shop on Saturday morning."),
+        new(4, "Reading list", "Saved links\n\n- Typography basics\n- How to write good meeting notes"),
+        new(2, "Interview prep", "To ask: onboarding timeline, team size\nTidy the résumé and portfolio beforehand."),
+        new(1, "Workout log", "Run 5 km · 28 min\nNext week: three times"),
+    ];
+
+    private static readonly Entry[] TabletEnglishToday =
+    [
+        new(0, "Q3 planning meeting", "Last quarter came in a little over target, and the new onboarding flow ships this month.\nAttending: product 2, design 1, engineering 3\n\nDecided\n- Onboarding goes out in the third week\n- Search first has to find two-letter words\n- Budget draft shared by Friday\n\nNext meeting after the design review."),
+        new(0, "Design review notes", "Going with onboarding mockup B. The first screen's copy gets cut to one line, and every button goes brand navy.\n\nSomeone suggested showing one sample note on an empty day."),
+        new(0, "Reading notes", "Up to chapter 3 of Deep Work.\nOne thing at a time, and notifications only at set hours. Tried it for an hour this afternoon and felt far less worn out."),
+        new(0, "Journal", "The rain stopped in the morning, so I walked to work. Lunch with the team at the new noodle place. A long meeting, but we settled everything. Early night tonight."),
+    ];
+
+    private static readonly Todo[] TabletEnglishTodos =
+    [
+        new(9, "Share the review", Done: true),
+        new(6, "Buy detergent"),
+        new(2, "Update my résumé"),
+        new(2, "Tidy the portfolio"),
+        new(0, "Last quarter's numbers", Done: true),
+        new(0, "Stand-up", Done: true),
+        new(0, "Share the budget draft"),
+        new(0, "Request copy edits"),
+        new(0, "Send the meeting notes"),
+        new(0, "Check the budget figures"),
     ];
 }
