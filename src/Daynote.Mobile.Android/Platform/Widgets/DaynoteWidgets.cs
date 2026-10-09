@@ -38,6 +38,10 @@ internal static class DaynoteWidgets
     internal const string ExtraLaunch = "daynote.widget.launch";
     internal const string ExtraKey = "daynote.widget.key";
     internal const string ExtraDay = "daynote.widget.day";
+    internal const string ExtraComplete = "daynote.widget.complete";
+
+    /// <summary>How soon to try again when a draw failed, so one bad read does not end the alarm chain.</summary>
+    private static readonly TimeSpan RetryAfter = TimeSpan.FromMinutes(5);
 
     /// <summary>How long a row ticked on the widget stays drawn, done, before it drops.</summary>
     internal static readonly TimeSpan SettleFor = TimeSpan.FromSeconds(2);
@@ -90,7 +94,7 @@ internal static class DaynoteWidgets
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
-                global::Android.Util.Log.Warn("Daynote", $"Widget work failed: {exception}");
+                global::Android.Util.Log.Warn("Daynote", $"Background work failed: {exception}");
             }
             finally
             {
@@ -99,13 +103,25 @@ internal static class DaynoteWidgets
         });
     }
 
-    /// <summary>A ring was tapped: tick it, show it done at once, then drop it.</summary>
-    internal static async Task ToggleAsync(Context context, WidgetRowKey key, DateOnly day)
+    /// <summary>
+    /// A ring was tapped: set the row to the state the tap asked for, show it at once, then drop
+    /// it. A tap that finds the row already in that state (a widget drawn before it changed
+    /// elsewhere) changes nothing and only redraws.
+    /// </summary>
+    internal static async Task SetDoneAsync(Context context, WidgetRowKey key, DateOnly day, bool complete)
     {
-        bool ticked = await WidgetData.ToggleAsync(
-            AndroidPlatformServices.ResolveDataRoot(context), new AndroidKeyStoreSecretProtector(), key, day)
+        WidgetTick tick = await WidgetData.SetDoneAsync(
+            AndroidPlatformServices.ResolveDataRoot(context), new AndroidKeyStoreSecretProtector(), key, day, complete)
             .ConfigureAwait(false);
-        if (!ticked)
+
+        // Finished with the app not running: its reminders were taken out of reminders.json, and
+        // their alarms go with them.
+        foreach (string id in tick.CancelledReminders)
+        {
+            AndroidReminderScheduler.Cancel(context, id);
+        }
+
+        if (!tick.Changed)
         {
             await UpdateAllAsync(context).ConfigureAwait(false);
             return;
@@ -140,11 +156,13 @@ internal static class DaynoteWidgets
         }
 
         await Drawing.WaitAsync().ConfigureAwait(false);
+
+        // .NET caches the zone; after a zone change the cached one is the old one.
+        TimeZoneInfo.ClearCachedData();
+        DateTime now = DateTime.Now;
+        DateTime nextRefresh = now + RetryAfter;
         try
         {
-            // .NET caches the zone; after a zone change the cached one is the old one.
-            TimeZoneInfo.ClearCachedData();
-            DateTime now = DateTime.Now;
             WidgetSnapshot snapshot = await WidgetData.ReadAsync(
                 AndroidPlatformServices.ResolveDataRoot(context),
                 new AndroidKeyStoreSecretProtector(),
@@ -171,11 +189,13 @@ internal static class DaynoteWidgets
                 manager.UpdateAppWidget(day, Day(context, snapshot));
             }
 
-            ScheduleRefresh(context, snapshot.NextRefresh);
+            nextRefresh = snapshot.NextRefresh;
         }
         finally
         {
+            // Whatever happened above, there is a next draw: the snapshot's moment, or a retry.
             Drawing.Release();
+            ScheduleRefresh(context, nextRefresh);
         }
     }
 
@@ -202,7 +222,7 @@ internal static class DaynoteWidgets
         views.SetTextViewText(Resource.Id.widget_title, snapshot.Text("WidgetToday"));
         views.SetTextViewText(
             Resource.Id.widget_remaining,
-            snapshot.State == WidgetState.Locked ? string.Empty : snapshot.Format("WidgetRemainingFormat", snapshot.Remaining));
+            snapshot.State != WidgetState.Ready ? string.Empty : snapshot.Format("WidgetRemainingFormat", snapshot.Remaining));
         AddButton(context, views, snapshot);
         views.SetOnClickPendingIntent(Resource.Id.widget_header, Launch(context, WidgetLaunch.Today));
         Rows(context, views, snapshot, TodayRows, more: false);
@@ -249,14 +269,14 @@ internal static class DaynoteWidgets
         views.SetTextViewText(Resource.Id.widget_title, snapshot.Text("WidgetUpNext"));
         views.SetOnClickPendingIntent(Resource.Id.widget_root, Launch(context, WidgetLaunch.Today));
 
-        WidgetEvent? next = snapshot.State == WidgetState.Locked ? null : snapshot.NextEvent;
+        WidgetEvent? next = snapshot.State != WidgetState.Ready ? null : snapshot.NextEvent;
         views.SetViewVisibility(Resource.Id.widget_event_when, next is null ? ViewStates.Gone : ViewStates.Visible);
         views.SetViewVisibility(Resource.Id.widget_event_span, next is null ? ViewStates.Gone : ViewStates.Visible);
         views.SetTextViewText(Resource.Id.widget_event_when, next?.When ?? string.Empty);
         views.SetTextViewText(Resource.Id.widget_event_span, next?.Span ?? string.Empty);
         views.SetTextViewText(
             Resource.Id.widget_event_title,
-            next?.Title ?? snapshot.Text(snapshot.State == WidgetState.Locked ? "WidgetLocked" : "WidgetNoEvent"));
+            next?.Title ?? snapshot.Text(StateMessage(snapshot) ?? "WidgetNoEvent"));
         return views;
     }
 
@@ -280,7 +300,7 @@ internal static class DaynoteWidgets
     private static void Rows(Context context, RemoteViews views, WidgetSnapshot snapshot, int room, bool more)
     {
         views.RemoveAllViews(Resource.Id.widget_rows);
-        string message = snapshot.State == WidgetState.Locked ? snapshot.Text("WidgetLocked")
+        string message = StateMessage(snapshot) is { } state ? snapshot.Text(state)
             : snapshot.Todos.Count == 0 ? snapshot.Text("WidgetEmpty")
             : string.Empty;
         views.SetTextViewText(Resource.Id.widget_message, message);
@@ -308,6 +328,14 @@ internal static class DaynoteWidgets
             views.SetTextViewText(Resource.Id.widget_more, hidden > 0 ? snapshot.Format("WidgetMoreFormat", hidden) : string.Empty);
         }
     }
+
+    /// <summary>The line that stands in for all content when the widget may not show any.</summary>
+    private static string? StateMessage(WidgetSnapshot snapshot) => snapshot.State switch
+    {
+        WidgetState.Locked => "WidgetLocked",
+        WidgetState.Outdated => "WidgetOutdated",
+        _ => null,
+    };
 
     private static RemoteViews Row(Context context, WidgetSnapshot snapshot, WidgetTodo todo, int index, int count)
     {
@@ -351,14 +379,17 @@ internal static class DaynoteWidgets
     }
 
     /// <summary>
-    /// The tick, as a broadcast to <see cref="WidgetToggleReceiver"/>. The row's key is also the
-    /// intent's data, so every row has a PendingIntent of its own.
+    /// The tick, as a broadcast to <see cref="WidgetToggleReceiver"/>, carrying the state the tap
+    /// asks for rather than "flip". The row's key and that state are also the intent's data, so
+    /// every row has a PendingIntent of its own.
     /// </summary>
     private static PendingIntent Toggle(Context context, WidgetTodo todo)
     {
         var intent = new Intent(context, typeof(WidgetToggleReceiver));
-        intent.SetData(global::Android.Net.Uri.Parse($"daynote-widget:toggle/{todo.Key}/{todo.Day:yyyy-MM-dd}"));
+        intent.SetData(global::Android.Net.Uri.Parse(
+            $"daynote-widget:toggle/{todo.Key}/{todo.Day:yyyy-MM-dd}/{(todo.IsDone ? "open" : "done")}"));
         intent.PutExtra(ExtraKey, todo.Key.ToString());
+        intent.PutExtra(ExtraComplete, !todo.IsDone);
         intent.PutExtra(ExtraDay, todo.Day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
         return PendingIntent.GetBroadcast(context, 0, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable)!;
     }

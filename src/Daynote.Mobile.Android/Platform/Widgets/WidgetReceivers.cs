@@ -75,7 +75,10 @@ public sealed class WidgetToggleReceiver : BroadcastReceiver
             return;
         }
 
-        DaynoteWidgets.RunAsync(this, () => DaynoteWidgets.ToggleAsync(context, key, day));
+        // Absent only on an intent from a build before the state was carried: finishing is what a
+        // tap on an open ring meant then too.
+        bool complete = intent?.GetBooleanExtra(DaynoteWidgets.ExtraComplete, true) ?? true;
+        DaynoteWidgets.RunAsync(this, () => DaynoteWidgets.SetDoneAsync(context, key, day, complete));
     }
 }
 

@@ -82,6 +82,12 @@ public enum WidgetState
 
     /// <summary>The profile's account has the lock on and this device has not been unlocked.</summary>
     Locked,
+
+    /// <summary>
+    /// The app was updated and has not yet brought its database up to the new schema; the widget
+    /// does not migrate it, so it asks for the app to be opened.
+    /// </summary>
+    Outdated,
 }
 
 /// <summary>
@@ -136,11 +142,18 @@ public sealed record WidgetSnapshot(
     /// <summary>How far ahead the next event is looked for.</summary>
     public const int EventDays = 7;
 
-    public static WidgetSnapshot Locked(DateTime now, AppLanguage language)
+    public static WidgetSnapshot Locked(DateTime now, AppLanguage language) =>
+        Empty(WidgetState.Locked, now, language);
+
+    public static WidgetSnapshot Outdated(DateTime now, AppLanguage language) =>
+        Empty(WidgetState.Outdated, now, language);
+
+    /// <summary>A state with nothing of the content: no rows, no count, no event.</summary>
+    private static WidgetSnapshot Empty(WidgetState state, DateTime now, AppLanguage language)
     {
         DateOnly today = DateOnly.FromDateTime(now);
         return new WidgetSnapshot(
-            WidgetState.Locked, today, FormatDateHeader(today, language), 0, [], null, WeekOf(today, language),
+            state, today, FormatDateHeader(today, language), 0, [], null, WeekOf(today, language),
             now.Date.AddDays(1), language);
     }
 

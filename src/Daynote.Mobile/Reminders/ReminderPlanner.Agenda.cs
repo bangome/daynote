@@ -183,6 +183,29 @@ public static partial class ReminderPlanner
         }
     }
 
+    /// <summary>
+    /// Every id <see cref="Plan"/> can give <paramref name="row"/>'s reminders, one per alert: what
+    /// to take back when the row is finished somewhere the planner is not running.
+    /// </summary>
+    /// <remarks>
+    /// An override is planned under its series and occurrence, or under its own id when its series
+    /// was not loaded; both are here, since asking which applied would mean planning everything.
+    /// </remarks>
+    public static IReadOnlyList<string> IdsFor(AgendaDayRow row)
+    {
+        var ids = new List<string>();
+        foreach (int lead in row.Item.AlarmLeadMinutes)
+        {
+            ids.Add(IdFor(row.Item.SeriesId ?? row.Item.Id, row.RecurrenceId, lead));
+            if (row.Item.IsOverride)
+            {
+                ids.Add(IdFor(row.Item.Id, (WallClock?)null, lead));
+            }
+        }
+
+        return ids;
+    }
+
     /// <summary>"todo-" and 16 hex digits over what the reminder is for and when it fires.</summary>
     /// <remarks>
     /// Keeps the shape the heads already parse — <see cref="RequestCodeFor"/> reads the last eight

@@ -1,41 +1,32 @@
 using Avalonia.Threading;
-using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.Core.Agenda;
-using Daynote.Core.Settings;
-using Daynote.Core.Sync;
-using Daynote.Infrastructure.Agenda;
-using Daynote.Infrastructure.Persistence;
-using Daynote.Infrastructure.Persistence.Profiles;
-using Daynote.Infrastructure.Settings;
 using Daynote.Infrastructure.Sync;
-using Daynote.Mobile.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
+using Daynote.Mobile.Platform;
+using Daynote.Mobile.Reminders;
 
 namespace Daynote.Mobile.Widgets;
 
+/// <summary>What a tap on a widget's ring did.</summary>
+/// <param name="Changed">False when the row was gone, already in the state asked for, or locked.</param>
+/// <param name="CancelledReminders">
+/// Reminder ids taken out of <c>reminders.json</c> because the row was just finished with the app
+/// not running; the head cancels their alarms.
+/// </param>
+public sealed record WidgetTick(bool Changed, IReadOnlyList<string> CancelledReminders)
+{
+    public static WidgetTick None { get; } = new(false, []);
+}
+
 /// <summary>
-/// What the home-screen widgets read and write: the active profile's own store, with no network
-/// and no UI.
+/// What the home-screen widgets read and write, through <see cref="BackgroundStore"/>: the active
+/// profile's own store, with no network, no UI and no migration.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <b>The running app's composition when there is one.</b> A widget update usually happens because
-/// the app just changed a to-do, and its database is already open; a second one in the same process
-/// would run the integrity check again for every tick. Only when the app is not up (the process was
-/// started for the broadcast), or is composed over another profile mid-switch, is the profile's
-/// database opened here, read, and closed again.
-/// </para>
-/// <para>
 /// <b>A tick goes through the same store the app ticks through</b>, so the outbox triggers queue it
 /// for sync exactly as an in-app tick is queued. With the app running the shell does it, which also
-/// redraws the app and asks for a sync soon.
-/// </para>
-/// <para>
-/// <b>The profile is the one the app would open</b> (<c>profile.json</c>), read without running the
-/// layout migration: that belongs to the app's own start, and a widget must not be what moves
-/// folders around.
-/// </para>
+/// redraws the app, reconciles the reminders and asks for a sync soon. Without it, the finished
+/// row's reminders are taken out here, since nothing else would before they fire.
 /// </remarks>
 public static class WidgetData
 {
@@ -47,143 +38,93 @@ public static class WidgetData
         IReadOnlyCollection<WidgetSettling> settling,
         CancellationToken cancellationToken = default)
     {
-        await using Source? source = Open(baseRoot, protector);
-        if (source is null)
+        await using BackgroundStore? store = BackgroundStore.Open(baseRoot, protector, out bool outdated);
+        if (outdated)
+        {
+            return WidgetSnapshot.Outdated(now, AppLanguages.FromSystem());
+        }
+
+        if (store is null)
         {
             // No database yet: the app has never run on this profile.
             return WidgetSnapshot.Build(now, [], [], AppLanguages.FromSystem());
         }
 
-        AppLanguage language = source.IsLive
+        AppLanguage language = store.IsLive
             ? LocalizationService.Instance.Language
-            : await LanguageStartup.ResolveAsync(source.Settings, cancellationToken).ConfigureAwait(false);
+            : await LanguageStartup.ResolveAsync(store.Settings, cancellationToken).ConfigureAwait(false);
 
-        if (await IsLockedAsync(source.Sessions, cancellationToken).ConfigureAwait(false))
+        if (await store.IsLockedAsync(cancellationToken).ConfigureAwait(false))
         {
             return WidgetSnapshot.Locked(now, language);
         }
 
-        IReadOnlyList<AgendaItem> items = await source.Agenda.GetAllAsync(cancellationToken).ConfigureAwait(false);
-        IReadOnlyList<AgendaList> lists = await source.Agenda.GetListsAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AgendaItem> items = await store.Agenda.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AgendaList> lists = await store.Agenda.GetListsAsync(cancellationToken).ConfigureAwait(false);
         return WidgetSnapshot.Build(now, items, lists, language, settling);
     }
 
     /// <summary>
-    /// Ticks (or unticks) the row <paramref name="key"/> stands for on <paramref name="day"/>.
-    /// False when it is not there any more, or the profile is locked.
+    /// Sets the row <paramref name="key"/> stands for on <paramref name="day"/> to done, or back to
+    /// open.
     /// </summary>
-    public static async Task<bool> ToggleAsync(
+    /// <param name="complete">
+    /// The state the tapped widget showed the opposite of. A set rather than a flip: a widget drawn
+    /// before the row was finished elsewhere must not reopen it.
+    /// </param>
+    public static async Task<WidgetTick> SetDoneAsync(
         string baseRoot,
         ISecretProtector? protector,
         WidgetRowKey key,
         DateOnly day,
+        bool complete,
         CancellationToken cancellationToken = default)
     {
-        await using Source? source = Open(baseRoot, protector);
-        if (source is null || await IsLockedAsync(source.Sessions, cancellationToken).ConfigureAwait(false))
+        await using BackgroundStore? store = BackgroundStore.Open(baseRoot, protector, out _);
+        if (store is null || await store.IsLockedAsync(cancellationToken).ConfigureAwait(false))
         {
-            return false;
+            return WidgetTick.None;
         }
 
-        IReadOnlyList<AgendaItem> items = await source.Agenda.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AgendaItem> items = await store.Agenda.GetAllAsync(cancellationToken).ConfigureAwait(false);
         AgendaDayView view = AgendaDay.For(day, items);
         AgendaDayRow? found = view.Open.Concat(view.Done)
             .Cast<AgendaDayRow?>()
             .FirstOrDefault(row => row is { } r && WidgetRowKey.Of(r) == key);
-        if (found is not { } row || row.Item.Kind != AgendaKind.Task)
+        if (found is not { } row || row.Item.Kind != AgendaKind.Task || row.IsDone == complete)
         {
-            return false;
+            return WidgetTick.None;
         }
 
-        if (source.Shell is { } shell)
+        if (store.Shell is { } shell)
         {
             await Dispatcher.UIThread.InvokeAsync(() => shell.ToggleFromWidgetAsync(row));
-        }
-        else
-        {
-            await new ToggleAgendaItem(source.Agenda).ToggleAsync(row, cancellationToken).ConfigureAwait(false);
+            return new WidgetTick(true, []);
         }
 
-        return true;
+        await new ToggleAgendaItem(store.Agenda).ToggleAsync(row, cancellationToken).ConfigureAwait(false);
+        return new WidgetTick(true, complete ? Unschedule(baseRoot, row) : []);
     }
 
     /// <summary>
-    /// Whether the account behind this profile has the lock on and this device has not been
-    /// unlocked: the same test <see cref="AccountService.ResumeAsync"/> makes for
-    /// <see cref="ResumeState.Locked"/>.
+    /// Takes a finished row's reminders out of <c>reminders.json</c> and returns their ids.
     /// </summary>
-    private static async Task<bool> IsLockedAsync(ISyncSessionStore? sessions, CancellationToken cancellationToken)
+    /// <remarks>
+    /// Only on the way to done. Reopening a row with the app not running leaves its reminder to
+    /// the app's next reconciliation, which is the same wait any other change made outside the app
+    /// has; a reminder that fires for something already finished is the one that cannot wait.
+    /// </remarks>
+    internal static IReadOnlyList<string> Unschedule(string baseRoot, AgendaDayRow row)
     {
-        if (sessions is null)
+        var store = ReminderStateStore.InFolder(baseRoot);
+        ReminderState state = store.Load();
+        var ids = new HashSet<string>(ReminderPlanner.IdsFor(row), StringComparer.Ordinal);
+        string[] gone = [.. state.Scheduled.Where(r => ids.Contains(r.Id)).Select(static r => r.Id)];
+        if (gone.Length > 0)
         {
-            return false;
+            store.Save(state with { Scheduled = [.. state.Scheduled.Where(r => !ids.Contains(r.Id))] });
         }
 
-        using SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
-        return credentials is { DataKey: null, Protection: KeyProtection.Passphrase };
-    }
-
-    private static Source? Open(string baseRoot, ISecretProtector? protector)
-    {
-        string folder = new ProfileStore(baseRoot).ResolveActiveFolder();
-
-        if (App.Live is { } live
-            && string.Equals(
-                Path.GetFullPath(live.Services.GetRequiredService<DaynoteAppOptions>().DataRoot),
-                Path.GetFullPath(folder),
-                StringComparison.Ordinal))
-        {
-            return new Source(
-                live.Services.GetRequiredService<IAgendaRepository>(),
-                live.Services.GetRequiredService<ISettingsStore>(),
-                live.Services.GetService<ISyncSessionStore>(),
-                live.Shell,
-                database: null);
-        }
-
-        string path = Path.Combine(folder, ProfileStore.DatabaseFileName);
-        if (!File.Exists(path))
-        {
-            return null;
-        }
-
-        var database = new SqliteDatabase(new SqliteDatabaseOptions(path));
-        try
-        {
-            database.Initialize();
-        }
-        catch
-        {
-            database.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            throw;
-        }
-
-        return new Source(
-            new SqliteAgendaRepository(database),
-            new SqliteSettingsStore(database, new SystemClock()),
-            protector is null ? null : new ProtectedFileSyncSessionStore(folder, protector),
-            shell: null,
-            database);
-    }
-
-    /// <summary>The repositories to use, and the database to close afterwards when this opened one.</summary>
-    private sealed class Source(
-        IAgendaRepository agenda,
-        ISettingsStore settings,
-        ISyncSessionStore? sessions,
-        MobileShellViewModel? shell,
-        SqliteDatabase? database) : IAsyncDisposable
-    {
-        public IAgendaRepository Agenda { get; } = agenda;
-
-        public ISettingsStore Settings { get; } = settings;
-
-        public ISyncSessionStore? Sessions { get; } = sessions;
-
-        public MobileShellViewModel? Shell { get; } = shell;
-
-        public bool IsLive => database is null;
-
-        public ValueTask DisposeAsync() => database?.DisposeAsync() ?? ValueTask.CompletedTask;
+        return gone;
     }
 }

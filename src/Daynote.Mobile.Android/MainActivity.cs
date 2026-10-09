@@ -50,7 +50,9 @@ public class MainActivity : AvaloniaMainActivity
         base.OnCreate(savedInstanceState);
 
         // Launched by tapping a to-do reminder or a widget: the shell acts once the day has loaded.
-        if (!OpenReminder(Intent))
+        // Not when reopened from Recents, which replays the task's original intent with its extras
+        // still on it: that would open the reminder's note again, or make another new note.
+        if (!IsFromHistory(Intent) && !OpenReminder(Intent))
         {
             OpenWidget(Intent);
         }
@@ -139,7 +141,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnNewIntent(Intent? intent)
     {
         base.OnNewIntent(intent);
-        if (OpenReminder(intent) || OpenWidget(intent))
+        if (IsFromHistory(intent) || OpenReminder(intent) || OpenWidget(intent))
         {
             return;
         }
@@ -149,6 +151,9 @@ public class MainActivity : AvaloniaMainActivity
             Platform.AndroidAuthSession.Complete(new Uri(data.ToString()!));
         }
     }
+
+    private static bool IsFromHistory(Intent? intent) =>
+        intent is not null && (intent.Flags & ActivityFlags.LaunchedFromHistory) != 0;
 
     /// <summary>A tapped to-do reminder carries its note's date and id; hands them to the app.</summary>
     private static bool OpenReminder(Intent? intent)
