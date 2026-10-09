@@ -15,6 +15,17 @@
     claims that property for its own .ico and fails the build looking for a file by that name.
   -->
   <key>XSAppIconAssets</key><string>Resources/Assets.xcassets/AppIcon.appiconset</string>
+  <!--
+    iPhone and iPad (Daynote Tablet). Not full screen: an iPad app that asks for the whole screen is
+    left out of Split View, Slide Over and Stage Manager, which are exactly the window sizes the
+    layout follows (MobileLayout). Multitasking also needs all four iPad orientations, below.
+  -->
+  <key>UIDeviceFamily</key>
+  <array>
+    <integer>1</integer>
+    <integer>2</integer>
+  </array>
+  <key>UIRequiresFullScreen</key><false/>
   <key>UIRequiredDeviceCapabilities</key>
   <array><string>arm64</string></array>
   <key>UISupportedInterfaceOrientations</key>

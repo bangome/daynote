@@ -17,6 +17,11 @@ namespace Daynote.Mobile.Android;
 /// surface and lose the editor's caret and any unflushed draft.
 /// </para>
 /// <para>
+/// <c>ResizeableActivity</c> lets a tablet run it in split screen and a desktop-mode window, and
+/// a foldable keep it across a fold; the layout follows the window's width, not the device's
+/// (MobileLayout), and the size changes are handled in place for the reason above.
+/// </para>
+/// <para>
 /// <c>AdjustResize</c> is what makes the note editor usable: the window shrinks when the keyboard
 /// opens, so the line being typed stays above it instead of behind it.
 /// </para>
@@ -28,6 +33,7 @@ namespace Daynote.Mobile.Android;
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTask,
     WindowSoftInputMode = SoftInput.AdjustResize,
+    ResizeableActivity = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode
         | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.SmallestScreenSize
         | ConfigChanges.Density | ConfigChanges.ScreenLayout)]

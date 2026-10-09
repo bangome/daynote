@@ -240,6 +240,74 @@ public sealed class MotionTests
         Assert.AreEqual(0, target.Opacity, 1e-9);
     }
 
+    /// <summary>
+    /// M2 on the phone's day screen, including the first to-do a day has ever had - an empty list
+    /// prepares no rows, and the arrival once missed it for that reason on a tablet.
+    /// </summary>
+    [TestMethod]
+    public void M2_a_new_todo_arrives_even_on_an_empty_day()
+    {
+        TestServices.WithInitialisedShell(402, 874, (view, shell) =>
+        {
+            shell.GoToPageCommand.Execute(MobilePage.Day);
+            Settle(view);
+            Assert.IsEmpty(shell.DayTodos, "The fresh day should have no to-dos.");
+
+            var arrived = new List<Visual>();
+            MotionPlayer.Interceptor = (owner, channel, board) =>
+            {
+                if (channel == "arrive")
+                {
+                    arrived.Add(owner);
+                }
+
+                board.Seek(board.Duration);
+                return Task.FromResult(true);
+            };
+
+            AddTodo(shell, "회의실 예약 확인");
+            Settle(view);
+            Assert.HasCount(1, arrived, "The first row did not arrive.");
+
+            AddTodo(shell, "퇴근 전 로그 확인");
+            Settle(view);
+            Assert.HasCount(2, arrived, "Only the second row arrives the second time.");
+        });
+    }
+
+    private static void AddTodo(MobileShellViewModel shell, string title)
+    {
+        var agenda = (Daynote.Core.Agenda.IAgendaRepository)TestServices.CurrentProvider!.GetService(typeof(Daynote.Core.Agenda.IAgendaRepository))!;
+        DateOnly day = LocalDates.ToDateOnly(shell.SelectedDate);
+        ScreenshotTests.Pump(async () =>
+        {
+            await agenda.SaveAsync(new Daynote.Core.Agenda.AgendaItem(
+                Guid.NewGuid(),
+                Daynote.Core.Agenda.AgendaList.DefaultId,
+                Daynote.Core.Agenda.AgendaKind.Task,
+                title,
+                string.Empty,
+                "Asia/Seoul",
+                StartsAt: null,
+                EndsAt: null,
+                DueAt: new Daynote.Core.Agenda.WallClock(day.ToDateTime(new TimeOnly(14, 0))),
+                HasDueTime: true,
+                Rrule: null,
+                SeriesId: null,
+                RecurrenceId: null,
+                Daynote.Core.Agenda.AgendaStatus.NeedsAction,
+                CompletedUtc: null,
+                Priority: 0,
+                Daynote.Core.Agenda.TimelineVisibility.Auto,
+                SourceNoteId: null,
+                ExceptionDates: [],
+                Daynote.Core.Agenda.AgendaAlert.Default,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow));
+            await shell.RefreshAllAsync();
+        });
+    }
+
     // ── Frames ───────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>M3 on the day screen's first open to-do: 16 frames over its 760 ms.</summary>

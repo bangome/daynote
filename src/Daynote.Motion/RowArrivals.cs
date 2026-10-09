@@ -51,6 +51,8 @@ public static class RowArrivals
             if (e.NewValue is true)
             {
                 list.ContainerPrepared += OnContainerPrepared;
+                list.ItemsView.CollectionChanged += (_, _) => OnItemsChanged(list);
+                list.Loaded += (_, _) => OnItemsChanged(list);
             }
             else
             {
@@ -84,6 +86,18 @@ public static class RowArrivals
         lock (KeyReaders)
         {
             return KeyReaders.Select(key => key(item)).FirstOrDefault(static k => k is not null);
+        }
+    }
+
+    /// <summary>
+    /// An empty list prepares no rows, so nothing else would record that it was seen empty - and
+    /// the first row ever made on a day would then not count as new.
+    /// </summary>
+    private static void OnItemsChanged(ItemsControl list)
+    {
+        if (GetIsEnabled(list) && list.ItemCount == 0)
+        {
+            QueueCommit(list, State.GetOrCreateValue(list));
         }
     }
 

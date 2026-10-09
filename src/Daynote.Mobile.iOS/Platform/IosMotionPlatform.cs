@@ -19,7 +19,7 @@ internal sealed class IosMotionPlatform : IMotionPlatform
     public IosMotionPlatform()
     {
         // The centre keeps the observer for the life of the app, which is this object's life too.
-        _ = UIAccessibility.Notifications.ObserveReduceMotionStatusDidChange(
+        _ = UIApplication.Notifications.ObserveReduceMotionStatusDidChange(
             (_, _) => PreferenceChanged?.Invoke(this, EventArgs.Empty));
     }
 
@@ -46,14 +46,32 @@ internal sealed class IosMotionPlatform : IMotionPlatform
 
                 break;
             default:
-                using (var impact = new UIImpactFeedbackGenerator(UIImpactFeedbackStyle.Light))
+                // iOS 17.5 wants the generator tied to the view it plays for; earlier ones have no
+                // such call.
+                if (OperatingSystem.IsIOSVersionAtLeast(17, 5))
                 {
+                    if (KeyView() is { } view)
+                    {
+                        using UIImpactFeedbackGenerator tied = UIImpactFeedbackGenerator.GetFeedbackGenerator(UIImpactFeedbackStyle.Light, view);
+                        tied.ImpactOccurred();
+                    }
+                }
+                else
+                {
+                    using var impact = new UIImpactFeedbackGenerator(UIImpactFeedbackStyle.Light);
                     impact.ImpactOccurred();
                 }
 
                 break;
         }
     }
+
+    /// <summary>The key window's root view, which the app's one window always is.</summary>
+    private static UIView? KeyView() =>
+        UIApplication.SharedApplication.ConnectedScenes
+            .OfType<UIWindowScene>()
+            .SelectMany(static scene => scene.Windows)
+            .FirstOrDefault(static window => window.IsKeyWindow)?.RootViewController?.View;
 }
 
 /// <summary>
