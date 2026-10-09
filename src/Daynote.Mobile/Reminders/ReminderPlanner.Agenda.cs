@@ -148,6 +148,33 @@ public static partial class ReminderPlanner
             .Take(capacity)];
     }
 
+    /// <summary>
+    /// Whether the to-do a reminder was for is still open: the item exists and is not done, and for
+    /// an occurrence of a rule, that occurrence is neither skipped nor completed by an override.
+    /// </summary>
+    public static bool IsStillOpen(IReadOnlyList<AgendaItem> items, Guid itemId, string? occurrence)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (items.FirstOrDefault(item => item.Id == itemId) is not { } found)
+        {
+            return false;
+        }
+
+        if (occurrence is null)
+        {
+            return found.Status == AgendaStatus.NeedsAction;
+        }
+
+        WallClock at = WallClock.Parse(occurrence);
+        if (found.ExceptionDates.Contains(at))
+        {
+            return false;
+        }
+
+        AgendaItem? replaced = items.FirstOrDefault(item => item.SeriesId == itemId && item.RecurrenceId == at);
+        return (replaced ?? found).Status == AgendaStatus.NeedsAction;
+    }
+
     private static void Add(
         List<Reminder> planned,
         AgendaItem item,

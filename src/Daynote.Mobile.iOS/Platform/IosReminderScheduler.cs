@@ -102,7 +102,11 @@ internal sealed class IosReminderScheduler : IReminderScheduler
                 Body = reminder.Body,
                 Sound = UNNotificationSound.Default,
                 UserInfo = info,
-                CategoryIdentifier = reminder.ItemId is null ? string.Empty : TodoCategory,
+                // 완료 works through the App Group queue; without the group there is nowhere to
+                // put it, so the buttons are not offered rather than offered and ignored.
+                CategoryIdentifier = reminder.ItemId is not null && IosPlatformServices.Glance.Folder is not null
+                    ? TodoCategory
+                    : string.Empty,
             };
 
             // Date components rather than an interval: the reminder stays at 14:00 local even if
@@ -128,6 +132,30 @@ internal sealed class IosReminderScheduler : IReminderScheduler
             }
         }
     }
+
+    /// <summary>The 30분 뒤 다시 copies, whose to-do has since been ticked, deleted or switched off.</summary>
+    public async Task SweepAsync(Func<Guid, string?, bool> stillOpen)
+    {
+        ArgumentNullException.ThrowIfNull(stillOpen);
+        UNUserNotificationCenter center = UNUserNotificationCenter.Current;
+        UNNotificationRequest[] pending = await center.GetPendingNotificationRequestsAsync().ConfigureAwait(true);
+        string[] stale = [.. pending
+            .Where(request => request.Identifier.EndsWith(SnoozeSuffix, StringComparison.Ordinal))
+            .Where(request =>
+            {
+                NSDictionary info = request.Content.UserInfo;
+                return !Guid.TryParse(info[ItemKey]?.ToString(), out Guid item)
+                    || !stillOpen(item, info[OccurrenceKey]?.ToString());
+            })
+            .Select(static request => request.Identifier)];
+        if (stale.Length > 0)
+        {
+            center.RemovePendingNotificationRequests(stale);
+        }
+    }
+
+    /// <summary>The id a snoozed copy gets: the reminder's own, so the planner never mistakes it for one of its.</summary>
+    internal const string SnoozeSuffix = ".snooze";
 
     /// <summary>Calendar triggers fire on the minute; there is nothing to ask for.</summary>
     public ExactAlarmState ExactAlarms => ExactAlarmState.NotApplicable;
@@ -174,11 +202,13 @@ internal sealed class IosReminderDelegate : UNUserNotificationCenterDelegate
         {
             // Into the queue widgets and the watch use, which the app drains through its store
             // (docs/APPLE_EXTENSIONS.md §4) — now if it is running, on its next start if not.
+            // Written here and now, before the handler returns: iOS may suspend the app the moment
+            // it does, and only the signal to drain needs the main thread.
             string? item = info[IosReminderScheduler.ItemKey]?.ToString();
             string? occurrence = info[IosReminderScheduler.OccurrenceKey]?.ToString();
             if (item is not null && date is not null)
             {
-                NSRunLoop.Main.BeginInvokeOnMainThread(() => IosPlatformServices.Glance.Enqueue(new Daynote.App.Glance.GlanceAction(
+                IosPlatformServices.Glance.Enqueue(new Daynote.App.Glance.GlanceAction(
                     1,
                     Guid.NewGuid().ToString("D"),
                     Daynote.App.Glance.GlanceActionTypes.Complete,
@@ -186,7 +216,7 @@ internal sealed class IosReminderDelegate : UNUserNotificationCenterDelegate
                     ItemId: item,
                     SeriesId: occurrence is null ? null : item,
                     Occurrence: occurrence,
-                    Date: date)));
+                    Date: date));
             }
 
             completionHandler();
@@ -199,7 +229,7 @@ internal sealed class IosReminderDelegate : UNUserNotificationCenterDelegate
             // only knows the planned ones, neither replaces nor cancels it.
             UNNotificationContent original = response.Notification.Request.Content;
             UNNotificationRequest again = UNNotificationRequest.FromIdentifier(
-                response.Notification.Request.Identifier + ".snooze",
+                response.Notification.Request.Identifier + IosReminderScheduler.SnoozeSuffix,
                 original,
                 UNTimeIntervalNotificationTrigger.CreateTrigger(30 * 60, repeats: false));
             center.AddNotificationRequest(again, null);

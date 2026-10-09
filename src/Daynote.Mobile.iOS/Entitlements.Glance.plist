@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements.plist, plus the App Group the app shares with its widgets and its watch relay
+  (docs/APPLE_EXTENSIONS.md §3). Used only for a build that embeds them (-p:DaynoteGlance=true,
+  which scripts/Build-IosApp.sh passes with DAYNOTE_IOS_EXTENSIONS=1): a profile without the group
+  would otherwise sign an app that App Store processing rejects. Keep the rest identical to
+  Entitlements.plist.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.developer.applesignin</key>
+  <array>
+    <string>Default</string>
+  </array>
+  <key>com.apple.security.application-groups</key>
+  <array>
+    <string>group.cc.arachat.daynote</string>
+  </array>
+</dict>
+</plist>

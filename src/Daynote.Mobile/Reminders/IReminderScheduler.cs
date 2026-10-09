@@ -37,6 +37,14 @@ public interface IReminderScheduler
     /// </summary>
     Task ApplyAsync(ReminderChanges changes);
 
+    /// <summary>
+    /// Withdraws reminders the head scheduled on its own — a notification's 30분 뒤 다시 — for
+    /// to-dos that are no longer open. Called on every pass, since nothing in
+    /// <see cref="ReminderChanges"/> knows about them. A head with no such reminders does nothing.
+    /// </summary>
+    /// <param name="stillOpen">Whether the to-do (item id, and occurrence for a rule) is still open.</param>
+    Task SweepAsync(Func<Guid, string?, bool> stillOpen) => Task.CompletedTask;
+
     /// <summary>Opens this app's page in the system notification settings.</summary>
     void OpenSystemSettings();
 

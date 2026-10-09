@@ -19,10 +19,11 @@ namespace Daynote.Mobile.iOS.Platform;
 /// </para>
 /// <para>
 /// WidgetKit's reload and ActivityKit are Swift-only, so they are reached through the two C
-/// functions <c>DaynoteBridge.framework</c> exports. A build without the framework linked (a plain
-/// <c>dotnet build</c> that skipped the native targets) answers the first call with
-/// <see cref="DllNotFoundException"/> or <see cref="EntryPointNotFoundException"/>, and the bridge
-/// is not asked again: the widgets then refresh on their own timeline instead of at once.
+/// functions <c>DaynoteBridge.framework</c> exports — looked up at run time in the framework the
+/// app bundle carries, never declared with <c>[DllImport]</c>. A declared import is a symbol the
+/// native link requires, so a build without the framework (a plain <c>dotnet build</c> that skipped
+/// the native targets) would fail to link rather than run without it. Without it the widgets
+/// refresh on their own timeline instead of at once.
 /// </para>
 /// </remarks>
 internal sealed class IosGlanceHost : IGlanceHost
@@ -31,7 +32,6 @@ internal sealed class IosGlanceHost : IGlanceHost
     internal const string AppGroup = "group.cc.arachat.daynote";
 
     private readonly IosWatchRelay _watch;
-    private bool _bridgeMissing;
 
     public IosGlanceHost()
     {
@@ -50,11 +50,8 @@ internal sealed class IosGlanceHost : IGlanceHost
 
     public void Published(string snapshotJson)
     {
-        CallBridge(static () =>
-        {
-            daynote_glance_reload();
-            daynote_glance_sync_activity();
-        });
+        daynote_glance_reload();
+        daynote_glance_sync_activity();
         _watch.Send(snapshotJson);
     }
 
@@ -62,9 +59,12 @@ internal sealed class IosGlanceHost : IGlanceHost
     /// The app came back to the foreground: a Live Activity may be due, or over, without the
     /// snapshot having changed.
     /// </summary>
-    public void Resumed() => CallBridge(static () => daynote_glance_sync_activity());
+    public void Resumed() => daynote_glance_sync_activity();
 
-    /// <summary>The watch sent an action: into the queue it goes, and the app is told.</summary>
+    /// <summary>
+    /// An action from the watch or a notification: written into the queue on the caller's thread,
+    /// at once, and only the signal to drain is posted to the main thread.
+    /// </summary>
     internal void Enqueue(GlanceAction action)
     {
         if (Folder is not { } folder)
@@ -73,32 +73,44 @@ internal sealed class IosGlanceHost : IGlanceHost
         }
 
         new GlanceFolder(folder).Enqueue(action);
-        ActionsArrived?.Invoke(this, EventArgs.Empty);
+        NSRunLoop.Main.BeginInvokeOnMainThread(() => ActionsArrived?.Invoke(this, EventArgs.Empty));
     }
 
-    private void CallBridge(Action call)
+    private static unsafe void daynote_glance_reload()
     {
-        if (_bridgeMissing)
+        if (Bridge.Reload != 0)
         {
-            return;
-        }
-
-        try
-        {
-            call();
-        }
-        catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException)
-        {
-            _bridgeMissing = true;
-            System.Diagnostics.Trace.TraceWarning($"DaynoteBridge is not linked; widgets will refresh on their own timeline. {exception.Message}");
+            ((delegate* unmanaged<void>)Bridge.Reload)();
         }
     }
 
-    [DllImport("__Internal")]
-    private static extern void daynote_glance_reload();
+    private static unsafe void daynote_glance_sync_activity()
+    {
+        if (Bridge.SyncActivity != 0)
+        {
+            ((delegate* unmanaged<void>)Bridge.SyncActivity)();
+        }
+    }
 
-    [DllImport("__Internal")]
-    private static extern void daynote_glance_sync_activity();
+    /// <summary>The two exports, found once; zero when the framework is not in the bundle.</summary>
+    private static class Bridge
+    {
+        internal static readonly nint Reload;
+        internal static readonly nint SyncActivity;
+
+        static Bridge()
+        {
+            string path = Path.Combine(NSBundle.MainBundle.PrivateFrameworksPath ?? string.Empty, "DaynoteBridge.framework", "DaynoteBridge");
+            if (!NativeLibrary.TryLoad(path, out nint library))
+            {
+                System.Diagnostics.Trace.TraceWarning("DaynoteBridge is not in the bundle; widgets will refresh on their own timeline.");
+                return;
+            }
+
+            NativeLibrary.TryGetExport(library, "daynote_glance_reload", out Reload);
+            NativeLibrary.TryGetExport(library, "daynote_glance_sync_activity", out SyncActivity);
+        }
+    }
 }
 
 /// <summary>
@@ -189,8 +201,7 @@ internal sealed class IosWatchRelay(IosGlanceHost host) : WCSessionDelegate
 
         if (action is not null)
         {
-            // UIKit's main queue, as the reminder taps do: this can arrive before Avalonia has started.
-            NSRunLoop.Main.BeginInvokeOnMainThread(() => host.Enqueue(action));
+            host.Enqueue(action);
         }
     }
 }

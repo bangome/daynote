@@ -181,6 +181,7 @@ public sealed class ReminderCoordinator
         ReminderState state = _store.Load();
         ReminderPermission permission = await _scheduler.GetPermissionAsync().ConfigureAwait(true);
         IReadOnlyList<Reminder> desired = [];
+        Func<Guid, string?, bool> stillOpen = static (_, _) => false;
 
         if (await IsEnabledAsync(_settings).ConfigureAwait(true))
         {
@@ -189,6 +190,8 @@ public sealed class ReminderCoordinator
             ClockSnapshot snapshot = _clock.Read();
             DateTimeOffset now = snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset);
             TimeSpan dateOnlyTime = await GetDateOnlyTimeAsync(_settings).ConfigureAwait(true);
+            IReadOnlyList<AgendaItem> all = items;
+            stillOpen = (id, occurrence) => ReminderPlanner.IsStillOpen(all, id, occurrence);
             desired = ReminderPlanner.Plan(
                 items,
                 now,
@@ -223,6 +226,10 @@ public sealed class ReminderCoordinator
         {
             desired = [];
         }
+
+        // A snoozed reminder for something since ticked, deleted or switched off goes too.
+        await _scheduler.SweepAsync(permission == ReminderPermission.Granted && !_closed ? stillOpen : static (_, _) => false)
+            .ConfigureAwait(true);
 
         string channel = AppStrings.ReminderChannelName;
         string description = AppStrings.ReminderChannelDescription;

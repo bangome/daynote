@@ -9,12 +9,18 @@
 # simulator  -> an unsigned .app that runs in the Simulator, which needs no account at all and is
 #               the fastest way to see a change.
 #
-# Both embed the native Apple targets from native/apple (docs/APPLE_EXTENSIONS.md): the widget
-# extension in PlugIns, the watch app (with its complications) in Watch, and DaynoteBridge in
-# Frameworks. xcodebuild builds them first, unsigned; the .NET build links the bridge; and the
-# bundles are then signed inside out — extensions, watch app, app — each with its own profile and
-# the App Group entitlement. Device profiles are found by name, "Daynote Glance <bundle id>", as
-# scripts/New-AppleGlanceProfiles.py makes them. DAYNOTE_IOS_EXTENSIONS=0 leaves all of it out.
+# DAYNOTE_IOS_EXTENSIONS=1 also embeds the native Apple targets from native/apple
+# (docs/APPLE_EXTENSIONS.md): the widget extension in PlugIns, the watch app (with its
+# complications) in Watch, and DaynoteBridge in Frameworks, and gives the app the App Group
+# entitlement. xcodebuild builds them first; the .NET build links the bridge; the bundles are then
+# signed inside out — extensions, watch app, app — each with its own profile. The extensions' profiles
+# are found by name, "Daynote Glance <bundle id>", as scripts/New-AppleGlanceProfiles.py makes them;
+# the app's is DAYNOTE_IOS_PROVISIONING, as without extensions.
+#
+# Off by default, until the App Group group.cc.arachat.daynote exists in the developer portal and
+# is assigned to the four App IDs: without that every profile grants an empty group list, and an
+# IPA claiming the group is rejected by App Store processing. A device build with extensions checks
+# the profiles for the group before it starts and stops if one lacks it.
 set -euo pipefail
 
 CONFIG=""; OUT="dist/ios"; TARGET="device"
@@ -72,7 +78,10 @@ save_locks
 NATIVE="$ROOT/native/apple"
 NATIVE_BUILD="$NATIVE/build"
 TEAM="4T8C76SP99"
-WITH_EXTENSIONS="${DAYNOTE_IOS_EXTENSIONS:-1}"
+WITH_EXTENSIONS="${DAYNOTE_IOS_EXTENSIONS:-0}"
+GROUP="group.cc.arachat.daynote"
+GLANCE_PROPS=()
+[[ "$WITH_EXTENSIONS" == "1" ]] && GLANCE_PROPS=(-p:DaynoteGlance=true)
 
 # The Swift targets. For a device, unsigned: signing happens once they are inside the app. For the
 # Simulator, signed ad hoc by Xcode, which is what writes their entitlements into the binary where
@@ -99,16 +108,45 @@ entitlements_for() {
   /usr/libexec/PlistBuddy -c "Add :get-task-allow bool false" "$out"
 }
 
-profile_named() {
-  local name="Daynote Glance $1" file
+# An installed profile by name or UUID.
+profile_file() {
+  local wanted="$1" file decoded
   for file in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
-    if security cms -D -i "$file" 2>/dev/null | plutil -extract Name raw -o - - 2>/dev/null | grep -qx "$name"; then
+    decoded="$(security cms -D -i "$file" 2>/dev/null)" || continue
+    if [[ "$(plutil -extract Name raw -o - - <<<"$decoded" 2>/dev/null)" == "$wanted" \
+       || "$(plutil -extract UUID raw -o - - <<<"$decoded" 2>/dev/null)" == "$wanted" ]]; then
       echo "$file"
       return 0
     fi
   done
-  echo "error: no provisioning profile named '$name'; run scripts/New-AppleGlanceProfiles.py" >&2
+  echo "error: no installed provisioning profile '$wanted'" >&2
   return 1
+}
+
+# The profile a bundle signs with: the app's is DAYNOTE_IOS_PROVISIONING, the extensions' their own.
+profile_named() {
+  if [[ "$1" == "cc.arachat.daynote" ]]; then
+    profile_file "$DAYNOTE_IOS_PROVISIONING"
+  else
+    profile_file "Daynote Glance $1" || { echo "  run scripts/New-AppleGlanceProfiles.py" >&2; return 1; }
+  fi
+}
+
+# Stops before a half-hour build that would end in an IPA App Store processing rejects.
+check_group_in_profiles() {
+  local bundle file
+  for bundle in cc.arachat.daynote cc.arachat.daynote.widgets cc.arachat.daynote.watchkitapp cc.arachat.daynote.watchkitapp.widgets; do
+    file="$(profile_named "$bundle")"
+    if ! security cms -D -i "$file" 2>/dev/null \
+         | plutil -extract Entitlements.com\.apple\.security\.application-groups xml1 -o - - 2>/dev/null \
+         | grep -q "<string>$GROUP</string>"; then
+      echo "error: the profile for $bundle does not grant $GROUP." >&2
+      echo "  Create the App Group in the developer portal, assign it to the four App IDs, and run" >&2
+      echo "  scripts/New-AppleGlanceProfiles.py (and regenerate DAYNOTE_IOS_PROVISIONING) — or build" >&2
+      echo "  with DAYNOTE_IOS_EXTENSIONS=0. docs/APPLE_EXTENSIONS.md §2." >&2
+      return 1
+    fi
+  done
 }
 
 # Copies the widget extension and the watch app into APP and signs them, then APP itself, inside
@@ -178,7 +216,7 @@ if [[ "$TARGET" == "simulator" ]]; then
   # crash and is not one. A clean build here costs about ninety seconds.
   rm -rf "$ROOT/$OUT" "$ROOT/src/Daynote.Mobile.iOS/bin" "$ROOT/src/Daynote.Mobile.iOS/obj"
   [[ "$WITH_EXTENSIONS" == "1" ]] && build_native Debug iphonesimulator watchsimulator
-  dotnet build "$PROJECT" -c "$CONFIG" -r "$RID" -o "$ROOT/$OUT" -nologo -v q
+  dotnet build "$PROJECT" -c "$CONFIG" -r "$RID" -o "$ROOT/$OUT" -nologo -v q ${GLANCE_PROPS[@]+"${GLANCE_PROPS[@]}"}
   [[ "$WITH_EXTENSIONS" == "1" ]] && embed_native "$ROOT/$OUT/Daynote.Mobile.iOS.app" simulator -
   echo "==> done: $ROOT/$OUT"
   echo "    xcrun simctl install booted \"$ROOT/$OUT/Daynote.Mobile.iOS.app\""
@@ -190,11 +228,15 @@ echo "==> publish (ios-arm64, $CONFIG)"
 # assembly that a newly added packaging target removed, producing an IPA that does not match the
 # current project file. A distribution build must always start from a clean app-head graph.
 rm -rf "$ROOT/$OUT" "$ROOT/src/Daynote.Mobile.iOS/bin" "$ROOT/src/Daynote.Mobile.iOS/obj"
-[[ "$WITH_EXTENSIONS" == "1" ]] && build_native Release iphoneos watchos
+if [[ "$WITH_EXTENSIONS" == "1" ]]; then
+  : "${DAYNOTE_IOS_PROVISIONING:?set DAYNOTE_IOS_PROVISIONING}"
+  check_group_in_profiles
+  build_native Release iphoneos watchos
+fi
 dotnet publish "$PROJECT" -c "$CONFIG" -r ios-arm64 -o "$ROOT/$OUT" -nologo -v q \
   -p:ArchiveOnBuild=true \
   -p:CodesignKey="${DAYNOTE_IOS_SIGN_IDENTITY:?set DAYNOTE_IOS_SIGN_IDENTITY}" \
-  -p:CodesignProvision="${DAYNOTE_IOS_PROVISIONING:?set DAYNOTE_IOS_PROVISIONING}"
+  -p:CodesignProvision="${DAYNOTE_IOS_PROVISIONING:?set DAYNOTE_IOS_PROVISIONING}" ${GLANCE_PROPS[@]+"${GLANCE_PROPS[@]}"}
 
 IPA="$(find "$ROOT/$OUT" -maxdepth 2 -name '*.ipa' -print -quit)"
 if [[ -z "$IPA" ]]; then

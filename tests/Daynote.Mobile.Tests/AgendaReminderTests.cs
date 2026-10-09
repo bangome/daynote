@@ -358,6 +358,30 @@ public sealed class AgendaReminderTests
         Assert.AreEqual("2026-10-03T09:00", occurrence.Occurrence);
     }
 
+    [TestMethod]
+    public void A_snoozed_reminder_stays_only_while_its_to_do_is_open()
+    {
+        // The notification's 30분 뒤 다시 is a copy the planner never made, so the planner's diff
+        // cannot withdraw it; this is the question the head's sweep asks instead (review M4).
+        AgendaItem single = Dated(1);
+        Assert.IsTrue(ReminderPlanner.IsStillOpen([single], single.Id, null));
+        Assert.IsFalse(ReminderPlanner.IsStillOpen([single with { Status = AgendaStatus.Completed }], single.Id, null));
+        Assert.IsFalse(ReminderPlanner.IsStillOpen([], single.Id, null), "Deleted.");
+
+        AgendaItem rule = Repeating("FREQ=DAILY", new DateTime(2026, 10, 3, 9, 0, 0));
+        const string Monday = "2026-10-05T09:00";
+        Assert.IsTrue(ReminderPlanner.IsStillOpen([rule], rule.Id, Monday));
+        Assert.IsFalse(ReminderPlanner.IsStillOpen(
+            [rule with { ExceptionDates = [WallClock.Parse(Monday)] }], rule.Id, Monday), "Skipped.");
+        AgendaItem ticked = rule with
+        {
+            Id = Id(9), Rrule = null, SeriesId = rule.Id, RecurrenceId = WallClock.Parse(Monday),
+            Status = AgendaStatus.Completed,
+        };
+        Assert.IsFalse(ReminderPlanner.IsStillOpen([rule, ticked], rule.Id, Monday), "That occurrence was ticked.");
+        Assert.IsTrue(ReminderPlanner.IsStillOpen([rule, ticked], rule.Id, "2026-10-06T09:00"), "The next one was not.");
+    }
+
     private static Guid Id(int suffix) => Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}");
 
     /// <summary>A repeating to-do, anchored on DTSTART the way a VTODO with an RRULE is.</summary>

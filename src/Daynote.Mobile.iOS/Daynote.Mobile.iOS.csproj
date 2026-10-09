@@ -58,6 +58,10 @@
     -->
     <RuntimeIdentifiers></RuntimeIdentifiers>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <!-- With the widgets and watch embedded, the App Group too (Entitlements.Glance.plist). -->
+    <CodesignEntitlements Condition="'$(DaynoteGlance)' == 'true'">Entitlements.Glance.plist</CodesignEntitlements>
+    <!-- Function pointers into DaynoteBridge, looked up at run time (Platform/IosGlanceHost.cs). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
