@@ -16,6 +16,7 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
 {
     private const uint SummonId = 0xB0B0;
     private const uint QuickNoteId = 0xB0B1;
+    private const uint CaptureId = 0xB0B2;
     private static readonly Hotkey QuickNoteChord = new(HotkeyModifiers.Alt, HotkeyKey.Oem3);
 
     // Keeps the native callback alive for the life of the service.
@@ -23,6 +24,7 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
     private IntPtr _handlerRef;
     private IntPtr _summonRef;
     private IntPtr _quickRef;
+    private IntPtr _captureRef;
     private bool _disposed;
 
     public MacGlobalHotkeyService()
@@ -39,7 +41,11 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
 
     public event EventHandler? QuickNotePressed;
 
+    public event EventHandler? CapturePressed;
+
     public Hotkey? Current { get; private set; }
+
+    public Hotkey? CurrentCapture { get; private set; }
 
     /// <summary>No window handle is involved on macOS; registration is application-wide.</summary>
     public void Attach(nint hwnd)
@@ -54,23 +60,60 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
             return HotkeySetResult.Invalid;
         }
 
-        IntPtr previous = _summonRef;
-        _summonRef = IntPtr.Zero;
+        if (hotkey == CurrentCapture)
+        {
+            return HotkeySetResult.Conflict;
+        }
+
+        HotkeySetResult result = Replace(hotkey, Current, SummonId, ref _summonRef);
+        if (result == HotkeySetResult.Ok)
+        {
+            Current = hotkey;
+        }
+
+        return result;
+    }
+
+    public HotkeySetResult TrySetCapture(Hotkey hotkey)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!hotkey.IsValid || KeyCodes.ToVirtualKey(hotkey.Key) is null)
+        {
+            return HotkeySetResult.Invalid;
+        }
+
+        if (hotkey == Current || hotkey == QuickNoteChord)
+        {
+            return HotkeySetResult.Conflict;
+        }
+
+        HotkeySetResult result = Replace(hotkey, CurrentCapture, CaptureId, ref _captureRef);
+        if (result == HotkeySetResult.Ok)
+        {
+            CurrentCapture = hotkey;
+        }
+
+        return result;
+    }
+
+    private static HotkeySetResult Replace(Hotkey hotkey, Hotkey? current, uint id, ref IntPtr reference)
+    {
+        IntPtr previous = reference;
+        reference = IntPtr.Zero;
         if (previous != IntPtr.Zero)
         {
             Carbon.UnregisterEventHotKey(previous);
         }
 
-        if (Register(hotkey, SummonId, ref _summonRef))
+        if (Register(hotkey, id, ref reference))
         {
-            Current = hotkey;
             return HotkeySetResult.Ok;
         }
 
         // Refused (another app owns it): put the previous chord back so the user keeps a working key.
-        if (Current is { } kept)
+        if (current is { } kept)
         {
-            Register(kept, SummonId, ref _summonRef);
+            Register(kept, id, ref reference);
         }
 
         return HotkeySetResult.Conflict;
@@ -138,6 +181,10 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
             {
                 QuickNotePressed?.Invoke(this, EventArgs.Empty);
             }
+            else if (hotKeyId.Id == CaptureId)
+            {
+                CapturePressed?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         return 0;
@@ -159,6 +206,11 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
         if (_quickRef != IntPtr.Zero)
         {
             Carbon.UnregisterEventHotKey(_quickRef);
+        }
+
+        if (_captureRef != IntPtr.Zero)
+        {
+            Carbon.UnregisterEventHotKey(_captureRef);
         }
 
         if (_handlerRef != IntPtr.Zero)

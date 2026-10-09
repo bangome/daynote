@@ -35,4 +35,27 @@ public interface IGlobalHotkeyService : IDisposable
 
     /// <summary>Registers <paramref name="hotkey"/>, replacing the previous one; keeps the old on conflict.</summary>
     HotkeySetResult TrySet(Hotkey hotkey);
+
+    /// <summary>
+    /// Raised for the quick-capture chord, which opens the menu bar / tray popover (menu bar design
+    /// §01). A second configurable chord beside the summon key rather than a replacement for it.
+    /// </summary>
+    /// <remarks>
+    /// Default members, so the WPF shell and the test doubles that predate the popover keep compiling
+    /// and simply never fire it.
+    /// </remarks>
+    event EventHandler? CapturePressed
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>The quick-capture chord currently registered, if any.</summary>
+    Hotkey? CurrentCapture => null;
+
+    /// <summary>
+    /// Registers the quick-capture chord, replacing the previous one. Refused as a conflict when it is
+    /// the summon chord or the fixed quick-note chord, as well as when the OS refuses it.
+    /// </summary>
+    HotkeySetResult TrySetCapture(Hotkey hotkey) => HotkeySetResult.Invalid;
 }

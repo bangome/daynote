@@ -17,6 +17,7 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
 {
     private const int SummonId = 0xB0B0;
     private const int QuickNoteId = 0xB0B1;
+    private const int CaptureId = 0xB0B2;
     private const uint WmHotkey = 0x0312;
     private const uint WmQuit = 0x0012;
     private const uint WmApp = 0x8000;
@@ -29,7 +30,7 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
     private readonly object _gate = new();
     private uint _threadId;
     private nint _hwnd;
-    private Hotkey? _pending;
+    private (int Id, Hotkey Hotkey)? _pending;
     private HotkeySetResult _lastResult = HotkeySetResult.Ok;
     private readonly ManualResetEventSlim _applied = new(false);
     private bool _disposed;
@@ -45,7 +46,11 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
 
     public event EventHandler? QuickNotePressed;
 
+    public event EventHandler? CapturePressed;
+
     public Hotkey? Current { get; private set; }
+
+    public Hotkey? CurrentCapture { get; private set; }
 
     public void Attach(nint hwnd)
     {
@@ -59,9 +64,25 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
             return HotkeySetResult.Invalid;
         }
 
+        return hotkey == CurrentCapture ? HotkeySetResult.Conflict : Apply(SummonId, hotkey);
+    }
+
+    public HotkeySetResult TrySetCapture(Hotkey hotkey)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!hotkey.IsValid)
+        {
+            return HotkeySetResult.Invalid;
+        }
+
+        return hotkey == Current || hotkey == QuickNoteChord ? HotkeySetResult.Conflict : Apply(CaptureId, hotkey);
+    }
+
+    private HotkeySetResult Apply(int id, Hotkey hotkey)
+    {
         lock (_gate)
         {
-            _pending = hotkey;
+            _pending = (id, hotkey);
             _applied.Reset();
         }
 
@@ -93,6 +114,10 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
                     {
                         QuickNotePressed?.Invoke(this, EventArgs.Empty);
                     }
+                    else if (id == CaptureId)
+                    {
+                        CapturePressed?.Invoke(this, EventArgs.Empty);
+                    }
                 });
             }
             else if (message.Message == WmApply)
@@ -108,37 +133,48 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
 
         UnregisterHotKey(_hwnd, SummonId);
         UnregisterHotKey(_hwnd, QuickNoteId);
+        UnregisterHotKey(_hwnd, CaptureId);
         DestroyWindow(_hwnd);
     }
 
     private void ApplyPending()
     {
-        Hotkey? next;
+        (int Id, Hotkey Hotkey)? next;
         lock (_gate)
         {
             next = _pending;
             _pending = null;
         }
 
-        if (next is not { } hotkey)
+        if (next is not { } pending)
         {
             _applied.Set();
             return;
         }
 
-        UnregisterHotKey(_hwnd, SummonId);
+        (int id, Hotkey hotkey) = pending;
+        Hotkey? current = id == CaptureId ? CurrentCapture : Current;
+        UnregisterHotKey(_hwnd, id);
         (uint mods, uint key) = ToWin32(hotkey);
-        if (RegisterHotKey(_hwnd, SummonId, mods, key))
+        if (RegisterHotKey(_hwnd, id, mods, key))
         {
-            Current = hotkey;
+            if (id == CaptureId)
+            {
+                CurrentCapture = hotkey;
+            }
+            else
+            {
+                Current = hotkey;
+            }
+
             _lastResult = HotkeySetResult.Ok;
         }
         else
         {
-            if (Current is { } kept)
+            if (current is { } kept)
             {
                 (uint km, uint kk) = ToWin32(kept);
-                RegisterHotKey(_hwnd, SummonId, km, kk);
+                RegisterHotKey(_hwnd, id, km, kk);
             }
 
             _lastResult = HotkeySetResult.Conflict;
