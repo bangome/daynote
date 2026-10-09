@@ -52,35 +52,18 @@ public sealed class EditorHelperTests
     }
 
     [TestMethod]
-    public void The_todo_helper_opens_the_caret_line_and_closes_it_again()
-    {
-        WithEditor((view, _) =>
-        {
-            TextBox body = Body(view);
-            body.Text = "첫 줄\n둘째 줄";
-            body.CaretIndex = body.Text.IndexOf("둘째", StringComparison.Ordinal) + 1;
-
-            Tap(view, "InsertTodo");
-            Assert.AreEqual("첫 줄\n-[] 둘째 줄", body.Text, "The checkbox did not open the caret's line.");
-
-            // Again on the same line takes it off.
-            Tap(view, "InsertTodo");
-            Assert.AreEqual("첫 줄\n둘째 줄", body.Text, "A second tap did not remove the checkbox.");
-        });
-    }
-
-    [TestMethod]
     public void The_date_helper_appends_the_notes_own_day_and_replaces_its_own_suffix()
     {
         WithEditor((view, shell) =>
         {
             TextBox body = Body(view);
-            body.Text = "-[] 보고서 보내기";
-            body.CaretIndex = 4;
+            body.Text = "보고서 보내기";
+            body.CaretIndex = 0;
 
             Tap(view, "InsertDate");
             string expected = $"({shell.SelectedDate.Month}/{shell.SelectedDate.Day})";
-            Assert.AreEqual($"-[] 보고서 보내기 {expected}", body.Text, "The due date was not appended.");
+            // Plain text. It used to be read back as a to-do's due date; nothing parses it now.
+            Assert.AreEqual($"보고서 보내기 {expected}", body.Text, "The date was not appended.");
 
             // A line that already ends in one gets a replacement, not a second suffix.
             Tap(view, "MobileInsertTime");

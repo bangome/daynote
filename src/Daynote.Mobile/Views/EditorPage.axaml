@@ -140,22 +140,21 @@
 
     <Border Grid.Row="4" x:Name="Toolbar" Background="{DynamicResource Mobile.Panel}"
             BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0">
-      <Grid ColumnDefinitions="*,4,*,4,*,4,44" Margin="12,8,12,0">
-        <Button Grid.Column="0" Classes="tool primary" Focusable="False" Click="OnInsertTodo">
-          <StackPanel Orientation="Horizontal" Spacing="7">
-            <views:Glyph Kind="TodoBox" Width="15" Height="15" VerticalAlignment="Center"
-                         Foreground="{DynamicResource Mobile.OnPri}" />
-            <TextBlock Text="{Binding Strings[InsertTodo]}" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertDate">
+      <!--
+        No `-[]` button. It wrote the syntax the panels used to read; a to-do is its own row now,
+        so the only thing it could insert is text that looks like a checkbox. The phone's own @
+        bar takes its place (phone §01); until that lands, a to-do is captured on the desktop or
+        made in the list. Date and time stay: they stamp ordinary prose, which still reads.
+      -->
+      <Grid ColumnDefinitions="*,4,*,4,44" Margin="12,8,12,0">
+        <Button Grid.Column="0" Classes="tool" Focusable="False" Click="OnInsertDate">
           <TextBlock Text="{Binding Strings[InsertDate]}" />
         </Button>
-        <Button Grid.Column="4" Classes="tool" Focusable="False" Click="OnInsertTime">
+        <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertTime">
           <TextBlock Text="{Binding Strings[MobileInsertTime]}" />
         </Button>
         <!-- Attach: files belong to the day, so this is the day screen's same sheet. -->
-        <Button Grid.Column="6" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
+        <Button Grid.Column="4" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
                 AutomationProperties.Name="{Binding Strings[MobileFilesAdd]}">
           <views:Glyph Kind="Paperclip" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
         </Button>

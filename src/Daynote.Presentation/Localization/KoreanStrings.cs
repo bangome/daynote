@@ -282,7 +282,7 @@ internal static class KoreanStrings
         ["DeskFilesDropFormat"] = "파일을 끌어 놓거나 클릭해서 {0}에 보관",
         ["DeskFileDelete"] = "삭제",
         ["DeskDayTodoTitle"] = "이 날의 할 일",
-        ["DeskDayTodoEmptySuffix"] = " 을 쓰면 여기에 모입니다.",
+        ["DeskDayTodoEmptySuffix"] = " 를 쓰면 여기에 모입니다.",
         ["DeskFilesAdd"] = "+ 추가",
         ["DeskFilesEmpty"] = "보관된 파일이 없습니다.",
         ["DeskPalettePlaceholder"] = "노트, 파일, 날짜를 검색하세요",
@@ -356,8 +356,8 @@ internal static class KoreanStrings
         // Todo tab
         ["TodoEmptyText"] = "(내용 없음)",
         ["TodoEmptyPrefix"] = "노트에 ",
-        ["TodoEmptyCode"] = "-[] 할 일",
-        ["TodoEmptySuffix"] = " 을 입력하면 여기에 자동으로 표시됩니다",
+        ["TodoEmptyCode"] = "@",
+        ["TodoEmptySuffix"] = " 를 입력하면 여기에 모입니다",
 
         // Clipboard tab
 
@@ -674,7 +674,6 @@ internal static class KoreanStrings
         ["TabLists"] = "목록",
         // The floating helpers over the note body: they type the syntax a thumb would otherwise
         // have to hunt for two keyboard layers down.
-        ["InsertTodo"] = "할 일",
         ["InsertDate"] = "날짜",
         ["InsertTime"] = "시각",
         // The segmented control on the Lists page. The desktop's TabTodoName and friends end in

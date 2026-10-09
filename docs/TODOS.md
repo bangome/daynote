@@ -480,8 +480,10 @@ The order that makes that safe:
          overwritten, because the useful copy is the first one.
    - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
    - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).
-   - [ ] The desktop's empty-state copy and the phone toolbar's `-[]` button still point at the
-         old syntax (§99).
+   - [x] The copy and the buttons stopped pointing at a syntax the app no longer reads (§99).
+         The empty state says to type `@`; the phone toolbar's `-[]` button is gone, because the
+         only thing it could insert now is text that looks like a checkbox. Date and time stay —
+         they stamp ordinary prose, which still reads, and nothing parses what they write.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 

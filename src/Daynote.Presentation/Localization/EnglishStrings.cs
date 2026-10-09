@@ -367,8 +367,8 @@ internal static class EnglishStrings
         // Todo tab
         ["TodoEmptyText"] = "(empty)",
         ["TodoEmptyPrefix"] = "Type ",
-        ["TodoEmptyCode"] = "-[] task",
-        ["TodoEmptySuffix"] = " in a note and it shows up here automatically",
+        ["TodoEmptyCode"] = "@",
+        ["TodoEmptySuffix"] = " in a note and it shows up here",
 
         // Clipboard tab
 
@@ -684,7 +684,6 @@ internal static class EnglishStrings
         ["TabLists"] = "Lists",
         // The floating helpers over the note body: they type the syntax a thumb would otherwise
         // have to hunt for two keyboard layers down.
-        ["InsertTodo"] = "To-do",
         ["InsertDate"] = "Date",
         ["InsertTime"] = "Time",
         // The segmented control on the Lists page. The desktop's TabTodoName and friends end in

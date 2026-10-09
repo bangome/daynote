@@ -784,7 +784,6 @@ public static class AppStrings
     public static string BillingTrialFormatOne => LocalizationService.Instance[nameof(BillingTrialFormatOne)];
     public static string InsertDate => LocalizationService.Instance[nameof(InsertDate)];
     public static string InsertTime => LocalizationService.Instance[nameof(InsertTime)];
-    public static string InsertTodo => LocalizationService.Instance[nameof(InsertTodo)];
     public static string NextDay => LocalizationService.Instance[nameof(NextDay)];
     public static string NoteCountFormatOne => LocalizationService.Instance[nameof(NoteCountFormatOne)];
     public static string PreviousDay => LocalizationService.Instance[nameof(PreviousDay)];

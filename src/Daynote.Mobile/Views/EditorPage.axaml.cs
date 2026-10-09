@@ -132,44 +132,19 @@ public partial class EditorPage : UserControl
 
     // ── The writing helpers ──────────────────────────────────────────────────────────────────────
 
-    /// <summary>Opens the caret's line with an empty checkbox, or removes the one already there.</summary>
-    private void OnInsertTodo(object? sender, RoutedEventArgs e)
-    {
-        (string text, int caret) = Read();
-        int start = LineStart(text, caret);
-        int indent = start;
-        while (indent < text.Length && (text[indent] == ' ' || text[indent] == '\t'))
-        {
-            indent++;
-        }
-
-        const string Marker = "-[] ";
-        string rest = text[indent..];
-
-        // Tapping it again on a line that already has one takes it off, which is what a toggle in a
-        // toolbar is expected to do and costs nothing to support.
-        foreach (string existing in new[] { "-[] ", "-[ ] ", "-[x] ", "-[X] " })
-        {
-            if (rest.StartsWith(existing, StringComparison.Ordinal))
-            {
-                Write(text.Remove(indent, existing.Length), Math.Max(indent, caret - existing.Length));
-                return;
-            }
-        }
-
-        Write(text.Insert(indent, Marker), caret + Marker.Length);
-    }
-
-    /// <summary>Appends a due date to the caret's line: the note's own day, as <c>(M/D)</c>.</summary>
+    /// <summary>Stamps the caret's line with the note's own day, as <c>(M/D)</c>.</summary>
     private void OnInsertDate(object? sender, RoutedEventArgs e) => AppendDue(withTime: false);
 
     /// <summary>The same with a time, <c>(M/D H:mm)</c>, rounded to the next five minutes.</summary>
     private void OnInsertTime(object? sender, RoutedEventArgs e) => AppendDue(withTime: true);
 
     /// <remarks>
-    /// The date is the note's own, not today's: a due suffix is read against the day the note
-    /// belongs to, and someone writing up Monday on Monday means Monday. The time is the clock's,
-    /// rounded up to five minutes, because nobody schedules anything for 14:37.
+    /// The date is the note's own, not today's: someone writing up Monday on Monday means
+    /// Monday. The time is the clock's, rounded up to five minutes, because nobody writes 14:37.
+    /// <para>
+    /// Plain text, and only that. It used to be read back as a to-do's due date; a to-do is its
+    /// own row now, so this stamps prose and nothing parses it.
+    /// </para>
     /// </remarks>
     private void AppendDue(bool withTime)
     {
