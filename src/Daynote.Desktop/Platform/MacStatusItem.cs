@@ -231,7 +231,31 @@ public sealed class MacStatusItem : IDisposable
         return targetClass;
     }
 
-    private static void OnClicked(IntPtr self, IntPtr selector, IntPtr sender)
+    private static void OnClicked(IntPtr self, IntPtr selector, IntPtr sender) => Guarded(HandleClick);
+
+    private static void OnShow(IntPtr self, IntPtr selector, IntPtr sender) =>
+        Guarded(static () => current?.ShowRequested?.Invoke(current, EventArgs.Empty));
+
+    private static void OnQuit(IntPtr self, IntPtr selector, IntPtr sender) =>
+        Guarded(static () => current?.QuitRequested?.Invoke(current, EventArgs.Empty));
+
+    /// <summary>
+    /// Runs a callback AppKit called into. Nothing may unwind out of it: a managed exception
+    /// crossing Objective-C frames takes the process down rather than reaching any handler.
+    /// </summary>
+    private static void Guarded(Action callback)
+    {
+        try
+        {
+            callback();
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
+    }
+
+    private static void HandleClick()
     {
         if (current is not { } status)
         {
@@ -254,11 +278,6 @@ public sealed class MacStatusItem : IDisposable
         }
     }
 
-    private static void OnShow(IntPtr self, IntPtr selector, IntPtr sender) =>
-        current?.ShowRequested?.Invoke(current, EventArgs.Empty);
-
-    private static void OnQuit(IntPtr self, IntPtr selector, IntPtr sender) =>
-        current?.QuitRequested?.Invoke(current, EventArgs.Empty);
 }
 
 /// <summary>The handful of AppKit calls the status item and the popover's placement need.</summary>

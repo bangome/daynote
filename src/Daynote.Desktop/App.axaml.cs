@@ -118,6 +118,9 @@ public partial class App : Application
         // The menu bar status item (Mac) or the tray flyout (Windows): today's count and quick capture.
         _menuBar = CreateMenuBar(shell, hotkeys);
 
+        // Quit tears the resident lifecycle down and ends the lifetime; the status item goes with it.
+        desktop.Exit += (_, _) => _menuBar?.Dispose();
+
         // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile.
         window.Activated += (_, _) => shell.NotifyActivated();
 
@@ -218,7 +221,7 @@ public partial class App : Application
                 lifecycle.ShowWindow();
                 if (date is { } day)
                 {
-                    _ = shell.ShowDateFromMenuBarAsync(day);
+                    MenuBarController.Forget(shell.ShowDateFromMenuBarAsync(day));
                 }
             },
             () =>
@@ -232,7 +235,7 @@ public partial class App : Application
 
         // Two ways round: what the popover makes shows in the window's panels, and what the window
         // changes moves the count beside the status item.
-        model.AgendaChanged += (_, _) => _ = shell.Todo.RefreshAsync();
+        model.AgendaChanged += (_, _) => MenuBarController.Forget(shell.Todo.RefreshAsync());
         shell.Todo.Refreshed += (_, _) => controller.NotifyAgendaChanged();
         return controller;
     }

@@ -907,6 +907,8 @@ public static class AppStrings
     public static string MenuBarAppendedNewNote => LocalizationService.Instance[nameof(MenuBarAppendedNewNote)];
     /// <summary>The line could not be written; the text stays in the box.</summary>
     public static string MenuBarAppendFailed => LocalizationService.Instance[nameof(MenuBarAppendFailed)];
+    /// <summary>A to-do or event made or ticked here could not be written.</summary>
+    public static string MenuBarSaveFailed => LocalizationService.Instance[nameof(MenuBarSaveFailed)];
     public static string MenuBarView => LocalizationService.Instance[nameof(MenuBarView)];
     public static string MenuBarOpenApp => LocalizationService.Instance[nameof(MenuBarOpenApp)];
     public static string MenuBarSettings => LocalizationService.Instance[nameof(MenuBarSettings)];
@@ -923,6 +925,8 @@ public static class AppStrings
     public static string SettingsMenuBarLabel => LocalizationService.Instance[nameof(SettingsMenuBarLabel)];
     public static string SettingsMenuBarDesc => LocalizationService.Instance[nameof(SettingsMenuBarDesc)];
     public static string SettingsCaptureHotkeyLabel => LocalizationService.Instance[nameof(SettingsCaptureHotkeyLabel)];
+    /// <summary>The quick-capture row when no chord could be registered.</summary>
+    public static string SettingsCaptureHotkeyNone => LocalizationService.Instance[nameof(SettingsCaptureHotkeyNone)];
     public static string SettingsCaptureHotkeyDesc => LocalizationService.Instance[nameof(SettingsCaptureHotkeyDesc)];
 
     public static string AgendaRuleDaily => LocalizationService.Instance[nameof(AgendaRuleDaily)];

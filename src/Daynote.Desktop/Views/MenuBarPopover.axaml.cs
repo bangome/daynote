@@ -133,7 +133,7 @@ public partial class MenuBarPopover : Window
 
                 // Posted, so a Korean syllable still being composed is committed into the box before
                 // the text is read.
-                Dispatcher.UIThread.Post(() => _ = model.SubmitAsync(newNote), DispatcherPriority.Input);
+                Dispatcher.UIThread.Post(() => Lifecycle.MenuBarController.Forget(model.SubmitAsync(newNote)), DispatcherPriority.Input);
                 break;
             case Key.Tab:
                 e.Handled = true;

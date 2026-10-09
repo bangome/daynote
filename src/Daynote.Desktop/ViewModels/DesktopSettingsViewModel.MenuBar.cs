@@ -56,8 +56,19 @@ public sealed partial class DesktopSettingsViewModel
             return;
         }
 
-        _hotkeys.TrySetCapture(hotkey);
-        CaptureHotkeyDisplay = (_hotkeys.CurrentCapture ?? hotkey).ToDisplayString();
+        // Another app (or the summon key) may already hold it. Then nothing is registered, and the
+        // row says so rather than showing a chord that does nothing.
+        HotkeySetResult result = _hotkeys.TrySetCapture(hotkey);
+        if (_hotkeys.CurrentCapture is { } registered)
+        {
+            CaptureHotkeyDisplay = registered.ToDisplayString();
+        }
+        else
+        {
+            CaptureHotkeyDisplay = AppStrings.SettingsCaptureHotkeyNone;
+        }
+
+        CaptureHotkeyStatusText = result == HotkeySetResult.Ok ? null : AppStrings.HotkeyConflict;
     }
 
     [RelayCommand]

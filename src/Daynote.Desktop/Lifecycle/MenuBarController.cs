@@ -87,7 +87,7 @@ public sealed class MenuBarController : IDisposable
             statusItem = new MacStatusItem(StatusSymbol.TemplatePng(), "Daynote");
             statusItem.Clicked += (_, _) => Toggle(fromShortcut: false);
             statusItem.ShowRequested += (_, _) => lifecycle.ShowWindow();
-            statusItem.QuitRequested += (_, _) => _ = lifecycle.QuitAsync();
+            statusItem.QuitRequested += (_, _) => Forget(lifecycle.QuitAsync());
             lifecycle.SetTrayVisible(false);
         }
         else
@@ -130,7 +130,7 @@ public sealed class MenuBarController : IDisposable
     {
         if (!model.IsOpen)
         {
-            _ = model.RefreshAsync();
+            Forget(model.RefreshAsync());
         }
     }
 
@@ -141,7 +141,7 @@ public sealed class MenuBarController : IDisposable
         {
             if (!closing)
             {
-                _ = CloseAsync(animated: !fromShortcut);
+                Forget(CloseAsync(animated: !fromShortcut));
             }
 
             return;
@@ -156,13 +156,13 @@ public sealed class MenuBarController : IDisposable
     }
 
     /// <summary>Puts the popover away at once: the popover's own links to the main window.</summary>
-    public void HideNow() => _ = CloseAsync(animated: false);
+    public void HideNow() => Forget(CloseAsync(animated: false));
 
     private void Open(bool fromShortcut)
     {
         popover ??= CreatePopover();
         popover.RequestedThemeVariant = SystemVariant();
-        _ = model.OpenAsync();
+        Forget(model.OpenAsync());
 
         popover.PlayEntrance(
             fromShortcut ? PopoverEntrance.None : OperatingSystem.IsMacOS() ? PopoverEntrance.Popover : PopoverEntrance.Flyout,
@@ -216,7 +216,7 @@ public sealed class MenuBarController : IDisposable
     private MenuBarPopover CreatePopover()
     {
         var window = new MenuBarPopover { DataContext = model };
-        window.Deactivated += (_, _) => _ = CloseAsync(animated: true);
+        window.Deactivated += (_, _) => Forget(CloseAsync(animated: true));
 
         // The card grows as the readback, a notice or a new row appears. Below the menu bar it
         // grows downwards by itself; above a taskbar it has to be moved up to keep its bottom put.
@@ -301,6 +301,22 @@ public sealed class MenuBarController : IDisposable
         window.Position = new PixelPoint(
             (int)Math.Round((left - margin.Left) * units),
             (int)Math.Round((top - margin.Top) * units));
+    }
+
+    /// <summary>
+    /// Runs a task nobody waits on, and keeps a failure in it from going unobserved: logged, not
+    /// rethrown, because there is no caller left to hand it to and the menu bar must stay up.
+    /// </summary>
+    internal static async void Forget(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
     }
 
     /// <summary>
@@ -399,7 +415,7 @@ public sealed class MenuBarController : IDisposable
 
     private void OnCapturePressed(object? sender, EventArgs e) => Toggle(fromShortcut: true);
 
-    private void OnCloseRequested(object? sender, EventArgs e) => _ = CloseAsync(animated: true);
+    private void OnCloseRequested(object? sender, EventArgs e) => Forget(CloseAsync(animated: true));
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {

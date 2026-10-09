@@ -50,6 +50,7 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     private IReadOnlyDictionary<Guid, int> tones = new Dictionary<Guid, int>();
     private string chordText = string.Empty;
     private int caret;
+    private bool submitting;
 
     public MenuBarViewModel(
         IAgendaRepository agenda,
@@ -277,33 +278,78 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     /// Enter (or ⌘Enter for a new note). A reading makes the item; plain text goes into today's
     /// note. Returns whether anything was written. The popover stays open either way.
     /// </summary>
+    /// <remarks>
+    /// One at a time. Enter is posted on every key-down, auto-repeat included, and a second press
+    /// arriving while the first is still writing would find the readback already closed and add
+    /// the literal "@내일 회의" to today's note — or the same line twice.
+    /// </remarks>
     public async Task<bool> SubmitAsync(bool newNote = false, CancellationToken cancellationToken = default)
     {
         string text = Draft;
-        if (text.Trim().Length == 0)
+        if (submitting || text.Trim().Length == 0)
         {
             return false;
         }
 
-        if (Capture.IsOpen)
+        submitting = true;
+        try
         {
-            // An @ with nothing read yet: Enter has nothing to make, and the text is not a line for
-            // a note either — it is half of a command.
-            if (Capture.Create(Guid.Empty, DateTimeOffset.UtcNow) is not { } made)
-            {
-                return false;
-            }
+            return Capture.IsOpen
+                ? await MakeAsync(cancellationToken).ConfigureAwait(true)
+                : await AppendAsync(text, newNote).ConfigureAwait(true);
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
 
-            // Typed here rather than in a note, so there is no note to jump back to.
-            made = made with { SourceNoteId = null };
-            await agenda.SaveAsync(made, cancellationToken).ConfigureAwait(true);
-            AgendaChanged?.Invoke(this, EventArgs.Empty);
-            Draft = string.Empty;
-            await AnnounceAsync(made, cancellationToken).ConfigureAwait(true);
-            return true;
+    /// <summary>The readback's item, written and announced. False when nothing was read yet.</summary>
+    private async Task<bool> MakeAsync(CancellationToken cancellationToken)
+    {
+        // An @ with nothing read yet: Enter has nothing to make, and the text is not a line for a
+        // note either — it is half of a command.
+        if (Capture.Create(Guid.Empty, DateTimeOffset.UtcNow) is not { } made)
+        {
+            return false;
         }
 
-        MenuBarAppendResult result = await appendLine(text.Trim(), newNote).ConfigureAwait(true);
+        // Typed here rather than in a note, so there is no note to jump back to.
+        made = made with { SourceNoteId = null };
+        try
+        {
+            await agenda.SaveAsync(made, cancellationToken).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The text stays, so Enter again is the retry. Re-read it so the readback is back too.
+            Capture.Update(Draft, caret, Now);
+            RaiseBoxState();
+            ShowNotice(AppStrings.MenuBarSaveFailed, null);
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+            return false;
+        }
+
+        AgendaChanged?.Invoke(this, EventArgs.Empty);
+        Draft = string.Empty;
+        await AnnounceAsync(made, cancellationToken).ConfigureAwait(true);
+        return true;
+    }
+
+    /// <summary>A plain line into today's note, through the host.</summary>
+    private async Task<bool> AppendAsync(string text, bool newNote)
+    {
+        MenuBarAppendResult result;
+        try
+        {
+            result = await appendLine(text.Trim(), newNote).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+            result = MenuBarAppendResult.Failed;
+        }
+
         if (result == MenuBarAppendResult.Failed)
         {
             ShowNotice(AppStrings.MenuBarAppendFailed, null);
@@ -404,17 +450,45 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         await RefreshAsync(cancellationToken).ConfigureAwait(true);
     }
 
+    /// <remarks>
+    /// The ring fills at once and is taken back if the store refuses: a tick that waited on a
+    /// write would feel like a missed click, and one that stayed after a failed write would lie.
+    /// </remarks>
     private async Task ToggleRowAsync(MenuBarTodoRowViewModel row)
     {
-        AgendaItem updated = await toggle.ToggleAsync(row.Row).ConfigureAwait(true);
-        row.Row = new AgendaDayRow(updated, row.Row.RecurrenceId, row.Row.At);
-        row.IsDone = row.Row.IsDone;
+        bool wasDone = row.IsDone;
+        bool wasTicked = row.IsTickedHere;
+        row.IsDone = !wasDone;
         row.IsTickedHere = row.IsDone;
         RecountRemaining();
+
+        try
+        {
+            AgendaItem updated = await toggle.ToggleAsync(row.Row).ConfigureAwait(true);
+            row.Row = new AgendaDayRow(updated, row.Row.RecurrenceId, row.Row.At);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            row.IsDone = wasDone;
+            row.IsTickedHere = wasTicked;
+            RecountRemaining();
+            ShowNotice(AppStrings.MenuBarSaveFailed, null);
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+            return;
+        }
+
         AgendaChanged?.Invoke(this, EventArgs.Empty);
 
         // Re-read underneath without rebuilding: the store has the tick, the list keeps the row.
-        items = await agenda.GetAllAsync().ConfigureAwait(true);
+        try
+        {
+            items = await agenda.GetAllAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The tick is written; the next opening reads everything again anyway.
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
     }
 
     private MenuBarTodoRowViewModel Row(AgendaDayRow row, bool isJustAdded, DateTime now) =>

@@ -822,6 +822,7 @@ internal static class EnglishStrings
         ["MenuBarAppended"] = "Added to today’s note",
         ["MenuBarAppendedNewNote"] = "Added to a new note for today",
         ["MenuBarAppendFailed"] = "Couldn’t add to the note. Try again.",
+        ["MenuBarSaveFailed"] = "Couldn’t save it. Try again.",
         ["MenuBarView"] = "View",
         ["MenuBarOpenApp"] = "Open Daynote",
         ["MenuBarSettings"] = "Settings",
@@ -834,6 +835,7 @@ internal static class EnglishStrings
         ["SettingsMenuBarLabel"] = "Show in menu bar",
         ["SettingsMenuBarDesc"] = "Shows how many to-dos are left today; click it for quick capture. Daynote stays in the menu bar when the window is closed.",
         ["SettingsCaptureHotkeyLabel"] = "Quick capture",
+        ["SettingsCaptureHotkeyNone"] = "Not set",
         ["SettingsCaptureHotkeyDesc"] = "Opens quick capture from anywhere. Change it if another app uses it.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)

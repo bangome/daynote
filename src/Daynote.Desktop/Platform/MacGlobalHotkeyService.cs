@@ -183,7 +183,15 @@ public sealed class MacGlobalHotkeyService : IGlobalHotkeyService
             }
             else if (hotKeyId.Id == CaptureId)
             {
-                CapturePressed?.Invoke(this, EventArgs.Empty);
+                // Called from Carbon: an exception must not unwind through its frames.
+                try
+                {
+                    CapturePressed?.Invoke(this, EventArgs.Empty);
+                }
+                catch (Exception exception)
+                {
+                    System.Diagnostics.Trace.TraceError(exception.ToString());
+                }
             }
         }
 

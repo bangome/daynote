@@ -812,6 +812,7 @@ internal static class KoreanStrings
         ["MenuBarAppended"] = "오늘 노트에 추가됨",
         ["MenuBarAppendedNewNote"] = "오늘 새 노트에 추가됨",
         ["MenuBarAppendFailed"] = "노트에 추가하지 못했어요. 다시 시도해 주세요.",
+        ["MenuBarSaveFailed"] = "저장하지 못했어요. 다시 시도해 주세요.",
         ["MenuBarView"] = "보기",
         ["MenuBarOpenApp"] = "Daynote 열기",
         ["MenuBarSettings"] = "설정",
@@ -824,6 +825,7 @@ internal static class KoreanStrings
         ["SettingsMenuBarLabel"] = "메뉴 막대에 표시",
         ["SettingsMenuBarDesc"] = "오늘 남은 할 일 수를 보여 주고, 누르면 빠른 기록이 열립니다. 창을 닫아도 메뉴 막대에 남아 있습니다.",
         ["SettingsCaptureHotkeyLabel"] = "빠른 기록",
+        ["SettingsCaptureHotkeyNone"] = "설정 안 됨",
         ["SettingsCaptureHotkeyDesc"] = "어디서든 빠른 기록 창을 엽니다. 다른 앱과 겹치면 바꾸세요.",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)

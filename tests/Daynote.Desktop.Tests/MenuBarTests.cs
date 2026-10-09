@@ -355,6 +355,140 @@ public sealed class MenuBarTests
         });
     }
 
+    [TestMethod]
+    public void A_second_Enter_while_the_first_is_writing_makes_nothing_more()
+    {
+        var gate = new GatedAgenda();
+        int appended = 0;
+        WithMenuBar(
+            (model, agenda) =>
+            {
+                Type(model, "회의 @내일 3시");
+                gate.Hold();
+                Task<bool> first = model.SubmitAsync();
+                Task<bool> second = model.SubmitAsync();
+                Task<bool> third = model.SubmitAsync(newNote: true);
+
+                Assert.IsTrue(second.IsCompleted && !second.Result, "A second Enter was let through mid-write.");
+                Assert.IsTrue(third.IsCompleted && !third.Result, "A third Enter was let through mid-write.");
+
+                gate.Release();
+                Assert.IsTrue(Wait(first));
+                Assert.AreEqual(1, Wait(agenda.GetAllAsync()).Count(static item => item.Title == "회의"));
+            },
+            append: (_, _) =>
+            {
+                appended++;
+                return Task.FromResult(MenuBarAppendResult.Appended);
+            },
+            wrap: inner => gate.Over(inner));
+
+        Assert.AreEqual(0, appended, "The @ phrase went into today's note as text.");
+    }
+
+    [TestMethod]
+    public void A_plain_line_is_added_once_however_often_Enter_repeats()
+    {
+        var release = new TaskCompletionSource<MenuBarAppendResult>();
+        int appended = 0;
+        WithMenuBar(
+            (model, _) =>
+            {
+                Type(model, "한 번만");
+                Task<bool> first = model.SubmitAsync();
+                Assert.IsFalse(Wait(model.SubmitAsync()));
+                release.SetResult(MenuBarAppendResult.Appended);
+                Assert.IsTrue(Wait(first));
+            },
+            append: (_, _) =>
+            {
+                appended++;
+                return release.Task;
+            });
+
+        Assert.AreEqual(1, appended);
+    }
+
+    [TestMethod]
+    public void An_item_the_store_refuses_keeps_its_text_and_says_so()
+    {
+        var gate = new GatedAgenda { FailSaves = true };
+        WithMenuBar(
+            (model, _) =>
+            {
+                Type(model, "회의 @내일 3시");
+                Assert.IsFalse(Wait(model.SubmitAsync()));
+                Assert.AreEqual("회의 @내일 3시", model.Draft);
+                Assert.AreEqual("저장하지 못했어요. 다시 시도해 주세요.", model.NoticeText);
+                Assert.IsTrue(model.IsReadbackVisible, "The readback did not come back for a retry.");
+            },
+            wrap: inner => gate.Over(inner));
+    }
+
+    [TestMethod]
+    public void A_line_the_host_throws_on_is_reported_not_lost()
+    {
+        WithMenuBar(
+            (model, _) =>
+            {
+                Type(model, "던져질 문장");
+                Assert.IsFalse(Wait(model.SubmitAsync()));
+                Assert.AreEqual("던져질 문장", model.Draft);
+                Assert.AreEqual("노트에 추가하지 못했어요. 다시 시도해 주세요.", model.NoticeText);
+            },
+            append: (_, _) => throw new IOException("disk gone"));
+    }
+
+    [TestMethod]
+    public void A_tick_the_store_refuses_is_taken_back()
+    {
+        var gate = new GatedAgenda();
+        WithMenuBar(
+            (model, _) =>
+            {
+                gate.FailSaves = true;
+                MenuBarTodoRowViewModel first = model.Todos[0];
+                Wait(first.ToggleCommand.ExecuteAsync(null));
+
+                Assert.IsFalse(first.IsDone, "The ring stayed filled after the write failed.");
+                Assert.IsFalse(first.IsHighlighted);
+                Assert.AreEqual(4, model.RemainingCount);
+                Assert.AreEqual("저장하지 못했어요. 다시 시도해 주세요.", model.NoticeText);
+            },
+            wrap: inner => gate.Over(inner));
+    }
+
+    [TestMethod]
+    public void A_chord_someone_else_holds_at_start_up_is_reported_not_shown()
+    {
+        using var data = new TempDataRoot();
+        HeadlessAppFixture.OnUiThread(() =>
+        {
+            Environment.SetEnvironmentVariable("DAYNOTE_DATA_ROOT", data.Path);
+            var services = new ServiceCollection();
+            services.AddDaynoteDesktop(
+                Daynote.App.Composition.DaynoteAppOptions.ForCurrentUser(), Application.Current!, () => null, () => { });
+            services.AddSingleton<IGlobalHotkeyService>(new RefusingHotkeys());
+            ServiceProvider provider = services.BuildServiceProvider();
+            var localization = LocalizationService.Instance;
+            AppLanguage original = localization.Language;
+            try
+            {
+                localization.SetLanguage(AppLanguage.Korean);
+                DesktopSettingsViewModel settings = provider.GetRequiredService<DesktopShellViewModel>().SettingsViewModel!;
+                Wait(settings.LoadMenuBarAsync());
+
+                Assert.AreEqual("설정 안 됨", settings.CaptureHotkeyDisplay, "A chord that was never registered is shown as if it works.");
+                Assert.AreEqual(AppStrings.HotkeyConflict, settings.CaptureHotkeyStatusText);
+            }
+            finally
+            {
+                localization.SetLanguage(original);
+                provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        });
+    }
+
     /// <summary>The design's list, written through the store the app reads.</summary>
     internal static void SeedDesignDay(IAgendaRepository agenda, bool english = false)
     {
@@ -420,7 +554,8 @@ public sealed class MenuBarTests
     internal static void WithMenuBar(
         Action<MenuBarViewModel, IAgendaRepository> body,
         Func<string, bool, Task<MenuBarAppendResult>>? append = null,
-        AppLanguage language = AppLanguage.Korean)
+        AppLanguage language = AppLanguage.Korean,
+        Func<IAgendaRepository, IAgendaRepository>? wrap = null)
     {
         var localization = LocalizationService.Instance;
         AppLanguage original = localization.Language;
@@ -436,7 +571,7 @@ public sealed class MenuBarTests
                 var agenda = provider.GetRequiredService<IAgendaRepository>();
                 SeedDesignDay(agenda, language == AppLanguage.English);
                 var model = new MenuBarViewModel(
-                    agenda,
+                    wrap?.Invoke(agenda) ?? agenda,
                     new FixedClock(DesignNow),
                     append ?? ((_, _) => Task.FromResult(MenuBarAppendResult.Appended)),
                     _ => { },
@@ -498,6 +633,90 @@ public sealed class MenuBarTests
     }
 
     internal static T Wait<T>(ValueTask<T> work) => Wait(work.AsTask());
+
+    /// <summary>The real store, with saves that can be held back or refused.</summary>
+    internal sealed class GatedAgenda
+    {
+        private TaskCompletionSource? held;
+
+        public bool FailSaves { get; set; }
+
+        public void Hold() => held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void Release() => held?.TrySetResult();
+
+        public IAgendaRepository Over(IAgendaRepository inner) => new Repository(this, inner);
+
+        private sealed class Repository(GatedAgenda gate, IAgendaRepository inner) : IAgendaRepository
+        {
+            public async ValueTask SaveAsync(AgendaItem item, CancellationToken cancellationToken = default)
+            {
+                if (gate.held is { } held)
+                {
+                    await held.Task.ConfigureAwait(true);
+                }
+
+                if (gate.FailSaves)
+                {
+                    throw new IOException("The store refused the write.");
+                }
+
+                await inner.SaveAsync(item, cancellationToken).ConfigureAwait(true);
+            }
+
+            public ValueTask<IReadOnlyList<AgendaList>> GetListsAsync(CancellationToken cancellationToken = default) => inner.GetListsAsync(cancellationToken);
+
+            public ValueTask<AgendaList> CreateListAsync(Guid id, string name, CancellationToken cancellationToken = default) => inner.CreateListAsync(id, name, cancellationToken);
+
+            public ValueTask<AgendaList?> RenameListAsync(Guid id, string name, CancellationToken cancellationToken = default) => inner.RenameListAsync(id, name, cancellationToken);
+
+            public ValueTask<int?> DeleteListAsync(Guid id, CancellationToken cancellationToken = default) => inner.DeleteListAsync(id, cancellationToken);
+
+            public ValueTask<AgendaItem?> GetAsync(Guid id, CancellationToken cancellationToken = default) => inner.GetAsync(id, cancellationToken);
+
+            public ValueTask<IReadOnlyList<AgendaItem>> GetForDateAsync(DateOnly localDate, CancellationToken cancellationToken = default) => inner.GetForDateAsync(localDate, cancellationToken);
+
+            public ValueTask<IReadOnlyList<AgendaItem>> GetSeriesAsync(CancellationToken cancellationToken = default) => inner.GetSeriesAsync(cancellationToken);
+
+            public ValueTask<IReadOnlyList<AgendaItem>> GetAllAsync(CancellationToken cancellationToken = default) => inner.GetAllAsync(cancellationToken);
+
+            public ValueTask<IReadOnlyList<AgendaItem>> GetForListAsync(Guid listId, CancellationToken cancellationToken = default) => inner.GetForListAsync(listId, cancellationToken);
+
+            public ValueTask<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+        }
+    }
+
+    /// <summary>A machine where every chord is already taken.</summary>
+    private sealed class RefusingHotkeys : IGlobalHotkeyService
+    {
+        public event EventHandler? Pressed
+        {
+            add { }
+            remove { }
+        }
+
+        public event EventHandler? QuickNotePressed
+        {
+            add { }
+            remove { }
+        }
+
+        public Hotkey? Current => null;
+
+        public Hotkey? CurrentCapture => null;
+
+        public void Attach(nint hwnd)
+        {
+        }
+
+        public HotkeySetResult TrySet(Hotkey hotkey) => HotkeySetResult.Conflict;
+
+        public HotkeySetResult TrySetCapture(Hotkey hotkey) => HotkeySetResult.Conflict;
+
+        public void Dispose()
+        {
+        }
+    }
 
     internal sealed class FixedClock(DateTimeOffset now) : IClock
     {
