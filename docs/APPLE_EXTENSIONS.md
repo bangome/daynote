@@ -216,8 +216,10 @@ the design renders.
 
 ## 9. Not built, or not verifiable here
 
-- Notification actions 완료 / 30분 뒤 다시 / 회의 노트 열기 (watch design §05, "폰 알림에도 같은 동작"):
-  see the report for status.
+- Notification actions (watch design §05, "폰 알림에도 같은 동작"): a to-do's notification carries
+  완료 and 30분 뒤 다시 on iOS (category `daynote.todo`, so the watch mirrors them). 완료 queues a
+  `complete` action (§4); 30분 뒤 다시 adds the same notification half an hour on under its own id.
+  Android's notifications do not have them yet, and an event's 회의 노트 열기 is the plain tap.
 - Widgets cannot run code at midnight or at an event's start except through their own timeline;
   the provider lays out entries for each quarter hour, each event boundary and midnight.
 - The widget gallery's own names follow the system language (a string catalog); everything a

@@ -1,3 +1,4 @@
+using Daynote.App.Localization;
 using Daynote.Mobile.Reminders;
 using Foundation;
 using UIKit;
@@ -20,6 +21,13 @@ internal sealed class IosReminderScheduler : IReminderScheduler
 {
     internal const string DateKey = "daynote.reminder.date";
     internal const string NoteKey = "daynote.reminder.note";
+    internal const string ItemKey = "daynote.reminder.item";
+    internal const string OccurrenceKey = "daynote.reminder.occurrence";
+
+    /// <summary>A to-do's notification: 완료 and 30분 뒤 다시, which the watch shows too (Apple Watch design §05).</summary>
+    internal const string TodoCategory = "daynote.todo";
+    internal const string DoneAction = "daynote.done";
+    internal const string SnoozeAction = "daynote.snooze";
 
     public int Capacity => 64;
 
@@ -54,6 +62,18 @@ internal sealed class IosReminderScheduler : IReminderScheduler
     {
         ArgumentNullException.ThrowIfNull(changes);
         UNUserNotificationCenter center = UNUserNotificationCenter.Current;
+
+        // Every pass, so the action titles follow a language switch. Neither action opens the app:
+        // finishing a to-do or putting it off is the whole of what the user asked for.
+        center.SetNotificationCategories(new NSSet<UNNotificationCategory>(UNNotificationCategory.FromIdentifier(
+            TodoCategory,
+            [
+                UNNotificationAction.FromIdentifier(DoneAction, AppStrings.ReminderActionDone, UNNotificationActionOptions.None),
+                UNNotificationAction.FromIdentifier(SnoozeAction, AppStrings.ReminderActionSnooze, UNNotificationActionOptions.None),
+            ],
+            [],
+            UNNotificationCategoryOptions.None)));
+
         if (changes.Cancel.Count > 0)
         {
             center.RemovePendingNotificationRequests([.. changes.Cancel]);
@@ -61,14 +81,28 @@ internal sealed class IosReminderScheduler : IReminderScheduler
 
         foreach (Reminder reminder in changes.Schedule)
         {
+            var info = new NSMutableDictionary
+            {
+                [DateKey] = new NSString(reminder.Date.ToString()),
+                [NoteKey] = new NSString(reminder.NoteId.ToString("D")),
+            };
+            if (reminder.ItemId is { } item)
+            {
+                info[ItemKey] = new NSString(item.ToString("D"));
+            }
+
+            if (reminder.Occurrence is { } occurrence)
+            {
+                info[OccurrenceKey] = new NSString(occurrence);
+            }
+
             var content = new UNMutableNotificationContent
             {
                 Title = reminder.Title,
                 Body = reminder.Body,
                 Sound = UNNotificationSound.Default,
-                UserInfo = NSDictionary.FromObjectsAndKeys(
-                    [new NSString(reminder.Date.ToString()), new NSString(reminder.NoteId.ToString("D"))],
-                    [new NSString(DateKey), new NSString(NoteKey)]),
+                UserInfo = info,
+                CategoryIdentifier = reminder.ItemId is null ? string.Empty : TodoCategory,
             };
 
             // Date components rather than an interval: the reminder stays at 14:00 local even if
@@ -135,6 +169,44 @@ internal sealed class IosReminderDelegate : UNUserNotificationCenterDelegate
         NSDictionary info = response.Notification.Request.Content.UserInfo;
         string? date = info[IosReminderScheduler.DateKey]?.ToString();
         string? note = info[IosReminderScheduler.NoteKey]?.ToString();
+
+        if (response.ActionIdentifier == IosReminderScheduler.DoneAction)
+        {
+            // Into the queue widgets and the watch use, which the app drains through its store
+            // (docs/APPLE_EXTENSIONS.md §4) — now if it is running, on its next start if not.
+            string? item = info[IosReminderScheduler.ItemKey]?.ToString();
+            string? occurrence = info[IosReminderScheduler.OccurrenceKey]?.ToString();
+            if (item is not null && date is not null)
+            {
+                NSRunLoop.Main.BeginInvokeOnMainThread(() => IosPlatformServices.Glance.Enqueue(new Daynote.App.Glance.GlanceAction(
+                    1,
+                    Guid.NewGuid().ToString("D"),
+                    Daynote.App.Glance.GlanceActionTypes.Complete,
+                    DateTimeOffset.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture),
+                    ItemId: item,
+                    SeriesId: occurrence is null ? null : item,
+                    Occurrence: occurrence,
+                    Date: date)));
+            }
+
+            completionHandler();
+            return;
+        }
+
+        if (response.ActionIdentifier == IosReminderScheduler.SnoozeAction)
+        {
+            // The same notification half an hour on. Its own id, so the next reminder pass, which
+            // only knows the planned ones, neither replaces nor cancels it.
+            UNNotificationContent original = response.Notification.Request.Content;
+            UNNotificationRequest again = UNNotificationRequest.FromIdentifier(
+                response.Notification.Request.Identifier + ".snooze",
+                original,
+                UNTimeIntervalNotificationTrigger.CreateTrigger(30 * 60, repeats: false));
+            center.AddNotificationRequest(again, null);
+            completionHandler();
+            return;
+        }
+
         // UIKit's main queue rather than Avalonia's dispatcher: a tap that launches the app arrives
         // before Avalonia has started, and touching Dispatcher.UIThread then crashes its start-up.
         NSRunLoop.Main.BeginInvokeOnMainThread(() => App.OpenReminder(date, note));

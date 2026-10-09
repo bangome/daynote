@@ -806,6 +806,12 @@ public static class AppStrings
     public static string ReminderSettingsDenied => LocalizationService.Instance[nameof(ReminderSettingsDenied)];
     public static string ReminderSettingsOpenSystem => LocalizationService.Instance[nameof(ReminderSettingsOpenSystem)];
     public static string ReminderChannelName => LocalizationService.Instance[nameof(ReminderChannelName)];
+
+    /// <summary>A to-do notification's action that completes it (Apple Watch design §05).</summary>
+    public static string ReminderActionDone => LocalizationService.Instance[nameof(ReminderActionDone)];
+
+    /// <summary>A to-do notification's action that brings it back in half an hour.</summary>
+    public static string ReminderActionSnooze => LocalizationService.Instance[nameof(ReminderActionSnooze)];
     public static string ReminderChannelDescription => LocalizationService.Instance[nameof(ReminderChannelDescription)];
     public static string ReminderTimeTitle => LocalizationService.Instance[nameof(ReminderTimeTitle)];
     public static string ReminderTimeHint => LocalizationService.Instance[nameof(ReminderTimeHint)];

@@ -343,6 +343,21 @@ public sealed class AgendaReminderTests
         Assert.AreEqual(new DateTime(2026, 10, 4, 9, 0, 0), plan[1].At);
     }
 
+    [TestMethod]
+    public void A_to_do_s_reminder_names_the_row_its_done_action_completes()
+    {
+        // Apple Watch design §05: 완료 on the notification completes the to-do without the app, so
+        // the reminder carries the item, and for a rule the occurrence, the way a widget row does.
+        Reminder single = ReminderPlanner.Plan([Dated(1)], Now, 10, Nine).Single();
+        Assert.AreEqual(Id(1), single.ItemId);
+        Assert.IsNull(single.Occurrence);
+
+        Reminder occurrence = ReminderPlanner.Plan(
+            [Repeating("FREQ=DAILY", new DateTime(2026, 10, 3, 9, 0, 0))], Now, 1, Nine).Single();
+        Assert.AreEqual(Id(1), occurrence.ItemId, "An occurrence names its series.");
+        Assert.AreEqual("2026-10-03T09:00", occurrence.Occurrence);
+    }
+
     private static Guid Id(int suffix) => Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}");
 
     /// <summary>A repeating to-do, anchored on DTSTART the way a VTODO with an RRULE is.</summary>

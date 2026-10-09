@@ -702,6 +702,8 @@ internal static class KoreanStrings
         ["ReminderSettingsDenied"] = "기기 설정에서 데이노트 알림이 꺼져 있습니다",
         ["ReminderSettingsOpenSystem"] = "알림 설정 열기",
         ["ReminderChannelName"] = "할 일 알림",
+        ["ReminderActionDone"] = "완료",
+        ["ReminderActionSnooze"] = "30분 뒤 다시",
         ["ReminderChannelDescription"] = "노트에 적은 할 일의 기한에 맞춰 알려 드립니다.",
         ["ReminderTimeTitle"] = "기본 알림 시각",
         ["ReminderTimeHint"] = "날짜만 있고 시각이 없는 할 일을 알릴 시각",

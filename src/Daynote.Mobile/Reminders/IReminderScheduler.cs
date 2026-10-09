@@ -80,7 +80,15 @@ public enum ReminderPermission
 /// <param name="Body">"note title · due label".</param>
 /// <param name="Date">The note's day, which a tap opens.</param>
 /// <param name="NoteId">The note a tap opens in the editor.</param>
-public sealed record Reminder(string Id, DateTime At, string Title, string Body, LocalDate Date, Guid NoteId)
+/// <param name="ItemId">
+/// The to-do it is for — the series, for an occurrence of a rule — so the notification's 완료 can
+/// complete it without the app on screen (Apple Watch design §05). Null on a reminder that cannot
+/// be completed from the notification.
+/// </param>
+/// <param name="Occurrence">Which occurrence of <paramref name="ItemId"/>, as its <c>RECURRENCE-ID</c>, or null.</param>
+public sealed record Reminder(
+    string Id, DateTime At, string Title, string Body, LocalDate Date, Guid NoteId,
+    Guid? ItemId = null, string? Occurrence = null)
 {
     /// <summary>Everything a platform shows or fires on; a change in any of it means "schedule again".</summary>
     public string Fingerprint => string.Join(
@@ -89,7 +97,9 @@ public sealed record Reminder(string Id, DateTime At, string Title, string Body,
         Title,
         Body,
         Date.ToString(),
-        NoteId.ToString("N"));
+        NoteId.ToString("N"),
+        ItemId?.ToString("N") ?? string.Empty,
+        Occurrence ?? string.Empty);
 
     /// <summary>
     /// A stable 32-bit number for the id, for the APIs that want an int (Android's PendingIntent

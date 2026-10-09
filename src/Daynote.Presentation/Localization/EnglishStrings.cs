@@ -712,6 +712,8 @@ internal static class EnglishStrings
         ["ReminderSettingsDenied"] = "Daynote notifications are turned off in system settings",
         ["ReminderSettingsOpenSystem"] = "Open notification settings",
         ["ReminderChannelName"] = "To-do reminders",
+        ["ReminderActionDone"] = "Done",
+        ["ReminderActionSnooze"] = "In 30 min",
         ["ReminderChannelDescription"] = "Reminds you when a to-do in your notes is due.",
         ["ReminderTimeTitle"] = "Default reminder time",
         ["ReminderTimeHint"] = "When a to-do with a date but no time reminds you",

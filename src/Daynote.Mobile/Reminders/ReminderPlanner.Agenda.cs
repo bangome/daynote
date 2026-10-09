@@ -179,7 +179,10 @@ public static partial class ReminderPlanner
                 DayOf(item, anchor, dateOnlyTime),
                 // What a tap opens. Empty when the to-do was never captured from a note, which is
                 // ordinary: the shell then selects the day and opens no editor.
-                item.SourceNoteId ?? Guid.Empty));
+                item.SourceNoteId ?? Guid.Empty,
+                // A to-do can be finished from its notification; an event has nothing to finish.
+                item.Kind == AgendaKind.Task ? identity : null,
+                item.Kind == AgendaKind.Task ? occurrence?.ToString() : null));
         }
     }
 

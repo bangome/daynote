@@ -73,7 +73,9 @@ public sealed class ReminderStateStore
                     && LocalDate.Parse(item.Date) is { IsSuccess: true } date
                     && Guid.TryParse(item.Note, out Guid note))
                 {
-                    items.Add(new Reminder(id, DateTime.SpecifyKind(at, DateTimeKind.Unspecified), item.Title ?? string.Empty, item.Body ?? string.Empty, date.Value, note));
+                    items.Add(new Reminder(
+                        id, DateTime.SpecifyKind(at, DateTimeKind.Unspecified), item.Title ?? string.Empty, item.Body ?? string.Empty,
+                        date.Value, note, Guid.TryParse(item.Item, out Guid itemId) ? itemId : null, item.Occurrence));
                 }
             }
 
@@ -103,6 +105,8 @@ public sealed class ReminderStateStore
                 Body = r.Body,
                 Date = r.Date.ToString(),
                 Note = r.NoteId.ToString("D"),
+                Item = r.ItemId?.ToString("D"),
+                Occurrence = r.Occurrence,
             })],
         };
 
@@ -142,6 +146,10 @@ public sealed class ReminderStateStore
         public string? Date { get; set; }
 
         public string? Note { get; set; }
+
+        public string? Item { get; set; }
+
+        public string? Occurrence { get; set; }
     }
 }
 
