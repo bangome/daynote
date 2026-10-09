@@ -112,8 +112,18 @@ dot-prefixed file is never read.
 ```
 
 - **Applying twice changes nothing.** `complete` completes (never toggles), finding the row again
-  the way the day panel does — by `itemId`, or by series and `RECURRENCE-ID` — and does nothing
+  the way the day panel does — by `itemId` for a one-off, and for an occurrence by its
+  `RECURRENCE-ID` (never by id alone: every occurrence carries the series id) — and does nothing
   if it has gone or is already done. `capture` makes its item under the action's own `id`.
+- **One drain at a time.** Requests that arrive during a drain are folded into one more pass, never
+  run beside it and never dropped. Nothing is drained or published until the app has loaded the
+  day and read the account (`StartGlanceAsync`, after `account.InitializeAsync`).
+- **Deleted when done or impossible, kept when it might work later.** An unreadable file, an
+  unknown `type`, or a row that has gone is deleted. An action whose apply throws, or asks to be
+  retried (a note that would not save), stays in the queue for up to a day after the file was
+  written, then is dropped. The Mac's `GlanceRelay` uses the same day.
+- **The snapshot is compared with the file**, not with what the app last wrote, stamp aside, so a
+  widget's read-modify-write that lands late is noticed and replaced.
 - `complete` on an occurrence writes the override `ToggleAgendaItem` writes in the app.
 - `capture` with `task`/`event` is parsed again on the phone with `AgendaPhraseParser.ParseTrailing`
   and built with the `@` command's own `AgendaCapture.Compose` (default list, default alert on a
@@ -121,8 +131,8 @@ dot-prefixed file is never read.
   the end of that day's first note, creating one if the day has none.
 - **An extension marks its own guess in the snapshot** (the tick shows at once) and the app
   overwrites the whole file from its store after the drain.
-- When: on launch (end of `InitializeAsync`), on every resume, and at once when the watch relay
-  delivers something while the app runs. **Nothing applies while the app is not running** — a tick
+- When: on start (after the day and the account are read), on every resume, and at once when the
+  watch relay or a notification action delivers something while the app runs. **Nothing applies while the app is not running** — a tick
   on a widget is queued until Daynote is next opened, and other devices see it after that.
 
 ## 5. The watch
@@ -154,8 +164,9 @@ dot-prefixed file is never read.
 
 ## 6. The bridge
 
-`DaynoteBridge.framework` (iOS 15+) exports two C functions, called with `[DllImport("__Internal")]`
-from `IosGlanceHost`:
+`DaynoteBridge.framework` (iOS 15+) exports two C functions, which `IosGlanceHost` looks up at run
+time (`NativeLibrary.TryLoad` on the bundled framework, then `TryGetExport`) and calls through
+function pointers — not `[DllImport]`, which would make them symbols the native link requires:
 
 | Function | Does |
 | --- | --- |
@@ -163,8 +174,8 @@ from `IosGlanceHost`:
 | `daynote_glance_sync_activity()` | Starts, updates or ends the event Live Activity from the snapshot |
 
 The csproj links it with a conditional `NativeReference`, so a plain `dotnet build` without the
-native build still works; the first call then throws `DllNotFoundException`, the host stops
-calling, and widgets fall back to their own quarter-hour timeline.
+native build still links and runs; the lookup then finds nothing, the calls do nothing, and
+widgets fall back to their own quarter-hour timeline.
 
 **Live Activity (design §08): local only.** From 15 minutes before an event to its end, events
 only. With no push, it starts the first time the app runs (launch, resume, a new snapshot) inside
@@ -188,7 +199,12 @@ that arrives before the day has loaded.
 
 ## 8. Building and signing
 
-`scripts/Build-IosApp.sh` does all of it (`DAYNOTE_IOS_EXTENSIONS=0` leaves it out):
+`scripts/Build-IosApp.sh` does all of it with `DAYNOTE_IOS_EXTENSIONS=1`. **It is off by default**
+until the App Group exists (§2): a default build is the app alone, signed with
+`DAYNOTE_IOS_PROVISIONING` and exactly the entitlements it had before (`Entitlements.plist`, Sign
+in with Apple only). With extensions on, the app is built with `-p:DaynoteGlance=true`, which
+signs it with `Entitlements.Glance.plist` (the same plus the group), and the script stops before
+building if any of the four profiles lacks the group.
 
 1. `xcodebuild` the bridge and widget extension (iOS) and the watch app with its complications
    (watchOS) into `native/apple/build` — unsigned for a device, ad hoc by Xcode for the Simulator,
@@ -203,9 +219,13 @@ that arrives before the day has loaded.
 
 ```sh
 python3 scripts/New-AppleGlanceProfiles.py            # after any App ID change
+# Today, until the App Group exists: the app alone, as before.
 DAYNOTE_IOS_SIGN_IDENTITY="Apple Distribution: …" \
+DAYNOTE_IOS_PROVISIONING="cc.arachat.daynote AppStore" scripts/Build-IosApp.sh
+# With widgets and watch (the app's profile must grant the group too):
+DAYNOTE_IOS_EXTENSIONS=1 DAYNOTE_IOS_SIGN_IDENTITY="Apple Distribution: …" \
 DAYNOTE_IOS_PROVISIONING="Daynote Glance cc.arachat.daynote" scripts/Build-IosApp.sh
-scripts/Build-IosApp.sh -t simulator
+DAYNOTE_IOS_EXTENSIONS=1 scripts/Build-IosApp.sh -t simulator
 ```
 
 Tests: `xcodebuild test -project native/apple/Daynote.xcodeproj -scheme DaynoteKitTests
@@ -218,7 +238,9 @@ the design renders.
 
 - Notification actions (watch design §05, "폰 알림에도 같은 동작"): a to-do's notification carries
   완료 and 30분 뒤 다시 on iOS (category `daynote.todo`, so the watch mirrors them). 완료 queues a
-  `complete` action (§4); 30분 뒤 다시 adds the same notification half an hour on under its own id.
+  `complete` action (§4), written before the handler returns; 30분 뒤 다시 adds the same notification
+  half an hour on under its own id (`….snooze`), which every reminder pass withdraws once its
+  to-do is ticked, skipped or deleted. Without an App Group folder no 완료 is offered.
   Android's notifications do not have them yet, and an event's 회의 노트 열기 is the plain tap.
 - Widgets cannot run code at midnight or at an event's start except through their own timeline;
   the provider lays out entries for each quarter hour, each event boundary and midnight.
