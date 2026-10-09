@@ -8,6 +8,13 @@
 #               (the profile's name or UUID).
 # simulator  -> an unsigned .app that runs in the Simulator, which needs no account at all and is
 #               the fastest way to see a change.
+#
+# Both embed the native Apple targets from native/apple (docs/APPLE_EXTENSIONS.md): the widget
+# extension in PlugIns, the watch app (with its complications) in Watch, and DaynoteBridge in
+# Frameworks. xcodebuild builds them first, unsigned; the .NET build links the bridge; and the
+# bundles are then signed inside out — extensions, watch app, app — each with its own profile and
+# the App Group entitlement. Device profiles are found by name, "Daynote Glance <bundle id>", as
+# scripts/New-AppleGlanceProfiles.py makes them. DAYNOTE_IOS_EXTENSIONS=0 leaves all of it out.
 set -euo pipefail
 
 CONFIG=""; OUT="dist/ios"; TARGET="device"
@@ -62,6 +69,105 @@ restore_locks() {
 trap restore_locks EXIT
 save_locks
 
+NATIVE="$ROOT/native/apple"
+NATIVE_BUILD="$NATIVE/build"
+TEAM="4T8C76SP99"
+WITH_EXTENSIONS="${DAYNOTE_IOS_EXTENSIONS:-1}"
+
+# The Swift targets. For a device, unsigned: signing happens once they are inside the app. For the
+# Simulator, signed ad hoc by Xcode, which is what writes their entitlements into the binary where
+# the Simulator reads them: macOS refuses to launch an ad hoc signature that claims an App Group.
+build_native() {
+  local config="$1" ios_sdk="$2" watch_sdk="$3"
+  echo "==> native targets ($config, $ios_sdk, $watch_sdk)"
+  rm -rf "$NATIVE_BUILD"
+  local signing=(CODE_SIGNING_ALLOWED=NO)
+  [[ "$ios_sdk" == "iphonesimulator" ]] && signing=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
+  local common=(-project "$NATIVE/Daynote.xcodeproj" -configuration "$config" "${signing[@]}"
+    "SYMROOT=$NATIVE_BUILD" "OBJROOT=$NATIVE_BUILD/obj" -quiet)
+  xcodebuild build "${common[@]}" -sdk "$ios_sdk" -target DaynoteBridge -target DaynoteWidgets
+  xcodebuild build "${common[@]}" -sdk "$watch_sdk" -target DaynoteWatch
+}
+
+# The entitlements a bundle is signed with: its own file, plus what an App Store profile grants
+# every bundle (the identifier, the team) and nothing the profile does not.
+entitlements_for() {
+  local source="$1" bundle_id="$2" out="$3"
+  cp "$source" "$out"
+  /usr/libexec/PlistBuddy -c "Add :application-identifier string $TEAM.$bundle_id" "$out"
+  /usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string $TEAM" "$out"
+  /usr/libexec/PlistBuddy -c "Add :get-task-allow bool false" "$out"
+}
+
+profile_named() {
+  local name="Daynote Glance $1" file
+  for file in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+    if security cms -D -i "$file" 2>/dev/null | plutil -extract Name raw -o - - 2>/dev/null | grep -qx "$name"; then
+      echo "$file"
+      return 0
+    fi
+  done
+  echo "error: no provisioning profile named '$name'; run scripts/New-AppleGlanceProfiles.py" >&2
+  return 1
+}
+
+# Copies the widget extension and the watch app into APP and signs them, then APP itself, inside
+# out. IDENTITY "-" signs ad hoc for the Simulator; anything else is a device identity and each
+# bundle gets its profile embedded.
+embed_native() {
+  local app="$1" platform="$2" identity="$3"
+  local ios_dir watch_dir
+  if [[ "$platform" == "device" ]]; then
+    ios_dir="$NATIVE_BUILD/Release-iphoneos"; watch_dir="$NATIVE_BUILD/Release-watchos"
+  else
+    ios_dir="$NATIVE_BUILD/Debug-iphonesimulator"; watch_dir="$NATIVE_BUILD/Debug-watchsimulator"
+  fi
+
+  echo "==> embedding widgets and watch app"
+  mkdir -p "$app/PlugIns" "$app/Watch"
+  rm -rf "$app/PlugIns/DaynoteWidgets.appex" "$app/Watch/DaynoteWatch.app"
+  ditto "$ios_dir/DaynoteWidgets.appex" "$app/PlugIns/DaynoteWidgets.appex"
+  ditto "$watch_dir/DaynoteWatch.app" "$app/Watch/DaynoteWatch.app"
+
+  local work; work="$(mktemp -d)"
+  # On a device, the app's own entitlements as the .NET build signed it, so the re-sign keeps
+  # exactly those. A Simulator build carries none in its signature, so it gets the project's file.
+  if [[ "$platform" == "device" ]]; then
+    codesign -d --entitlements "$work/app.plist" --xml "$app" >/dev/null 2>&1
+  else
+    cp "$ROOT/src/Daynote.Mobile.iOS/Entitlements.plist" "$work/app.plist"
+  fi
+
+  sign_bundle() {
+    local bundle="$1" bundle_id="$2" entitlements="$3"
+    # Xcode already signed the Simulator's copies, entitlements and all.
+    [[ "$identity" == "-" ]] && return 0
+    if [[ "$identity" != "-" ]]; then
+      local profile; profile="$(profile_named "$bundle_id")"
+      cp "$profile" "$bundle/embedded.mobileprovision"
+      entitlements_for "$entitlements" "$bundle_id" "$work/$bundle_id.plist"
+      entitlements="$work/$bundle_id.plist"
+    fi
+    codesign --force --sign "$identity" --entitlements "$entitlements" --timestamp=none --generate-entitlement-der "$bundle"
+  }
+
+  local watch="$app/Watch/DaynoteWatch.app"
+  sign_bundle "$watch/PlugIns/DaynoteWatchWidgets.appex" cc.arachat.daynote.watchkitapp.widgets "$NATIVE/WatchWidgets/DaynoteWatchWidgets.entitlements"
+  sign_bundle "$watch" cc.arachat.daynote.watchkitapp "$NATIVE/Watch/DaynoteWatch.entitlements"
+  sign_bundle "$app/PlugIns/DaynoteWidgets.appex" cc.arachat.daynote.widgets "$NATIVE/Widgets/DaynoteWidgets.entitlements"
+  if [[ "$identity" != "-" ]]; then
+    cp "$(profile_named cc.arachat.daynote)" "$app/embedded.mobileprovision"
+  fi
+  if [[ "$identity" == "-" ]]; then
+    # The .NET build put the app's entitlements in its binary; the seal only has to cover the new contents.
+    codesign --force --sign - --timestamp=none "$app"
+  else
+    codesign --force --sign "$identity" --entitlements "$work/app.plist" --timestamp=none --generate-entitlement-der "$app"
+  fi
+  codesign --verify --deep --strict "$app"
+  rm -rf "$work"
+}
+
 if [[ "$TARGET" == "simulator" ]]; then
   # The Simulator runs the host's architecture; arm64 on Apple silicon.
   RID="iossimulator-$(uname -m | sed 's/x86_64/x64/')"
@@ -71,7 +177,9 @@ if [[ "$TARGET" == "simulator" ]]; then
   # the Simulator kills it on launch with "Code Signature Invalid" - which looks exactly like an app
   # crash and is not one. A clean build here costs about ninety seconds.
   rm -rf "$ROOT/$OUT" "$ROOT/src/Daynote.Mobile.iOS/bin" "$ROOT/src/Daynote.Mobile.iOS/obj"
+  [[ "$WITH_EXTENSIONS" == "1" ]] && build_native Debug iphonesimulator watchsimulator
   dotnet build "$PROJECT" -c "$CONFIG" -r "$RID" -o "$ROOT/$OUT" -nologo -v q
+  [[ "$WITH_EXTENSIONS" == "1" ]] && embed_native "$ROOT/$OUT/Daynote.Mobile.iOS.app" simulator -
   echo "==> done: $ROOT/$OUT"
   echo "    xcrun simctl install booted \"$ROOT/$OUT/Daynote.Mobile.iOS.app\""
   exit 0
@@ -82,6 +190,7 @@ echo "==> publish (ios-arm64, $CONFIG)"
 # assembly that a newly added packaging target removed, producing an IPA that does not match the
 # current project file. A distribution build must always start from a clean app-head graph.
 rm -rf "$ROOT/$OUT" "$ROOT/src/Daynote.Mobile.iOS/bin" "$ROOT/src/Daynote.Mobile.iOS/obj"
+[[ "$WITH_EXTENSIONS" == "1" ]] && build_native Release iphoneos watchos
 dotnet publish "$PROJECT" -c "$CONFIG" -r ios-arm64 -o "$ROOT/$OUT" -nologo -v q \
   -p:ArchiveOnBuild=true \
   -p:CodesignKey="${DAYNOTE_IOS_SIGN_IDENTITY:?set DAYNOTE_IOS_SIGN_IDENTITY}" \
@@ -95,6 +204,16 @@ fi
 if unzip -Z1 "$IPA" | grep -q 'Avalonia\.DesignerSupport'; then
   echo "error: IPA contains Avalonia.DesignerSupport, which crashes trimmed iOS device builds" >&2
   exit 1
+fi
+
+if [[ "$WITH_EXTENSIONS" == "1" ]]; then
+  # The IPA is the .NET build's, signed; open it, put the extensions in, sign it again inside out.
+  STAGE="$(mktemp -d)"
+  unzip -q "$IPA" -d "$STAGE"
+  embed_native "$(find "$STAGE/Payload" -maxdepth 1 -name '*.app' -print -quit)" device "$DAYNOTE_IOS_SIGN_IDENTITY"
+  rm -f "$IPA"
+  (cd "$STAGE" && zip -qr -y "$IPA" Payload $(ls -d SwiftSupport 2>/dev/null))
+  rm -rf "$STAGE"
 fi
 
 echo "==> done: $ROOT/$OUT"

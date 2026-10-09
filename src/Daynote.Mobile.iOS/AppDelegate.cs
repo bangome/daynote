@@ -19,6 +19,10 @@ public partial class AppDelegate : AvaloniaAppDelegate<App>
     {
         App.Platform = IosPlatformServices.Create();
 
+        // Before launch finishes too: a watch transfer waiting for the app is delivered to an
+        // activated session, and only then.
+        IosPlatformServices.Glance.Start();
+
         // Before launch finishes, or a tap on a reminder that launched the app never arrives.
         UserNotifications.UNUserNotificationCenter.Current.Delegate = ReminderDelegate;
 
@@ -35,11 +39,19 @@ public partial class AppDelegate : AvaloniaAppDelegate<App>
         };
 
         // Coming back to the foreground is when other devices' notes are most likely waiting.
-        ((IAvaloniaAppDelegate)this).Activated += (_, _) =>
+        ((IAvaloniaAppDelegate)this).Activated += (_, args) =>
         {
             if (Avalonia.Application.Current is App app)
             {
                 app.NotifyResumed();
+            }
+
+            IosPlatformServices.Glance.Resumed();
+
+            // A widget, a control or the Live Activity opening the app on a daynote:// link.
+            if (args is Avalonia.Controls.ApplicationLifetimes.ProtocolActivatedEventArgs { Uri: { } link })
+            {
+                App.OpenLink(link.ToString());
             }
         };
 

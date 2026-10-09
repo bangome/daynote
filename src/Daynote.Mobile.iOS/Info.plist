@@ -53,7 +53,15 @@
       <key>CFBundleURLSchemes</key>
       <array><string>com.googleusercontent.apps.298036592294-21i9l31vhlihpfi6898b8inc0045nnhh</string></array>
     </dict>
+    <!-- The widgets', Control Center's and the Live Activity's way into the app (docs/APPLE_EXTENSIONS.md §7). -->
+    <dict>
+      <key>CFBundleURLName</key><string>cc.arachat.daynote.glance</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>daynote</string></array>
+    </dict>
   </array>
+  <!-- The event Live Activity (iPhone widgets design §08), started by the app itself; no push. -->
+  <key>NSSupportsLiveActivities</key><true/>
   <!--
     Declared so the account panel's terms and privacy links can open Safari. Nothing else leaves the
     app, and there is no photo, camera, contacts or location use to declare.

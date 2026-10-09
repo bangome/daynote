@@ -12,5 +12,13 @@
   <array>
     <string>Default</string>
   </array>
+  <!--
+    The folder the app shares with its widgets and its watch relay (docs/APPLE_EXTENSIONS.md §3).
+    Every App ID in the bundle carries the same group, and so does each profile.
+  -->
+  <key>com.apple.security.application-groups</key>
+  <array>
+    <string>group.cc.arachat.daynote</string>
+  </array>
 </dict>
 </plist>

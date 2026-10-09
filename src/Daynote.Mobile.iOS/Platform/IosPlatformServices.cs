@@ -41,6 +41,9 @@ public static class IosPlatformServices
     internal static string ReverseClientId(string clientId) =>
         string.Join('.', clientId.Split('.').Reverse());
 
+    /// <summary>The widgets' and the watch's host, kept so the app delegate can start and resume it.</summary>
+    internal static IosGlanceHost Glance { get; } = new();
+
     public static MobilePlatformServices Create() =>
         new(
             DataRoot: ResolveDataRoot(),
@@ -56,7 +59,8 @@ public static class IosPlatformServices
             Store: new IosStorePurchases(),
             Reminders: new IosReminderScheduler(),
             Motion: new IosMotionPlatform(),
-            Device: new IosDeviceShape());
+            Device: new IosDeviceShape(),
+            Glance: Glance);
 
     /// <summary>
     /// <c>Library/Daynote</c> inside the app container.

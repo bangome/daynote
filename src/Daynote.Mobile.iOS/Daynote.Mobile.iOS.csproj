@@ -87,6 +87,23 @@
   </ItemGroup>
 
   <!--
+    The Swift bridge to WidgetKit and ActivityKit (docs/APPLE_EXTENSIONS.md §6), built by
+    scripts/Build-IosApp.sh into native/apple/build before this project. Optional: without it the
+    app still builds and runs, and its widgets refresh on their own timeline rather than at once.
+  -->
+  <PropertyGroup>
+    <DaynoteNativeBuild>$(MSBuildProjectDirectory)/../../native/apple/build</DaynoteNativeBuild>
+    <DaynoteBridgeFramework Condition="'$(RuntimeIdentifier)' == 'ios-arm64'">$(DaynoteNativeBuild)/Release-iphoneos/DaynoteBridge.framework</DaynoteBridgeFramework>
+    <DaynoteBridgeFramework Condition="'$(RuntimeIdentifier)' != 'ios-arm64'">$(DaynoteNativeBuild)/Debug-iphonesimulator/DaynoteBridge.framework</DaynoteBridgeFramework>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(DaynoteBridgeFramework)')">
+    <NativeReference Include="$(DaynoteBridgeFramework)">
+      <Kind>Framework</Kind>
+      <SmartLink>False</SmartLink>
+    </NativeReference>
+  </ItemGroup>
+
+  <!--
     Avalonia's umbrella package ships Avalonia.DesignerSupport as a runtime asset even though it is
     only used by the desktop previewer. On a trimmed iOS device build that assembly is AOT-compiled
     against the pre-trim Avalonia.Base module, while Avalonia.Base itself is rewritten by the iOS
