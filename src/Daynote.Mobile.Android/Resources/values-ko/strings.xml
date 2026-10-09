@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="widget_today_label">오늘 할 일</string>
+  <string name="widget_today_description">오늘 할 일을 지난 것부터 보여 줍니다. 링을 누르면 완료됩니다.</string>
+  <string name="widget_next_label">다음 일정</string>
+  <string name="widget_next_description">다음 일정과 그 시각.</string>
+  <string name="widget_capture_label">빠른 기록</string>
+  <string name="widget_capture_description">노트를 쓰거나, @로 할 일을 바로 만듭니다.</string>
+  <string name="widget_day_label">하루</string>
+  <string name="widget_day_description">이번 주, 다음 일정, 오늘 할 일을 한눈에.</string>
+
+  <string name="widget_new_note">+ 노트</string>
+  <string name="widget_new_todo">@ 할 일</string>
+  <string name="widget_preview_today">오늘</string>
+  <string name="widget_preview_date">10월 7일 수요일</string>
+  <string name="widget_preview_left">남은 4</string>
+  <string name="widget_preview_up_next">다음 일정</string>
+  <string name="widget_preview_todo1">회의실 예약 확인</string>
+  <string name="widget_preview_todo2">퇴근 전 로그 확인</string>
+  <string name="widget_preview_todo3">릴리즈 노트 작성</string>
+  <string name="widget_preview_event">디자인 리뷰</string>
+  <string name="widget_preview_event_span">16:00–17:30</string>
+  <string name="widget_preview_sun">일</string>
+  <string name="widget_preview_mon">월</string>
+  <string name="widget_preview_tue">화</string>
+  <string name="widget_preview_wed">수</string>
+  <string name="widget_preview_thu">목</string>
+  <string name="widget_preview_fri">금</string>
+  <string name="widget_preview_sat">토</string>
+</resources>

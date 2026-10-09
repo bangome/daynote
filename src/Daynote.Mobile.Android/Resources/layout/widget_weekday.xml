@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A day in the 4×4 widget's week strip. widget_weekday_today is the lit one. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+  <TextView
+      android:id="@+id/widget_weekday_name"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:textColor="@color/widget_text2"
+      android:textSize="11sp" />
+  <TextView
+      android:id="@+id/widget_weekday_number"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:textColor="@color/widget_text"
+      android:textSize="16sp"
+      android:textStyle="bold" />
+</LinearLayout>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×2 다음 일정: the label, the time large, then the title and its span. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="16dp">
+  <TextView
+      android:id="@+id/widget_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/widget_preview_up_next"
+      android:textColor="@color/widget_text2"
+      android:textSize="12sp"
+      android:textStyle="bold" />
+  <FrameLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1" />
+  <TextView
+      android:id="@+id/widget_event_when"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:maxLines="1"
+      android:textColor="@color/widget_text"
+      android:textSize="30sp"
+      android:textStyle="bold" />
+  <TextView
+      android:id="@+id/widget_event_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:ellipsize="end"
+      android:maxLines="2"
+      android:textColor="@color/widget_text"
+      android:textSize="15sp"
+      android:textStyle="bold" />
+  <TextView
+      android:id="@+id/widget_event_span"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="2dp"
+      android:maxLines="1"
+      android:textColor="@color/widget_text2"
+      android:textSize="12sp" />
+</LinearLayout>

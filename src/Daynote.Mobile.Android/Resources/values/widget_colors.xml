@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    The home-screen widgets, in the Mobile B palette (src/Daynote.Mobile/Themes/Daynote.Mobile.Palette.axaml),
+    light. values-night/widget_colors.xml holds the dark half under the same names, so the launcher
+    re-inflating a widget on a theme switch picks the right one without the app running. The check
+    rings are not here: they are the list's colour, the same in both themes, and set from code.
+  -->
+  <color name="widget_surface">#EFEDE6</color>
+  <color name="widget_row">#FFFEFB</color>
+  <color name="widget_text">#161A36</color>
+  <color name="widget_text2">#62667D</color>
+  <color name="widget_text3">#9A9CAA</color>
+  <color name="widget_primary">#1B2356</color>
+  <color name="widget_on_primary">#FFFFFF</color>
+  <color name="widget_tonal">#F8DDC8</color>
+  <color name="widget_on_tonal">#B4531A</color>
+  <color name="widget_sun">#EE7F35</color>
+  <color name="widget_danger">#CF4A3F</color>
+</resources>

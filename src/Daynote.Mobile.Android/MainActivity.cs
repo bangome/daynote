@@ -49,8 +49,11 @@ public class MainActivity : AvaloniaMainActivity
         Current = this;
         base.OnCreate(savedInstanceState);
 
-        // Launched by tapping a to-do reminder: the shell opens its note once the day has loaded.
-        OpenReminder(Intent);
+        // Launched by tapping a to-do reminder or a widget: the shell acts once the day has loaded.
+        if (!OpenReminder(Intent))
+        {
+            OpenWidget(Intent);
+        }
 
         // With three-button navigation Android lays a translucent grey scrim over the button bar for
         // contrast, which read as the bottom of the app being dimmed. The app paints that strip in its
@@ -136,7 +139,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnNewIntent(Intent? intent)
     {
         base.OnNewIntent(intent);
-        if (OpenReminder(intent))
+        if (OpenReminder(intent) || OpenWidget(intent))
         {
             return;
         }
@@ -159,6 +162,22 @@ public class MainActivity : AvaloniaMainActivity
         intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraNote);
         intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraDate);
         App.OpenReminder(date, note);
+        return true;
+    }
+
+    /// <summary>A tap on a home-screen widget: today, a new note, or a new note with the @ bar up.</summary>
+    private static bool OpenWidget(Intent? intent)
+    {
+        if (intent?.GetStringExtra(Platform.Widgets.DaynoteWidgets.ExtraLaunch) is not { } name
+            || !Enum.TryParse(name, out ViewModels.WidgetLaunch launch))
+        {
+            return false;
+        }
+
+        // Taken off the intent, so recreating the activity does not open a second note.
+        intent.RemoveExtra(Platform.Widgets.DaynoteWidgets.ExtraLaunch);
+        intent.SetData(null);
+        App.OpenFromWidget(launch);
         return true;
     }
 

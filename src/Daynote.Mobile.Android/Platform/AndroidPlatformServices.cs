@@ -37,7 +37,8 @@ public static class AndroidPlatformServices
             OpenExternal: target => OpenExternal(context, target),
             TopLevel: () => TopLevel.GetTopLevel((currentActivity() as AvaloniaMainActivity)?.Content as Control),
             OpenFile: (name, bytes) => OpenFileAsync(context, currentActivity, name, bytes),
-            Reminders: new AndroidReminderScheduler(context, currentActivity));
+            Reminders: new AndroidReminderScheduler(context, currentActivity),
+            AgendaChanged: () => Widgets.DaynoteWidgets.RequestUpdate(context));
     }
 
     /// <summary>

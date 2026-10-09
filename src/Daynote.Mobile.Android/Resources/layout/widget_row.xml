@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One to-do on a widget. The whole row is the tap target for its ring (48dp tall, the design's
+  min-height), and its corners come from code: Material 3 grouping, large only at the ends.
+  The done and overdue looks are separate views rather than colours set from code, so they keep
+  following values-night when the launcher re-inflates the widget on a theme switch.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="3dp"
+    android:minHeight="46dp"
+    android:background="@drawable/widget_row_middle"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp">
+  <ImageView
+      android:id="@+id/widget_row_ring"
+      android:layout_width="20dp"
+      android:layout_height="20dp"
+      android:importantForAccessibility="no"
+      android:src="@drawable/widget_ring" />
+  <TextView
+      android:id="@+id/widget_row_title"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="12dp"
+      android:layout_weight="1"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:textColor="@color/widget_text"
+      android:textSize="15sp" />
+  <TextView
+      android:id="@+id/widget_row_title_done"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="12dp"
+      android:layout_weight="1"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:textColor="@color/widget_text3"
+      android:textSize="15sp"
+      android:visibility="gone" />
+  <TextView
+      android:id="@+id/widget_row_repeat"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="6dp"
+      android:importantForAccessibility="no"
+      android:text="↻"
+      android:textColor="@color/widget_text2"
+      android:textSize="14sp"
+      android:visibility="gone" />
+  <TextView
+      android:id="@+id/widget_row_when"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="8dp"
+      android:textColor="@color/widget_text2"
+      android:textSize="13sp"
+      android:textStyle="bold" />
+  <TextView
+      android:id="@+id/widget_row_when_overdue"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="8dp"
+      android:textColor="@color/widget_danger"
+      android:textSize="13sp"
+      android:textStyle="bold"
+      android:visibility="gone" />
+</LinearLayout>

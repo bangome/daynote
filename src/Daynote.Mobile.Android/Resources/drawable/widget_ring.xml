@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A to-do's check ring, drawn white and tinted with its list's colour from code (setColorFilter),
+  so one drawable serves every list. widget_ring_done is the same ring filled: ticked.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="20dp" android:height="20dp"
+        android:viewportWidth="20" android:viewportHeight="20">
+  <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2.2" android:fillColor="#00000000"
+        android:pathData="M10,1.1a8.9,8.9 0,1 1,0 17.8a8.9,8.9 0,1 1,0 -17.8z" />
+</vector>
