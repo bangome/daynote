@@ -1,7 +1,7 @@
 # The macOS widgets and the helper the .NET app loads to talk to WidgetKit.
 # `xcodegen generate` (in this folder) rebuilds DaynoteMac.xcodeproj from this file; the generated
 # project is committed so a machine without XcodeGen can still build. scripts/Build-MacApp.sh runs
-# xcodebuild against it and embeds the results (docs/APPLE_EXTENSIONS.md, "macOS").
+# xcodebuild against it and embeds the results (docs/APPLE_EXTENSIONS.md §10).
 name: DaynoteMac
 options:
   bundleIdPrefix: cc.arachat.daynote
@@ -35,7 +35,7 @@ targets:
         excludes: ["LICENSE-Pretendard.txt"]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.mac.widgets
         PRODUCT_NAME: DaynoteWidgets
         INFOPLIST_FILE: Widgets/Info.plist
         CODE_SIGN_ENTITLEMENTS: Widgets/DaynoteWidgets.entitlements

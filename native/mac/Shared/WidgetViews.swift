@@ -33,7 +33,7 @@ struct CompleteTodoIntent: AppIntent {
     }
 }
 
-/// Where a click lands: the app opens the day it names (docs/APPLE_EXTENSIONS.md, links).
+/// Where a click lands: the app opens the day it names (docs/APPLE_EXTENSIONS.md §7).
 enum WidgetLink {
     static func day(_ day: LocalDay) -> URL { URL(string: "daynote://day?date=" + day.iso)! }
 

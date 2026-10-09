@@ -453,7 +453,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.mac.widgets;
 				PRODUCT_NAME = DaynoteWidgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -549,7 +549,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.mac.widgets;
 				PRODUCT_NAME = DaynoteWidgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;

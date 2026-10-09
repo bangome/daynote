@@ -5,7 +5,7 @@ namespace Daynote.Desktop.Tests;
 
 /// <summary>
 /// When the Mac app writes its widgets' snapshot and how it drains their queue
-/// (docs/APPLE_EXTENSIONS.md "macOS").
+/// (docs/APPLE_EXTENSIONS.md §10).
 /// </summary>
 [TestClass]
 public sealed class GlanceRelayTests

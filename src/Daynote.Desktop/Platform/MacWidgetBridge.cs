@@ -16,7 +16,7 @@ using Daynote.Desktop.ViewModels;
 namespace Daynote.Desktop.Platform;
 
 /// <summary>
-/// The Mac app's side of its desktop widgets (native/mac, docs/APPLE_EXTENSIONS.md "macOS"): the
+/// The Mac app's side of its desktop widgets (native/mac, docs/APPLE_EXTENSIONS.md §10): the
 /// phone's glance contract — <see cref="GlanceSnapshotBuilder"/> into <see cref="GlanceFolder"/>,
 /// drained by <see cref="GlanceActionApplier"/> — plus the WidgetKit reload and the links a widget
 /// opens a day with.

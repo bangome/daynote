@@ -3,7 +3,7 @@ using Daynote.Desktop.Platform;
 namespace Daynote.Desktop.Tests;
 
 /// <summary>
-/// The links a Mac widget opens the app with (docs/APPLE_EXTENSIONS.md): the phone's
+/// The links a Mac widget opens the app with (docs/APPLE_EXTENSIONS.md §7): the phone's
 /// <c>daynote://</c> scheme, of which the desktop follows the two that name a day.
 /// </summary>
 [TestClass]

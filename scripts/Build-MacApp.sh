@@ -14,7 +14,7 @@
 # they are built and embedded only when DAYNOTE_SIGN_IDENTITY is set (and Xcode is installed);
 # otherwise the app is built without them and says so. DAYNOTE_TEAM_ID (default 4T8C76SP99) names
 # the group; DAYNOTE_APP_PROFILE / DAYNOTE_WIDGET_PROFILE embed provisioning profiles when the
-# distribution channel wants them. DAYNOTE_WIDGETS=0 leaves them out. docs/APPLE_EXTENSIONS.md.
+# distribution channel wants them. DAYNOTE_WIDGETS=0 leaves them out. docs/APPLE_EXTENSIONS.md §10.
 set -euo pipefail
 
 RID="osx-arm64"; CONFIG="Release"; OUT="dist/mac"; VERSION="1.5.0"

@@ -267,7 +267,7 @@ directly, so the Codable model, the strings and the queue code are one copy on b
 | App Group | `group.cc.arachat.daynote` | `4T8C76SP99.group.cc.arachat.daynote` |
 | Folder | `<container>/Glance/` | `~/Library/Group Containers/4T8C76SP99.group.cc.arachat.daynote/Glance/` |
 | Snapshot / queue | `snapshot.json`, `actions/*.json` | same |
-| Widget bundle id | `cc.arachat.daynote.widgets` | `cc.arachat.daynote.widgets` (inside `Daynote.app/Contents/PlugIns/DaynoteWidgets.appex`) |
+| Widget bundle id | `cc.arachat.daynote.widgets` (registered, platform IOS) | `cc.arachat.daynote.mac.widgets`, unregistered (inside `Daynote.app/Contents/PlugIns/DaynoteWidgets.appex`) |
 | Who writes the snapshot | `GlanceCoordinator` (Daynote.Mobile) | `MacWidgetBridge` (Daynote.Desktop/Platform) |
 | Who reloads WidgetKit | the iOS bridge | `libDaynoteWidgetBridge.dylib`, loaded into the app |
 
@@ -317,7 +317,8 @@ the app itself has to be sandboxed — out of scope for direct download.
   and drained after the app relaunched into another is looked up in the other profile's store,
   finds no such row, and is dropped; the snapshot is simply rewritten for the profile now open.
 - **Links.** `daynote://day?date=yyyy-MM-dd` (and a note's `daynote://note?date=…&id=…`) arrive as
-  Avalonia `ProtocolActivatedEventArgs`; the window comes forward on that day. The scheme is
+  Avalonia `ProtocolActivatedEventArgs`; the window comes forward on that day. The phone's other
+  links (`capture`, `todos`, §7) are not produced by the Mac widgets; if one arrives it opens today. The scheme is
   declared in `CFBundleURLTypes` only in a build that has the widgets.
 - **Only when present.** It attaches when `Contents/Info.plist` has `DaynoteAppGroup`, the
   `.appex` and the dylib are in the bundle, and the dylib can resolve the group container.
@@ -367,7 +368,9 @@ with the hardened runtime and a secure timestamp, which is what `notarytool` req
 `Notarize-MacApp.sh` submits, staples and zips the whole bundle, extension included, unchanged.
 
 Nothing was registered in App Store Connect for this: Developer ID needs no bundle id or profile for
-these entitlements. The team has no Developer ID Application certificate yet (only Apple
+these entitlements. The extension's id is its own, `cc.arachat.daynote.mac.widgets`, rather than the
+iPhone's: that one is registered with platform IOS, which App Store Connect cannot change, and a Mac
+App Store build would need a MAC_OS App ID of its own anyway. The team has no Developer ID Application certificate yet (only Apple
 Development and Apple Distribution), so a notarized build is still the release checklist's step 1.
 
 ### Verified, and what only a person can check
@@ -375,7 +378,7 @@ Development and Apple Distribution), so a notarized build is still the release c
 Verified on this Mac (macOS 26.4, Xcode 26.6): `xcodebuild` builds all three targets; the bundle
 builds with the extension and dylib embedded and passes `codesign --verify --deep --strict`; the
 extension's signature carries the sandbox and the group, team `4T8C76SP99`; `pluginkit -m -i
-cc.arachat.daynote.widgets` lists it after LaunchServices registers a copy of the bundle; that copy,
+cc.arachat.daynote.mac.widgets` lists it after LaunchServices registers a copy of the bundle; that copy,
 run against a temporary `DAYNOTE_DATA_ROOT` and `TMPDIR` (so it neither shares the real profile nor
 hands off to the running app), wrote `Glance/snapshot.json`, applied a queued `complete` action to
 the database within the watcher's latency, and republished; and the snapshot it wrote renders
