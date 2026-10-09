@@ -120,6 +120,38 @@ public sealed class GlanceTests
     }
 
     [TestMethod]
+    public void A_check_from_outside_drops_the_tick_the_app_is_holding_on_that_row()
+    {
+        // Motion M3 holds a tick before writing it. A widget, watch or notification completing the
+        // same row meanwhile must drop it, or the held tick would be written after and untick it.
+        var host = new FakeGlanceHost();
+        TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
+        {
+            Pump(shell.StartGlanceAsync);
+            IAgendaRepository agenda = Agenda();
+            DateOnly today = LocalDates.ToDateOnly(shell.SelectedDate);
+            AgendaItem item = Task("회의실 예약 확인", today, new TimeOnly(23, 59));
+            Pump(() => agenda.SaveAsync(item).AsTask());
+
+            AgendaDayRow row = AgendaDay.For(today, [item]).Open.Single();
+            int written = 0;
+            shell.Ticks.Delay = (_, token) => System.Threading.Tasks.Task.Delay(Timeout.Infinite, token);
+            shell.Ticks.Begin(
+                Daynote.App.Shell.Product.TodoItemViewModel.KeyOf(row),
+                new CommunityToolkit.Mvvm.Input.RelayCommand(() => written++));
+
+            new GlanceFolder(host.Folder).Enqueue(new GlanceAction(
+                1, Guid.NewGuid().ToString("D"), GlanceActionTypes.Complete, "2026-10-07T05:30:00Z",
+                ItemId: item.Id.ToString("D"), Date: today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)));
+            Pump(shell.DrainGlanceAsync);
+
+            Assert.AreEqual(0, shell.Ticks.Count, "The held tick is dropped.");
+            Assert.AreEqual(0, written);
+            Assert.AreEqual(AgendaStatus.Completed, Read(agenda, item.Id)!.Status);
+        });
+    }
+
+    [TestMethod]
     public void A_watch_capture_makes_the_item_the_readback_offered_and_only_once()
     {
         var host = new FakeGlanceHost();

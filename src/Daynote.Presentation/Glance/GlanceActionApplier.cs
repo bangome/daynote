@@ -23,10 +23,15 @@ public readonly record struct GlanceApplied(bool Changed, AgendaItem? Made = nul
 /// completion therefore completes rather than toggles — something already done stays done — and a
 /// capture makes its item under the action's own id, so a second pass finds it there.
 /// </remarks>
+/// <param name="beforeComplete">
+/// Told the row a completion is about to tick, so a shell holding its own tick on that row (motion
+/// M3's wait before the write) can drop it rather than write a second tick after this one.
+/// </param>
 public sealed class GlanceActionApplier(
     IAgendaRepository agenda,
     Func<string, DateOnly, CancellationToken, Task<bool>> appendNoteLine,
-    Func<DateTimeOffset>? utcNow = null)
+    Func<DateTimeOffset>? utcNow = null,
+    Action<AgendaDayRow>? beforeComplete = null)
 {
     private readonly IAgendaRepository agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
 
@@ -84,6 +89,7 @@ public sealed class GlanceActionApplier(
             return new GlanceApplied(false);
         }
 
+        beforeComplete?.Invoke(open);
         await new ToggleAgendaItem(agenda, utcNow).ToggleAsync(open, cancellationToken).ConfigureAwait(true);
         return new GlanceApplied(true);
     }

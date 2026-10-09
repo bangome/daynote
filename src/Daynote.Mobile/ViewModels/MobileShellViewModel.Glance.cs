@@ -68,7 +68,12 @@ public sealed partial class MobileShellViewModel
         }
 
         _glanceLocked = Account is { IsLocked: true };
-        var applier = new GlanceActionApplier(_agenda, AppendNoteLineAsync);
+        // A tick from a widget, the watch or a notification drops the tick this app is still holding
+        // on the same row, as a widget's own does (ToggleFromWidgetAsync): two ticks would untick it.
+        var applier = new GlanceActionApplier(
+            _agenda,
+            AppendNoteLineAsync,
+            beforeComplete: row => Ticks.Cancel(Daynote.App.Shell.Product.TodoItemViewModel.KeyOf(row)));
         return glance.StartAsync(
             action => applier.ApplyAsync(action),
             RefreshAfterStructureChangeAsync,
