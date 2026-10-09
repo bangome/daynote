@@ -17,6 +17,17 @@ public readonly record struct AgendaDayRow(
 
     public bool IsDone => Item.Status == AgendaStatus.Completed;
 
+    /// <summary>
+    /// Where it falls: its clock, or for an occurrence of a rule with no clock the occurrence
+    /// itself. Null for a to-do with no day.
+    /// </summary>
+    /// <remarks>
+    /// Not <c>Item.Anchor</c>. For an untouched occurrence the item is the series, whose anchor is
+    /// its first day, so reading that would file every occurrence of a daily rule under the day it
+    /// began.
+    /// </remarks>
+    public WallClock? Falls => At ?? (Item.IsSeries && RecurrenceId is { } occurrence ? occurrence : Item.Anchor);
+
     /// <summary>True when the clock has gone past it and nobody ticked it.</summary>
     public bool IsOverdue(DateTime now) => !IsDone && At is { } at && at.Value < now;
 }

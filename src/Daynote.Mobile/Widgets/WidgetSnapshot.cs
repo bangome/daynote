@@ -251,7 +251,7 @@ public sealed record WidgetSnapshot(
 
     /// <summary>The day a row is owed on: its occurrence's, else its anchor's.</summary>
     private static DateOnly DayOf(AgendaDayRow row) =>
-        DateOnly.FromDateTime(row.At?.Value ?? row.Item.Anchor?.Value ?? DateTime.MinValue);
+        DateOnly.FromDateTime(row.Falls?.Value ?? DateTime.MinValue);
 
     /// <summary>
     /// The first event that has not ended, today or in the week ahead, and when it ends.

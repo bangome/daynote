@@ -56,7 +56,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     /// <summary>The day it falls on, so a view can keep only one day's rows.</summary>
     public LocalDate Date => LocalDates.FromDateOnly(
-        DateOnly.FromDateTime(row.At?.Value ?? row.Item.Anchor?.Value ?? now));
+        DateOnly.FromDateTime(row.Falls?.Value ?? now));
 
     public string Text => row.Item.Title;
 
@@ -96,7 +96,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
                 return when.Value.ToString(AppStrings.TodoRowDateTimeFormat, culture);
             }
 
-            return row.Item.Anchor is { } day
+            return row.Falls is { } day
                 ? day.Value.ToString(AppStrings.TodoRowDateFormat, culture)
                 : string.Empty;
         }

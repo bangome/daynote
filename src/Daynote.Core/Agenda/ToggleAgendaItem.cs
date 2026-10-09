@@ -61,8 +61,13 @@ public sealed class ToggleAgendaItem(IAgendaRepository repository, Func<DateTime
                 // schema requires it of anything claiming a time — while DTSTART is what the
                 // rule anchored on, and an override that disagreed with itself would show one
                 // time and remind at another.
-                StartsAt = row.At ?? row.Item.StartsAt,
-                DueAt = row.Item.Kind == AgendaKind.Task ? row.At ?? row.Item.DueAt : row.Item.DueAt,
+                // A to-do with a day and no clock has no At and falls back to the occurrence: the
+                // series' own start is its first day, and an override anchored there would leave
+                // the day it was ticked on for that one.
+                StartsAt = row.At ?? (row.Item.StartsAt is null ? null : occurrence),
+                DueAt = row.Item.Kind == AgendaKind.Task
+                    ? row.At ?? (row.Item.DueAt is null ? null : occurrence)
+                    : row.Item.DueAt,
                 CreatedUtc = now,
             },
             complete,

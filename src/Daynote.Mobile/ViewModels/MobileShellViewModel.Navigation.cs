@@ -21,7 +21,7 @@ public sealed partial class MobileShellViewModel
     /// </summary>
     private async Task JumpToTodoAsync(AgendaDayRow row)
     {
-        DateOnly day = DateOnly.FromDateTime(row.At?.Value ?? row.Item.Anchor?.Value ?? DateTime.Today);
+        DateOnly day = DateOnly.FromDateTime(row.Falls?.Value ?? DateTime.Today);
         Guid? note = row.Item.SourceNoteId;
         if (await SelectDateAsync(Daynote.App.Composition.LocalDates.FromDateOnly(day)).ConfigureAwait(true)
             && note is { } id)

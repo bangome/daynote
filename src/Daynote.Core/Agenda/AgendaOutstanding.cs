@@ -102,13 +102,13 @@ public static class AgendaOutstanding
     }
 
     /// <summary>The day a row is owed on, or null when it carries none.</summary>
-    private static DateOnly? Day(AgendaDayRow row) => row.Item.Anchor is { } anchor
-        ? DateOnly.FromDateTime(row.At?.Value ?? anchor.Value)
+    private static DateOnly? Day(AgendaDayRow row) => row.Falls is { } at
+        ? DateOnly.FromDateTime(at.Value)
         : null;
 
     /// <summary>Soonest first, and within a day the timed ones before the merely owed.</summary>
     private static DateTime Ordering(AgendaDayRow row) =>
-        row.At?.Value ?? (row.Item.Anchor?.Value.Date ?? DateTime.MaxValue).AddDays(1).AddTicks(-1);
+        row.At?.Value ?? (row.Falls?.Value.Date ?? DateTime.MaxValue).AddDays(1).AddTicks(-1);
 
     private static WallClock? Clock(AgendaItem item, WallClock anchor) =>
         item.HasClockTime ? anchor : null;

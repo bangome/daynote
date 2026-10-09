@@ -113,7 +113,7 @@ public sealed class TodoRowViewModel(TodoItemViewModel item, AgendaDayRow row)
 
     private static string Caption(TodoItemViewModel item, AgendaDayRow row)
     {
-        string day = row.Item.Anchor is { } anchor
+        string day = row.Falls is { } anchor
             ? string.Create(CultureInfo.InvariantCulture, $"{anchor.Value.Month:00}/{anchor.Value.Day:00}")
             : string.Empty;
 
@@ -192,7 +192,7 @@ public sealed class TodoGroupViewModel(TodoGroupKind kind, string label, IReadOn
 
         // Owed on a day: today or before it is today's problem, later is upcoming. A to-do with
         // no day at all is neither, and gets the band that says so.
-        return row.Item.Anchor is not { } anchor
+        return row.Falls is not { } anchor
             ? TodoGroupKind.NoDate
             : anchor.Value.Date <= now.Date ? TodoGroupKind.Today : TodoGroupKind.Upcoming;
     }

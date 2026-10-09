@@ -39,7 +39,7 @@ public sealed partial class ProductShellViewModel
     private async Task JumpToTodoAsync(Daynote.Core.Agenda.AgendaDayRow row)
     {
         DateOnly day = DateOnly.FromDateTime(
-            row.At?.Value ?? row.Item.Anchor?.Value ?? DateTime.Today);
+            row.Falls?.Value ?? DateTime.Today);
         if (!await SelectDateAsync(LocalDates.FromDateOnly(day)).ConfigureAwait(true))
         {
             return;
