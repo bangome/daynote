@@ -7,7 +7,11 @@ namespace Daynote.App.Glance;
 /// <summary>What carrying out one action changed, for the caller to show.</summary>
 /// <param name="Made">The item a capture made, or null.</param>
 /// <param name="NoteLine">A capture went into today's note as a line instead.</param>
-public readonly record struct GlanceApplied(bool Changed, AgendaItem? Made = null, bool NoteLine = false);
+/// <param name="Retry">
+/// Nothing was done, but it could be later — the note would not save just now. The action stays in
+/// the queue. Everything else, including "the row has gone", is final.
+/// </param>
+public readonly record struct GlanceApplied(bool Changed, AgendaItem? Made = null, bool NoteLine = false, bool Retry = false);
 
 /// <summary>
 /// Carries out what a widget or the watch queued, through the app's own store, so it syncs and
@@ -65,11 +69,15 @@ public sealed class GlanceActionApplier(
 
         IReadOnlyList<AgendaItem> items = await agenda.GetAllAsync(cancellationToken).ConfigureAwait(true);
         AgendaDayView day = AgendaDay.For(date, items);
+        // An occurrence is matched by which occurrence it is, never by id alone: every occurrence
+        // of a rule carries the series' id until it has an override, so a rule that fires twice a
+        // day has two rows with that id and only the RECURRENCE-ID tells them apart.
         AgendaDayRow? row = day.Open.Concat(day.Done).Cast<AgendaDayRow?>().FirstOrDefault(candidate =>
             candidate is { } r
-            && (r.Item.Id == itemId
-                || (seriesId is { } s && occurrence is { } o && r.RecurrenceId == o
-                    && (r.Item.Id == s || r.Item.SeriesId == s))));
+            && (occurrence is { } o
+                ? r.RecurrenceId == o && (r.Item.Id == itemId || r.Item.SeriesId == itemId
+                    || (seriesId is { } s && (r.Item.Id == s || r.Item.SeriesId == s)))
+                : r.Item.Id == itemId && r.RecurrenceId is null));
 
         if (row is not { IsDone: false } open)
         {
@@ -126,7 +134,8 @@ public sealed class GlanceActionApplier(
             return new GlanceApplied(true, made);
         }
 
+        // False means the note would not save; the line is not lost, it is tried again.
         bool appended = await appendNoteLine(action.Text.Trim(), DateOnly.FromDateTime(said), cancellationToken).ConfigureAwait(true);
-        return new GlanceApplied(appended, NoteLine: appended);
+        return new GlanceApplied(appended, NoteLine: appended, Retry: !appended);
     }
 }

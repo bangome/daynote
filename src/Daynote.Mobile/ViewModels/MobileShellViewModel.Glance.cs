@@ -34,36 +34,54 @@ public sealed partial class MobileShellViewModel
     {
         if (Glance is { } glance && !_disposed)
         {
-            _ = RunQuietlyAsync(() => glance.RefreshAsync(items, Account is { IsLocked: true }, force));
+            _ = RunQuietlyAsync(() => glance.RefreshAsync(items, force));
+        }
+    }
+
+    /// <summary>The lock state the last snapshot was written under, to notice it changing.</summary>
+    private bool _glanceLocked;
+
+    /// <summary>
+    /// The account lock sealed or unsealed the notes: the snapshot is written again at once, empty
+    /// or full, rather than whenever a to-do next changes.
+    /// </summary>
+    private void RefreshGlanceLock()
+    {
+        bool locked = Account is { IsLocked: true };
+        if (locked != _glanceLocked)
+        {
+            _glanceLocked = locked;
+            RefreshGlance(force: true);
         }
     }
 
     /// <summary>
-    /// Carries out what was done on a widget or the watch since the app last looked, then shows
-    /// it: the lists are read again and the snapshot rewritten from the store, which replaces the
-    /// widget's own guess at what its tap did.
+    /// Starts the widgets' side once the day has loaded and the account has been read — App's
+    /// start-up calls it after both, and not before, since only then is it known whether the lock
+    /// has the notes sealed. Drains what waited and publishes.
     /// </summary>
-    public async Task DrainGlanceAsync()
+    public Task StartGlanceAsync()
     {
         if (Glance is not { } glance || _disposed)
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        _glanceLocked = Account is { IsLocked: true };
         var applier = new GlanceActionApplier(_agenda, AppendNoteLineAsync);
-        IReadOnlyList<GlanceApplied> applied = await glance.DrainAsync(applier).ConfigureAwait(true);
-        if (applied.Count == 0)
-        {
-            return;
-        }
-
-        if (applied.Any(static result => result.Changed))
-        {
-            await RefreshAfterStructureChangeAsync().ConfigureAwait(true);
-        }
-
-        RefreshGlance(force: true);
+        return glance.StartAsync(
+            action => applier.ApplyAsync(action),
+            RefreshAfterStructureChangeAsync,
+            () => Account is { IsLocked: true });
     }
+
+    /// <summary>
+    /// Carries out what was done on a widget or the watch since the app last looked, then shows
+    /// it. Does nothing before <see cref="StartGlanceAsync"/>, and a call while one is running is
+    /// folded into one more pass rather than run beside it.
+    /// </summary>
+    public Task DrainGlanceAsync() =>
+        Glance is { } glance && !_disposed ? glance.DrainAsync() : Task.CompletedTask;
 
     /// <summary>
     /// "노트에 한 줄" from the watch. The editor's draft is saved first and the day loaded again

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Daynote.App.Glance;
 using Daynote.App.Localization;
 using Daynote.Core.Agenda;
@@ -10,41 +11,68 @@ namespace Daynote.Mobile.Glance;
 /// <summary>
 /// Keeps the widgets and the watch in step with the app: writes the snapshot when the day's
 /// to-dos, events or notes change, and carries out what was done on them in the meantime
-/// (docs/APPLE_EXTENSIONS.md).
+/// (docs/APPLE_EXTENSIONS.md). The Mac's <c>GlanceRelay</c> follows the same rules.
 /// </summary>
 /// <remarks>
-/// Called from the same place the reminders are — after the to-do lists are rebuilt, which every
-/// edit, tick, sync pull and language switch goes through — with the rows already read. Runs never
-/// overlap; a call during a run is folded into one more run afterwards, as with reminders.
 /// <para>
-/// The snapshot is only published when something in it changed, not on every pass: a widget
-/// reload costs the extension a slice of its daily budget, and the watch's context is a transfer.
-/// The time it was written is left out of that comparison, or nothing would ever be the same.
+/// <b>Nothing until <see cref="StartAsync"/>.</b> The shell starts it once the day has loaded and
+/// the account has been read. Before that the rows are empty, which would blank every widget, and
+/// whether the account lock has the notes sealed is not known yet, which would put titles in a
+/// file the lock says must not have them.
+/// </para>
+/// <para>
+/// <b>One drain at a time, and a drain asked for during one runs again.</b> Resume, a watch
+/// transfer and the start can all ask at once; two passes over the same listing would apply an
+/// action twice — a second override on a repeating to-do, a line written into the note twice —
+/// and dropping the request instead would leave a tick queued behind a publish that un-ticks it.
+/// </para>
+/// <para>
+/// <b>An action is deleted when it is done or can never be done:</b> applied, unreadable, of a
+/// type this build does not know, or naming a row that has gone. One that throws, or that asks to
+/// be tried again (a note that would not save), is kept for the next drain, for at most
+/// <see cref="RetryFor"/>.
+/// </para>
+/// <para>
+/// <b>Compared with the file, not with what was last written.</b> A widget writes its own guess
+/// into the snapshot with a read-modify-write that can land after the app's newer one; comparing
+/// with the file is what notices. The stamp is left out, or nothing would ever be the same.
 /// </para>
 /// </remarks>
 public sealed class GlanceCoordinator
 {
+    /// <summary>How long an action that keeps failing is retried; the Mac keeps the same day.</summary>
+    public static readonly TimeSpan RetryFor = TimeSpan.FromDays(1);
+
     private readonly IGlanceHost _host;
     private readonly IAgendaRepository _agenda;
     private readonly INoteRepository _notes;
     private readonly IClock _clock;
+    private readonly Func<DateTime> _utcNow;
+    private Func<GlanceAction, Task<GlanceApplied>>? _apply;
+    private Func<Task>? _afterDrain;
+    private Func<bool> _locked = static () => true;
     private Task? _run;
     private bool _again;
+    private bool _forceNext;
     private IReadOnlyList<AgendaItem>? _latestItems;
-    private bool _latestLocked;
-    private string? _published;
+    private bool _draining;
+    private bool _drainRequested;
 
-    public GlanceCoordinator(IGlanceHost host, IAgendaRepository agenda, INoteRepository notes, IClock clock)
+    public GlanceCoordinator(
+        IGlanceHost host, IAgendaRepository agenda, INoteRepository notes, IClock clock, Func<DateTime>? utcNow = null)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
         _notes = notes ?? throw new ArgumentNullException(nameof(notes));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _utcNow = utcNow ?? (() => DateTime.UtcNow);
         Folder = host.Folder is { } root ? new GlanceFolder(root) : null;
     }
 
     /// <summary>The shared folder, or null when this build cannot reach one.</summary>
     public GlanceFolder? Folder { get; }
+
+    public bool IsStarted { get; private set; }
 
     /// <summary>Raised when the host put actions in the queue while the app was running.</summary>
     public event EventHandler? ActionsArrived
@@ -54,25 +82,40 @@ public sealed class GlanceCoordinator
     }
 
     /// <summary>
-    /// Writes the snapshot if it changed.
+    /// The day and the account are known: drain what waited, then publish.
+    /// </summary>
+    /// <param name="apply">Carries out one action through the app's store.</param>
+    /// <param name="afterDrain">Re-reads what the screens show once a drain changed something.</param>
+    /// <param name="locked">Whether the account lock has the notes sealed, asked at every publish.</param>
+    public async Task StartAsync(Func<GlanceAction, Task<GlanceApplied>> apply, Func<Task> afterDrain, Func<bool> locked)
+    {
+        _apply = apply ?? throw new ArgumentNullException(nameof(apply));
+        _afterDrain = afterDrain ?? throw new ArgumentNullException(nameof(afterDrain));
+        _locked = locked ?? throw new ArgumentNullException(nameof(locked));
+        if (Folder is null)
+        {
+            return;
+        }
+
+        IsStarted = true;
+        await DrainAsync().ConfigureAwait(true);
+        await RefreshAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Writes the snapshot if it differs from the file.
     /// </summary>
     /// <param name="items">Every agenda row, when the caller has just read them; null reads them.</param>
-    /// <param name="locked">The account's lock has the notes sealed.</param>
-    /// <param name="force">Publish even if nothing changed: a widget may have written its own guess over the file.</param>
-    public Task RefreshAsync(IReadOnlyList<AgendaItem>? items = null, bool locked = false, bool force = false)
+    /// <param name="force">Write even if it does not differ — the lock just changed, say.</param>
+    public Task RefreshAsync(IReadOnlyList<AgendaItem>? items = null, bool force = false)
     {
-        if (Folder is null)
+        if (!IsStarted)
         {
             return Task.CompletedTask;
         }
 
         _latestItems = items;
-        _latestLocked = locked;
-        if (force)
-        {
-            _published = null;
-        }
-
+        _forceNext |= force;
         if (_run is { IsCompleted: false } running)
         {
             _again = true;
@@ -84,39 +127,79 @@ public sealed class GlanceCoordinator
     }
 
     /// <summary>
-    /// Carries out every queued action, oldest first, and answers with what each changed. Each file
-    /// is deleted once it has been applied, and a file that will not apply is deleted too rather
-    /// than retried forever.
+    /// Carries out every queued action, oldest first, then has the screens and the snapshot read
+    /// the store again — the store's answer replaces the widget's guess.
     /// </summary>
-    public async Task<IReadOnlyList<GlanceApplied>> DrainAsync(GlanceActionApplier applier, CancellationToken cancellationToken = default)
+    /// <remarks>All calls are on the UI thread, so a flag is enough to fold a reentrant one in.</remarks>
+    public async Task DrainAsync()
     {
-        ArgumentNullException.ThrowIfNull(applier);
-        if (Folder is not { } folder)
+        if (!IsStarted)
         {
-            return [];
+            return;
         }
 
-        var applied = new List<GlanceApplied>();
-        foreach ((string path, GlanceAction? action) in folder.ReadActions())
+        if (_draining)
+        {
+            _drainRequested = true;
+            return;
+        }
+
+        _draining = true;
+        try
+        {
+            do
+            {
+                _drainRequested = false;
+                if (await ApplyQueuedAsync().ConfigureAwait(true))
+                {
+                    await _afterDrain!().ConfigureAwait(true);
+                    await RefreshAsync(force: true).ConfigureAwait(true);
+                }
+            }
+            while (_drainRequested);
+        }
+        finally
+        {
+            _draining = false;
+        }
+    }
+
+    /// <summary>One pass over the queue. True when any file was taken off it.</summary>
+    private async Task<bool> ApplyQueuedAsync()
+    {
+        bool any = false;
+        foreach ((string path, GlanceAction? action) in Folder!.ReadActions())
         {
             if (action is not null)
             {
+                string? retry;
                 try
                 {
-                    applied.Add(await applier.ApplyAsync(action, cancellationToken).ConfigureAwait(true));
+                    GlanceApplied applied = await _apply!(action).ConfigureAwait(true);
+                    retry = applied.Retry ? "it asked to be tried again" : null;
                 }
                 catch (Exception exception) when (exception is not (OperationCanceledException or OutOfMemoryException))
                 {
-                    // A store that is failing now will fail the same way on every retry; the
-                    // action is lost rather than the whole queue stuck behind it.
-                    System.Diagnostics.Trace.TraceError($"Applying {action.Type} {action.Id} failed: {exception}");
+                    retry = exception.Message;
+                }
+
+                if (retry is not null)
+                {
+                    if (_utcNow() - File.GetLastWriteTimeUtc(path) < RetryFor)
+                    {
+                        System.Diagnostics.Trace.TraceWarning($"Applying {action.Type} {action.Id} kept for retry: {retry}");
+                        continue;
+                    }
+
+                    System.Diagnostics.Trace.TraceError($"Applying {action.Type} {action.Id} kept failing, dropped: {retry}");
                 }
             }
 
             GlanceFolder.Delete(path);
+            any = true;
         }
 
-        return applied;
+        return any;
     }
 
     private async Task RunLoopAsync()
@@ -126,9 +209,11 @@ public sealed class GlanceCoordinator
             _again = false;
             IReadOnlyList<AgendaItem>? items = _latestItems;
             _latestItems = null;
+            bool force = _forceNext;
+            _forceNext = false;
             try
             {
-                await RunOnceAsync(items, _latestLocked).ConfigureAwait(true);
+                await PublishAsync(items, force).ConfigureAwait(true);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
@@ -139,7 +224,7 @@ public sealed class GlanceCoordinator
         while (_again);
     }
 
-    private async Task RunOnceAsync(IReadOnlyList<AgendaItem>? items, bool locked)
+    private async Task PublishAsync(IReadOnlyList<AgendaItem>? items, bool force)
     {
         items ??= await _agenda.GetAllAsync().ConfigureAwait(true);
         IReadOnlyList<AgendaList> lists = await _agenda.GetListsAsync().ConfigureAwait(true);
@@ -155,17 +240,40 @@ public sealed class GlanceCoordinator
             utcNow,
             AgendaZone.Local(),
             LocalizationService.Instance.Language,
-            locked);
+            _locked());
 
-        string content = GlanceSnapshotBuilder.Serialize(snapshot with { GeneratedUtc = string.Empty });
-        if (string.Equals(content, _published, StringComparison.Ordinal))
+        if (!force && string.Equals(Unstamped(snapshot), OnDisk(), StringComparison.Ordinal))
         {
             return;
         }
 
         string json = GlanceSnapshotBuilder.Serialize(snapshot);
         Folder!.WriteSnapshot(json);
-        _published = content;
         _host.Published(json);
     }
+
+    /// <summary>The file as this app would have written it, stamp aside; null when absent or unreadable.</summary>
+    private string? OnDisk()
+    {
+        try
+        {
+            if (!File.Exists(Folder!.SnapshotPath))
+            {
+                return null;
+            }
+
+            // Read back and written again, so the widget's encoder (key order, escaping) is not a
+            // difference; only the content is.
+            GlanceSnapshot? existing = JsonSerializer.Deserialize(
+                File.ReadAllText(Folder.SnapshotPath), GlanceJson.Default.GlanceSnapshot);
+            return existing is null ? null : Unstamped(existing);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string Unstamped(GlanceSnapshot snapshot) =>
+        GlanceSnapshotBuilder.Serialize(snapshot with { GeneratedUtc = string.Empty });
 }

@@ -270,6 +270,10 @@ public partial class App : Application
             await account.InitializeAsync().ConfigureAwait(true);
         }
 
+        // Only now: before the account is read nobody knows whether its lock has the notes sealed,
+        // and a snapshot written then could carry titles the lock says must not leave the app.
+        await shell.StartGlanceAsync().ConfigureAwait(true);
+
         shell.StartAutoSync();
     }
 

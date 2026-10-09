@@ -99,9 +99,9 @@ public sealed class GlanceFolder(string root)
         {
             File.Delete(path);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            // Gone already, or busy: the next drain tries again, and applying is idempotent.
+            // Gone already, busy, or not ours to delete: the next drain tries again, and applying is idempotent.
         }
     }
 }
