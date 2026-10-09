@@ -57,6 +57,8 @@ favicon and an `Info.plist` (bundle id `cc.arachat.daynote`), then signs it. Wit
 `DAYNOTE_SIGN_IDENTITY` the signature is ad-hoc (runs here, Gatekeeper warns elsewhere); with a
 Developer ID identity it signs with the hardened runtime and a timestamp, ready for `notarytool`.
 `Daynote.Mcp` ships inside `Contents/MacOS`, which is what the settings panel registers with Claude.
+With a signing identity the desktop widgets (`native/mac`) are built and embedded too, signed
+inside-out with an App Group; an ad-hoc build leaves them out. See [APPLE_EXTENSIONS.md](APPLE_EXTENSIONS.md).
 
 ## Release checklist (what only a person with the Apple account can do)
 

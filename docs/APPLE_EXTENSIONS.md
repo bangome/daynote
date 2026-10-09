@@ -246,3 +246,143 @@ the design renders.
   the provider lays out entries for each quarter hour, each event boundary and midnight.
 - The widget gallery's own names follow the system language (a string catalog); everything a
   widget draws follows the app's.
+
+## 10. macOS: desktop and Notification Center widgets
+
+Design: `Daynote Menu Bar - Desktop - Android Widgets` §02 (B8 light/Korean, B9 dark/English). The
+Mac gets the iPhone's set — small 할 일, small 다음 일정, medium 오늘, large 이번 주 — and, because
+macOS 14 widgets are interactive on the desktop, the same tick-in-place. The card is translucent so
+the wallpaper shows through.
+
+### Same contract as the phone
+
+Nothing about the data is Mac-specific. The app writes the phone's `GlanceSnapshot` with
+`GlanceSnapshotBuilder` into `GlanceFolder`, the widget queues `complete` actions with the phone's
+`GlanceStore.complete`, and the app carries them out with `GlanceActionApplier`. The widget target
+compiles `native/apple/Shared/Model/{GlanceSnapshot,GlanceStore,LocalTime,GlanceText}.swift`
+directly, so the Codable model, the strings and the queue code are one copy on both platforms.
+
+| | iPhone | Mac |
+| --- | --- | --- |
+| App Group | `group.cc.arachat.daynote` | `4T8C76SP99.group.cc.arachat.daynote` |
+| Folder | `<container>/Glance/` | `~/Library/Group Containers/4T8C76SP99.group.cc.arachat.daynote/Glance/` |
+| Snapshot / queue | `snapshot.json`, `actions/*.json` | same |
+| Widget bundle id | `cc.arachat.daynote.widgets` | `cc.arachat.daynote.widgets` (inside `Daynote.app/Contents/PlugIns/DaynoteWidgets.appex`) |
+| Who writes the snapshot | `GlanceCoordinator` (Daynote.Mobile) | `MacWidgetBridge` (Daynote.Desktop/Platform) |
+| Who reloads WidgetKit | the iOS bridge | `libDaynoteWidgetBridge.dylib`, loaded into the app |
+
+`GlanceStore.appGroup` picks the Mac form under `#if os(macOS)`, reading `DaynoteAppGroup` from the
+extension's Info.plist (the build writes it), so another team changes one setting.
+
+### Why the team-prefixed group
+
+Apple's rule for `com.apple.security.application-groups` on macOS: an id of the form
+`<TEAMID>.<name>` needs no registration on the developer site and no provisioning profile; the
+`group.<name>` form must be registered and authorised by a profile. A Developer ID build of an app
+that is otherwise unprovisioned therefore takes the team-prefixed form. Since macOS 15 the system
+also protects group containers: a process whose signature does not carry the group (an ad-hoc
+build, which has no team at all) gets a "would like to access data from other apps" prompt when it
+touches the folder. That is why the bridge does nothing unless the build stamped the group into
+Info.plist — it never touches the container from an ad-hoc build.
+
+If the Mac app ever goes to the Mac App Store, the group stays team-prefixed (also valid there), but
+both targets then need Mac App Store profiles (`DAYNOTE_APP_PROFILE`, `DAYNOTE_WIDGET_PROFILE`) and
+the app itself has to be sandboxed — out of scope for direct download.
+
+### The app side (`src/Daynote.Desktop/Platform/MacWidgetBridge.cs`)
+
+- **Not before the day is read.** Nothing is drained or published until `App.InitializeAsync` has
+  read the day and the lock state (`MacWidgetBridge.StartAsync`); an earlier publish would hand the
+  widgets an empty day.
+- **Publish.** Subscribes to `TodoPanelViewModel.Refreshed`, which every edit, tick, note save, sync
+  pull and `@` capture already ends in, plus language changes and a midnight timer. Debounced
+  400 ms; builds the snapshot from the rows the panel just read, the lists and the notes; writes it
+  only if it differs (stamp excluded) from **the file on disk** — not from what the app last wrote,
+  because the widget's read-modify-write of its optimistic tick can land after the app's newer
+  snapshot. A watcher on `snapshot.json` triggers that comparison, so such an overwrite is undone;
+  the app's own writes come back through it and compare equal. Then
+  `WidgetCenter.reloadAllTimelines()` through the dylib — each reload costs the extension budget,
+  hence the comparison.
+- **Drain.** A watcher on `Glance/actions/` (both sides write a dot-name and rename it into place,
+  so `Renamed` is the event), plus a drain at start and whenever the window comes forward. A drain
+  asked for while one runs makes it run another pass, so a tick queued mid-drain is applied before
+  the republish rather than un-ticked by it. Each file is applied with `GlanceActionApplier` — a
+  completion completes, so a repeat is harmless — and deleted once applied or once it can never
+  apply (unreadable, or naming a row that is gone, which the applier answers without throwing). One
+  that throws — a busy database — is kept for the next drain, for at most a day. Then the panel
+  refreshes and the snapshot is republished regardless, replacing the widget's guess.
+  `GlanceRelay` holds this logic; `GlanceRelayTests` drives it.
+- **One folder for every profile.** The group container, and so `Glance/`, belongs to the Mac
+  user, not to a Daynote profile (docs/PROFILES.md). A tick queued while one profile was showing
+  and drained after the app relaunched into another is looked up in the other profile's store,
+  finds no such row, and is dropped; the snapshot is simply rewritten for the profile now open.
+- **Links.** `daynote://day?date=yyyy-MM-dd` (and a note's `daynote://note?date=…&id=…`) arrive as
+  Avalonia `ProtocolActivatedEventArgs`; the window comes forward on that day. The scheme is
+  declared in `CFBundleURLTypes` only in a build that has the widgets.
+- **Only when present.** It attaches when `Contents/Info.plist` has `DaynoteAppGroup`, the
+  `.appex` and the dylib are in the bundle, and the dylib can resolve the group container.
+  Otherwise — ad-hoc builds, Windows, `dotnet run` — it is null and nothing changes.
+
+### The widget side (`native/mac`)
+
+`project.yml` (XcodeGen; the generated `DaynoteMac.xcodeproj` is committed) has three targets:
+
+| Target | What |
+| --- | --- |
+| `DaynoteWidgets` | The `.appex`, macOS 14+. Four `StaticConfiguration` widgets over one timeline provider: an entry every 15 minutes for six hours, one at each event's start and end, one just after midnight. The ring is a `Button(intent: CompleteTodoIntent)`; clicking anywhere else follows a `daynote://day` link. Pretendard is bundled from `src/Daynote.Desktop/Assets/Fonts` via `ATSApplicationFontsPath`. |
+| `DaynoteWidgetBridge` | `libDaynoteWidgetBridge.dylib`, macOS 12+: `daynote_widgets_container(group)` and `daynote_widgets_reload()`. A dylib in the app's own process rather than a helper executable, because `WidgetCenter` answers to the calling bundle and only `Daynote.app` contains the widgets. |
+| `DaynoteWidgetPreviews` | A command-line renderer: `DaynoteWidgetPreviews <snapshot.json> <out> [yyyy-MM-ddTHH:mm]` draws all four widgets light/dark × KO/EN plus ticked, empty, locked and no-snapshot boards with `ImageRenderer`, laid out like B8/B9. Set `DAYNOTE_WIDGET_FONTS` and `DAYNOTE_WIDGET_ASSETS` to `src/Daynote.Desktop/Assets/Fonts` and `native/mac/Widgets/Resources`. |
+
+Strings come from the phone's `GlanceText` (the snapshot's `language`, not the Mac's), with the
+Mac-only lines — the large widget's "클릭하면 Daynote에서 그 날짜를 엽니다" and the gallery
+descriptions — in an extension beside the views. The week strip's dots are the day's note count, as
+on the phone. List colours are `GlanceList.color`/`colorDark`, i.e. `AgendaListPalette`.
+
+### Build, sign, notarize
+
+`scripts/Build-MacApp.sh` builds the two native targets with `xcodebuild` for the RID's
+architecture and embeds them **only when `DAYNOTE_SIGN_IDENTITY` is set and Xcode is installed**;
+otherwise it prints why and builds the app without widgets, exactly as before.
+
+```bash
+# Distributable: a Developer ID Application identity of team 4T8C76SP99.
+DAYNOTE_SIGN_IDENTITY="Developer ID Application: <Name> (4T8C76SP99)" scripts/Build-MacApp.sh -r osx-arm64
+scripts/Notarize-MacApp.sh -a dist/mac/Daynote.app
+
+# This Mac only (what the verification below used): an Apple Development identity of the same team.
+DAYNOTE_SIGN_IDENTITY="Apple Development: Created via API (TUZYBFQ4CK)" scripts/Build-MacApp.sh -o dist/mac-dev
+```
+
+| Variable | |
+| --- | --- |
+| `DAYNOTE_TEAM_ID` | Default `4T8C76SP99`. Names the group; the script refuses an identity from another team, or one whose team it cannot read (the identity may be a name or a SHA-1). |
+| `DAYNOTE_WIDGETS=0` | Build without widgets even with an identity. |
+| `DAYNOTE_APP_PROFILE`, `DAYNOTE_WIDGET_PROFILE` | Embedded as `embedded.provisionprofile` when a channel needs them (Mac App Store). Developer ID needs neither: nothing either target uses is a restricted entitlement. |
+
+Signing is inside-out and **without `--deep`**, which would re-sign the extension with the app's
+entitlements and strip its sandbox: every file in `Contents/MacOS` (Mach-O executables — the app's
+`Daynote.Mcp` — with the .NET JIT entitlements, libraries and the managed assemblies without), then
+the `.appex` with `app-sandbox` + the group, then the app with the JIT entitlements + the group. All
+with the hardened runtime and a secure timestamp, which is what `notarytool` requires; the existing
+`Notarize-MacApp.sh` submits, staples and zips the whole bundle, extension included, unchanged.
+
+Nothing was registered in App Store Connect for this: Developer ID needs no bundle id or profile for
+these entitlements. The team has no Developer ID Application certificate yet (only Apple
+Development and Apple Distribution), so a notarized build is still the release checklist's step 1.
+
+### Verified, and what only a person can check
+
+Verified on this Mac (macOS 26.4, Xcode 26.6): `xcodebuild` builds all three targets; the bundle
+builds with the extension and dylib embedded and passes `codesign --verify --deep --strict`; the
+extension's signature carries the sandbox and the group, team `4T8C76SP99`; `pluginkit -m -i
+cc.arachat.daynote.widgets` lists it after LaunchServices registers a copy of the bundle; that copy,
+run against a temporary `DAYNOTE_DATA_ROOT` and `TMPDIR` (so it neither shares the real profile nor
+hands off to the running app), wrote `Glance/snapshot.json`, applied a queued `complete` action to
+the database within the watcher's latency, and republished; and the snapshot it wrote renders
+through the Swift model in the preview tool.
+
+Not verifiable without the GUI: adding a widget to the desktop or Notification Center (the gallery
+is drag-and-drop), the widget process actually running `CompleteTodoIntent` on a click, the
+WidgetKit reload visibly redrawing it, and a widget click arriving as an OpenUri activation.
+Gatekeeper rejects the Apple Development build by design; only a Developer ID build can be assessed
+and notarized.
