@@ -33,8 +33,8 @@ namespace Daynote.Desktop.Platform;
 /// <b>Riding on the panel's refresh.</b> Every edit, tick, sync and capture already ends in
 /// <see cref="Daynote.App.Shell.Product.TodoPanelViewModel.RefreshAsync"/>, and its
 /// <c>Refreshed</c> event comes after every item has been read, so no edit path can forget the
-/// widgets. The snapshot is published only when its content changed: each WidgetKit reload spends
-/// some of the extension's daily budget.
+/// widgets. When to write and how to drain is <see cref="GlanceRelay"/>'s; this class is the
+/// wiring to the shell, the watcher and WidgetKit.
 /// </para>
 /// </remarks>
 public sealed partial class MacWidgetBridge : IDisposable
@@ -48,12 +48,10 @@ public sealed partial class MacWidgetBridge : IDisposable
     private readonly IAgendaRepository _agenda;
     private readonly INoteRepository _notes;
     private readonly IClock _clock;
-    private readonly GlanceFolder _folder;
+    private readonly GlanceRelay _relay;
     private readonly FileSystemWatcher? _watcher;
     private readonly DispatcherTimer _debounce;
     private readonly DispatcherTimer _midnight;
-    private string? _published;
-    private bool _draining;
 
     private MacWidgetBridge(
         DesktopShellViewModel shell,
@@ -66,7 +64,12 @@ public sealed partial class MacWidgetBridge : IDisposable
         _agenda = agenda;
         _notes = notes;
         _clock = clock;
-        _folder = new GlanceFolder(Path.Combine(container, GlanceFolderName));
+        _relay = new GlanceRelay(
+            new GlanceFolder(Path.Combine(container, GlanceFolderName)),
+            BuildAsync,
+            action => new GlanceActionApplier(_agenda, AppendNoteLineAsync).ApplyAsync(action),
+            () => _shell.Todo.RefreshAsync(),
+            Native.Reload);
 
         // A burst of refreshes — typing, a sync pulling twenty items — becomes one write.
         _debounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
@@ -90,16 +93,22 @@ public sealed partial class MacWidgetBridge : IDisposable
 
         try
         {
-            Directory.CreateDirectory(_folder.ActionsPath);
-            _watcher = new FileSystemWatcher(_folder.ActionsPath, "*.json") { EnableRaisingEvents = true };
+            // The whole folder: a new action means a drain, and a snapshot written by anyone —
+            // the widget's optimistic tick may land after the app's own — means a comparison.
+            Directory.CreateDirectory(_relay.Folder.ActionsPath);
+            _watcher = new FileSystemWatcher(_relay.Folder.Root, "*.json")
+            {
+                IncludeSubdirectories = true,
+                EnableRaisingEvents = true,
+            };
             // Renamed, because both sides write to a dot-name and move it into place.
-            _watcher.Renamed += (_, _) => Dispatcher.UIThread.Post(() => _ = DrainAsync());
-            _watcher.Created += (_, _) => Dispatcher.UIThread.Post(() => _ = DrainAsync());
+            _watcher.Renamed += (_, e) => Dispatcher.UIThread.Post(() => OnFolderChanged(e.FullPath));
+            _watcher.Created += (_, e) => Dispatcher.UIThread.Post(() => OnFolderChanged(e.FullPath));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             // Actions are still drained on activation; only the immediacy is lost.
-            System.Diagnostics.Trace.TraceWarning($"Widget actions not watched: {exception.Message}");
+            System.Diagnostics.Trace.TraceWarning($"Widget folder not watched: {exception.Message}");
         }
     }
 
@@ -137,12 +146,17 @@ public sealed partial class MacWidgetBridge : IDisposable
             };
         }
 
-        _ = bridge.DrainAsync();
         return bridge;
     }
 
+    /// <summary>
+    /// The shell has read the day. Until now nothing is drained or published: the panel's rows
+    /// are still empty, and publishing them would blank every widget.
+    /// </summary>
+    public Task StartAsync() => Quietly(_relay.StartAsync);
+
     /// <summary>The window came forward: pick up any check the watcher missed while the Mac slept.</summary>
-    public void NotifyActivated() => _ = DrainAsync();
+    public void NotifyActivated() => _ = Quietly(_relay.DrainAsync);
 
     /// <summary>
     /// The day a widget link names — <c>daynote://day?date=yyyy-MM-dd</c>, or a note's
@@ -173,91 +187,48 @@ public sealed partial class MacWidgetBridge : IDisposable
         _debounce.Start();
     }
 
-    private async Task PublishAsync(bool force = false)
+    private void OnFolderChanged(string path)
+    {
+        if (string.Equals(Path.GetDirectoryName(path), _relay.Folder.ActionsPath, StringComparison.Ordinal))
+        {
+            _ = Quietly(_relay.DrainAsync);
+        }
+        else if (string.Equals(path, _relay.Folder.SnapshotPath, StringComparison.Ordinal))
+        {
+            // Our own writes come back here too; the relay compares and finds nothing to do.
+            OnChanged(this, EventArgs.Empty);
+        }
+    }
+
+    private Task PublishAsync() => Quietly(() => _relay.PublishAsync());
+
+    private async Task<GlanceSnapshot> BuildAsync()
+    {
+        IReadOnlyList<AgendaList> lists = await _agenda.GetListsAsync().ConfigureAwait(true);
+        IReadOnlyList<NoteSummary> notes = await _notes.GetAllNotesAsync().ConfigureAwait(true);
+        ClockSnapshot clock = _clock.Read();
+        return GlanceSnapshotBuilder.Build(
+            _shell.Todo.All,
+            lists,
+            notes,
+            clock.UtcInstant.ToOffset(clock.LocalUtcOffset).DateTime,
+            clock.UtcInstant,
+            AgendaZone.Local(),
+            LocalizationService.Instance.Language,
+            _shell.Account is { IsLocked: true });
+    }
+
+    /// <summary>Nothing waits on a widget: a failure is traced and the next change tries again.</summary>
+    private static async Task Quietly(Func<Task> work)
     {
         try
         {
-            IReadOnlyList<AgendaList> lists = await _agenda.GetListsAsync().ConfigureAwait(true);
-            IReadOnlyList<NoteSummary> notes = await _notes.GetAllNotesAsync().ConfigureAwait(true);
-            ClockSnapshot clock = _clock.Read();
-            GlanceSnapshot snapshot = GlanceSnapshotBuilder.Build(
-                _shell.Todo.All,
-                lists,
-                notes,
-                clock.UtcInstant.ToOffset(clock.LocalUtcOffset).DateTime,
-                clock.UtcInstant,
-                AgendaZone.Local(),
-                LocalizationService.Instance.Language,
-                _shell.Account is { IsLocked: true });
-
-            // Compared without the stamp, or nothing would ever be the same.
-            string content = GlanceSnapshotBuilder.Serialize(snapshot with { GeneratedUtc = string.Empty });
-            if (!force && string.Equals(content, _published, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _folder.WriteSnapshot(GlanceSnapshotBuilder.Serialize(snapshot));
-            _published = content;
-            Native.Reload();
+            await work().ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
             or InvalidOperationException or DllNotFoundException or EntryPointNotFoundException)
         {
-            // Nothing waits on a widget; the next change writes the file again.
             System.Diagnostics.Trace.TraceWarning($"Widgets not refreshed: {exception.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Carries out every queued check, oldest first, then rewrites the snapshot from the store,
-    /// which replaces the widget's own guess at what its tap did.
-    /// </summary>
-    private async Task DrainAsync()
-    {
-        // The watcher fires per file; one drain at a time, and the UI thread is the only caller.
-        if (_draining)
-        {
-            return;
-        }
-
-        _draining = true;
-        try
-        {
-            var applier = new GlanceActionApplier(_agenda, AppendNoteLineAsync);
-            bool any = false;
-            foreach ((string path, GlanceAction? action) in _folder.ReadActions())
-            {
-                any = true;
-                if (action is not null)
-                {
-                    try
-                    {
-                        await applier.ApplyAsync(action).ConfigureAwait(true);
-                    }
-                    catch (Exception exception) when (exception is not (OperationCanceledException or OutOfMemoryException))
-                    {
-                        // Lost rather than the whole queue stuck behind it, as on the phone.
-                        System.Diagnostics.Trace.TraceError($"Applying {action.Type} {action.Id} failed: {exception}");
-                    }
-                }
-
-                GlanceFolder.Delete(path);
-            }
-
-            if (any)
-            {
-                await _shell.Todo.RefreshAsync().ConfigureAwait(true);
-                await PublishAsync(force: true).ConfigureAwait(true);
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            System.Diagnostics.Trace.TraceWarning($"Widget actions not drained: {exception.Message}");
-        }
-        finally
-        {
-            _draining = false;
         }
     }
 

@@ -206,6 +206,13 @@ public partial class App : Application
 
             shell.StartAutoSync();
 
+            // Only now, with the day read and the lock state known: the widgets would otherwise
+            // be handed an empty day and show it until the next edit.
+            if (_widgets is { } widgets)
+            {
+                await widgets.StartAsync().ConfigureAwait(true);
+            }
+
             // Look for a newer build in the background. Deliberately not awaited and never surfaced:
             // it downloads, stages, and the next start runs it. Nothing about writing a note should
             // wait on, or be interrupted by, an update (Platform/WindowsUpdateService.cs).
