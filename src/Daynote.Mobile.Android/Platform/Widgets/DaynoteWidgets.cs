@@ -66,7 +66,15 @@ internal static class DaynoteWidgets
         {
             await Task.Delay(300).ConfigureAwait(false);
             Interlocked.Exchange(ref _queued, 0);
-            await UpdateAllAsync(app).ConfigureAwait(false);
+            try
+            {
+                await UpdateAllAsync(app).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // A profile switch can close the database under a draw; the next change redraws.
+                global::Android.Util.Log.Warn("Daynote", $"Widget update failed: {exception}");
+            }
         });
     }
 
