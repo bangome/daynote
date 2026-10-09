@@ -486,7 +486,15 @@ The order that makes that safe:
          heading keeps counting everything owed: narrowing the view does not make seventeen
          things into seven. Renaming happens in place, the way a note's title does; deleting is
          not confirmed, because the to-dos move to the built-in list rather than going with it.
-   - [ ] The phone's Lists tab (phone §03) — the same rows as chips.
+   - [x] The phone's Lists tab (phone §03) — the same rows as chips, over the same counts. The
+         row leads with a 전체 chip that is not a list: it carries the panel's own total, which is
+         the number the desktop heading shows, and it is how the filter comes off on a touch
+         screen. The bands take the panel's already-filtered view rather than projecting again, so
+         a chip's number and the rows under it cannot disagree. The day panel is not filtered: a
+         list narrows the cross-date view, and hiding part of a date from itself is not a filter.
+         Making, renaming and deleting happen in one sheet with two faces, because a phone has
+         nowhere to rename in place the way the sidebar does; a long press is the chip's only
+         affordance, as on a file row.
    - [ ] Colour, and connecting a list to Reminders. Both are in §04's menu and neither exists:
          the schema has no colour column and the integration is §10.
    - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).

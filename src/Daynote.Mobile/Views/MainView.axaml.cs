@@ -164,6 +164,7 @@ public partial class MainView : UserControl
         // The attachment sheets sit where the month sheet does.
         Bleed(this.FindControl<Border>("AttachSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("FileSheet"), bottom, extra: 6, fallback: 24);
+        Bleed(this.FindControl<Border>("ListSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("ReminderTimeSheet"), bottom, extra: 6, fallback: 24);
         if (this.FindControl<Border>("ReminderTimeSheet") is { } timeSheet)
         {

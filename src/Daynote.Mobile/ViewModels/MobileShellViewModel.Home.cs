@@ -152,7 +152,13 @@ public sealed partial class MobileShellViewModel
         TodoRowViewModel Row(AgendaDayRow row) =>
             new(Todo.Row(row, now.DateTime), row);
 
-        AgendaOutstandingView owed = AgendaOutstanding.For(DateOnly.FromDateTime(now.DateTime), items);
+        // The panel has already decided what is owed and which list the chips are filtering to;
+        // projecting it again here is how the chip's number and the rows under it drift apart.
+        AgendaOutstandingView owed = Todo.Outstanding;
+
+        // The day is not filtered. A list narrows the cross-date view, which is the one with the
+        // chips over it; the day panel answers "what is on this date", and a filter there would be
+        // hiding part of the date from itself.
         AgendaDayView today = AgendaDay.For(LocalDates.ToDateOnly(SelectedDate), items);
 
         TodoGroups.Clear();
@@ -182,6 +188,7 @@ public sealed partial class MobileShellViewModel
 
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));
+        OnPropertyChanged(nameof(IsAllAgendaListsSelected));
         RebuildCards();
 
         // Everything that changes a to-do - an edit, a tick, a delete, a sync pull, a language

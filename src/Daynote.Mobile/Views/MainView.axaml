@@ -322,6 +322,63 @@
         </StackPanel>
       </Border>
     </Panel>
+
+    <!--
+      A list's menu, and the one field that both makes and renames one. Two faces of a sheet rather
+      than two sheets: only one is ever up, and a phone has nowhere to rename in place the way the
+      desktop sidebar does. Colour and connecting a list to Reminders are in the design's menu and
+      are not built yet, so they are absent rather than disabled.
+    -->
+    <Panel IsVisible="{Binding IsAgendaListSheetOpen}">
+      <Button Classes="scrim" Command="{Binding CloseAgendaListSheetCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
+      <Border x:Name="ListSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <StackPanel Margin="16,10,16,0" Spacing="8">
+          <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+          <TextBlock Classes="line" FontSize="15.5" FontWeight="ExtraBold" Margin="4,0,4,0"
+                     Text="{Binding AgendaListSheetTitle}" />
+          <TextBlock Classes="muted" FontSize="12.5" Margin="4,0,4,4" IsVisible="{Binding IsSheetListDefault}"
+                     Text="{Binding Strings[MobileListDefault]}" />
+
+          <StackPanel Spacing="8" IsVisible="{Binding !IsNamingAgendaList}">
+            <Button Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding RenameAgendaListFromSheetCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[AgendaListRename]}" />
+            </Button>
+            <Button Classes="quiet" HorizontalAlignment="Stretch" IsVisible="{Binding CanDeleteSheetList}"
+                    Command="{Binding DeleteAgendaListFromSheetCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Mobile.Danger}"
+                         Text="{Binding Strings[AgendaListDelete]}" />
+            </Button>
+            <TextBlock Classes="muted" FontSize="12.5" Margin="4,2,4,0" TextWrapping="Wrap"
+                       IsVisible="{Binding IsSheetListDefault}" Text="{Binding Strings[MobileListDefaultHint]}" />
+          </StackPanel>
+
+          <StackPanel Spacing="8" IsVisible="{Binding IsNamingAgendaList}">
+            <TextBox x:Name="ListNameBox" Text="{Binding AgendaListDraftName, Mode=TwoWay}"
+                     PlaceholderText="{Binding Strings[MobileListNamePlaceholder]}">
+              <!-- The keyboard is already up with the field; its return key should finish the job. -->
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding CommitAgendaListNameCommand}" />
+              </TextBox.KeyBindings>
+            </TextBox>
+            <Grid ColumnDefinitions="*,10,*" Margin="0,4,0,0">
+              <Button Grid.Column="0" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding CloseAgendaListSheetCommand}">
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+              </Button>
+              <Button Grid.Column="2" Classes="solid" HorizontalAlignment="Stretch" Command="{Binding CommitAgendaListNameCommand}">
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}"
+                           Text="{Binding Strings[MobileListCreate]}" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Margin="0,4,0,0" IsVisible="{Binding !IsNamingAgendaList}"
+                  Command="{Binding CloseAgendaListSheetCommand}">
+            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+          </Button>
+        </StackPanel>
+      </Border>
+    </Panel>
   </Panel>
 
   <UserControl.Styles>

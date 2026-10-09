@@ -181,7 +181,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
     public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
-        && !IsReminderTimeSheetOpen;
+        && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen;
 
     partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -236,6 +236,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         IsMonthPickerOpen = false;
         IsAttachSheetOpen = false;
         IsReminderTimeSheetOpen = false;
+        IsAgendaListSheetOpen = false;
         MenuFile = null;
         ViewerFile = null;
         Page = page;
@@ -283,6 +284,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (IsReminderTimeSheetOpen)
         {
             IsReminderTimeSheetOpen = false;
+            return true;
+        }
+
+        if (IsAgendaListSheetOpen)
+        {
+            IsAgendaListSheetOpen = false;
             return true;
         }
 

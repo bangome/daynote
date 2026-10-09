@@ -64,6 +64,16 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
     public ObservableCollection<AgendaListRowViewModel> Lists { get; } = [];
 
     /// <summary>
+    /// What the cross-date view is showing: everything owed, or the one list it is narrowed to.
+    /// </summary>
+    /// <remarks>
+    /// The phone builds its own bands out of these rows rather than reading <see cref="TodayItems"/>,
+    /// because it groups them differently. Handing it the filtered view rather than letting it
+    /// filter again is what stops a chip and the sidebar row beside it disagreeing.
+    /// </remarks>
+    public AgendaOutstandingView Outstanding { get; private set; } = new([], [], []);
+
+    /// <summary>
     /// Which list the cross-date view is narrowed to, or null for all of them.
     /// </summary>
     /// <remarks>
@@ -127,7 +137,8 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
             SelectedListId = null;
         }
 
-        AgendaOutstandingView shown = SelectedListId is { } only ? Only(owed, only) : owed;
+        Outstanding = SelectedListId is { } only ? Only(owed, only) : owed;
+        AgendaOutstandingView shown = Outstanding;
 
         TodayItems.Clear();
         Items.Clear();
