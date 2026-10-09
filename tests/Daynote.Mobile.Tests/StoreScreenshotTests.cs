@@ -40,6 +40,12 @@ public sealed class StoreScreenshotTests
     /// <summary>iPhone 6.9" display, the size App Store Connect requires.</summary>
     private static readonly Target AppStore = new("app-store", 1320, 2868, 390, new Thickness(0, 59, 0, 34));
 
+    /// <summary>
+    /// iPad 13", landscape: 1376 by 1032 points at 2x, wide enough for the Tablet layout (sidebar,
+    /// day and day panel), where portrait's 1032 would fold the sidebar away.
+    /// </summary>
+    private static readonly Target AppStoreIpad13 = new("app-store", 2752, 2064, 1376, new Thickness(0, 24, 0, 20), "ipad-13", Subfolder: true);
+
     /// <summary>Google Play phone: 9:18, the tallest ratio Play accepts (its limit is 2:1).</summary>
     private static readonly Target GooglePlay = new("google-play", 1080, 2160, 360, new Thickness(0, 24, 0, 24));
 
@@ -53,6 +59,11 @@ public sealed class StoreScreenshotTests
     [DataRow("ko")]
     [DataRow("en")]
     public void App_Store_images(string language) => Render(AppStore, language);
+
+    [TestMethod]
+    [DataRow("ko")]
+    [DataRow("en")]
+    public void App_Store_iPad_images(string language) => Render(AppStoreIpad13, language);
 
     [TestMethod]
     [DataRow("ko")]
@@ -76,7 +87,9 @@ public sealed class StoreScreenshotTests
         }
 
         AppLanguage language = languageCode == "ko" ? AppLanguage.Korean : AppLanguage.English;
-        string directory = Path.Combine(BrandRoot, target.Folder, languageCode);
+        string directory = target.Subfolder
+            ? Path.Combine(BrandRoot, target.Folder, languageCode, target.Variant!)
+            : Path.Combine(BrandRoot, target.Folder, languageCode);
         Directory.CreateDirectory(directory);
         string root = Path.Combine(Path.GetTempPath(), "daynote-store-shots", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -117,6 +130,15 @@ public sealed class StoreScreenshotTests
 
                 Wait(shell.InitializeAsync());
                 Seed(shell, language);
+                ScreenshotTests.CaptureSeededTodos(provider);
+                if (target.LogicalWidth >= MobileLayouts.TabletWidth)
+                {
+                    // The Tablet layout shows the day's files under its notes, where a phone's
+                    // first screen never reaches.
+                    SeedFiles(shell, language);
+                }
+
+                Wait(shell.RefreshAllAsync());
 
                 string prefix = target.Variant is { } variant
                     ? $"daynote-{target.Folder}-{variant}-{languageCode}"
@@ -197,6 +219,20 @@ public sealed class StoreScreenshotTests
         Pump();
     }
 
+    private static void SeedFiles(MobileShellViewModel shell, AppLanguage language)
+    {
+        bool korean = language == AppLanguage.Korean;
+        Wait(AddFile(shell, korean ? "회의실 화이트보드.png" : "Whiteboard.png", ScreenshotTests.SamplePng(320, 240)));
+        Wait(AddFile(shell, korean ? "3분기 예산안.pdf" : "Q3 budget draft.pdf", new byte[184_320]));
+        Wait(shell.Files.RefreshAsync());
+    }
+
+    private static async Task AddFile(MobileShellViewModel shell, string name, byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        await shell.Files.AddFromStreamAsync(name, stream);
+    }
+
     private static void WriteNote(MobileShellViewModel shell, string title, string body)
     {
         Wait(shell.NewNoteCommand.ExecuteAsync(null));
@@ -253,7 +289,7 @@ public sealed class StoreScreenshotTests
         }
     }
 
-    private sealed record Target(string Folder, int Width, int Height, double LogicalWidth, Thickness SafeArea, string? Variant = null);
+    private sealed record Target(string Folder, int Width, int Height, double LogicalWidth, Thickness SafeArea, string? Variant = null, bool Subfolder = false);
 
     private sealed record ThemeVariantHolder(Avalonia.Styling.ThemeVariant? Value);
 

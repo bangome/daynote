@@ -127,6 +127,33 @@ final class RenderTests: XCTestCase {
             store: rolled, clock: "14:30").frame(width: 198, height: 242, alignment: .top).background(.black), width: 198, height: 242)
     }
 
+    /// The App Store's watch images: Series 11 46 mm, 416 × 496 pixels and no alpha, which is the
+    /// 208 × 248-point screen at 2x, so the views are laid out at that size rather than scaled
+    /// from the 41 mm frames above. Written to `store/` beside the design renders.
+    func testWatchStoreScreens() throws {
+        let size = CGSize(width: 208, height: 248)
+        for english in [false, true] {
+            let suffix = english ? "en" : "ko"
+            let store = WatchStore(snapshot: GlanceSamples.make(today: designDay, english: english))
+            store.now = { [unowned self] in moment(14, 30) }
+            try watch("store/watch-\(suffix)-01-today", store: store, size: size)
+
+            store.tap(store.todos[0])
+            try watch("store/watch-\(suffix)-02-checked", store: store, size: size)
+
+            let sentence = english ? "Share draft slides today at 5pm" : "회의자료 초안 공유 오늘 5시"
+            let readback = CaptureReadback.read(sentence, now: LocalMoment(moment(14, 30)), text: store.text)
+            try save("store/watch-\(suffix)-03-readback", ReadbackView(sentence: sentence, readback: readback, store: store, clock: "14:30")
+                .frame(width: size.width, height: size.height, alignment: .top).background(.black),
+                width: size.width, height: size.height, scale: 2, opaque: true)
+
+            let made = WatchStore(snapshot: GlanceSamples.make(today: designDay, english: english))
+            made.now = { [unowned self] in moment(14, 30) }
+            made.create(sentence, kind: "task", readback: readback)
+            try watch("store/watch-\(suffix)-04-created", store: made, size: size)
+        }
+    }
+
     // MARK: - Frames
 
     private func widget<V: View>(
@@ -144,12 +171,15 @@ final class RenderTests: XCTestCase {
         try save(name, view, width: width + 48, height: height + 48)
     }
 
-    private func watch(_ name: String, store: WatchStore) throws {
+    /// A store size (anything but the 41 mm default) is drawn at 2x and opaque, as App Store
+    /// Connect wants it.
+    private func watch(_ name: String, store: WatchStore, size: CGSize = CGSize(width: 198, height: 242)) throws {
         let view = TodayView(store: store, clock: "14:30") { CaptureLabel(title: store.text.capture) }
-            .frame(width: 198, height: 242, alignment: .top)
+            .frame(width: size.width, height: size.height, alignment: .top)
             .background(.black)
             .environment(\.colorScheme, .dark)
-        try save(name, view, width: 198, height: 242)
+        let storeSize = size != CGSize(width: 198, height: 242)
+        try save(name, view, width: size.width, height: size.height, scale: storeSize ? 2 : 3, opaque: storeSize)
     }
 
     /// The Lock Screen's three accessories over a wallpaper, in the system's white.
@@ -214,10 +244,13 @@ final class RenderTests: XCTestCase {
         .environment(\.colorScheme, .dark)
     }
 
-    private func save<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat) throws {
+    private func save<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat, scale: CGFloat = 3, opaque: Bool = false) throws {
         let renderer = ImageRenderer(content: view.frame(width: width, height: height, alignment: .top).clipped())
-        renderer.scale = 3
+        renderer.scale = scale
+        renderer.isOpaque = opaque
         let image = try XCTUnwrap(renderer.uiImage, name)
-        try XCTUnwrap(image.pngData()).write(to: folder.appendingPathComponent("\(name).png"))
+        let url = folder.appendingPathComponent("\(name).png")
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try XCTUnwrap(image.pngData()).write(to: url)
     }
 }

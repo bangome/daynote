@@ -169,9 +169,9 @@ public sealed class ScreenshotTests
     /// migration's own walk — it cannot do it itself, because it runs when the database is opened
     /// and these notes are written afterwards.
     /// </remarks>
-    internal static void CaptureSeededTodos()
+    internal static void CaptureSeededTodos(IServiceProvider? services = null)
     {
-        var provider = TestServices.CurrentProvider
+        var provider = services ?? TestServices.CurrentProvider
             ?? throw new InvalidOperationException("No shell is running.");
         var notes = (INoteRepository)provider.GetService(typeof(INoteRepository))!;
         var agenda = (IAgendaRepository)provider.GetService(typeof(IAgendaRepository))!;
