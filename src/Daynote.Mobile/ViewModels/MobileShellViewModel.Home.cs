@@ -186,6 +186,8 @@ public sealed partial class MobileShellViewModel
                 static group => group.Key,
                 static group => (group.Count(static i => i.Status == AgendaStatus.Completed), group.Count()));
 
+        RebuildNoteItems(items, now.DateTime);
+
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));
         OnPropertyChanged(nameof(IsAllAgendaListsSelected));

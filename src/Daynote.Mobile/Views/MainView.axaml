@@ -379,6 +379,50 @@
         </StackPanel>
       </Border>
     </Panel>
+
+    <!--
+      What this note made (phone §02). Behind the toolbar's count, because that is where the user
+      was told the number: a sheet opened from the number it explains needs no title to say what it
+      is a list of.
+    -->
+    <Panel IsVisible="{Binding IsNoteItemsSheetOpen}">
+      <Button Classes="scrim" Command="{Binding CloseNoteItemsCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileClose]}" />
+      <Border x:Name="NoteItemsSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="16,10,16,0" Spacing="8">
+            <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+            <Grid ColumnDefinitions="*,Auto" Margin="4,0,4,2">
+              <TextBlock Grid.Column="0" Classes="section" Text="{Binding Strings[MobileNoteItemsTitle]}" />
+              <TextBlock Grid.Column="1" Classes="faint" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
+                         Text="{Binding NoteItems.Count}" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding NoteItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:TodoItemViewModel">
+                  <Button Classes="row" HorizontalContentAlignment="Left" Command="{Binding JumpCommand}">
+                    <Border Classes="rule" Padding="4,12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Classes="line todo" FontSize="15" FontWeight="SemiBold"
+                                   Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                        <TextBlock Grid.Column="1" Classes="faint line" FontSize="12.5" Margin="10,0,0,0"
+                                   VerticalAlignment="Center" IsVisible="{Binding HasDue}" Text="{Binding DueLabel}" />
+                      </Grid>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- Said once, because "any date" is the surprising half of what this list is. -->
+            <TextBlock Classes="muted" FontSize="12.5" Margin="4,4,4,0" TextWrapping="Wrap"
+                       Text="{Binding Strings[MobileNoteItemsHint]}" />
+            <Button Classes="quiet" HorizontalAlignment="Stretch" Margin="0,4,0,0" Command="{Binding CloseNoteItemsCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileClose]}" />
+            </Button>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Panel>
   </Panel>
 
   <UserControl.Styles>

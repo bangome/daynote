@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Notes;
 using Daynote.Core.Agenda;
+using Daynote.Core.Time;
 
 namespace Daynote.Mobile.ViewModels;
 
@@ -51,11 +52,16 @@ public sealed partial class MobileShellViewModel
     [RelayCommand]
     private async Task CommitCapture()
     {
-        if (await Notes.CommitCaptureAsync().ConfigureAwait(true) is null)
+        if (await Notes.CommitCaptureAsync().ConfigureAwait(true) is not { } made)
         {
             return;
         }
 
         await RefreshTodosAsync().ConfigureAwait(true);
+
+        // §02: the confirmation is the thing itself turning up in the note's own collection.
+        ClockSnapshot snapshot = _clock.Read();
+        await FlashJustMadeAsync(made, snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset).DateTime)
+            .ConfigureAwait(true);
     }
 }

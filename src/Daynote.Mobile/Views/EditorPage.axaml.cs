@@ -179,6 +179,20 @@ public partial class EditorPage : UserControl
         shell.CommitCaptureCommand.Execute(null);
     }
 
+    /// <summary>
+    /// The @ button: types the character, with a space in front of it when the line needs one.
+    /// </summary>
+    /// <remarks>
+    /// @ only opens the bar at the start of a word, which is what keeps an email address out of
+    /// it; a button that pasted one mid-word would do nothing and look broken.
+    /// </remarks>
+    private void OnInsertAt(object? sender, RoutedEventArgs e)
+    {
+        (string text, int caret) = Read();
+        string insert = caret > 0 && text[caret - 1] is not (' ' or '\n') ? " @" : "@";
+        Write(text.Insert(caret, insert), caret + insert.Length);
+    }
+
     /// <summary>A tap on an example types it, so the parser reads it like anything else.</summary>
     private void OnCaptureExample(object? sender, RoutedEventArgs e)
     {

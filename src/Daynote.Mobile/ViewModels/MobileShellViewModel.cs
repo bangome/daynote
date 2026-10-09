@@ -181,7 +181,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
     public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
-        && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen;
+        && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen && !IsNoteItemsSheetOpen;
 
     partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -237,6 +237,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         IsAttachSheetOpen = false;
         IsReminderTimeSheetOpen = false;
         IsAgendaListSheetOpen = false;
+        IsNoteItemsSheetOpen = false;
         MenuFile = null;
         ViewerFile = null;
         Page = page;
@@ -290,6 +291,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (IsAgendaListSheetOpen)
         {
             IsAgendaListSheetOpen = false;
+            return true;
+        }
+
+        if (IsNoteItemsSheetOpen)
+        {
+            IsNoteItemsSheetOpen = false;
             return true;
         }
 
@@ -690,6 +697,11 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         {
             RefreshHeader();
             OnPropertyChanged(nameof(EditorDateText));
+
+            // Another note's items are not this one's, and the toolbar's count is on screen the
+            // moment the editor opens.
+            RebuildNoteItems(Todo.All, _clock.Read().UtcInstant.ToOffset(_clock.Read().LocalUtcOffset).DateTime);
+            JustMade = null;
         }
         else if (e.PropertyName == nameof(NoteWorkspaceViewModel.SaveStatus))
         {

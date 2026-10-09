@@ -165,6 +165,7 @@ public partial class MainView : UserControl
         Bleed(this.FindControl<Border>("AttachSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("FileSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("ListSheet"), bottom, extra: 6, fallback: 24);
+        Bleed(this.FindControl<Border>("NoteItemsSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("ReminderTimeSheet"), bottom, extra: 6, fallback: 24);
         if (this.FindControl<Border>("ReminderTimeSheet") is { } timeSheet)
         {

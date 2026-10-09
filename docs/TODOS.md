@@ -450,8 +450,10 @@ The order that makes that safe:
 3. Desktop and phone switch their readers in the same version, and `TodoParsing` stops feeding
    panels on both at once.
 
-   **In progress.** The order below keeps `main` buildable at every step; nothing user-visible
-   changes until the last two, which go together.
+   **Done.** The order below kept `main` buildable at every step, and nothing user-visible changed
+   until the reader switch and the migration's registration, which went together in one change.
+   One item is deliberately left open at the end: it belongs to a schema change and to §10, not to
+   this cutover.
 
    - [x] `AgendaDay` — which rows a day has and in what order, shared by both panels. The two
          shells lay them out differently (§99 calls that intended) but *which* rows there are is
@@ -495,8 +497,10 @@ The order that makes that safe:
          Making, renaming and deleting happen in one sheet with two faces, because a phone has
          nowhere to rename in place the way the sidebar does; a long press is the chip's only
          affordance, as on a file row.
-   - [ ] Colour, and connecting a list to Reminders. Both are in §04's menu and neither exists:
-         the schema has no colour column and the integration is §10.
+   - [ ] **Deferred, not part of this step.** Colour, and connecting a list to Reminders. Both
+         are in §04's menu and neither exists: the schema has no colour column and the
+         integration is §10. Absent from both menus rather than greyed, so the menu says only
+         what it can do.
    - [x] The phone's `@` bar (phone §01). The keyboard accessory slot rather than a card at the
          caret: on a phone the caret is almost always just above the keyboard, so a card that
          followed it would cover the words it is reading back. The readings, the title and what
@@ -505,8 +509,15 @@ The order that makes that safe:
          Tapping a line replaces Tab, the return key replaces Enter (tunnelled, because the box
          handles Enter itself), the × replaces Esc. Under 230 points above the keyboard the bar
          folds to one line, measured rather than guessed from the screen size.
-   - [ ] The phone's creation feedback (phone §02): the toolbar's "이 노트의 항목 N", the row
-         that rises for 2.5 seconds, and the sheet of what this note made.
+   - [x] The phone's creation feedback (phone §02). The confirmation appears where the object
+         lives — the note's own collection — rather than in a toast: a toast claims something
+         happened somewhere else, a row rising in the place that holds it is the thing arriving.
+         It settles into the count after 2.5 seconds, which is also how it stops being in the way.
+         A row for another day says where it went and offers 보기, because that is the case where
+         the user would look on today and not find it. The sheet behind the count lists everything
+         this note made with @, any date and done or not: it is a record of what the note
+         produced, not a queue. The toolbar also regained an @ button — @ is two keyboard layers
+         away in Korean, and §12 took the `-[]` button away without putting anything in its place.
    - [x] The copy and the buttons stopped pointing at a syntax the app no longer reads (§99).
          The empty state says to type `@`; the phone toolbar's `-[]` button is gone, because the
          only thing it could insert now is text that looks like a checkbox. Date and time stay —
