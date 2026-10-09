@@ -1,0 +1,166 @@
+# The native Apple targets the .NET iOS app cannot build: its widgets, its watch app and the
+# small bridge that lets it reload one and drive the other (docs/APPLE_EXTENSIONS.md).
+#
+# Generate the Xcode project with `xcodegen generate` in this folder after changing this file;
+# Daynote.xcodeproj is checked in so a build needs only Xcode. scripts/Build-IosApp.sh builds the
+# targets with xcodebuild and embeds them in the .NET app.
+name: Daynote
+options:
+  bundleIdPrefix: cc.arachat.daynote
+  createIntermediateGroups: true
+  developmentLanguage: ko
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+    macOS: "14.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: 4T8C76SP99
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.5.0"
+    CURRENT_PROJECT_VERSION: "14"
+    # Manual signing: the build script hands each target its own App Store profile, and an
+    # unsigned simulator build needs none.
+    CODE_SIGN_STYLE: Manual
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+
+targets:
+  # The iPhone's widgets, Lock Screen accessories, Control Center controls and Live Activity.
+  DaynoteWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Widgets
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.widgets
+        PRODUCT_NAME: DaynoteWidgets
+        INFOPLIST_FILE: Widgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widgets/DaynoteWidgets.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
+        SKIP_INSTALL: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
+      - sdk: AppIntents.framework
+
+  # Linked into the .NET app: WidgetKit's reload and ActivityKit are Swift-only, so the app calls
+  # these through four C functions.
+  DaynoteBridge:
+    type: framework
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - Bridge
+      - Shared/Model
+      - path: Widgets/LiveActivityAttributes.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.bridge
+        PRODUCT_NAME: DaynoteBridge
+        GENERATE_INFOPLIST_FILE: YES
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+        BUILD_LIBRARY_FOR_DISTRIBUTION: NO
+
+  # The watch app: today, tap to complete, dictation capture.
+  DaynoteWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - Watch
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.watchkitapp
+        PRODUCT_NAME: DaynoteWatch
+        INFOPLIST_FILE: Watch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Watch/DaynoteWatch.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
+    dependencies:
+      - target: DaynoteWatchWidgets
+        embed: true
+
+  # The watch's complications and Smart Stack widget.
+  DaynoteWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - WatchWidgets
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.watchkitapp.widgets
+        PRODUCT_NAME: DaynoteWatchWidgets
+        INFOPLIST_FILE: WatchWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WatchWidgets/DaynoteWatchWidgets.entitlements
+        SKIP_INSTALL: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  # The model, the parser port and the readback, on the Mac where they run in seconds.
+  DaynoteKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Shared/Model
+      - Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.kittests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+
+  # Renders every widget and watch screen to PNG, light and dark, Korean and English, for
+  # comparing against the design renders. Runs on an iOS simulator; set
+  # TEST_RUNNER_DAYNOTE_RENDER_DIR to where the PNGs should go.
+  DaynoteRenderTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Shared
+      - path: Widgets
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+          - "DaynoteWidgetsBundle.swift"
+      - path: Watch
+        includes:
+          - "Views/**"
+      - RenderTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.rendertests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: DAYNOTE_RENDER_TESTS
+
+schemes:
+  DaynoteKitTests:
+    build:
+      targets:
+        DaynoteKitTests: all
+    test:
+      targets:
+        - DaynoteKitTests
+  DaynoteRenderTests:
+    build:
+      targets:
+        DaynoteRenderTests: all
+    test:
+      targets:
+        - DaynoteRenderTests

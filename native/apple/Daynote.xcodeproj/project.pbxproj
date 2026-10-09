@@ -1,0 +1,1126 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00A9EB19D10AF248161B95E7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F8AD192ACB9EDC2DC151F13 /* WidgetKit.framework */; };
+		01E0F515254CE5138C7A8490 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		031649FD60123554382C14F5 /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		078F3F5A346BEBAFD465EFA2 /* GlanceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68A39540BA9D6E77113B0B6 /* GlanceStoreTests.swift */; };
+		0EA9B8E4E6BB6C58E64265D1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 38C1CEBE7AD8CD770BA366C6 /* Assets.xcassets */; };
+		1054A7DADC071E813FEE869E /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		16485B9C718429E96ECBCEBC /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		199C8903ED101A21A51953B7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F8AD192ACB9EDC2DC151F13 /* WidgetKit.framework */; };
+		1A44CEB89DF9F9418BC4E117 /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		226E7E243C4822B805EB5C10 /* HomeWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8F9FDFA647DB12A60B6DC4 /* HomeWidgetViews.swift */; };
+		2315EAE56E8F1EC178D3FDBC /* ReadbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6139F681DA96B20D39D935FC /* ReadbackView.swift */; };
+		26845173A03F81E91C68261A /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C8FEA3C6652A63755B2B94 /* LiveActivityAttributes.swift */; };
+		286CB7436F3513156BB626FA /* GlanceTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */; };
+		2D672EA09838222591862EE0 /* GlanceTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */; };
+		2F3FAA61D52EA472C33821FD /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		31CB1E2CBA560ED23C05859C /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		357B128BF66282C28D999BB0 /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		3BDE3856E030BB1C69A4FFE6 /* DaynoteWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70EFD444AB3FBFB30A733A09 /* DaynoteWatchApp.swift */; };
+		3EE0646B40C4A3C0B938EA79 /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		44C2399E765DF5D31A13F6C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C4BC06464399F93DB2F2D8C /* Assets.xcassets */; };
+		4CF6B3146AA32A73AC896F45 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C8FEA3C6652A63755B2B94 /* LiveActivityAttributes.swift */; };
+		4DAF41DC2B3A1322080C3F7D /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		4DEB59B4501D079F911AD899 /* GlanceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F96EFE782D3C79F43B5112 /* GlanceProvider.swift */; };
+		4F723660760C7C29D7D8D336 /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		52948C3A679F33185FD6A1C8 /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		579506B88A929D56B5740B61 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C8FEA3C6652A63755B2B94 /* LiveActivityAttributes.swift */; };
+		590D23AD5058963D6E9D2C0A /* DaynoteWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4853E899E7F36A7028391613 /* DaynoteWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5F26B4C79369D3B2FEFFEB21 /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		60C32BED244C6A0029F81AE5 /* GlanceTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */; };
+		65A5A7B2328572A641CAC0C8 /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		6625DE616C6419F96CB2F917 /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		6748FBE17B27572A184DDCC4 /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		681B1BECD8D8DBDFC1153545 /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		69A822840DC3596EED7991AC /* WatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092A34CACB63C3ED56512B4C /* WatchSession.swift */; };
+		6B5595E7057B2EF55AD0224D /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		6CE43FD31BAED0F2B113CD06 /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		6FAA829CF319CCD046056694 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 241AACAFE4D24063533BC47B /* AppIntents.framework */; };
+		719E32854757A8D3F2E67CDA /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		71AEBBBB0FC6362F2A03D5B8 /* EventLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054FDA3355BAB48C13F8645 /* EventLiveActivity.swift */; };
+		7330CD906ED21790A0219E26 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 559D8C083F470AD0D2FF1CBC /* Localizable.xcstrings */; };
+		78A44B7570C2C536CA8A3250 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C4BC06464399F93DB2F2D8C /* Assets.xcassets */; };
+		8065DB0BF654DB7AE6495B7D /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		81531E02F6BB7D15DC296AFF /* AccessoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 423AA1B87B7B41B8EAEAAE05 /* AccessoryViews.swift */; };
+		84CB263F567461E028777122 /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		85D2C2547444DFE93F7D3E0A /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		87E00D5E3A7A9407E4CCF313 /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		88297BFDFC3C2E22A9762280 /* DaynoteBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3748ADC3F46C03329339044 /* DaynoteBridge.swift */; };
+		8D3D8C2B13F1C9139AEBD4B6 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C969E07F329BFD3AA1146968 /* ActivityKit.framework */; };
+		8D4ABE0A99FB3DD9B301B925 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A5C494E74FC5AA00B815937A /* SwiftUI.framework */; };
+		91E34D0AFA92EA6322E1AE63 /* CaptureReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */; };
+		96799B5DDF92A26BEC14A406 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		96D4CBA7FC36D1307B8249AC /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		99ACCB14DAE80620BB82D202 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		A4EF9F098B3CB3A939FA4C32 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4E314C561325F30AD5D2BD0F /* Localizable.xcstrings */; };
+		A912AF7EA0D67D27654CD049 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7124C98E271B9CAAEEEDEE47 /* TodayView.swift */; };
+		AD8BBEE38A453C7837C495AE /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		B076BB77E4A7E015A5BF5AF5 /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		B079B5753D7DCE755F46102B /* GlanceSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE880714FC8FAE890760F27 /* GlanceSamples.swift */; };
+		B117CCDF043FAAF39DBEE9EA /* GlanceTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */; };
+		B9495FF336C74848C68BD71A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4E314C561325F30AD5D2BD0F /* Localizable.xcstrings */; };
+		BD769ECF7E5B2BD3FC0A15AF /* AccessoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 423AA1B87B7B41B8EAEAAE05 /* AccessoryViews.swift */; };
+		BFAE76E3F0ABC907698391EF /* EventLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054FDA3355BAB48C13F8645 /* EventLiveActivity.swift */; };
+		CA71788E507F52A43F6F6ABB /* HomeWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8F9FDFA647DB12A60B6DC4 /* HomeWidgetViews.swift */; };
+		CB40347BA37E6E4141236A89 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		CBBED8069EAD1C1830BECBA4 /* DaynoteWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E31009335E54CA5BB5BF0170 /* DaynoteWidgetsBundle.swift */; };
+		CC263E39D3F5129FE57D0424 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C4BC06464399F93DB2F2D8C /* Assets.xcassets */; };
+		CF0E2889C302F98D07DFAFCA /* AgendaPhraseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF4591F4A8F67737A7E914A /* AgendaPhraseParserTests.swift */; };
+		CFF11FF1C2CEE61F3B530341 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		D061026E900889A3E545E9A9 /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		D15479DD2A28066D68230443 /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		D2B1F6BCF19E330EB691FF5D /* WatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3812777A82A652984EFB3CF0 /* WatchStore.swift */; };
+		D66F9C5179442531F893DAAB /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		D822EEA01C6B89E86D0D6FE4 /* GlanceIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FB37FAE2D0A88731A20575D /* GlanceIntents.swift */; };
+		DCB2836F63B91A5B565C80D6 /* RenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C306DC535FB5E8F597D6638C /* RenderTests.swift */; };
+		DD891D24DCD04E4ECD915C38 /* GlanceIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FB37FAE2D0A88731A20575D /* GlanceIntents.swift */; };
+		E01439ECEE88CC662495EEC9 /* GlanceText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3F6B853D673200321AA3FD /* GlanceText.swift */; };
+		E2C78BE31B66347FDFC91B91 /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		E2DC26508C31D30CB2185B88 /* GlanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */; };
+		E550A978A0FD0C3D72E9B6BE /* ReadbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6139F681DA96B20D39D935FC /* ReadbackView.swift */; };
+		E6697254A542B9857BA914F4 /* WatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3812777A82A652984EFB3CF0 /* WatchStore.swift */; };
+		ED289293AC43ED5A3C4D42C6 /* GlanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */; };
+		EF2B18210FB892BA79F11758 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7124C98E271B9CAAEEEDEE47 /* TodayView.swift */; };
+		EFFC60E61FFB5427FD1D6F54 /* LocalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F7EC427605251EDF75CE39 /* LocalTime.swift */; };
+		F217FA311269ED5B3EDA1987 /* AgendaPhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */; };
+		F81957A4CA506EA2172E88FB /* GlanceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F96EFE782D3C79F43B5112 /* GlanceProvider.swift */; };
+		F882EE4D258994544BF322E6 /* WatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCCC42B0948F86210913D85 /* WatchComplications.swift */; };
+		FC0CB559F1DB9DE1E7D5D0CE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C4BC06464399F93DB2F2D8C /* Assets.xcassets */; };
+		FF56CADD1ED972C51E522F35 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A5C494E74FC5AA00B815937A /* SwiftUI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9F45089F22F3559E9FD48729 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ADC5BC34103FB07B9E56F47E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4563236A48EF974B1A377839;
+			remoteInfo = DaynoteWatchWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1A1CEEA8184333A541651C20 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				590D23AD5058963D6E9D2C0A /* DaynoteWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceStore.swift; sourceTree = "<group>"; };
+		04C8FEA3C6652A63755B2B94 /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
+		092A34CACB63C3ED56512B4C /* WatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSession.swift; sourceTree = "<group>"; };
+		241AACAFE4D24063533BC47B /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		2C4BC06464399F93DB2F2D8C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3812777A82A652984EFB3CF0 /* WatchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStore.swift; sourceTree = "<group>"; };
+		38C1CEBE7AD8CD770BA366C6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		423AA1B87B7B41B8EAEAAE05 /* AccessoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryViews.swift; sourceTree = "<group>"; };
+		43315DA6567A9C5BC5DC33E3 /* DaynoteKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaynoteKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4853E899E7F36A7028391613 /* DaynoteWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DaynoteWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4959188E03C155A0CA4EEFE8 /* DaynoteWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DaynoteWatch.entitlements; sourceTree = "<group>"; };
+		4E314C561325F30AD5D2BD0F /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		51F96EFE782D3C79F43B5112 /* GlanceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceProvider.swift; sourceTree = "<group>"; };
+		559D8C083F470AD0D2FF1CBC /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureReadback.swift; sourceTree = "<group>"; };
+		6139F681DA96B20D39D935FC /* ReadbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadbackView.swift; sourceTree = "<group>"; };
+		6BCCC42B0948F86210913D85 /* WatchComplications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchComplications.swift; sourceTree = "<group>"; };
+		70267FF7A2AACA02AE299879 /* DaynoteBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DaynoteBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		70EFD444AB3FBFB30A733A09 /* DaynoteWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaynoteWatchApp.swift; sourceTree = "<group>"; };
+		7124C98E271B9CAAEEEDEE47 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		7FB37FAE2D0A88731A20575D /* GlanceIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceIntents.swift; sourceTree = "<group>"; };
+		85E426BD460901CD3223B613 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		88A5FB0793BBF2A148701898 /* DaynoteRenderTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DaynoteRenderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F8AD192ACB9EDC2DC151F13 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		9054FDA3355BAB48C13F8645 /* EventLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLiveActivity.swift; sourceTree = "<group>"; };
+		9E784160F77554EF7A2A1F77 /* DaynoteWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DaynoteWidgets.entitlements; sourceTree = "<group>"; };
+		A5C494E74FC5AA00B815937A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		A68A39540BA9D6E77113B0B6 /* GlanceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceStoreTests.swift; sourceTree = "<group>"; };
+		A6CE77C957ADF6444B6408B1 /* DaynoteWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = DaynoteWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaPhraseParser.swift; sourceTree = "<group>"; };
+		B3F02056B805D31443E08398 /* DaynoteWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DaynoteWatchWidgets.entitlements; sourceTree = "<group>"; };
+		B3F7EC427605251EDF75CE39 /* LocalTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTime.swift; sourceTree = "<group>"; };
+		BEA01786B2ED1920A54D0BE5 /* DaynoteWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DaynoteWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C29147341C671B5E23D0B084 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C306DC535FB5E8F597D6638C /* RenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderTests.swift; sourceTree = "<group>"; };
+		C969E07F329BFD3AA1146968 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		CE8F9FDFA647DB12A60B6DC4 /* HomeWidgetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWidgetViews.swift; sourceTree = "<group>"; };
+		E085C9B16B28A76C2D1F182A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E31009335E54CA5BB5BF0170 /* DaynoteWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaynoteWidgetsBundle.swift; sourceTree = "<group>"; };
+		ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceTheme.swift; sourceTree = "<group>"; };
+		F3748ADC3F46C03329339044 /* DaynoteBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaynoteBridge.swift; sourceTree = "<group>"; };
+		F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceSnapshot.swift; sourceTree = "<group>"; };
+		FAF4591F4A8F67737A7E914A /* AgendaPhraseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaPhraseParserTests.swift; sourceTree = "<group>"; };
+		FBE880714FC8FAE890760F27 /* GlanceSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceSamples.swift; sourceTree = "<group>"; };
+		FC3F6B853D673200321AA3FD /* GlanceText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceText.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		26EB02B224CCED1A2341FC90 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				199C8903ED101A21A51953B7 /* WidgetKit.framework in Frameworks */,
+				8D4ABE0A99FB3DD9B301B925 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		91BB75C85DF3B702A49A3336 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00A9EB19D10AF248161B95E7 /* WidgetKit.framework in Frameworks */,
+				FF56CADD1ED972C51E522F35 /* SwiftUI.framework in Frameworks */,
+				8D3D8C2B13F1C9139AEBD4B6 /* ActivityKit.framework in Frameworks */,
+				6FAA829CF319CCD046056694 /* AppIntents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1648F150504F56FAD31F666C /* RenderTests */ = {
+			isa = PBXGroup;
+			children = (
+				C306DC535FB5E8F597D6638C /* RenderTests.swift */,
+			);
+			path = RenderTests;
+			sourceTree = "<group>";
+		};
+		35DF925E088B3825ECBDD21C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C969E07F329BFD3AA1146968 /* ActivityKit.framework */,
+				241AACAFE4D24063533BC47B /* AppIntents.framework */,
+				A5C494E74FC5AA00B815937A /* SwiftUI.framework */,
+				8F8AD192ACB9EDC2DC151F13 /* WidgetKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3D51B71D14160600593CF741 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				AA5C7639F85142B91FA4D43A /* AgendaPhraseParser.swift */,
+				5EBADB42FBAEBB38D24620C8 /* CaptureReadback.swift */,
+				FBE880714FC8FAE890760F27 /* GlanceSamples.swift */,
+				F6F5ADC72560352E68C3C0AF /* GlanceSnapshot.swift */,
+				00D9EFDF4B2C4F6F126E1808 /* GlanceStore.swift */,
+				FC3F6B853D673200321AA3FD /* GlanceText.swift */,
+				B3F7EC427605251EDF75CE39 /* LocalTime.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		46B57F244DD0B18C789AB3B4 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				F3748ADC3F46C03329339044 /* DaynoteBridge.swift */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+		63DB47BE2F98C56B37C8DC61 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				38C1CEBE7AD8CD770BA366C6 /* Assets.xcassets */,
+				4959188E03C155A0CA4EEFE8 /* DaynoteWatch.entitlements */,
+				70EFD444AB3FBFB30A733A09 /* DaynoteWatchApp.swift */,
+				85E426BD460901CD3223B613 /* Info.plist */,
+				092A34CACB63C3ED56512B4C /* WatchSession.swift */,
+				FD5DEC7A1342F972FDD9C597 /* Views */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		667CBB4C0480867746A37648 /* WatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				B3F02056B805D31443E08398 /* DaynoteWatchWidgets.entitlements */,
+				E085C9B16B28A76C2D1F182A /* Info.plist */,
+				559D8C083F470AD0D2FF1CBC /* Localizable.xcstrings */,
+				6BCCC42B0948F86210913D85 /* WatchComplications.swift */,
+			);
+			path = WatchWidgets;
+			sourceTree = "<group>";
+		};
+		743FB4D46891F5F351CFC271 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				70267FF7A2AACA02AE299879 /* DaynoteBridge.framework */,
+				43315DA6567A9C5BC5DC33E3 /* DaynoteKitTests.xctest */,
+				88A5FB0793BBF2A148701898 /* DaynoteRenderTests.xctest */,
+				BEA01786B2ED1920A54D0BE5 /* DaynoteWatch.app */,
+				4853E899E7F36A7028391613 /* DaynoteWatchWidgets.appex */,
+				A6CE77C957ADF6444B6408B1 /* DaynoteWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BDC9B33FB0DDD3DFF94A239B /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				FAF4591F4A8F67737A7E914A /* AgendaPhraseParserTests.swift */,
+				A68A39540BA9D6E77113B0B6 /* GlanceStoreTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		D5AB2CA8DDBA7D0ED635380C /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				2C4BC06464399F93DB2F2D8C /* Assets.xcassets */,
+				3D51B71D14160600593CF741 /* Model */,
+				DB0214B0141935F1BB409E15 /* UI */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		DB0214B0141935F1BB409E15 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				ECC147FDE0AD9CAD86B25B34 /* GlanceTheme.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		DEF58561E30AC13B11752169 = {
+			isa = PBXGroup;
+			children = (
+				46B57F244DD0B18C789AB3B4 /* Bridge */,
+				1648F150504F56FAD31F666C /* RenderTests */,
+				D5AB2CA8DDBA7D0ED635380C /* Shared */,
+				BDC9B33FB0DDD3DFF94A239B /* Tests */,
+				63DB47BE2F98C56B37C8DC61 /* Watch */,
+				667CBB4C0480867746A37648 /* WatchWidgets */,
+				E1D778086D0AE12506903B6C /* Widgets */,
+				35DF925E088B3825ECBDD21C /* Frameworks */,
+				743FB4D46891F5F351CFC271 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E1D778086D0AE12506903B6C /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				423AA1B87B7B41B8EAEAAE05 /* AccessoryViews.swift */,
+				9E784160F77554EF7A2A1F77 /* DaynoteWidgets.entitlements */,
+				E31009335E54CA5BB5BF0170 /* DaynoteWidgetsBundle.swift */,
+				9054FDA3355BAB48C13F8645 /* EventLiveActivity.swift */,
+				7FB37FAE2D0A88731A20575D /* GlanceIntents.swift */,
+				51F96EFE782D3C79F43B5112 /* GlanceProvider.swift */,
+				CE8F9FDFA647DB12A60B6DC4 /* HomeWidgetViews.swift */,
+				C29147341C671B5E23D0B084 /* Info.plist */,
+				04C8FEA3C6652A63755B2B94 /* LiveActivityAttributes.swift */,
+				4E314C561325F30AD5D2BD0F /* Localizable.xcstrings */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		FD5DEC7A1342F972FDD9C597 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6139F681DA96B20D39D935FC /* ReadbackView.swift */,
+				7124C98E271B9CAAEEEDEE47 /* TodayView.swift */,
+				3812777A82A652984EFB3CF0 /* WatchStore.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1DC55F61AD20C6E78232B519 /* DaynoteBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B61BBDA0979C373EF3279EB /* Build configuration list for PBXNativeTarget "DaynoteBridge" */;
+			buildPhases = (
+				BE22F5C2564862910C7B06EC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DaynoteBridge;
+			packageProductDependencies = (
+			);
+			productName = DaynoteBridge;
+			productReference = 70267FF7A2AACA02AE299879 /* DaynoteBridge.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		2FF0ED5A8339AF9477AD76E6 /* DaynoteWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2D8E0D014D6FE4298841DD7E /* Build configuration list for PBXNativeTarget "DaynoteWatch" */;
+			buildPhases = (
+				98A72167E7C8AD655244493C /* Sources */,
+				5F2F52EC15313747DD162773 /* Resources */,
+				1A1CEEA8184333A541651C20 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				756EDAAB87D6934F9CE63CA0 /* PBXTargetDependency */,
+			);
+			name = DaynoteWatch;
+			packageProductDependencies = (
+			);
+			productName = DaynoteWatch;
+			productReference = BEA01786B2ED1920A54D0BE5 /* DaynoteWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		44A9052F7C3AC39F2D8D8657 /* DaynoteRenderTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1EB1517BC45790CBE3A24CF /* Build configuration list for PBXNativeTarget "DaynoteRenderTests" */;
+			buildPhases = (
+				0386E57BF8B9F27A3A86212A /* Sources */,
+				68E30B4671BB2898D7FF4B07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DaynoteRenderTests;
+			packageProductDependencies = (
+			);
+			productName = DaynoteRenderTests;
+			productReference = 88A5FB0793BBF2A148701898 /* DaynoteRenderTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		4563236A48EF974B1A377839 /* DaynoteWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D99901BBEE9B59DDDDC18902 /* Build configuration list for PBXNativeTarget "DaynoteWatchWidgets" */;
+			buildPhases = (
+				C67E0AF626EC4446B88DF7AF /* Sources */,
+				F8964FF8F9EA8F232495C6CD /* Resources */,
+				26EB02B224CCED1A2341FC90 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DaynoteWatchWidgets;
+			packageProductDependencies = (
+			);
+			productName = DaynoteWatchWidgets;
+			productReference = 4853E899E7F36A7028391613 /* DaynoteWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		4CD38DA65F61AD6CD15D50EF /* DaynoteKitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5B71DA77248C5845724548E9 /* Build configuration list for PBXNativeTarget "DaynoteKitTests" */;
+			buildPhases = (
+				273128F5002D7683030B574E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DaynoteKitTests;
+			packageProductDependencies = (
+			);
+			productName = DaynoteKitTests;
+			productReference = 43315DA6567A9C5BC5DC33E3 /* DaynoteKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5C0056A900D6939C7A04E336 /* DaynoteWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A61572033386951741714983 /* Build configuration list for PBXNativeTarget "DaynoteWidgets" */;
+			buildPhases = (
+				885C4C6496DE89B1AC700649 /* Sources */,
+				61ED69F88A487DC69496E71F /* Resources */,
+				91BB75C85DF3B702A49A3336 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DaynoteWidgets;
+			packageProductDependencies = (
+			);
+			productName = DaynoteWidgets;
+			productReference = A6CE77C957ADF6444B6408B1 /* DaynoteWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ADC5BC34103FB07B9E56F47E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					1DC55F61AD20C6E78232B519 = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Manual;
+					};
+					2FF0ED5A8339AF9477AD76E6 = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Manual;
+					};
+					44A9052F7C3AC39F2D8D8657 = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Automatic;
+					};
+					4563236A48EF974B1A377839 = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Manual;
+					};
+					4CD38DA65F61AD6CD15D50EF = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Automatic;
+					};
+					5C0056A900D6939C7A04E336 = {
+						DevelopmentTeam = 4T8C76SP99;
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 7E28F5547D75ABFD3B782614 /* Build configuration list for PBXProject "Daynote" */;
+			developmentRegion = ko;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				ko,
+			);
+			mainGroup = DEF58561E30AC13B11752169;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 743FB4D46891F5F351CFC271 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5C0056A900D6939C7A04E336 /* DaynoteWidgets */,
+				1DC55F61AD20C6E78232B519 /* DaynoteBridge */,
+				2FF0ED5A8339AF9477AD76E6 /* DaynoteWatch */,
+				4563236A48EF974B1A377839 /* DaynoteWatchWidgets */,
+				4CD38DA65F61AD6CD15D50EF /* DaynoteKitTests */,
+				44A9052F7C3AC39F2D8D8657 /* DaynoteRenderTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5F2F52EC15313747DD162773 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0EA9B8E4E6BB6C58E64265D1 /* Assets.xcassets in Resources */,
+				FC0CB559F1DB9DE1E7D5D0CE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		61ED69F88A487DC69496E71F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC263E39D3F5129FE57D0424 /* Assets.xcassets in Resources */,
+				A4EF9F098B3CB3A939FA4C32 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		68E30B4671BB2898D7FF4B07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				78A44B7570C2C536CA8A3250 /* Assets.xcassets in Resources */,
+				B9495FF336C74848C68BD71A /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8964FF8F9EA8F232495C6CD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44C2399E765DF5D31A13F6C1 /* Assets.xcassets in Resources */,
+				7330CD906ED21790A0219E26 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0386E57BF8B9F27A3A86212A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BD769ECF7E5B2BD3FC0A15AF /* AccessoryViews.swift in Sources */,
+				D15479DD2A28066D68230443 /* AgendaPhraseParser.swift in Sources */,
+				65A5A7B2328572A641CAC0C8 /* CaptureReadback.swift in Sources */,
+				BFAE76E3F0ABC907698391EF /* EventLiveActivity.swift in Sources */,
+				D822EEA01C6B89E86D0D6FE4 /* GlanceIntents.swift in Sources */,
+				4DEB59B4501D079F911AD899 /* GlanceProvider.swift in Sources */,
+				31CB1E2CBA560ED23C05859C /* GlanceSamples.swift in Sources */,
+				96799B5DDF92A26BEC14A406 /* GlanceSnapshot.swift in Sources */,
+				ED289293AC43ED5A3C4D42C6 /* GlanceStore.swift in Sources */,
+				E01439ECEE88CC662495EEC9 /* GlanceText.swift in Sources */,
+				60C32BED244C6A0029F81AE5 /* GlanceTheme.swift in Sources */,
+				CA71788E507F52A43F6F6ABB /* HomeWidgetViews.swift in Sources */,
+				26845173A03F81E91C68261A /* LiveActivityAttributes.swift in Sources */,
+				B076BB77E4A7E015A5BF5AF5 /* LocalTime.swift in Sources */,
+				2315EAE56E8F1EC178D3FDBC /* ReadbackView.swift in Sources */,
+				DCB2836F63B91A5B565C80D6 /* RenderTests.swift in Sources */,
+				EF2B18210FB892BA79F11758 /* TodayView.swift in Sources */,
+				E6697254A542B9857BA914F4 /* WatchStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		273128F5002D7683030B574E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F217FA311269ED5B3EDA1987 /* AgendaPhraseParser.swift in Sources */,
+				CF0E2889C302F98D07DFAFCA /* AgendaPhraseParserTests.swift in Sources */,
+				91E34D0AFA92EA6322E1AE63 /* CaptureReadback.swift in Sources */,
+				1054A7DADC071E813FEE869E /* GlanceSamples.swift in Sources */,
+				E2DC26508C31D30CB2185B88 /* GlanceSnapshot.swift in Sources */,
+				6748FBE17B27572A184DDCC4 /* GlanceStore.swift in Sources */,
+				078F3F5A346BEBAFD465EFA2 /* GlanceStoreTests.swift in Sources */,
+				4DAF41DC2B3A1322080C3F7D /* GlanceText.swift in Sources */,
+				D66F9C5179442531F893DAAB /* LocalTime.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		885C4C6496DE89B1AC700649 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				81531E02F6BB7D15DC296AFF /* AccessoryViews.swift in Sources */,
+				84CB263F567461E028777122 /* AgendaPhraseParser.swift in Sources */,
+				52948C3A679F33185FD6A1C8 /* CaptureReadback.swift in Sources */,
+				CBBED8069EAD1C1830BECBA4 /* DaynoteWidgetsBundle.swift in Sources */,
+				71AEBBBB0FC6362F2A03D5B8 /* EventLiveActivity.swift in Sources */,
+				DD891D24DCD04E4ECD915C38 /* GlanceIntents.swift in Sources */,
+				F81957A4CA506EA2172E88FB /* GlanceProvider.swift in Sources */,
+				96D4CBA7FC36D1307B8249AC /* GlanceSamples.swift in Sources */,
+				01E0F515254CE5138C7A8490 /* GlanceSnapshot.swift in Sources */,
+				031649FD60123554382C14F5 /* GlanceStore.swift in Sources */,
+				5F26B4C79369D3B2FEFFEB21 /* GlanceText.swift in Sources */,
+				2D672EA09838222591862EE0 /* GlanceTheme.swift in Sources */,
+				226E7E243C4822B805EB5C10 /* HomeWidgetViews.swift in Sources */,
+				579506B88A929D56B5740B61 /* LiveActivityAttributes.swift in Sources */,
+				8065DB0BF654DB7AE6495B7D /* LocalTime.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98A72167E7C8AD655244493C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD8BBEE38A453C7837C495AE /* AgendaPhraseParser.swift in Sources */,
+				87E00D5E3A7A9407E4CCF313 /* CaptureReadback.swift in Sources */,
+				3BDE3856E030BB1C69A4FFE6 /* DaynoteWatchApp.swift in Sources */,
+				B079B5753D7DCE755F46102B /* GlanceSamples.swift in Sources */,
+				CFF11FF1C2CEE61F3B530341 /* GlanceSnapshot.swift in Sources */,
+				2F3FAA61D52EA472C33821FD /* GlanceStore.swift in Sources */,
+				357B128BF66282C28D999BB0 /* GlanceText.swift in Sources */,
+				286CB7436F3513156BB626FA /* GlanceTheme.swift in Sources */,
+				EFFC60E61FFB5427FD1D6F54 /* LocalTime.swift in Sources */,
+				E550A978A0FD0C3D72E9B6BE /* ReadbackView.swift in Sources */,
+				A912AF7EA0D67D27654CD049 /* TodayView.swift in Sources */,
+				69A822840DC3596EED7991AC /* WatchSession.swift in Sources */,
+				D2B1F6BCF19E330EB691FF5D /* WatchStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BE22F5C2564862910C7B06EC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				681B1BECD8D8DBDFC1153545 /* AgendaPhraseParser.swift in Sources */,
+				1A44CEB89DF9F9418BC4E117 /* CaptureReadback.swift in Sources */,
+				88297BFDFC3C2E22A9762280 /* DaynoteBridge.swift in Sources */,
+				719E32854757A8D3F2E67CDA /* GlanceSamples.swift in Sources */,
+				CB40347BA37E6E4141236A89 /* GlanceSnapshot.swift in Sources */,
+				D061026E900889A3E545E9A9 /* GlanceStore.swift in Sources */,
+				3EE0646B40C4A3C0B938EA79 /* GlanceText.swift in Sources */,
+				4CF6B3146AA32A73AC896F45 /* LiveActivityAttributes.swift in Sources */,
+				6CE43FD31BAED0F2B113CD06 /* LocalTime.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C67E0AF626EC4446B88DF7AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2C78BE31B66347FDFC91B91 /* AgendaPhraseParser.swift in Sources */,
+				6B5595E7057B2EF55AD0224D /* CaptureReadback.swift in Sources */,
+				6625DE616C6419F96CB2F917 /* GlanceSamples.swift in Sources */,
+				99ACCB14DAE80620BB82D202 /* GlanceSnapshot.swift in Sources */,
+				85D2C2547444DFE93F7D3E0A /* GlanceStore.swift in Sources */,
+				4F723660760C7C29D7D8D336 /* GlanceText.swift in Sources */,
+				B117CCDF043FAAF39DBEE9EA /* GlanceTheme.swift in Sources */,
+				16485B9C718429E96ECBCEBC /* LocalTime.swift in Sources */,
+				F882EE4D258994544BF322E6 /* WatchComplications.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		756EDAAB87D6934F9CE63CA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4563236A48EF974B1A377839 /* DaynoteWatchWidgets */;
+			targetProxy = 9F45089F22F3559E9FD48729 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00C945BAD4B19E0BA14AAFA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WatchWidgets/DaynoteWatchWidgets.entitlements;
+				INFOPLIST_FILE = WatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.watchkitapp.widgets;
+				PRODUCT_NAME = DaynoteWatchWidgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		04DBCC52CBD934AEDB9C8FB3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = Widgets/DaynoteWidgets.entitlements;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.widgets;
+				PRODUCT_NAME = DaynoteWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		16CEFB71AAD873762D21519A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.bridge;
+				PRODUCT_NAME = DaynoteBridge;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		23B472482AE961959B433834 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/DaynoteWatch.entitlements;
+				INFOPLIST_FILE = Watch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.watchkitapp;
+				PRODUCT_NAME = DaynoteWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		4F17B8C2E833B87AB4969CD2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/DaynoteWatch.entitlements;
+				INFOPLIST_FILE = Watch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.watchkitapp;
+				PRODUCT_NAME = DaynoteWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		72A66325A3A53363362D0845 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 14;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 4T8C76SP99;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.5.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		7DA78BF46164AF3EAF787DEB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WatchWidgets/DaynoteWatchWidgets.entitlements;
+				INFOPLIST_FILE = WatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.watchkitapp.widgets;
+				PRODUCT_NAME = DaynoteWatchWidgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		9FB7B5EEA8F80D31EC1677E8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.kittests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A0A350B6A9E46D4F4769E512 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.kittests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B02495E716B44461E67D7B1C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.rendertests;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DAYNOTE_RENDER_TESTS;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BF31041A8938DCA9B0E5DCCB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.bridge;
+				PRODUCT_NAME = DaynoteBridge;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		CC410B25B8510EFBBD78AB57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 14;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 4T8C76SP99;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.5.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		E33EB02F7DB8736EE00C81F7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.rendertests;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DAYNOTE_RENDER_TESTS;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F95E15F78C38347B54744BE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = Widgets/DaynoteWidgets.entitlements;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cc.arachat.daynote.widgets;
+				PRODUCT_NAME = DaynoteWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B61BBDA0979C373EF3279EB /* Build configuration list for PBXNativeTarget "DaynoteBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16CEFB71AAD873762D21519A /* Debug */,
+				BF31041A8938DCA9B0E5DCCB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2D8E0D014D6FE4298841DD7E /* Build configuration list for PBXNativeTarget "DaynoteWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4F17B8C2E833B87AB4969CD2 /* Debug */,
+				23B472482AE961959B433834 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5B71DA77248C5845724548E9 /* Build configuration list for PBXNativeTarget "DaynoteKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9FB7B5EEA8F80D31EC1677E8 /* Debug */,
+				A0A350B6A9E46D4F4769E512 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7E28F5547D75ABFD3B782614 /* Build configuration list for PBXProject "Daynote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC410B25B8510EFBBD78AB57 /* Debug */,
+				72A66325A3A53363362D0845 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A61572033386951741714983 /* Build configuration list for PBXNativeTarget "DaynoteWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				04DBCC52CBD934AEDB9C8FB3 /* Debug */,
+				F95E15F78C38347B54744BE8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C1EB1517BC45790CBE3A24CF /* Build configuration list for PBXNativeTarget "DaynoteRenderTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E33EB02F7DB8736EE00C81F7 /* Debug */,
+				B02495E716B44461E67D7B1C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D99901BBEE9B59DDDDC18902 /* Build configuration list for PBXNativeTarget "DaynoteWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7DA78BF46164AF3EAF787DEB /* Debug */,
+				00C945BAD4B19E0BA14AAFA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ADC5BC34103FB07B9E56F47E /* Project object */;
+}
