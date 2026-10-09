@@ -8,7 +8,17 @@ import Foundation
 /// file per action so a widget appending while the app drains cannot lose one.
 public struct GlanceStore: Sendable {
     /// The App Group every Daynote target on a device shares.
-    public static let appGroup = "group.cc.arachat.daynote"
+    ///
+    /// On macOS the team-prefixed form, which a Mac can use without the group being registered
+    /// (and which a Developer ID build has to, having no profile to grant a registered one); the
+    /// Mac widgets may name it in their Info.plist as `DaynoteAppGroup`.
+    public static let appGroup: String = {
+        #if os(macOS)
+        return Bundle.main.object(forInfoDictionaryKey: "DaynoteAppGroup") as? String ?? "4T8C76SP99.group.cc.arachat.daynote"
+        #else
+        return "group.cc.arachat.daynote"
+        #endif
+    }()
 
     /// The folder inside the group's container, which the iOS app's host names the same way.
     public static let folderName = "Glance"
