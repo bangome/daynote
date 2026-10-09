@@ -1,4 +1,3 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -44,7 +43,6 @@ public partial class EditorPage : UserControl
         if (_observed is { } previous)
         {
             previous.TitleRenameStarted -= OnTitleRenameStarted;
-            previous.CaptureRequested -= OnCaptureRequested;
             previous.PropertyChanged -= OnShellPropertyChanged;
             previous.Capture.PropertyChanged -= OnCapturePropertyChanged;
         }
@@ -53,7 +51,6 @@ public partial class EditorPage : UserControl
         if (_observed is { } shell)
         {
             shell.TitleRenameStarted += OnTitleRenameStarted;
-            shell.CaptureRequested += OnCaptureRequested;
             shell.PropertyChanged += OnShellPropertyChanged;
             shell.Capture.PropertyChanged += OnCapturePropertyChanged;
             PlaceCaptureHighlight();
@@ -244,29 +241,6 @@ public partial class EditorPage : UserControl
     private void OnTitleRenameStarted(object? sender, EventArgs e) => FocusTitleBox();
 
     /// <summary>
-    /// A widget's or Control Center's @ 할 일: an @ typed at the end of the note's body, on a line of
-    /// its own, which is what opens the bar — as if the user had typed it there.
-    /// </summary>
-    /// <remarks>
-    /// Posted at a low priority for the reason <see cref="FocusTitleBox"/> is: the editor has only
-    /// just been asked to show, and a box that is not laid out yet takes neither focus nor a caret.
-    /// </remarks>
-    private void OnCaptureRequested(object? sender, EventArgs e) => Dispatcher.UIThread.Post(() =>
-    {
-        if (BodyBox is not { } box)
-        {
-            return;
-        }
-
-        // A new line when the note already has words on its last one: the line left of the @ is
-        // the item's title, and today's note opened from an iPhone widget is rarely empty.
-        box.Focus();
-        string text = box.Text ?? string.Empty;
-        string insert = text.Length == 0 || text.EndsWith('\n') ? "@" : "\n@";
-        Write(text + insert, text.Length + insert.Length);
-    }, DispatcherPriority.Background);
-
-    /// <summary>
     /// Runs the helper toolbar's fill under the home indicator, with its buttons kept above it; on a
     /// screen with no indicator it keeps 8 points under the buttons, as it does above them.
     /// </summary>
@@ -407,20 +381,6 @@ public partial class EditorPage : UserControl
         }
     }
 
-    /// <summary>
-    /// The @ button: types the character, with a space in front of it when the line needs one.
-    /// </summary>
-    /// <remarks>
-    /// @ only opens the bar at the start of a word, which is what keeps an email address out of
-    /// it; a button that pasted one mid-word would do nothing and look broken.
-    /// </remarks>
-    private void OnInsertAt(object? sender, RoutedEventArgs e)
-    {
-        (string text, int caret) = Read();
-        string insert = caret > 0 && text[caret - 1] is not (' ' or '\n') ? " @" : "@";
-        Write(text.Insert(caret, insert), caret + insert.Length);
-    }
-
     /// <summary>A tap on an example types it, so the parser reads it like anything else.</summary>
     private void OnCaptureExample(object? sender, RoutedEventArgs e)
     {
@@ -448,72 +408,6 @@ public partial class EditorPage : UserControl
 
     /// <summary>The design's threshold: under this much above the keyboard, one line.</summary>
     private const double CaptureBarTwoLineRoom = 230;
-
-    // ── The writing helpers ──────────────────────────────────────────────────────────────────────
-
-    /// <summary>Stamps the caret's line with the note's own day, as <c>(M/D)</c>.</summary>
-    private void OnInsertDate(object? sender, RoutedEventArgs e) => AppendDue(withTime: false);
-
-    /// <summary>The same with a time, <c>(M/D H:mm)</c>, rounded to the next five minutes.</summary>
-    private void OnInsertTime(object? sender, RoutedEventArgs e) => AppendDue(withTime: true);
-
-    /// <remarks>
-    /// The date is the note's own, not today's: someone writing up Monday on Monday means
-    /// Monday. The time is the clock's, rounded up to five minutes, because nobody writes 14:37.
-    /// <para>
-    /// Plain text, and only that. It used to be read back as a to-do's due date; a to-do is its
-    /// own row now, so this stamps prose and nothing parses it.
-    /// </para>
-    /// </remarks>
-    private void AppendDue(bool withTime)
-    {
-        if (DataContext is not MobileShellViewModel shell)
-        {
-            return;
-        }
-
-        (string text, int caret) = Read();
-        int end = LineEnd(text, caret);
-
-        // A line that already ends in a due suffix gets its replacement, not a second one.
-        string line = text[LineStart(text, caret)..end];
-        int existing = Daynote.App.Shell.Product.BodyHighlightSyntax.Pattern()
-            .Matches(line)
-            .Where(m => m.Groups["due"].Success && m.Index + m.Length == line.Length)
-            .Select(m => m.Index)
-            .DefaultIfEmpty(-1)
-            .First();
-
-        string suffix = withTime
-            ? string.Format(
-                CultureInfo.InvariantCulture,
-                "({0}/{1} {2:00}:{3:00})",
-                shell.SelectedDate.Month,
-                shell.SelectedDate.Day,
-                RoundedNow().Hour,
-                RoundedNow().Minute)
-            : string.Format(
-                CultureInfo.InvariantCulture,
-                "({0}/{1})",
-                shell.SelectedDate.Month,
-                shell.SelectedDate.Day);
-
-        if (existing >= 0)
-        {
-            int at = LineStart(text, caret) + existing;
-            Write(text.Remove(at, end - at).Insert(at, suffix), at + suffix.Length);
-            return;
-        }
-
-        string spaced = end > LineStart(text, caret) && text[end - 1] != ' ' ? " " + suffix : suffix;
-        Write(text.Insert(end, spaced), end + spaced.Length);
-    }
-
-    private static DateTime RoundedNow()
-    {
-        DateTime now = DateTime.Now;
-        return now.AddMinutes(4 - ((now.Minute + 4) % 5)).AddSeconds(-now.Second);
-    }
 
     /// <summary>The note body, looked up by name rather than held in a field.</summary>
     private TextBox? BodyBox => this.FindControl<TextBox>("Body");
@@ -545,17 +439,5 @@ public partial class EditorPage : UserControl
 
         box.Text = text;
         box.CaretIndex = Math.Clamp(caret, 0, text.Length);
-    }
-
-    private static int LineStart(string text, int caret)
-    {
-        int index = text.LastIndexOf('\n', Math.Max(0, Math.Min(caret, text.Length) - 1));
-        return index < 0 ? 0 : index + 1;
-    }
-
-    private static int LineEnd(string text, int caret)
-    {
-        int index = text.IndexOf('\n', Math.Min(caret, text.Length));
-        return index < 0 ? text.Length : index;
     }
 }

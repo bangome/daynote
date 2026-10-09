@@ -99,6 +99,18 @@ public sealed class DeviceSafeAreaTests
             ScreenshotTests.Pump(() => shell.Notes.SelectNoteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
             shell.IsEditorOpen = true;
             Check("editor");
+
+            // The to-do sheet, with the keyboard down and then up under it: everything in it that
+            // is on screen stays above the keyboard's top edge.
+            ScreenshotTests.Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+            Assert.IsTrue(shell.IsTodoSheetOpen, $"{device}: the to-do sheet did not open.");
+            Check("todo-sheet");
+            double keyboard = Math.Round(height * 0.38);
+            view.PreviewKeyboard = keyboard;
+            Check("todo-sheet-keyboard");
+            failures.AddRange(AboveKeyboard(view, safe, keyboard).Select(offender => $"{device}/todo-sheet-keyboard: {offender}"));
+            view.PreviewKeyboard = null;
+            shell.CloseTodoSheetCommand.Execute(null);
             shell.IsEditorOpen = false;
 
             shell.OpenAttachSheetCommand.Execute(null);
@@ -259,6 +271,29 @@ public sealed class DeviceSafeAreaTests
             {
                 string label = button.Name ?? (button.Content as string) ?? AutomationName(button) ?? button.GetType().Name;
                 yield return $"'{label}' at {rect} outside the safe area {safe} of {size}";
+            }
+        }
+    }
+
+    /// <summary>The to-do sheet's edge and its buttons, wherever they reach under a keyboard covering <paramref name="keyboard"/> points.</summary>
+    private static IEnumerable<string> AboveKeyboard(Control view, Thickness safe, double keyboard)
+    {
+        if (TopLevel.GetTopLevel(view) is not { } root || view.FindControl<Border>("TodoSheet") is not { } sheet)
+        {
+            yield break;
+        }
+
+        double top = root.ClientSize.Height - safe.Bottom - keyboard;
+        if (sheet.TranslatePoint(new Point(0, sheet.Bounds.Height), root) is { } edge && Math.Abs(edge.Y - top) > 0.5)
+        {
+            yield return $"the sheet ends at {edge.Y:0.#}, not on the keyboard's top edge {top:0.#}";
+        }
+
+        foreach (Button button in sheet.GetVisualDescendants().OfType<Button>())
+        {
+            if (button.IsEffectivelyVisible && OnScreen(button, root) is { } rect && rect.Bottom > top + 0.5)
+            {
+                yield return $"'{button.Name ?? AutomationName(button) ?? button.GetType().Name}' at {rect} under the keyboard from {top:0.#}";
             }
         }
     }

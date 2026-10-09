@@ -115,7 +115,8 @@ public sealed partial class MobileShellViewModel
     {
         _justMadeDate = LocalDates.FromDateOnly(
             DateOnly.FromDateTime(made.Anchor?.Value ?? now));
-        IsJustMadeElsewhere = _justMadeDate != SelectedDate;
+        // An undated to-do went to no day at all, so there is nowhere else to point to.
+        IsJustMadeElsewhere = made.Anchor is not null && _justMadeDate != SelectedDate;
         JustMadeWhenText = IsJustMadeElsewhere
             ? MobileStrings.Format(
                 "MobileNoteItemsAddedTo",

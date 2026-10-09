@@ -73,6 +73,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         ArgumentNullException.ThrowIfNull(searchService);
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
+        Entry = new TodoEntryViewModel(clock, repository);
         Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, JumpToTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
@@ -186,7 +187,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
     public bool ShowDock => IsPhoneLayout && !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
-        && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen && !IsNoteItemsSheetOpen;
+        && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen && !IsNoteItemsSheetOpen && !IsTodoSheetOpen;
 
     partial void OnIsEditorOpenChanged(bool value)
     {
@@ -255,6 +256,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         IsReminderTimeSheetOpen = false;
         IsAgendaListSheetOpen = false;
         IsNoteItemsSheetOpen = false;
+        IsTodoSheetOpen = false;
         MenuFile = null;
         ViewerFile = null;
         Page = page;
@@ -314,6 +316,12 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         if (IsNoteItemsSheetOpen)
         {
             IsNoteItemsSheetOpen = false;
+            return true;
+        }
+
+        if (IsTodoSheetOpen)
+        {
+            IsTodoSheetOpen = false;
             return true;
         }
 

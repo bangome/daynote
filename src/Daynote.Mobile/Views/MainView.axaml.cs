@@ -55,6 +55,22 @@ public partial class MainView : UserControl
     private Thickness? _previewSafeArea;
 
     /// <summary>
+    /// How much of the content an on-screen keyboard covers, in points, when there is no platform
+    /// to report one. Off a device only, beside <see cref="PreviewSafeArea"/>.
+    /// </summary>
+    public double? PreviewKeyboard
+    {
+        get => _previewKeyboard;
+        set
+        {
+            _previewKeyboard = value;
+            Apply(TopLevel.GetTopLevel(this));
+        }
+    }
+
+    private double? _previewKeyboard;
+
+    /// <summary>
     /// Goes edge to edge and lets the surfaces at the bottom run under the home indicator.
     /// </summary>
     /// <remarks>
@@ -147,9 +163,9 @@ public partial class MainView : UserControl
         // home indicator, so the part of the keyboard over the content runs from its top edge to
         // there. (On a Pixel 9 Pro: a window 952 tall, the content ending at 928, the keyboard's top
         // at 616, so 312 points of it cover the content.)
-        double keyboard = _keyboardTop is { } keyboardTop && top is not null
+        double keyboard = _previewKeyboard ?? (_keyboardTop is { } keyboardTop && top is not null
             ? Math.Max(0, top.ClientSize.Height - bottom - keyboardTop)
-            : 0;
+            : 0);
 
         // The bar keeps clear of the home-indicator strip or the navigation buttons, and of the
         // edge when there is neither. The design dips it 4 points into the strip, but on a device
@@ -183,6 +199,22 @@ public partial class MainView : UserControl
             timeSheet.Margin = new Thickness(0, 24, 0, timeSheet.Margin.Bottom);
         }
 
+        // The to-do sheet's title field brings the keyboard up with it, so the sheet stands on the
+        // keyboard's top edge while it is up, and sits where the others do once it goes down.
+        if (this.FindControl<Border>("TodoSheet") is { } todoSheet)
+        {
+            if (keyboard > 0)
+            {
+                todoSheet.Margin = new Thickness(0, 24, 0, keyboard);
+                todoSheet.Padding = new Thickness(0, 0, 0, 10);
+            }
+            else
+            {
+                Bleed(todoSheet, bottom, extra: 6, fallback: 24);
+                todoSheet.Margin = new Thickness(0, 24, 0, todoSheet.Margin.Bottom);
+            }
+        }
+
         // The image viewer's dark ground covers the whole screen, notch and strip included, with its
         // bar and buttons kept inside the safe area.
         if (this.FindControl<Border>("Viewer") is { } viewer)
@@ -192,6 +224,15 @@ public partial class MainView : UserControl
             viewer.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         }
     }
+
+    /// <summary>
+    /// Puts the caret in the to-do sheet's title, which is what brings the keyboard up: the title is
+    /// the one field the sheet cannot do without. Posted, because the sheet is laid out on the next pass
+    /// and a control that is not yet visible takes no focus.
+    /// </summary>
+    private void FocusTodoText() => Avalonia.Threading.Dispatcher.UIThread.Post(
+        () => this.FindControl<TextBox>("TodoTextBox")?.Focus(),
+        Avalonia.Threading.DispatcherPriority.Loaded);
 
     // ── The image viewer's zoom ──────────────────────────────────────────────────────────────────
 
@@ -211,6 +252,10 @@ public partial class MainView : UserControl
                 if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.ViewerImage))
                 {
                     SetZoom(1);
+                }
+                else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsTodoSheetOpen) && shell.IsTodoSheetOpen)
+                {
+                    FocusTodoText();
                 }
             };
         }

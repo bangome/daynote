@@ -7,8 +7,8 @@
              x:DataType="vm:MobileShellViewModel"
              Background="{DynamicResource Mobile.Bg}">
   <!--
-    The note, full screen: the date it belongs to, its title and tags, its text, and the three
-    helpers that put the body's small syntax within reach of a thumb. It covers the tabs, because a
+    The note, full screen: the date it belongs to, its title and tags, its text, and a tool row
+    under it - the to-do sheet, what the note made, and the paperclip. It covers the tabs, because a
     390-point screen has room for the text and nothing else.
   -->
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
@@ -104,15 +104,10 @@
             HorizontalAlignment="Left" VerticalAlignment="Top" />
 
     <!--
-      The writing helpers. The note body carries a small syntax - a checkbox opens a line, a (M/D) or
-      (M/D H:mm) at the end of one gives it a due time - and on a desktop you simply type it. On a
-      phone those brackets are two keyboard layers away, which is enough to stop people using it.
+      The tool row's buttons are not focusable on purpose: taking focus would close the keyboard and
+      move the caret, which is the opposite of what a tool beside the text should do.
 
-      The buttons are not focusable on purpose: taking focus would close the keyboard and move the
-      caret, which is the opposite of what a helper should do.
-    -->
-    <!--
-      The day's files, one line of chips over the helpers: what is attached is in sight while writing,
+      The day's files, one line of chips over the tool row: what is attached is in sight while writing,
       and a tap opens it, as on the day screen.
     -->
     <Border Grid.Row="3" Background="{DynamicResource Mobile.Panel}" BorderBrush="{DynamicResource Mobile.Stroke2}"
@@ -154,37 +149,40 @@
     <Border Grid.Row="4" x:Name="Toolbar" Background="{DynamicResource Mobile.Panel}"
             BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0" ClipToBounds="True">
       <!--
-        No `-[]` button. It wrote the syntax the panels used to read; a to-do is its own row now,
-        so the only thing it could insert is text that looks like a checkbox. The phone's own @
-        bar takes its place (phone §01); until that lands, a to-do is captured on the desktop or
-        made in the list. Date and time stay: they stamp ordinary prose, which still reads.
+        One row: the way to a to-do, what this note has made, and the paperclip. No `-[]` button
+        and no date or time stamps: a to-do is its own row now, entered in a sheet of its own
+        rather than typed into the text, so there is nothing left for a helper to write.
       -->
       <Panel>
-        <StackPanel IsVisible="{Binding !Capture.IsOpen}">
+        <Grid ColumnDefinitions="*,8,44" Margin="12,8,12,0" IsVisible="{Binding !Capture.IsOpen}">
           <!--
-            What this note made (phone §02). The chip the body draws around the @ span says the
-            characters changed; it does not say which date or which list the thing went to. So the
-            confirmation appears where the object actually lives — the note's own collection — and
-            a row rising there is the thing arriving rather than a toast claiming it did.
+            What this note made (phone §02). The confirmation appears where the object actually
+            lives — the note's own collection — and a row rising there is the thing arriving rather
+            than a toast claiming it did.
           -->
-          <Grid x:Name="NoteItemsRow" ColumnDefinitions="40,*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNull}}">
-            <!-- The @ itself, two keyboard layers away on a Korean keyboard, and the only
-                 discoverable way in now that the `-[]` button is gone. -->
-            <Button Grid.Column="0" Classes="attool" Focusable="False" Click="OnInsertAt">
-              <TextBlock Text="@" />
+          <Grid Grid.Column="0" x:Name="NoteItemsRow" ColumnDefinitions="*,Auto"
+                IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNull}}">
+            <!-- The to-do sheet: 내용, 날짜, 시간 in fields of their own, not in the note's text. -->
+            <Button Grid.Column="0" x:Name="TodoTool" Classes="todotool" Focusable="False"
+                    Command="{Binding OpenTodoSheetCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="atmark">
+                  <TextBlock Text="@" />
+                </Border>
+                <TextBlock Classes="todotool" Text="{Binding Strings[MobileCaptureKinds]}" />
+              </StackPanel>
             </Button>
-            <TextBlock Grid.Column="1" Classes="faint" FontSize="12.5" FontWeight="SemiBold" Margin="10,0,0,0"
-                       VerticalAlignment="Center" TextWrapping="NoWrap" Text="{Binding Strings[MobileCaptureKinds]}" />
-            <Button Grid.Column="2" x:Name="NoteItemsButton" Classes="noteitems" Focusable="False" IsVisible="{Binding HasNoteItems}"
-                    RenderTransformOrigin="50%,50%"
+            <Button Grid.Column="1" x:Name="NoteItemsButton" Classes="noteitems" Focusable="False" IsVisible="{Binding HasNoteItems}"
+                    Margin="8,0,0,0" RenderTransformOrigin="50%,50%"
                     Command="{Binding OpenNoteItemsCommand}">
               <TextBlock Text="{Binding NoteItemCountText}" />
             </Button>
           </Grid>
 
           <!-- The row that rises in its place, then settles back into the count. -->
-          <Grid x:Name="JustMadeRow" ColumnDefinitions="*,Auto" Margin="12,6,12,0" IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+          <Grid Grid.Column="0" x:Name="JustMadeRow" ColumnDefinitions="*,Auto" Height="44"
+                IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="4,0,0,0">
               <Border Width="6" Height="6" CornerRadius="3" VerticalAlignment="Center"
                       Background="{DynamicResource Mobile.Sun}" />
               <TextBlock Classes="line" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
@@ -203,20 +201,12 @@
             </StackPanel>
           </Grid>
 
-          <Grid ColumnDefinitions="*,4,*,4,44" Margin="12,8,12,0">
-          <Button Grid.Column="0" Classes="tool" Focusable="False" Click="OnInsertDate">
-            <TextBlock Text="{Binding Strings[InsertDate]}" />
-          </Button>
-          <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertTime">
-            <TextBlock Text="{Binding Strings[MobileInsertTime]}" />
-          </Button>
           <!-- Attach: files belong to the day, so this is the day screen's same sheet. -->
-          <Button Grid.Column="4" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
+          <Button Grid.Column="2" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
                   AutomationProperties.Name="{Binding Strings[MobileFilesAdd]}">
             <views:Glyph Kind="Paperclip" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
           </Button>
-          </Grid>
-        </StackPanel>
+        </Grid>
 
         <!--
           The @ bar (phone §01). It takes the helpers' place rather than floating over the text:
@@ -387,18 +377,32 @@
     <Style Selector="Button.tool.primary">
       <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
     </Style>
-    <Style Selector="Button.attool">
-      <Setter Property="Width" Value="32" />
-      <Setter Property="Height" Value="28" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <!-- The way to a to-do: the tool row's height, the @ on its own tint, then what it makes. -->
+    <Style Selector="Button.todotool">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Padding" Value="8,0,14,0" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
     </Style>
-    <Style Selector="Button.attool TextBlock">
+    <Style Selector="TextBlock.todotool">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.atmark">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
+    </Style>
+    <Style Selector="Border.atmark TextBlock">
       <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
     </Style>
     <Style Selector="Button.noteitems">
       <Setter Property="Height" Value="28" />

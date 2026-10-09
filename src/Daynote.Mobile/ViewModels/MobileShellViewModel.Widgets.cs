@@ -11,7 +11,7 @@ public enum WidgetLaunch
     /// <summary>+ 노트: a new note on today, in the editor.</summary>
     NewNote,
 
-    /// <summary>@ 할 일 and the + beside 오늘: the same, with the @ bar already up.</summary>
+    /// <summary>@ 할 일 and the + beside 오늘: the same, with the to-do sheet already up.</summary>
     Capture,
 }
 
@@ -27,10 +27,7 @@ public sealed partial class MobileShellViewModel
     /// </summary>
     public Action? AgendaChanged { get; init; }
 
-    /// <summary>Raised once the new note's editor is up and the @ bar should open in it.</summary>
-    public event EventHandler? CaptureRequested;
-
-    /// <summary>A widget was tapped: today, a new note on today, or that note with the @ bar open.</summary>
+    /// <summary>A widget was tapped: today, a new note on today, or that note with the to-do sheet open.</summary>
     public async Task OpenFromWidgetAsync(WidgetLaunch launch)
     {
         // The open note is saved before anything moves, as every other way off the editor does.
@@ -47,9 +44,9 @@ public sealed partial class MobileShellViewModel
         }
 
         await NewNote().ConfigureAwait(true);
-        if (launch == WidgetLaunch.Capture && IsEditorOpen)
+        if (launch == WidgetLaunch.Capture)
         {
-            CaptureRequested?.Invoke(this, EventArgs.Empty);
+            await OpenTodoSheet().ConfigureAwait(true);
         }
     }
 

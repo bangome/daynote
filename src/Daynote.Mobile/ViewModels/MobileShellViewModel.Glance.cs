@@ -116,8 +116,8 @@ public sealed partial class MobileShellViewModel
     /// <item><c>daynote://capture</c> — "+ 새 노트": today's note, opened. Today's first note
     /// rather than another empty one, because the control is called "오늘 노트" and a tap a day
     /// would otherwise leave a trail of blank notes.</item>
-    /// <item><c>daynote://capture?at=1</c> — "@ 할 일·일정": the same note with a new line at its end
-    /// and the <c>@</c> bar open on it.</item>
+    /// <item><c>daynote://capture?at=1</c> — "@ 할 일·일정": the same note with the to-do sheet
+    /// open over it. Nothing is typed into the note.</item>
     /// <item><c>daynote://day?date=yyyy-MM-dd</c> — that day.</item>
     /// <item><c>daynote://note?date=yyyy-MM-dd&amp;id=…</c> — that note, as a reminder tap opens it.</item>
     /// <item><c>daynote://todos</c> — the to-do list.</item>
@@ -184,9 +184,9 @@ public sealed partial class MobileShellViewModel
             await NewNote().ConfigureAwait(true);
         }
 
-        if (withAt && IsEditorOpen)
+        if (withAt)
         {
-            CaptureRequested?.Invoke(this, EventArgs.Empty);
+            await OpenTodoSheet().ConfigureAwait(true);
         }
     }
 

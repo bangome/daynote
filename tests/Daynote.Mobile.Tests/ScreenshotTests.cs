@@ -77,6 +77,21 @@ public sealed class ScreenshotTests
             Pump(() => shell.Notes.SelectNoteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
             shell.IsEditorOpen = true;
             Capture(view, $"editor-{suffix}");
+
+            // The to-do sheet: as it opens, over a keyboard, with its date grid, and as an event
+            // with its time grid.
+            Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+            Capture(view, $"todo-sheet-{suffix}");
+            view.PreviewKeyboard = 336;
+            shell.Entry.Text = "회의자료 초안 공유";
+            Capture(view, $"todo-sheet-keyboard-{suffix}");
+            view.PreviewKeyboard = null;
+            Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Date));
+            Capture(view, $"todo-sheet-date-{suffix}");
+            shell.Entry.SelectKindCommand.Execute(AgendaKind.Event);
+            Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Time));
+            Capture(view, $"todo-sheet-event-{suffix}");
+            shell.CloseTodoSheetCommand.Execute(null);
             shell.IsEditorOpen = false;
 
             shell.GoToPageCommand.Execute(MobilePage.Lists);

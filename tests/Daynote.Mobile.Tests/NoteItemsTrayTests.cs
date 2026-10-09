@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.Core.Agenda;
@@ -153,28 +152,6 @@ public sealed class NoteItemsTrayTests
             Assert.IsFalse(shell.ShowDock, "A sheet covers the tab bar.");
             Assert.IsTrue(Run(shell.GoBackAsync()));
             Assert.IsFalse(shell.IsNoteItemsSheetOpen);
-        });
-    }
-
-    [TestMethod]
-    public void The_at_button_types_an_at_where_it_can_open_the_bar()
-    {
-        // @ only triggers at the start of a word, which is what keeps an email address out of it.
-        // A button that pasted one mid-word would do nothing and look broken.
-        TestServices.WithInitialisedShell((view, shell) =>
-        {
-            TextBox body = OpenEditor(view, shell);
-            Type(body, "분기 회고 잡기");
-
-            Button at = view.GetVisualDescendants().OfType<EditorPage>().Single()
-                .GetVisualDescendants().OfType<Button>()
-                .First(button => button.Classes.Contains("attool"));
-            at.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Dispatcher.UIThread.RunJobs();
-
-            Assert.AreEqual("분기 회고 잡기 @", body.Text);
-            Assert.IsTrue(shell.Capture.IsOpen);
-            Assert.IsTrue(shell.Capture.IsPrompting);
         });
     }
 

@@ -197,7 +197,7 @@ public sealed class GlanceTests
     }
 
     [TestMethod]
-    public void The_at_link_opens_today_s_note_with_the_bar_up()
+    public void The_at_link_opens_today_s_note_with_the_to_do_sheet_up()
     {
         var host = new FakeGlanceHost();
         TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
@@ -206,8 +206,9 @@ public sealed class GlanceTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.IsTrue(shell.IsEditorOpen);
-            Assert.IsTrue(shell.Notes.EditorText.EndsWith('@'));
-            Assert.IsTrue(shell.Capture.IsOpen, "The bar opens on the @, as if it had been typed.");
+            Assert.IsTrue(shell.IsTodoSheetOpen, "The sheet opens over the note.");
+            Assert.IsFalse(shell.Notes.EditorText.Contains('@', StringComparison.Ordinal), "Nothing is typed into the note.");
+            Assert.IsFalse(shell.Capture.IsOpen);
         });
     }
 
