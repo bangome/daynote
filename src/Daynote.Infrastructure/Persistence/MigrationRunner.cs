@@ -65,6 +65,23 @@ public sealed class MigrationRunner
         return new MigrationRunner(migrations);
     }
 
+    /// <summary>
+    /// The name of the first unapplied step that wants the database copied aside, or null.
+    /// </summary>
+    /// <remarks>
+    /// Asked before <see cref="Apply"/> rather than inside it, because a backup taken inside the
+    /// migration's own transaction would be a copy of the half-migrated database — which is the
+    /// one state nobody wants a backup of.
+    /// </remarks>
+    public string? PendingBackupName(SqliteConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        var applied = ReadAppliedVersions(connection);
+        return _migrations
+            .FirstOrDefault(migration => migration.BackupFirst && !applied.Contains(migration.Version))
+            ?.Name;
+    }
+
     public int Apply(SqliteConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);

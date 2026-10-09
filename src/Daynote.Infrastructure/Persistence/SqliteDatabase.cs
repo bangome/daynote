@@ -39,6 +39,7 @@ public sealed class SqliteDatabase : IAsyncDisposable
             using var connection = _connectionFactory.OpenConnection();
             var capability = _capabilityProbe.Check(connection);
             EnsureCapability(capability);
+            BackupBeforeMigrating(connection);
             var version = _migrationRunner.Apply(connection);
             CheckIntegrity(connection);
 
@@ -46,6 +47,72 @@ public sealed class SqliteDatabase : IAsyncDisposable
             _initialization = new DatabaseInitializationResult(version, true, true);
             return _initialization.Value;
         }
+    }
+
+    /// <summary>
+    /// Copies the database aside when a step that cannot be undone is about to run
+    /// (docs/TODOS.md §8).
+    /// </summary>
+    /// <remarks>
+    /// SQLite's own backup, not a file copy: the live content can be sitting in the -wal file,
+    /// and copying only the .db would hand the user a backup missing their most recent writes.
+    /// <para>
+    /// A failure here stops the upgrade. The point of the copy is that the step after it is
+    /// irreversible, so proceeding without one would make the safety net optional exactly when it
+    /// is needed. An existing file from a previous attempt is left alone — the first copy is the
+    /// one taken before anything was touched.
+    /// </para>
+    /// </remarks>
+    private void BackupBeforeMigrating(SqliteConnection connection)
+    {
+        if (_migrationRunner.PendingBackupName(connection) is not { } name)
+        {
+            return;
+        }
+
+        string path = Path.ChangeExtension(_options.DatabasePath, null) + $".before-{name}.db";
+        if (File.Exists(path) || !HasContent(connection))
+        {
+            return;
+        }
+
+        using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            // Unpooled: a pooled connection keeps the file open after Dispose, and this one is
+            // written once and never read by this process again.
+            Pooling = false,
+        }.ToString());
+
+        destination.Open();
+        connection.BackupDatabase(destination);
+    }
+
+    /// <summary>
+    /// Whether there is anything here worth keeping a copy of.
+    /// </summary>
+    /// <remarks>
+    /// A database being created right now has no notes, and a copy of nothing is a file the user
+    /// has to wonder about later. The table itself may not exist yet either — on a first run the
+    /// schema arrives in the same pass this guards.
+    /// </remarks>
+    private static bool HasContent(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+
+        // Asked in two steps, because the second cannot even be prepared while the table is absent.
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='notes');";
+        if (Scalar(command) == 0L)
+        {
+            return false;
+        }
+
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM notes);";
+        return Scalar(command) != 0L;
+
+        static long Scalar(SqliteCommand command) =>
+            Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public SqliteConnection OpenReadConnection()

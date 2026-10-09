@@ -78,11 +78,16 @@ public sealed class SqliteMigration
         Sql = sql;
     }
 
-    public SqliteMigration(int version, string name, Action<SqliteConnection, SqliteTransaction> apply)
+    public SqliteMigration(
+        int version,
+        string name,
+        Action<SqliteConnection, SqliteTransaction> apply,
+        bool backupFirst = false)
         : this(version, name)
     {
         ArgumentNullException.ThrowIfNull(apply);
         Apply = apply;
+        BackupFirst = backupFirst;
     }
 
     private SqliteMigration(int version, string name)
@@ -111,6 +116,16 @@ public sealed class SqliteMigration
 
     /// <summary>The code to run, or null when this step is SQL.</summary>
     public Action<SqliteConnection, SqliteTransaction>? Apply { get; }
+
+    /// <summary>
+    /// Whether the database should be copied aside before this step runs.
+    /// </summary>
+    /// <remarks>
+    /// For a step that cannot be undone. A schema change can be reasoned about from the .sql
+    /// file; a walk that reads the user's prose and writes rows from it cannot be un-walked, and
+    /// docs/TODOS.md §8 asks for a backup in front of exactly that one.
+    /// </remarks>
+    public bool BackupFirst { get; }
 }
 
 public readonly record struct DatabaseInitializationResult(

@@ -43,7 +43,7 @@ public static class TodoCaptureMigration
     /// <see cref="MigrationRunner.FromEmbeddedResources"/>; the tests construct a runner that
     /// includes it.
     /// </summary>
-    public static SqliteMigration Migration => new(Version, Name, Apply);
+    public static SqliteMigration Migration => new(Version, Name, Apply, backupFirst: true);
 
     internal static void Apply(SqliteConnection connection, SqliteTransaction transaction)
     {

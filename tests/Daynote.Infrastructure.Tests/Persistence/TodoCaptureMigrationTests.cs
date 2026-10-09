@@ -224,6 +224,104 @@ public sealed class TodoCaptureMigrationTests
             TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM schema_versions WHERE version = 2;"));
     }
 
+    // ── The backup §8 requires in front of it ────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task The_database_is_copied_aside_before_the_walk_runs()
+    {
+        // The walk reads the user's prose and writes rows from it, and nothing un-walks it.
+        await using TestDatabase fixture = TestDatabase.Create();
+        fixture.Database.Initialize();
+        var notes = new SqliteNoteRepository(fixture.Database, () => DateTimeOffset.UtcNow);
+        await Write(notes, 1, "- [ ] 예산안 초안");
+
+        File.Delete(BackupPath(fixture));
+        await ForgetTheWalkRanAsync(fixture);
+        await using TestDatabase reopened =
+            TestDatabase.CreateIn(Path.GetDirectoryName(fixture.DatabasePath)!);
+        reopened.Database.Initialize();
+
+        Assert.IsTrue(File.Exists(BackupPath(fixture)), "The upgrade ran without leaving a copy behind.");
+    }
+
+    [TestMethod]
+    public async Task A_database_being_created_right_now_gets_no_copy()
+    {
+        // There is nothing to lose, and a copy of nothing is a file the user has to wonder about
+        // later.
+        await using TestDatabase fixture = TestDatabase.Create();
+        fixture.Database.Initialize();
+
+        Assert.IsFalse(File.Exists(BackupPath(fixture)));
+    }
+
+    [TestMethod]
+    public async Task The_copy_holds_what_was_there_before_the_walk()
+    {
+        // The reason it is SQLite's own backup rather than a file copy: on a database in WAL mode
+        // the newest writes live in the -wal file, and copying only the .db would hand the user a
+        // backup missing exactly the work they would be trying to recover.
+        await using TestDatabase fixture = TestDatabase.Create();
+        fixture.Database.Initialize();
+        var notes = new SqliteNoteRepository(fixture.Database, () => DateTimeOffset.UtcNow);
+        await Write(notes, 1, "- [ ] 예산안 초안");
+
+        await ForgetTheWalkRanAsync(fixture);
+
+        await using TestDatabase reopened =
+            TestDatabase.CreateIn(Path.GetDirectoryName(fixture.DatabasePath)!);
+        reopened.Database.Initialize();
+
+        // Unpooled, or the handle outlives this test and the fixture cannot clear its folder.
+        using var connection = new SqliteConnection(
+            $"Data Source={BackupPath(fixture)};Pooling=False");
+        connection.Open();
+        Assert.AreEqual(
+            1L,
+            TestDatabase.ScalarInt64(connection, "SELECT COUNT(*) FROM notes;"),
+            "The copy does not hold the note that was there when it was taken.");
+    }
+
+    [TestMethod]
+    public async Task A_second_attempt_keeps_the_first_copy()
+    {
+        // The first copy is the one taken before anything was touched. A later one would be of a
+        // database the walk has already been over, which is the least useful thing to keep.
+        await using TestDatabase fixture = TestDatabase.Create();
+        fixture.Database.Initialize();
+        var notes = new SqliteNoteRepository(fixture.Database, () => DateTimeOffset.UtcNow);
+        await Write(notes, 1, "- [ ] 예산안 초안");
+
+        string backup = BackupPath(fixture);
+        File.WriteAllText(backup, "the first attempt");
+
+        await ForgetTheWalkRanAsync(fixture);
+        await using TestDatabase reopened =
+            TestDatabase.CreateIn(Path.GetDirectoryName(fixture.DatabasePath)!);
+        reopened.Database.Initialize();
+
+        Assert.AreEqual("the first attempt", File.ReadAllText(backup));
+    }
+
+    private static string BackupPath(TestDatabase fixture) =>
+        Path.ChangeExtension(fixture.DatabasePath, null) + $".before-{TodoCaptureMigration.Name}.db";
+
+    /// <summary>
+    /// Drops the recorded row for the walk, so the next open has it pending again — which is what
+    /// a database that upgraded from an older build looks like.
+    /// </summary>
+    private static async Task ForgetTheWalkRanAsync(TestDatabase fixture) =>
+        await fixture.Database.WriteAsync<object?>(
+            (connection, transaction, _) =>
+            {
+                using SqliteCommand command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM schema_versions WHERE version = $version;";
+                command.Parameters.AddWithValue("$version", TodoCaptureMigration.Version);
+                command.ExecuteNonQuery();
+                return null;
+            });
+
     private static async Task<NoteId> Write(SqliteNoteRepository notes, int suffix, string body)
     {
         NoteId id = NoteId.Create(Guid.Parse($"00000000-0000-4000-8000-{suffix:D12}")).Value;

@@ -470,7 +470,14 @@ The order that makes that safe:
    - [x] `TodoCaptureMigration` is registered — in the same change, and that ordering is the
          point: the panels read entities now, so a database that upgraded without it would open
          with an empty to-do list and the user's checkboxes sitting in their notes as text.
-   - [ ] The automatic backup §8 requires in front of the migration.
+   - [x] The automatic backup §8 requires in front of the migration. A step can now declare that
+         it wants the database copied aside first, and the walk is the one that does: a schema
+         change can be reasoned about from its .sql file, while a walk that reads the user's prose
+         and writes rows from it cannot be un-walked. Taken with SQLite's own backup rather than a
+         file copy, because on a database in WAL mode the newest writes live in the -wal file and
+         copying the .db alone would miss exactly the work somebody would be recovering. Skipped
+         when there are no notes — a copy of nothing is a file to wonder about later — and never
+         overwritten, because the useful copy is the first one.
    - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
    - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).
    - [ ] The desktop's empty-state copy and the phone toolbar's `-[]` button still point at the
