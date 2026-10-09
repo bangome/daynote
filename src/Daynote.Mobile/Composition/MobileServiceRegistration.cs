@@ -148,6 +148,7 @@ public static class MobileServiceRegistration
             Account = sp.GetService<Daynote.App.Account.AccountViewModel>(),
             Store = sp.GetService<MobileStoreViewModel>(),
             Reminders = sp.GetService<Reminders.ReminderCoordinator>(),
+            AgendaChanged = platform.AgendaChanged,
             OpenFileExternally = platform.OpenFile ?? ((name, bytes) => LaunchAsync(topLevel, name, bytes)),
             PendingFileUploads = sp.GetService<ISyncStore>() is SqliteSyncStore syncStore
                 ? async token => await syncStore.ReadQueuedFileIdsAsync(token).ConfigureAwait(false)

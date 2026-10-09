@@ -194,8 +194,10 @@ public sealed partial class MobileShellViewModel
         RebuildCards();
 
         // Everything that changes a to-do - an edit, a tick, a delete, a sync pull, a language
-        // switch - comes through here, with every note already read.
+        // switch - comes through here, with every note already read. The home-screen widgets
+        // read the store themselves; they only need telling.
         RefreshReminders(items);
+        AgendaChanged?.Invoke();
     }
 
     private static string GroupLabel(TodoGroupKind kind) => kind switch

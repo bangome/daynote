@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×1 빠른 기록: + 노트 and @ 할 일, side by side in one pill. Its own picker preview too. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_pill_surface"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="6dp">
+  <TextView
+      android:id="@+id/widget_new_note"
+      android:layout_width="0dp"
+      android:layout_height="match_parent"
+      android:layout_weight="1"
+      android:background="@drawable/widget_pill_primary"
+      android:gravity="center"
+      android:maxLines="1"
+      android:minHeight="48dp"
+      android:text="@string/widget_new_note"
+      android:textColor="@color/widget_on_primary"
+      android:textSize="15sp"
+      android:textStyle="bold" />
+  <TextView
+      android:id="@+id/widget_new_todo"
+      android:layout_width="0dp"
+      android:layout_height="match_parent"
+      android:layout_marginStart="6dp"
+      android:layout_weight="1"
+      android:background="@drawable/widget_pill_tonal"
+      android:gravity="center"
+      android:maxLines="1"
+      android:minHeight="48dp"
+      android:text="@string/widget_new_todo"
+      android:textColor="@color/widget_on_tonal"
+      android:textSize="15sp"
+      android:textStyle="bold" />
+</LinearLayout>

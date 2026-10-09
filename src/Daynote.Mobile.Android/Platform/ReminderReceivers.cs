@@ -12,15 +12,37 @@ namespace Daynote.Mobile.Android.Platform;
 /// </summary>
 /// <remarks>
 /// Not exported: only the app's own alarms reach it. Everything the notification shows travels in
-/// the alarm's extras, so posting needs neither the database nor the UI.
+/// the alarm's extras, but whether to show it is asked of the store first
+/// (<see cref="ReminderGate"/>): the to-do may have been finished, moved or deleted since the
+/// alarm was armed, by a widget or another device, with the app not running to cancel it.
 /// </remarks>
 [BroadcastReceiver(Exported = false)]
 public sealed class ReminderAlarmReceiver : BroadcastReceiver
 {
     public override void OnReceive(Context? context, Intent? intent)
     {
-        if (context is null || intent is null
-            || context.GetSystemService(Context.NotificationService) is not NotificationManager manager)
+        if (context is null || intent is null)
+        {
+            return;
+        }
+
+        string id = intent.Data?.SchemeSpecificPart ?? string.Empty;
+        Widgets.DaynoteWidgets.RunAsync(this, async () =>
+        {
+            if (await ReminderGate.ShouldNotifyAsync(
+                    AndroidPlatformServices.ResolveDataRoot(context),
+                    new AndroidKeyStoreSecretProtector(),
+                    id,
+                    DateTime.Now).ConfigureAwait(false))
+            {
+                Post(context, intent, id);
+            }
+        });
+    }
+
+    private static void Post(Context context, Intent intent, string id)
+    {
+        if (context.GetSystemService(Context.NotificationService) is not NotificationManager manager)
         {
             return;
         }
@@ -31,7 +53,6 @@ public sealed class ReminderAlarmReceiver : BroadcastReceiver
             return;
         }
 
-        string id = intent.Data?.SchemeSpecificPart ?? string.Empty;
         string title = intent.GetStringExtra(AndroidReminderScheduler.ExtraTitle) ?? string.Empty;
         string body = intent.GetStringExtra(AndroidReminderScheduler.ExtraBody) ?? string.Empty;
         int code = ReminderPlanner.RequestCodeFor(id);

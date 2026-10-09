@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  updatePeriodMillis is 0: the widget is redrawn when a to-do changes (the app tells it), and at
+  the next moment it would look different by itself - midnight, a time passing, an event ending -
+  by an inexact alarm that does not wake the phone (Platform/Widgets/DaynoteWidgets.cs).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_day_description"
+    android:initialLayout="@layout/widget_day"
+    android:minWidth="250dp"
+    android:minHeight="250dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="180dp"
+    android:previewLayout="@layout/widget_day_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="4"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

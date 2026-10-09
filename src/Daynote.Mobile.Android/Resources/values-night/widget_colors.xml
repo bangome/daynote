@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The dark half of values/widget_colors.xml, from the Mobile B palette's dark theme. -->
+  <color name="widget_surface">#141729</color>
+  <color name="widget_row">#1C1F35</color>
+  <color name="widget_text">#ECEAF2</color>
+  <color name="widget_text2">#9A9CB3</color>
+  <color name="widget_text3">#6C6F88</color>
+  <color name="widget_primary">#FF9A52</color>
+  <color name="widget_on_primary">#1A1206</color>
+  <color name="widget_tonal">#3A2A22</color>
+  <color name="widget_on_tonal">#FFB27A</color>
+  <color name="widget_sun">#FF9A52</color>
+  <color name="widget_danger">#FF8076</color>
+</resources>

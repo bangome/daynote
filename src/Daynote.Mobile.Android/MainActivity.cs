@@ -49,8 +49,13 @@ public class MainActivity : AvaloniaMainActivity
         Current = this;
         base.OnCreate(savedInstanceState);
 
-        // Launched by tapping a to-do reminder: the shell opens its note once the day has loaded.
-        OpenReminder(Intent);
+        // Launched by tapping a to-do reminder or a widget: the shell acts once the day has loaded.
+        // Not when reopened from Recents, which replays the task's original intent with its extras
+        // still on it: that would open the reminder's note again, or make another new note.
+        if (!IsFromHistory(Intent) && !OpenReminder(Intent))
+        {
+            OpenWidget(Intent);
+        }
 
         // With three-button navigation Android lays a translucent grey scrim over the button bar for
         // contrast, which read as the bottom of the app being dimmed. The app paints that strip in its
@@ -136,7 +141,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnNewIntent(Intent? intent)
     {
         base.OnNewIntent(intent);
-        if (OpenReminder(intent))
+        if (IsFromHistory(intent) || OpenReminder(intent) || OpenWidget(intent))
         {
             return;
         }
@@ -146,6 +151,9 @@ public class MainActivity : AvaloniaMainActivity
             Platform.AndroidAuthSession.Complete(new Uri(data.ToString()!));
         }
     }
+
+    private static bool IsFromHistory(Intent? intent) =>
+        intent is not null && (intent.Flags & ActivityFlags.LaunchedFromHistory) != 0;
 
     /// <summary>A tapped to-do reminder carries its note's date and id; hands them to the app.</summary>
     private static bool OpenReminder(Intent? intent)
@@ -159,6 +167,22 @@ public class MainActivity : AvaloniaMainActivity
         intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraNote);
         intent.RemoveExtra(Platform.AndroidReminderScheduler.ExtraDate);
         App.OpenReminder(date, note);
+        return true;
+    }
+
+    /// <summary>A tap on a home-screen widget: today, a new note, or a new note with the @ bar up.</summary>
+    private static bool OpenWidget(Intent? intent)
+    {
+        if (intent?.GetStringExtra(Platform.Widgets.DaynoteWidgets.ExtraLaunch) is not { } name
+            || !Enum.TryParse(name, out ViewModels.WidgetLaunch launch))
+        {
+            return false;
+        }
+
+        // Taken off the intent, so recreating the activity does not open a second note.
+        intent.RemoveExtra(Platform.Widgets.DaynoteWidgets.ExtraLaunch);
+        intent.SetData(null);
+        App.OpenFromWidget(launch);
         return true;
     }
 

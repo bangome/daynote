@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Only what Android itself shows: the widget picker's names, descriptions and previews. What a
+    placed widget says comes from MobileCatalog, in the app's own language; these follow the
+    phone's, because the picker is the launcher's screen. values-ko/strings.xml is the Korean half.
+  -->
+  <string name="widget_today_label">Today</string>
+  <string name="widget_today_description">Today\'s to-dos, overdue ones first. Tap a ring to finish one.</string>
+  <string name="widget_next_label">Up next</string>
+  <string name="widget_next_description">Your next event, and when it is.</string>
+  <string name="widget_capture_label">Quick capture</string>
+  <string name="widget_capture_description">Start a note, or a to-do with @.</string>
+  <string name="widget_day_label">Day</string>
+  <string name="widget_day_description">This week, the next event and today\'s to-dos.</string>
+
+  <string name="widget_new_note">+ Note</string>
+  <string name="widget_new_todo">@ To-do</string>
+  <string name="widget_preview_today">Today</string>
+  <string name="widget_preview_date">Wednesday, Oct 7</string>
+  <string name="widget_preview_left">4 left</string>
+  <string name="widget_preview_up_next">Up next</string>
+  <string name="widget_preview_todo1">Confirm room booking</string>
+  <string name="widget_preview_todo2">Check logs before leaving</string>
+  <string name="widget_preview_todo3">Write release notes</string>
+  <string name="widget_preview_event">Design review</string>
+  <string name="widget_preview_event_span">16:00–17:30</string>
+  <string name="widget_preview_sun">Sun</string>
+  <string name="widget_preview_mon">Mon</string>
+  <string name="widget_preview_tue">Tue</string>
+  <string name="widget_preview_wed">Wed</string>
+  <string name="widget_preview_thu">Thu</string>
+  <string name="widget_preview_fri">Fri</string>
+  <string name="widget_preview_sat">Sat</string>
+</resources>
