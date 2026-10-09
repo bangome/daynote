@@ -39,3 +39,10 @@ only is a bug waiting to happen. The designer's own words, grouped by what they 
 | --- | --- |
 | **시각 있는 할 일의 위치** | The desktop timeline mixes them with events; the phone's Day screen keeps them in the to-do card. A layout difference that follows from the screen, with the same data behind it. |
 | **키 매핑** | Tab ↔ tapping the other row · Enter ↔ "만들기" (the button and the keyboard's return key) · Esc ↔ × (the typed text stays either way). |
+
+## Built differently from the drawing
+
+| | |
+| --- | --- |
+| **리턴키 라벨** | §01 has the keyboard's return key read "만들기" while the bar is up. The key *does* create — the bar claims it on the way down — but its label is set by the OS from a field-level hint that cannot be changed mid-session, so it still reads "줄바꾸". The "만들기" button on the selected line is on screen either way, which is why the bar exists. |
+| **리스트 색·Reminders 연결** | §03's long-press menu offers both. Neither exists: the schema has no colour column and the integration is §10. They are absent from the menu rather than greyed. |

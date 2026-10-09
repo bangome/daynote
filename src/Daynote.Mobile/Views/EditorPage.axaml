@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
              xmlns:views="using:Daynote.Mobile.Views"
+             xmlns:agenda="using:Daynote.Core.Agenda"
              x:Class="Daynote.Mobile.Views.EditorPage"
              x:DataType="vm:MobileShellViewModel"
              Background="{DynamicResource Mobile.Bg}">
@@ -89,7 +90,8 @@
     -->
     <TextBox Grid.Row="2" x:Name="Body" Classes="bare body" Text="{Binding Notes.EditorText}"
              TextInputOptions.Multiline="True" TextInputOptions.ReturnKeyType="Return"
-             PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}" />
+             PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}"
+             PropertyChanged="OnBodyPropertyChanged" />
 
     <!--
       The writing helpers. The note body carries a small syntax - a checkbox opens a line, a (M/D) or
@@ -146,19 +148,122 @@
         bar takes its place (phone §01); until that lands, a to-do is captured on the desktop or
         made in the list. Date and time stay: they stamp ordinary prose, which still reads.
       -->
-      <Grid ColumnDefinitions="*,4,*,4,44" Margin="12,8,12,0">
-        <Button Grid.Column="0" Classes="tool" Focusable="False" Click="OnInsertDate">
-          <TextBlock Text="{Binding Strings[InsertDate]}" />
-        </Button>
-        <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertTime">
-          <TextBlock Text="{Binding Strings[MobileInsertTime]}" />
-        </Button>
-        <!-- Attach: files belong to the day, so this is the day screen's same sheet. -->
-        <Button Grid.Column="4" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
-                AutomationProperties.Name="{Binding Strings[MobileFilesAdd]}">
-          <views:Glyph Kind="Paperclip" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
-        </Button>
-      </Grid>
+      <Panel>
+        <Grid ColumnDefinitions="*,4,*,4,44" Margin="12,8,12,0" IsVisible="{Binding !Capture.IsOpen}">
+          <Button Grid.Column="0" Classes="tool" Focusable="False" Click="OnInsertDate">
+            <TextBlock Text="{Binding Strings[InsertDate]}" />
+          </Button>
+          <Button Grid.Column="2" Classes="tool" Focusable="False" Click="OnInsertTime">
+            <TextBlock Text="{Binding Strings[MobileInsertTime]}" />
+          </Button>
+          <!-- Attach: files belong to the day, so this is the day screen's same sheet. -->
+          <Button Grid.Column="4" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
+                  AutomationProperties.Name="{Binding Strings[MobileFilesAdd]}">
+            <views:Glyph Kind="Paperclip" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
+          </Button>
+        </Grid>
+
+        <!--
+          The @ bar (phone §01). It takes the helpers' place rather than floating over the text:
+          the caret on a phone is almost always just above the keyboard, so a card that followed it
+          would cover the words it is reading back.
+
+          Nothing here is focusable. Taking focus would close the keyboard and move the caret, and
+          the whole bar exists to be read while the phrase after the @ is still being typed.
+        -->
+        <StackPanel Margin="12,8,12,0" Spacing="6" IsVisible="{Binding Capture.IsOpen}">
+          <Grid ColumnDefinitions="Auto,*,36">
+            <TextBlock Grid.Column="0" Classes="faint" FontSize="11.5" FontWeight="Bold" VerticalAlignment="Center"
+                       Text="{Binding Strings[AgendaCaptureTitleLabel]}" />
+            <!-- The title is already typed; the bar shows it rather than asking for it again (§7). -->
+            <TextBlock Grid.Column="1" Classes="line" Margin="8,0,0,0" FontSize="13.5" FontWeight="ExtraBold"
+                       VerticalAlignment="Center" Text="{Binding Capture.Title}" />
+            <Button Grid.Column="2" Classes="capclose" Focusable="False" Command="{Binding DismissCaptureCommand}"
+                    AutomationProperties.Name="{Binding Strings[MobileCancel]}">
+              <views:Glyph Kind="Close" Width="13" Height="13" Foreground="{DynamicResource Mobile.Text2}" />
+            </Button>
+          </Grid>
+
+          <!-- Nothing typed after the @ yet: an invitation and four examples, not an error. -->
+          <StackPanel Spacing="8" Margin="0,0,0,4" IsVisible="{Binding Capture.IsPrompting}">
+            <TextBlock Classes="faint" FontSize="12.5" TextWrapping="Wrap" Text="{Binding Capture.Prompt}" />
+            <ItemsControl ItemsSource="{Binding Capture.Examples}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <!-- A tap types the example for you; the parser then reads it like any other. -->
+                  <Button Classes="pill" Focusable="False" Click="OnCaptureExample">
+                    <TextBlock FontSize="13.5" FontWeight="SemiBold" Text="{Binding}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel IsVisible="{Binding !Capture.IsPrompting}">
+            <!--
+              The two readings, one above the other. They describe the same phrase in the two
+              shapes it could take, so choosing is choosing a shape, not re-entering a date. Each
+              row is its own tap target: a phone has no Tab key, and a swipe nobody can see is not
+              an affordance.
+            -->
+            <StackPanel Spacing="2" IsVisible="{Binding !IsCaptureBarCompact}">
+              <Button Classes="capline" Classes.on="{Binding Capture.IsTaskSelected}" Focusable="False"
+                      Command="{Binding SelectCaptureKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
+                <Grid ColumnDefinitions="46,*,Auto">
+                  <TextBlock Grid.Column="0" Classes="capkind" Text="{Binding Strings[AgendaCaptureTask]}" />
+                  <TextBlock Grid.Column="1" Classes="capread" Text="{Binding Capture.TaskLine}" />
+                  <Button Grid.Column="2" Classes="capmake" Focusable="False" IsVisible="{Binding Capture.IsTaskSelected}"
+                          Command="{Binding CommitCaptureCommand}">
+                    <TextBlock Text="{Binding Strings[AgendaCaptureCreate]}" />
+                  </Button>
+                </Grid>
+              </Button>
+              <Button Classes="capline" Classes.on="{Binding Capture.IsEventSelected}" Focusable="False"
+                      Command="{Binding SelectCaptureKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}">
+                <Grid ColumnDefinitions="46,*,Auto">
+                  <TextBlock Grid.Column="0" Classes="capkind" Text="{Binding Strings[AgendaCaptureEvent]}" />
+                  <TextBlock Grid.Column="1" Classes="capread" Text="{Binding Capture.EventLine}" />
+                  <Button Grid.Column="2" Classes="capmake" Focusable="False" IsVisible="{Binding Capture.IsEventSelected}"
+                          Command="{Binding CommitCaptureCommand}">
+                    <TextBlock Text="{Binding Strings[AgendaCaptureCreate]}" />
+                  </Button>
+                </Grid>
+              </Button>
+            </StackPanel>
+
+            <!--
+              Too little room above the keyboard for two lines (§01 ⑤): the kind becomes a pair of
+              chips and only the reading that would be made is spelled out. Folding is better than
+              scrolling here - a readback you have to scroll to is one nobody reads.
+            -->
+            <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding IsCaptureBarCompact}">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <Button Classes="capchip" Classes.on="{Binding Capture.IsTaskSelected}" Focusable="False"
+                        Command="{Binding SelectCaptureKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
+                  <TextBlock Text="{Binding Strings[AgendaCaptureTask]}" />
+                </Button>
+                <Button Classes="capchip" Classes.on="{Binding Capture.IsEventSelected}" Focusable="False"
+                        Command="{Binding SelectCaptureKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}">
+                  <TextBlock Text="{Binding Strings[AgendaCaptureEvent]}" />
+                </Button>
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="capread" Margin="10,0" Text="{Binding Capture.SelectedLine}" />
+              <Button Grid.Column="2" Classes="capmake" Focusable="False" Command="{Binding CommitCaptureCommand}">
+                <TextBlock Text="{Binding Strings[AgendaCaptureCreate]}" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <!--
+            The one thing worth saying out loud: a time read as tomorrow, or a repeat that will not
+            remind yet. Absent when there is nothing to warn about, so its presence is the signal.
+          -->
+          <TextBlock Classes="capnote" IsVisible="{Binding Capture.HasNote}" Text="{Binding Capture.Note}" />
+        </StackPanel>
+      </Panel>
     </Border>
   </Grid>
 
@@ -219,6 +324,84 @@
     </Style>
     <Style Selector="Button.tool.primary">
       <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <!-- ── The @ bar ─────────────────────────────────────────────────────────────────────────── -->
+    <Style Selector="Button.capclose">
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <!-- 44 points, so each reading is its own thumb target rather than a line of text. -->
+    <Style Selector="Button.capline">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.capline.on">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+    </Style>
+    <Style Selector="TextBlock.capkind">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Button.capline.on TextBlock.capkind">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
+    </Style>
+    <Style Selector="TextBlock.capread">
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+    </Style>
+    <Style Selector="Button.capline.on TextBlock.capread">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text}" />
+    </Style>
+    <Style Selector="Button.capmake">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <Style Selector="Button.capmake TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+    </Style>
+    <Style Selector="Button.capchip">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+    </Style>
+    <Style Selector="Button.capchip TextBlock">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Button.capchip.on">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+    </Style>
+    <Style Selector="Button.capchip.on TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+    </Style>
+    <Style Selector="TextBlock.capnote">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Margin" Value="4,2,4,0" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
     </Style>
     <Style Selector="Button.tool.primary TextBlock">
       <Setter Property="FontWeight" Value="Bold" />

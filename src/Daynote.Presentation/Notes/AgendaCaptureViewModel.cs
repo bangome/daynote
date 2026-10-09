@@ -61,6 +61,16 @@ public sealed partial class AgendaCaptureViewModel(ReadbackWidth width = Readbac
 
     public bool IsEventSelected => Kind == AgendaKind.Event;
 
+    /// <summary>
+    /// The chosen line alone, for the one-line bar a small phone falls back to: there the two
+    /// readings do not fit, so the bar shows the one it would make and the kind stays a pair of
+    /// chips beside it.
+    /// </summary>
+    public string SelectedLine => IsTaskSelected ? TaskLine : EventLine;
+
+    /// <summary>Whether there is anything worth saying under the lines. Usually there is not.</summary>
+    public bool HasNote => Note.Length > 0;
+
     /// <summary>Where in the body the <c>@</c> is, for the view to hang the popup off.</summary>
     public int AtIndex => state.AtIndex;
 
@@ -100,14 +110,24 @@ public sealed partial class AgendaCaptureViewModel(ReadbackWidth width = Readbac
             EventLine = string.Empty;
             Note = string.Empty;
         }
+
+        OnPropertyChanged(nameof(SelectedLine));
+        OnPropertyChanged(nameof(HasNote));
     }
 
     /// <summary>Tab. The two lines describe the same reading, so switching has to be cheap.</summary>
-    public void ToggleKind()
+    public void ToggleKind() => SelectKind(Kind == AgendaKind.Task ? AgendaKind.Event : AgendaKind.Task);
+
+    /// <summary>
+    /// A tap on one of the two lines, which is what the phone has instead of Tab: a 44-point row
+    /// under the thumb says what it will make, where a key does not exist.
+    /// </summary>
+    public void SelectKind(AgendaKind kind)
     {
-        Kind = Kind == AgendaKind.Task ? AgendaKind.Event : AgendaKind.Task;
+        Kind = kind;
         OnPropertyChanged(nameof(IsTaskSelected));
         OnPropertyChanged(nameof(IsEventSelected));
+        OnPropertyChanged(nameof(SelectedLine));
     }
 
     /// <summary>Esc. Creates nothing and leaves the text exactly as it was typed (§7).</summary>

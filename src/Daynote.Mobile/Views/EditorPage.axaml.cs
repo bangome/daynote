@@ -15,7 +15,14 @@ namespace Daynote.Mobile.Views;
 /// </summary>
 public partial class EditorPage : UserControl
 {
-    public EditorPage() => InitializeComponent();
+    public EditorPage()
+    {
+        InitializeComponent();
+
+        // On the way down, not on the way up: the box handles Enter itself (that is what puts a
+        // line break in the body), and a handler attached after it would never be reached.
+        BodyBox?.AddHandler(InputElement.KeyDownEvent, OnBodyKeyDown, RoutingStrategies.Tunnel);
+    }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
@@ -76,6 +83,10 @@ public partial class EditorPage : UserControl
         {
             toolbar.Padding = new Thickness(0, 0, 0, bottom > 0 ? bottom : 8);
         }
+
+        // The page has just been shortened to sit above the keyboard, which is the measurement the
+        // bar folds on.
+        UpdateCaptureBarRoom();
     }
 
     /// <summary>
@@ -129,6 +140,72 @@ public partial class EditorPage : UserControl
             e.Handled = true;
         }
     }
+
+    // ── The @ command (phone §01) ────────────────────────────────────────────────
+
+    /// <summary>
+    /// A caret move can open or close the bar just as a keystroke can — tapping away from a
+    /// half-typed "@내일" has to dismiss it — so both are the same question, asked here because the
+    /// box is the only thing that knows where the caret ended up.
+    /// </summary>
+    private void OnBodyPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property != TextBox.CaretIndexProperty && e.Property != TextBox.TextProperty)
+        {
+            return;
+        }
+
+        if (DataContext is MobileShellViewModel shell && BodyBox is { } box)
+        {
+            shell.Notes.UpdateCapture(Math.Clamp(box.CaretIndex, 0, (box.Text ?? string.Empty).Length));
+            UpdateCaptureBarRoom();
+        }
+    }
+
+    /// <summary>
+    /// The return key, while the bar is up and has read something: it makes the item instead of a
+    /// line break. The one key on a phone keyboard that can be given a second job, and only for as
+    /// long as the bar is there to say so.
+    /// </summary>
+    private void OnBodyKeyDown(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
+    {
+        if (args is not KeyEventArgs { Key: Key.Enter } e
+            || DataContext is not MobileShellViewModel { Capture: { IsOpen: true, IsPrompting: false } } shell)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        shell.CommitCaptureCommand.Execute(null);
+    }
+
+    /// <summary>A tap on an example types it, so the parser reads it like anything else.</summary>
+    private void OnCaptureExample(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not string example)
+        {
+            return;
+        }
+
+        (string text, int caret) = Read();
+        Write(text.Insert(caret, example), caret + example.Length);
+    }
+
+    /// <summary>
+    /// Whether the bar still has room for both readings (§01 ⑤). Measured rather than guessed from
+    /// the screen size: a split-screen window and a tall keyboard leave the same gap as a small
+    /// phone, and the bar should fold for all three.
+    /// </summary>
+    private void UpdateCaptureBarRoom()
+    {
+        if (DataContext is MobileShellViewModel shell)
+        {
+            shell.IsCaptureBarCompact = Bounds.Height > 0 && Bounds.Height < CaptureBarTwoLineRoom;
+        }
+    }
+
+    /// <summary>The design's threshold: under this much above the keyboard, one line.</summary>
+    private const double CaptureBarTwoLineRoom = 230;
 
     // ── The writing helpers ──────────────────────────────────────────────────────────────────────
 

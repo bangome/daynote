@@ -801,6 +801,7 @@ internal static class EnglishStrings
 
         // The built-in to-do list stores no name, so that it reads in whichever language
         // the app is in. A rename writes a real one and it stops being translated.
+        ["AgendaCaptureCreate"] = "Create",
         ["AgendaListDefaultName"] = "My tasks",
 
         ["AgendaListNew"] = "+ New list",

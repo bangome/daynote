@@ -42,7 +42,8 @@ public sealed class NoteWorkspaceDependencies
         TimeSpan? debounce = null,
         ToggleNoteFavorite? toggleFavorite = null,
         SetNoteTags? setTags = null,
-        Daynote.Core.Agenda.IAgendaRepository? agenda = null)
+        Daynote.Core.Agenda.IAgendaRepository? agenda = null,
+        ReadbackWidth captureWidth = ReadbackWidth.Full)
     {
         Repository = repository ?? throw new ArgumentNullException(nameof(repository));
         GetDayWorkspace = getDayWorkspace ?? throw new ArgumentNullException(nameof(getDayWorkspace));
@@ -55,6 +56,7 @@ public sealed class NoteWorkspaceDependencies
         ToggleFavorite = toggleFavorite;
         SetTags = setTags;
         Agenda = agenda;
+        CaptureWidth = captureWidth;
     }
 
     public INoteRepository Repository { get; }
@@ -85,6 +87,12 @@ public sealed class NoteWorkspaceDependencies
     /// the phrase back and makes nothing, which is the honest behaviour for a half-wired app.
     /// </summary>
     public Daynote.Core.Agenda.IAgendaRepository? Agenda { get; }
+
+    /// <summary>
+    /// How much room the @ readback has. The phone's bar sits in the keyboard accessory slot and
+    /// says the same readings in fewer characters; the desktop popup has a card to itself.
+    /// </summary>
+    public ReadbackWidth CaptureWidth { get; }
 }
 
 /// <summary>

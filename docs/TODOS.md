@@ -497,7 +497,16 @@ The order that makes that safe:
          affordance, as on a file row.
    - [ ] Colour, and connecting a list to Reminders. Both are in §04's menu and neither exists:
          the schema has no colour column and the integration is §10.
-   - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).
+   - [x] The phone's `@` bar (phone §01). The keyboard accessory slot rather than a card at the
+         caret: on a phone the caret is almost always just above the keyboard, so a card that
+         followed it would cover the words it is reading back. The readings, the title and what
+         Create makes are the desktop's — `AgendaCapture` and `AgendaReadback`, asked at
+         `ReadbackWidth.Compact` — so the two shells cannot read the same phrase differently.
+         Tapping a line replaces Tab, the return key replaces Enter (tunnelled, because the box
+         handles Enter itself), the × replaces Esc. Under 230 points above the keyboard the bar
+         folds to one line, measured rather than guessed from the screen size.
+   - [ ] The phone's creation feedback (phone §02): the toolbar's "이 노트의 항목 N", the row
+         that rises for 2.5 seconds, and the sheet of what this note made.
    - [x] The copy and the buttons stopped pointing at a syntax the app no longer reads (§99).
          The empty state says to type `@`; the phone toolbar's `-[]` button is gone, because the
          only thing it could insert now is text that looks like a checkbox. Date and time stay —

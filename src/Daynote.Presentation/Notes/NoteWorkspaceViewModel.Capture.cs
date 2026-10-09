@@ -14,7 +14,14 @@ namespace Daynote.App.Notes;
 public sealed partial class NoteWorkspaceViewModel
 {
     /// <summary>The popup's state. Always present; <c>IsOpen</c> says whether it is on screen.</summary>
-    public AgendaCaptureViewModel Capture { get; } = new();
+    /// <remarks>
+    /// Built lazily so it can read the width out of the dependencies the workspace was given,
+    /// without that one setting having to be threaded through a constructor it has nothing else
+    /// to do with.
+    /// </remarks>
+    public AgendaCaptureViewModel Capture => capture ??= new AgendaCaptureViewModel(_dependencies.CaptureWidth);
+
+    private AgendaCaptureViewModel? capture;
 
     /// <summary>
     /// Re-reads the body under the caret. The view calls this on every keystroke and every caret

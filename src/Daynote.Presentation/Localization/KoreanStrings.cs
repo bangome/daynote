@@ -791,6 +791,7 @@ internal static class KoreanStrings
 
         // The built-in to-do list stores no name, so that it reads in whichever language
         // the app is in. A rename writes a real one and it stops being translated.
+        ["AgendaCaptureCreate"] = "만들기",
         ["AgendaListDefaultName"] = "내 할 일",
 
         ["AgendaListNew"] = "+ 새 리스트",

@@ -877,6 +877,9 @@ public static class AppStrings
     public static string AgendaCaptureKeyHints => LocalizationService.Instance[nameof(AgendaCaptureKeyHints)];
 
     /// <summary>What the built-in list is called on screen; it stores no name of its own.</summary>
+    /// <summary>The phone bar's button. The desktop popup says the same thing with a ↵ glyph.</summary>
+    public static string AgendaCaptureCreate => LocalizationService.Instance[nameof(AgendaCaptureCreate)];
+
     public static string AgendaListDefaultName => LocalizationService.Instance[nameof(AgendaListDefaultName)];
 
     public static string AgendaListNew => LocalizationService.Instance[nameof(AgendaListNew)];
