@@ -1,0 +1,71 @@
+# The macOS widgets and the helper the .NET app loads to talk to WidgetKit.
+# `xcodegen generate` (in this folder) rebuilds DaynoteMac.xcodeproj from this file; the generated
+# project is committed so a machine without XcodeGen can still build. scripts/Build-MacApp.sh runs
+# xcodebuild against it and embeds the results (docs/APPLE_EXTENSIONS.md, "macOS").
+name: DaynoteMac
+options:
+  bundleIdPrefix: cc.arachat.daynote
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: 4T8C76SP99
+    MARKETING_VERSION: "1.5.0"
+    CURRENT_PROJECT_VERSION: "1.5.0"
+    SWIFT_VERSION: "5.0"
+    DAYNOTE_APP_GROUP: 4T8C76SP99.group.cc.arachat.daynote
+    # Signing is Build-MacApp.sh's job: it signs the whole bundle inside-out once it is assembled.
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGN_IDENTITY: ""
+    ENABLE_HARDENED_RUNTIME: YES
+targets:
+  DaynoteWidgets:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Widgets
+      - Shared
+      # The phone's glance model, shared word for word: the same snapshot, queue and strings.
+      - path: ../apple/Shared/Model
+        includes: [GlanceSnapshot.swift, GlanceStore.swift, LocalTime.swift, GlanceText.swift]
+      - path: ../../src/Daynote.Desktop/Assets/Fonts
+        buildPhase: resources
+        type: folder
+        excludes: ["LICENSE-Pretendard.txt"]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cc.arachat.daynote.widgets
+        PRODUCT_NAME: DaynoteWidgets
+        INFOPLIST_FILE: Widgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widgets/DaynoteWidgets.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+  DaynoteWidgetBridge:
+    type: library.dynamic
+    platform: macOS
+    sources:
+      - Bridge
+    settings:
+      base:
+        PRODUCT_NAME: DaynoteWidgetBridge
+        EXECUTABLE_PREFIX: lib
+        # The .NET app loads it from Contents/MacOS by name, beside its own native libraries.
+        LD_DYLIB_INSTALL_NAME: "@rpath/libDaynoteWidgetBridge.dylib"
+        # 12.0 like the app: on 12 and 13 there are no widgets to reload, and the call is a no-op.
+        MACOSX_DEPLOYMENT_TARGET: "12.0"
+        SKIP_INSTALL: YES
+  DaynoteWidgetPreviews:
+    type: tool
+    platform: macOS
+    sources:
+      - Previews
+      - Shared
+      - path: ../apple/Shared/Model
+        includes: [GlanceSnapshot.swift, GlanceStore.swift, LocalTime.swift, GlanceText.swift]
+    settings:
+      base:
+        PRODUCT_NAME: DaynoteWidgetPreviews

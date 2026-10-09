@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "generatedUtc": "2026-10-07T05:30:00Z",
+  "zone": "Asia/Seoul",
+  "language": "ko",
+  "today": "2026-10-07",
+  "locked": false,
+  "lists": [
+    { "id": "00000000-0000-0000-0000-00000000da7e", "name": "할 일", "color": "#ee7f35", "colorDark": "#ff9a52" },
+    { "id": "22222222-2222-4222-8222-222222222222", "name": "업무", "color": "#5a64c4", "colorDark": "#9ca1c6" },
+    { "id": "33333333-3333-4333-8333-333333333333", "name": "건강", "color": "#2fa36b", "colorDark": "#3dd68c" }
+  ],
+  "days": [
+    {
+      "date": "2026-10-07",
+      "todos": [
+        { "id": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e01", "title": "회의실 예약 확인", "listId": "00000000-0000-0000-0000-00000000da7e", "time": "14:00", "repeats": false, "done": false },
+        { "id": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e02", "title": "퇴근 전 로그 확인", "listId": "22222222-2222-4222-8222-222222222222", "time": "18:00", "repeats": false, "done": false },
+        { "id": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e03", "title": "릴리즈 노트 작성", "listId": "00000000-0000-0000-0000-00000000da7e", "repeats": false, "done": false },
+        { "id": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e04", "seriesId": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e04", "occurrence": "2026-10-07T00:00", "title": "비타민 먹기", "listId": "33333333-3333-4333-8333-333333333333", "repeats": true, "done": false }
+      ],
+      "events": [
+        { "id": "8a3c1e4e-0f6b-4c55-9d8e-1a2b3c4d5e10", "title": "디자인 리뷰", "listId": "00000000-0000-0000-0000-00000000da7e", "start": "16:00", "end": "17:00", "repeats": false }
+      ]
+    },
+    { "date": "2026-10-08", "todos": [], "events": [] }
+  ],
+  "week": [
+    { "date": "2026-10-04", "noteCount": 0, "titles": [] },
+    { "date": "2026-10-05", "noteCount": 1, "titles": ["주간 계획"] },
+    { "date": "2026-10-06", "noteCount": 0, "titles": [] },
+    { "date": "2026-10-07", "noteCount": 2, "titles": ["회의록", "아이디어"] },
+    { "date": "2026-10-08", "noteCount": 1, "titles": ["메모"] },
+    { "date": "2026-10-09", "noteCount": 0, "titles": [] },
+    { "date": "2026-10-10", "noteCount": 1, "titles": ["주말"] }
+  ],
+  "favorites": []
+}
