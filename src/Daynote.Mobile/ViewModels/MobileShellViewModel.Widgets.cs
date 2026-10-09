@@ -57,8 +57,14 @@ public sealed partial class MobileShellViewModel
     /// A row ticked on a widget while the app is running: the same tick as the app's own, then a
     /// sync soon, since nobody is going to save a note to set one off.
     /// </summary>
+    /// <remarks>
+    /// Immediate: a widget has no row to animate and no wait to take back. A tick the app itself is
+    /// still holding on the same row (motion spec M3) is dropped, or its write would follow this one
+    /// and undo it.
+    /// </remarks>
     public async Task ToggleFromWidgetAsync(AgendaDayRow row)
     {
+        Ticks.Cancel(Daynote.App.Shell.Product.TodoItemViewModel.KeyOf(row));
         await ToggleTodoAsync(row).ConfigureAwait(true);
         _syncScheduler?.NotifySaved();
     }
