@@ -77,6 +77,10 @@ def main():
         name = PREFIX + identifier
         for old in call("GET", f"/v1/profiles?filter[name]={urllib.request.quote(name)}&limit=20")["data"]:
             call("DELETE", f"/v1/profiles/{old['id']}")
+            # The installed copy too, or a lookup by name could find the dead one first.
+            stale = os.path.join(PROFILES, old["attributes"]["uuid"] + ".mobileprovision")
+            if os.path.exists(stale):
+                os.remove(stale)
 
         profile = call("POST", "/v1/profiles", {"data": {
             "type": "profiles",
