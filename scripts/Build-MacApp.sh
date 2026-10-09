@@ -135,9 +135,14 @@ elif [ "$WIDGETS" = "0" ]; then
 else
   # Inside-out and without --deep: --deep would re-sign the extension with the app's entitlements
   # and strip its sandbox. Everything in MacOS first, then the extension, then the app.
-  CERT_TEAM="$(security find-certificate -c "$IDENTITY" -p 2>/dev/null | openssl x509 -noout -subject 2>/dev/null \
-    | sed -n 's/.*OU *= *\([A-Z0-9]\{10\}\).*/\1/p')"
-  if [ -n "$CERT_TEAM" ] && [ "$CERT_TEAM" != "$TEAM_ID" ]; then
+  # The identity may be given by name or by its SHA-1; find-certificate only takes a name.
+  CERT_NAME="$(security find-identity -v -p codesigning | grep -F "$IDENTITY" | head -1 | sed -n 's/.*"\(.*\)".*/\1/p' || true)"
+  CERT_TEAM="$(security find-certificate -c "${CERT_NAME:-$IDENTITY}" -p 2>/dev/null | openssl x509 -noout -subject 2>/dev/null \
+    | sed -n 's/.*OU *= *\([A-Z0-9]\{10\}\).*/\1/p' || true)"
+  if [ -z "$CERT_TEAM" ]; then
+    echo "error: cannot read the team of $IDENTITY; the App Group $APP_GROUP must belong to it" >&2
+    exit 1
+  elif [ "$CERT_TEAM" != "$TEAM_ID" ]; then
     echo "error: $IDENTITY belongs to team $CERT_TEAM, but the App Group is $APP_GROUP (DAYNOTE_TEAM_ID)" >&2
     exit 1
   fi
