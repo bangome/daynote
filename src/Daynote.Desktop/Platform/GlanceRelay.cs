@@ -22,8 +22,9 @@ namespace Daynote.Desktop.Platform;
 /// <para>
 /// <b>An action is deleted when it is done or can never be done</b> — applied, unreadable, or
 /// naming a row that no longer exists, which the applier answers without throwing. One that
-/// throws is kept for the next drain: a busy database or a store not ready yet will be fine in a
-/// moment. Kept for at most <see cref="RetryFor"/>, so one that always throws cannot sit there
+/// throws, or that the applier answers with <see cref="GlanceApplied.Retry"/> (a note that would
+/// not save just now), is kept for the next drain: a busy database or a store not ready yet will
+/// be fine in a moment. Kept for at most <see cref="RetryFor"/>, so one that always throws cannot sit there
 /// forever.
 /// </para>
 /// <para>
@@ -36,7 +37,7 @@ namespace Daynote.Desktop.Platform;
 public sealed class GlanceRelay(
     GlanceFolder folder,
     Func<Task<GlanceSnapshot>> build,
-    Func<GlanceAction, Task> apply,
+    Func<GlanceAction, Task<bool>> apply,
     Func<Task> afterDrain,
     Action reload,
     Func<DateTime>? utcNow = null)
@@ -129,19 +130,25 @@ public sealed class GlanceRelay(
         {
             if (action is not null)
             {
+                string? retry;
                 try
                 {
-                    await apply(action).ConfigureAwait(true);
+                    retry = await apply(action).ConfigureAwait(true) ? "it asked to be tried again" : null;
                 }
                 catch (Exception exception) when (exception is not (OperationCanceledException or OutOfMemoryException))
                 {
+                    retry = exception.Message;
+                }
+
+                if (retry is not null)
+                {
                     if (utcNow() - File.GetLastWriteTimeUtc(path) < RetryFor)
                     {
-                        System.Diagnostics.Trace.TraceWarning($"Applying {action.Type} {action.Id} failed, kept for retry: {exception.Message}");
+                        System.Diagnostics.Trace.TraceWarning($"Applying {action.Type} {action.Id} kept for retry: {retry}");
                         continue;
                     }
 
-                    System.Diagnostics.Trace.TraceError($"Applying {action.Type} {action.Id} kept failing, dropped: {exception}");
+                    System.Diagnostics.Trace.TraceError($"Applying {action.Type} {action.Id} kept failing, dropped: {retry}");
                 }
             }
 

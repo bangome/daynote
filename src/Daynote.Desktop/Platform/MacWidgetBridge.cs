@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Daynote.App.Composition;
 using Daynote.App.Glance;
 using Daynote.App.Localization;
+using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
@@ -67,7 +68,13 @@ public sealed partial class MacWidgetBridge : IDisposable
         _relay = new GlanceRelay(
             new GlanceFolder(Path.Combine(container, GlanceFolderName)),
             BuildAsync,
-            action => new GlanceActionApplier(_agenda, AppendNoteLineAsync).ApplyAsync(action),
+            async action => (await new GlanceActionApplier(
+                _agenda,
+                AppendNoteLineAsync,
+                // A tick held by the panel (motion M3) on the same row would otherwise be written
+                // after this one and untick it.
+                beforeComplete: row => _shell.Ticks.Cancel(TodoItemViewModel.KeyOf(row)))
+                .ApplyAsync(action).ConfigureAwait(true)).Retry,
             () => _shell.Todo.RefreshAsync(),
             Native.Reload);
 

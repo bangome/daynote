@@ -63,6 +63,8 @@ public sealed class GlanceRelayTests
                 _folder.Enqueue(Complete("b"));
                 await relay!.DrainAsync();
             }
+
+            return false;
         });
         await relay.StartAsync();
         _folder.Enqueue(Complete("a"));
@@ -87,7 +89,7 @@ public sealed class GlanceRelayTests
             }
 
             _applied.Add(action.Id);
-            return Task.CompletedTask;
+            return Task.FromResult(false);
         });
         await relay.StartAsync();
         _folder.Enqueue(Complete("a"));
@@ -103,6 +105,27 @@ public sealed class GlanceRelayTests
 
         CollectionAssert.AreEqual(new[] { "a" }, _applied);
         Assert.IsEmpty(_folder.ReadActions());
+    }
+
+    [TestMethod]
+    public async Task An_action_the_applier_asks_to_retry_is_kept()
+    {
+        bool retry = true;
+        GlanceRelay relay = Relay(apply: action =>
+        {
+            _applied.Add(action.Id);
+            return Task.FromResult(retry);
+        });
+        await relay.StartAsync();
+        _folder.Enqueue(Complete("a"));
+
+        await relay.DrainAsync();
+        Assert.HasCount(1, _folder.ReadActions());
+
+        retry = false;
+        await relay.DrainAsync();
+        Assert.IsEmpty(_folder.ReadActions());
+        CollectionAssert.AreEqual(new[] { "a", "a" }, _applied);
     }
 
     [TestMethod]
@@ -141,13 +164,13 @@ public sealed class GlanceRelayTests
         StringAssert.Contains(File.ReadAllText(_folder.SnapshotPath), "회의실 예약 확인");
     }
 
-    private GlanceRelay Relay(Func<GlanceAction, Task>? apply = null, Func<DateTime>? utcNow = null) => new(
+    private GlanceRelay Relay(Func<GlanceAction, Task<bool>>? apply = null, Func<DateTime>? utcNow = null) => new(
         _folder,
         () => Task.FromResult(_current),
         apply ?? (action =>
         {
             _applied.Add(action.Id);
-            return Task.CompletedTask;
+            return Task.FromResult(false);
         }),
         () =>
         {

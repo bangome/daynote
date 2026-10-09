@@ -309,7 +309,10 @@ the app itself has to be sandboxed — out of scope for direct download.
   the republish rather than un-ticked by it. Each file is applied with `GlanceActionApplier` — a
   completion completes, so a repeat is harmless — and deleted once applied or once it can never
   apply (unreadable, or naming a row that is gone, which the applier answers without throwing). One
-  that throws — a busy database — is kept for the next drain, for at most a day. Then the panel
+  that throws — a busy database — or that the applier answers with `Retry` is kept for the next
+  drain, for at most a day, as `GlanceCoordinator` does on the phone. A completion first cancels any
+  tick the panel is holding on the same row (motion M3, `beforeComplete`), so the held tick cannot
+  be written afterwards and untick it. Then the panel
   refreshes and the snapshot is republished regardless, replacing the widget's guess.
   `GlanceRelay` holds this logic; `GlanceRelayTests` drives it.
 - **One folder for every profile.** The group container, and so `Glance/`, belongs to the Mac
