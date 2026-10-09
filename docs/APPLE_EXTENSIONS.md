@@ -42,11 +42,12 @@ no Objective-C surface for .NET to bind. So:
 | App Group | `group.cc.arachat.daynote`, folder `Glance` inside it |
 | URL scheme | `daynote://` (§7) |
 
-App Groups is enabled on all four App IDs. **The group itself has to be created and assigned in
-the developer portal** (Identifiers → App Groups → +, then each App ID → App Groups → Configure):
-the App Store Connect API has no endpoint for groups. Until it is, every profile carries an empty
-group list and a device install refuses the App Group entitlement. After assigning it, run
-`scripts/New-AppleGlanceProfiles.py` again (§8).
+App Groups is enabled on all four App IDs, and the group exists and is assigned to them
+(2026-10-09; the App Store Connect API has no endpoint for groups, so that was done in the
+developer portal). Assigning a group invalidates every profile for the App ID: regenerate the four
+"Daynote Glance" profiles with `scripts/New-AppleGlanceProfiles.py` and "cc.arachat.daynote
+AppStore" likewise, and check each grants the group (`security cms -D -i <profile>`). The build
+script refuses to embed the extensions with a profile that does not.
 
 ## 3. The snapshot (`Glance/snapshot.json`)
 
