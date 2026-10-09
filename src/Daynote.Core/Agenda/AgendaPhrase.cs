@@ -120,6 +120,90 @@ public static class AgendaPhraseParser
         ? new WallClock(phrase.At.Value + DefaultEventLength)
         : null;
 
+    /// <summary>
+    /// Reads a date off the end of a sentence that has no <c>@</c> in it, and answers with what is
+    /// left in front of it as the title — the watch's dictation (Apple Watch design §03).
+    /// </summary>
+    /// <remarks>
+    /// Nobody can type <c>@</c> into a dictation, so the phrase has to be found rather than
+    /// marked. It is the <b>longest</b> run of whole words at the end that reads completely, which
+    /// is the same reading <see cref="Parse"/> gives when the same words follow an <c>@</c>: "회의자료
+    /// 초안 공유 오늘 5시" is the title "회의자료 초안 공유" and the phrase "오늘 5시", exactly as
+    /// "회의자료 초안 공유 @오늘 5시" would be in the editor.
+    /// <para>
+    /// Spoken sentences carry a few words a typed phrase does not: the full stop dictation adds,
+    /// a Korean particle on the last word ("5시에", "내일까지"), and English's "at" between a
+    /// day and a time or "on"/"by" in front of the day. Those are read past here rather than taught
+    /// to the parser, so the editor's <c>@</c> keeps exactly the grammar it has.
+    /// </para>
+    /// <para>
+    /// Null when no date was found, or when the whole sentence was a date and nothing is left to
+    /// call it — the watch then offers only "노트에 한 줄".
+    /// </para>
+    /// </remarks>
+    public static (string Title, AgendaPhrase Phrase)? ParseTrailing(string? text, DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        string sentence = text.Trim().TrimEnd('.', '!', '?', '。').TrimEnd();
+        foreach (string particle in TrailingParticles)
+        {
+            // Only stuck to the word before it: on its own it is a word, not a particle.
+            if (sentence.Length > particle.Length && sentence.EndsWith(particle, StringComparison.Ordinal)
+                && !char.IsWhiteSpace(sentence[^(particle.Length + 1)]))
+            {
+                sentence = sentence[..^particle.Length];
+                break;
+            }
+        }
+
+        // From the front, so the first reading found is the longest. One that starts at the very
+        // front leaves nothing to be the title, and a shorter one would only be making one up.
+        for (int start = 0; start < sentence.Length; start++)
+        {
+            if ((start > 0 && !char.IsWhiteSpace(sentence[start - 1])) || char.IsWhiteSpace(sentence[start]))
+            {
+                continue;
+            }
+
+            string phrase = DropConnector(sentence[start..]);
+            if (Parse(phrase, now) is { } reading && reading.Length == phrase.TrimEnd().Length)
+            {
+                string title = TrimConnectorAtEnd(sentence[..start].TrimEnd());
+                return title.Length == 0 ? null : (title, reading);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A particle a spoken Korean sentence leaves on its last word: "5시에", "내일까지".</summary>
+    private static readonly string[] TrailingParticles = ["까지", "에"];
+
+    /// <summary>English connectors that sit inside or in front of a spoken date.</summary>
+    private static readonly string[] Connectors = ["at", "on", "by"];
+
+    /// <summary>"today at 5pm" reads as "today 5pm": the parser takes a day and then a time, with nothing between.</summary>
+    private static string DropConnector(string phrase)
+    {
+        string[] words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length > 1
+            ? string.Join(' ', words.Where((word, index) => index == 0 || !Connectors.Contains(word, StringComparer.OrdinalIgnoreCase)))
+            : phrase;
+    }
+
+    /// <summary>"Call mom on" in front of "Friday" is the title "Call mom".</summary>
+    private static string TrimConnectorAtEnd(string title)
+    {
+        int space = title.LastIndexOf(' ');
+        return space > 0 && Connectors.Contains(title[(space + 1)..], StringComparer.OrdinalIgnoreCase)
+            ? title[..space].TrimEnd()
+            : title;
+    }
+
     private static string? ReadRecurrence(ref Scanner scan, out DayOfWeek? day)
     {
         day = null;
