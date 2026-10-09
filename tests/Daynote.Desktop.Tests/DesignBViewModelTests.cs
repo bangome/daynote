@@ -176,18 +176,23 @@ public sealed class DesignBViewModelTests
         WithShell(shell =>
         {
             LocalDate today = shell.SelectedDate;
-            WriteNote(shell, "-[] 오늘 하나\n-[x] 오늘 끝낸 것");
+            AddTodo(shell, "오늘 하나");
+            AddTodo(shell, "오늘 끝낸 것", done: true);
             Wait(shell.SelectDateAsync(LocalDates.AddDays(today, -1)));
-            WriteNote(shell, "-[] 어제 것");
+            AddTodo(shell, "어제 것");
             Wait(shell.SelectDateAsync(today));
             Wait(shell.Todo.RefreshAsync());
 
+            // Finished rows moved to their own collapsed list; the day is a record of itself, so
+            // they are still here, just not in the way of what is left.
             CollectionAssert.AreEquivalent(
-                new[] { "오늘 하나", "오늘 끝낸 것" },
+                new[] { "오늘 하나" },
                 shell.DayTodos.Select(static t => t.Text).ToArray());
-            Assert.AreEqual("1 / 2", shell.DayTodoCountText);
+            CollectionAssert.AreEquivalent(
+                new[] { "오늘 끝낸 것" },
+                shell.DayTodosDone.Select(static t => t.Text).ToArray());
+            Assert.IsTrue(shell.HasDayDone);
             Assert.IsFalse(shell.IsDayTodoEmpty);
-            Assert.IsFalse(shell.DayTodos[0].Checked, "Open to-dos come before finished ones.");
         });
     }
 
@@ -372,6 +377,48 @@ public sealed class DesignBViewModelTests
         }
     }
 
+    /// <summary>The graph behind the running shell, so a test can seed what the shell reads.</summary>
+    private static ServiceProvider? _provider;
+
+    /// <summary>
+    /// Stores one to-do on the selected day, the way the @ command would.
+    /// </summary>
+    /// <remarks>
+    /// Written through the repository rather than as a <c>-[]</c> line in a note: the panels read
+    /// to-do entities now, and a checkbox in a body is text that looks like one.
+    /// </remarks>
+    private static void AddTodo(DesktopShellViewModel shell, string title, bool done = false)
+    {
+        var agenda = _provider!.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>();
+        DateOnly day = LocalDates.ToDateOnly(shell.SelectedDate);
+        Wait(agenda.SaveAsync(new Daynote.Core.Agenda.AgendaItem(
+            Guid.NewGuid(),
+            Daynote.Core.Agenda.AgendaList.DefaultId,
+            Daynote.Core.Agenda.AgendaKind.Task,
+            title,
+            string.Empty,
+            "Asia/Seoul",
+            StartsAt: null,
+            EndsAt: null,
+            DueAt: new Daynote.Core.Agenda.WallClock(day.ToDateTime(new TimeOnly(10, 0))),
+            HasDueTime: true,
+            Rrule: null,
+            SeriesId: null,
+            RecurrenceId: null,
+            done
+                ? Daynote.Core.Agenda.AgendaStatus.Completed
+                : Daynote.Core.Agenda.AgendaStatus.NeedsAction,
+            CompletedUtc: done ? DateTimeOffset.UtcNow : null,
+            Priority: 0,
+            Daynote.Core.Agenda.TimelineVisibility.Auto,
+            SourceNoteId: null,
+            ExceptionDates: [],
+            Daynote.Core.Agenda.AgendaAlert.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow)).AsTask());
+        Pump();
+    }
+
     private static void WriteNote(DesktopShellViewModel shell, string body)
     {
         Wait(shell.NewNoteCommand.ExecuteAsync(null));
@@ -398,6 +445,7 @@ public sealed class DesignBViewModelTests
             }
 
             ServiceProvider provider = services.BuildServiceProvider();
+            _provider = provider;
             var shell = provider.GetRequiredService<DesktopShellViewModel>();
             try
             {

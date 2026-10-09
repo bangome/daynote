@@ -29,6 +29,8 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
 
     private readonly IClock _clock;
     private readonly INoteRepository _repository;
+    private readonly Daynote.Core.Agenda.IAgendaRepository _agenda;
+    private readonly Daynote.Core.Agenda.ToggleAgendaItem _toggleAgenda;
     private readonly ISettingsStore _settings;
     private readonly IThemeApplier _themeApplier;
     private bool _loading;
@@ -40,6 +42,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         IClock clock,
         SearchService searchService,
         INoteRepository repository,
+        Daynote.Core.Agenda.IAgendaRepository agenda,
         AddDayFile addDayFile,
         ListDayFiles listDayFiles,
         DeleteDayFile deleteDayFile,
@@ -52,12 +55,14 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         Notes = notes ?? throw new ArgumentNullException(nameof(notes));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
+        _toggleAgenda = new Daynote.Core.Agenda.ToggleAgendaItem(agenda);
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _themeApplier = themeApplier ?? throw new ArgumentNullException(nameof(themeApplier));
         ArgumentNullException.ThrowIfNull(searchService);
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
-        Todo = new TodoPanelViewModel(repository, clock, ToggleTodoAsync, JumpToTodoAsync);
+        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, JumpToTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
@@ -349,45 +354,15 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
     private Task RemoveTag(string? tag) =>
         string.IsNullOrEmpty(tag) ? Task.CompletedTask : RemoveTagAsync(tag);
 
-    private async Task ToggleTodoAsync(TodoLine line)
+    /// <summary>
+    /// Ticks a to-do. It used to rewrite the <c>-[]</c> line in the note body; the to-do is its
+    /// own row now, and on an occurrence of a rule this writes an override rather than touching
+    /// the rule (docs/TODOS.md §5).
+    /// </summary>
+    private async Task ToggleTodoAsync(Daynote.Core.Agenda.AgendaDayRow row)
     {
-        DomainResult<NoteId> id = NoteId.Create(line.NoteId);
-        if (!id.IsSuccess)
-        {
-            return;
-        }
-
-        DayWorkspace workspace = await _repository.GetDayWorkspaceStateAsync(line.Date).ConfigureAwait(true);
-        Note? note = workspace.Notes.Notes.FirstOrDefault(n => !n.IsProjection && n.Id == id.Value);
-        if (note is null)
-        {
-            return;
-        }
-
-        string newBody = TodoParsing.ToggleLine(note.Body, line.LineIndex);
-        if (string.Equals(newBody, note.Body, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var request = new NoteSaveRequest(
-            id.Value, line.Date, note.Title, newBody, workspace.RevisionOf(id.Value), IsNew: false, note.HasCustomTitle);
-        try
-        {
-            await _repository.SaveNoteAsync(request).ConfigureAwait(true);
-        }
-        catch (RecoverableNoteException)
-        {
-            return;
-        }
-
-        if (line.Date == SelectedDate)
-        {
-            await Notes.LoadAsync(SelectedDate).ConfigureAwait(true);
-        }
-
+        await _toggleAgenda.ToggleAsync(row).ConfigureAwait(true);
         await Todo.RefreshAsync().ConfigureAwait(true);
-        await TagPanel.RefreshAsync().ConfigureAwait(true);
     }
 
     /// <summary>Enters the timeline (after an autosave-safe flush) or leaves it back to the editor.</summary>

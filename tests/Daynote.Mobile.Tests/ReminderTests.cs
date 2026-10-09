@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using System.Globalization;
 using System.Reflection;
 using Avalonia.Threading;
@@ -367,27 +368,36 @@ public sealed class ReminderTests
     }
 
     [TestMethod]
-    public void Tapping_a_reminder_opens_its_note_on_its_day()
+    public void Tapping_a_reminder_opens_its_note_on_the_day_it_is_due()
     {
         var platform = new FakeReminderScheduler();
         WithShell(platform, (_, shell) =>
         {
             LocalDate yesterday = LocalDates.AddDays(Today, -1);
+            LocalDate due = LocalDates.AddDays(Today, 1);
             ScreenshotTests.Pump(() => shell.SelectDateAsync(yesterday));
             WriteNote(shell, "어제 쓴 노트", "-[] 내일 할 일 (10/3 9:00)");
             PumpUntil(() => platform.Pending.Count == 1, "the to-do was never scheduled");
             Reminder reminder = platform.Pending.Values.Single();
-            Assert.AreEqual(yesterday, reminder.Date, "A tap would not open the day the note is on.");
+
+            // The day it is due, not the day it was written down. A `-[ ]` line had no day of its
+            // own, so the reminder borrowed its note's; a to-do has one, and being taken to the
+            // day something is owed is what a reminder is for.
+            Assert.AreEqual(due, reminder.Date, "A tap would not open the day the to-do is due.");
 
             ScreenshotTests.Pump(() => shell.SelectDateAsync(Today));
             shell.GoToPageCommand.Execute(MobilePage.Settings);
 
             ScreenshotTests.Pump(() => shell.OpenReminderAsync(reminder.Date, reminder.NoteId));
 
-            Assert.AreEqual(yesterday, shell.SelectedDate);
+            Assert.AreEqual(due, shell.SelectedDate);
             Assert.IsTrue(shell.IsDayPage);
-            Assert.IsTrue(shell.IsEditorOpen);
-            Assert.AreEqual("어제 쓴 노트", shell.Notes.SelectedTab?.Title);
+
+            // The note stays shut, and that is the point. It was written yesterday and the to-do
+            // is owed tomorrow; opening it would mean walking straight back off the day the tap
+            // just arrived at. The to-do is what the reminder is about, the day panel is showing
+            // it, and the note it came from is one tap further on if anybody wants it.
+            Assert.IsFalse(shell.IsEditorOpen);
         });
     }
 
@@ -501,6 +511,13 @@ public sealed class ReminderTests
         ScreenshotTests.Pump(() => shell.Notes.FlushAsync(FlushReason.NoteChange));
         ScreenshotTests.Pump(() => shell.Notes.RenameAsync(shell.Notes.SelectedTab!, title));
         ScreenshotTests.Pump(() => shell.CloseEditorAsync());
+
+        // The body stays written as checkboxes — that is what makes these fixtures readable —
+        // but the panels and the reminders read entities now, so the §8 migration's own walk
+        // runs over what was just written. The migration itself cannot: it runs when the
+        // database is opened, and this note did not exist then.
+        ScreenshotTests.CaptureSeededTodos();
+        ScreenshotTests.Pump(shell.RefreshAllAsync);
     }
 
     private static void PumpUntil(Func<bool> condition, string failure)
@@ -529,7 +546,7 @@ public sealed class ReminderTests
             Settings = settings;
             Notes = notes;
             Coordinator = new ReminderCoordinator(
-                platform, NotesRepository.Over(notes), settings, new FixedClock(Now), ReminderStateStore.InFolder(root.Path));
+                platform, AgendaOverNotes.Over(notes), settings, new FixedClock(Now), ReminderStateStore.InFolder(root.Path));
         }
 
         internal TempDataRoot Root { get; }
@@ -577,24 +594,77 @@ public sealed class ReminderTests
     }
 
     /// <summary>
-    /// The repository as the coordinator uses it: only <c>GetAllNotesAsync</c>. A proxy rather than a
-    /// hand-written stub, because the interface is wide and nothing else of it is touched.
+    /// The to-do store the coordinator reads, built from the same note bodies these tests have
+    /// always been written in.
     /// </summary>
-    internal class NotesRepository : DispatchProxy
+    /// <remarks>
+    /// The fixtures stay as <c>-[] 회의자료 (10/3 14:00)</c> because that is what they are about —
+    /// which to-dos a device should be reminded of — and rewriting a dozen of them as entity
+    /// literals would make them harder to read without testing anything new. The conversion is
+    /// the one the §8 migration performs, so these tests now also exercise the shape that
+    /// migration will produce.
+    /// <para>
+    /// A proxy rather than a hand-written stub, because the interface is wide and the coordinator
+    /// touches two methods of it.
+    /// </para>
+    /// </remarks>
+    internal class AgendaOverNotes : DispatchProxy
     {
         private List<NoteSummary> _notes = [];
 
-        internal static INoteRepository Over(List<NoteSummary> notes)
+        internal static IAgendaRepository Over(List<NoteSummary> notes)
         {
-            INoteRepository proxy = Create<INoteRepository, NotesRepository>();
-            ((NotesRepository)(object)proxy)._notes = notes;
+            IAgendaRepository proxy = Create<IAgendaRepository, AgendaOverNotes>();
+            ((AgendaOverNotes)(object)proxy)._notes = notes;
             return proxy;
         }
 
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) =>
-            targetMethod?.Name == nameof(INoteRepository.GetAllNotesAsync) && targetMethod.GetParameters().Length == 1
-                ? new ValueTask<IReadOnlyList<NoteSummary>>([.. _notes])
-                : throw new NotSupportedException(targetMethod?.Name);
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch
+        {
+            nameof(IAgendaRepository.GetAllAsync) =>
+                new ValueTask<IReadOnlyList<AgendaItem>>(Items()),
+            nameof(IAgendaRepository.GetListsAsync) =>
+                new ValueTask<IReadOnlyList<AgendaList>>(Array.Empty<AgendaList>()),
+            _ => throw new NotSupportedException(targetMethod?.Name),
+        };
+
+        private IReadOnlyList<AgendaItem> Items()
+        {
+            var items = new List<AgendaItem>();
+            foreach (NoteSummary note in _notes)
+            {
+                foreach (ScannedTodo todo in TodoBodyScan.Scan(note.Id, note.LocalDate, note.Body))
+                {
+                    items.Add(new AgendaItem(
+                        todo.Id,
+                        AgendaList.DefaultId,
+                        AgendaKind.Task,
+                        todo.Text,
+                        string.Empty,
+                        "Asia/Seoul",
+                        StartsAt: null,
+                        EndsAt: null,
+                        DueAt: todo.DueAt,
+                        HasDueTime: todo.HasDueTime,
+                        Rrule: null,
+                        SeriesId: null,
+                        RecurrenceId: null,
+                        todo.Completed ? AgendaStatus.Completed : AgendaStatus.NeedsAction,
+                        CompletedUtc: null,
+                        Priority: 0,
+                        TimelineVisibility.Auto,
+                        SourceNoteId: note.Id,
+                        ExceptionDates: [],
+                        // As the migration does it: a line with a stamp reminded, one without
+                        // never did.
+                        todo.DueAt is null ? AgendaAlert.None : AgendaAlert.Default,
+                        DateTimeOffset.UnixEpoch,
+                        DateTimeOffset.UnixEpoch));
+                }
+            }
+
+            return items;
+        }
     }
 }
 

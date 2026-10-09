@@ -67,12 +67,12 @@ public sealed class TimelineNavigationTests
     public async Task A_todo_row_in_the_right_panel_leaves_the_timeline()
     {
         await using WorkspaceTestContext context = WorkspaceTestContext.Create();
-        await context.StoreNoteAsync(Earlier, "할 일", "-[] 장부 정리");
+        await context.StoreTodoAsync(Earlier, "장부 정리");
         await using WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
         await harness.Shell.InitializeAsync();
 
         await harness.Shell.ToggleTimelineCommand.ExecuteAsync(null);
-        TodoItemViewModel todo = harness.Shell.Todo.Items.First();
+        TodoItemViewModel todo = harness.Shell.Todo.TodayItems.Concat(harness.Shell.Todo.Items).First();
         await todo.JumpCommand.ExecuteAsync(null);
 
         Assert.IsFalse(harness.Shell.IsTimelineMode, "A todo row left the timeline open.");

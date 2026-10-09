@@ -30,6 +30,15 @@ public sealed class MigrationRunner
     /// <summary>The highest migration version this build ships — the schema version a fresh db reaches.</summary>
     public int LatestVersion => _migrations[^1].Version;
 
+    /// <summary>
+    /// Every step this build ships: the .sql files, then the code ones in version order.
+    /// </summary>
+    /// <remarks>
+    /// The <c>-[ ]</c> walk is here rather than held back, and it has to be: the panels read
+    /// entities now, so a database that upgraded without it would open with an empty to-do list
+    /// and the user's checkboxes sitting in their notes as plain text. docs/TODOS.md §12 asks for
+    /// the readers and the migration to arrive together, and this is where together happens.
+    /// </remarks>
     public static MigrationRunner FromEmbeddedResources()
     {
         var assembly = typeof(MigrationRunner).Assembly;
@@ -52,6 +61,7 @@ public sealed class MigrationRunner
                     reader.ReadToEnd()));
         }
 
+        migrations.Add(Migrations.TodoCaptureMigration.Migration);
         return new MigrationRunner(migrations);
     }
 

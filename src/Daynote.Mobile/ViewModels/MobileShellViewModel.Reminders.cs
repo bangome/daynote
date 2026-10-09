@@ -178,11 +178,11 @@ public sealed partial class MobileShellViewModel
         time.ToString(@"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Reconciles in the background; <paramref name="notes"/> when every note was just read anyway.</summary>
-    private void RefreshReminders(IReadOnlyList<NoteSummary>? notes = null)
+    private void RefreshReminders(IReadOnlyList<Daynote.Core.Agenda.AgendaItem>? items = null)
     {
         if (Reminders is { } reminders && !_disposed)
         {
-            _ = RunQuietlyAsync(() => reminders.RefreshAsync(notes));
+            _ = RunQuietlyAsync(() => reminders.RefreshAsync(items));
         }
     }
 

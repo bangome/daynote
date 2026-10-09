@@ -121,6 +121,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IClock>(),
             sp.GetRequiredService<SearchService>(),
             sp.GetRequiredService<INoteRepository>(),
+            sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>(),
             sp.GetRequiredService<AddDayFile>(),
             sp.GetRequiredService<ListDayFiles>(),
             sp.GetRequiredService<DeleteDayFile>(),

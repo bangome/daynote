@@ -19,14 +19,13 @@ public sealed class TodoCaptureMigrationTests
     private static readonly LocalDate Date = LocalDate.Parse("2026-08-20").Value;
 
     [TestMethod]
-    public void It_is_not_in_the_shipping_set_yet()
+    public void It_ships_with_the_readers_that_depend_on_it()
     {
-        // §12: until desktop and phone switch their readers in the same release, a device that
-        // migrated would hold entities while its phone still parsed the same lines out of the
-        // body — every task twice, and every reminder twice. Step 3 adds it; this is the guard
-        // that nobody adds it early by accident.
-        Assert.AreEqual(6, MigrationRunner.FromEmbeddedResources().LatestVersion);
-        Assert.IsTrue(TodoCaptureMigration.Version > MigrationRunner.FromEmbeddedResources().LatestVersion);
+        // It was held back while the panels still parsed `-[ ]` out of note bodies, because a
+        // device that migrated early would have held every task twice. Now the panels read
+        // entities, so the opposite is true: a database that upgraded *without* this would open
+        // with an empty to-do list and the user's checkboxes sitting in their notes as text.
+        Assert.AreEqual(TodoCaptureMigration.Version, MigrationRunner.FromEmbeddedResources().LatestVersion);
     }
 
     [TestMethod]

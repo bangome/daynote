@@ -20,7 +20,13 @@ namespace Daynote.App.Tests.Product;
 [TestClass]
 public sealed class DeskSurfaceParityTests
 {
-    private const string WpfSource = "src/Daynote.App/Shell/Product/ProductShellViewModel.Desk.cs";
+    // Semicolon-separated, because a shell's surface may be spread over more than one partial:
+    // the WPF day panel's to-do section moved to its own file when the panel started projecting
+    // rows out of the to-do store. What is compared is the surface, not the file it sits in.
+    private const string WpfSource =
+        "src/Daynote.App/Shell/Product/ProductShellViewModel.Desk.cs;"
+        + "src/Daynote.App/Shell/Product/ProductShellViewModel.DayTodos.cs";
+
     private const string AvaloniaSource = "src/Daynote.Desktop/ViewModels/DesktopShellViewModel.Views.cs";
     private const string WpfSections = "src/Daynote.App/Settings/SettingsViewModel.Sections.cs";
     private const string AvaloniaSections = "src/Daynote.Desktop/ViewModels/DesktopSettingsViewModel.Sections.cs";
@@ -54,17 +60,23 @@ public sealed class DeskSurfaceParityTests
     }
 
     /// <summary>The declared members: properties, commands and the backing fields the toolkit promotes.</summary>
-    private static string[] Surface(string relativePath)
+    private static string[] Surface(string relativePaths)
     {
-        string text = File.ReadAllText(Path.Combine(TestPaths.RepositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        // Trimmed per file and only then joined. The palette marker below sits partway through
+        // one of them, and cutting the joined text at it would silently drop every later file —
+        // which is a parity check quietly comparing half a surface.
+        string text = string.Join(
+            "\n",
+            relativePaths.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(static path =>
+            {
+                string one = File.ReadAllText(Path.Combine(
+                    TestPaths.RepositoryRoot, path.Replace('/', Path.DirectorySeparatorChar)));
 
-        // Only the shell's own partial: PaletteActionViewModel sits in the same file in both and is
-        // its own type.
-        int end = text.IndexOf("/// <summary>One quick action in the palette", StringComparison.Ordinal);
-        if (end > 0)
-        {
-            text = text[..end];
-        }
+                // Only the shell's own partial: PaletteActionViewModel sits in the same file in
+                // both and is its own type.
+                int cut = one.IndexOf("/// <summary>One quick action in the palette", StringComparison.Ordinal);
+                return cut > 0 ? one[..cut] : one;
+            }));
 
         var names = new SortedSet<string>(StringComparer.Ordinal);
 

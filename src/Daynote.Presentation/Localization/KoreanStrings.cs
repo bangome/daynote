@@ -781,6 +781,15 @@ internal static class KoreanStrings
         ["AgendaRuleOrdinalN"] = "{0}째 주",
         ["AgendaRuleNoAlerts"] = "이 반복({0})은 아직 알림을 보내지 않아요. 매일·매주 반복은 알림이 옵니다.",
 
+        // A to-do row's "when" (design §04). .NET date and time patterns, translated
+        // because the order of month and day is not universal.
+        ["TodoRowTimeFormat"] = "HH:mm",
+        ["TodoRowDateTimeFormat"] = "M'/'d HH:mm",
+        ["TodoRowDateFormat"] = "M'/'d",
+
+        ["DeskDayTodoRemainingFormat"] = "남은 {0}",
+        ["DeskDayTodoDoneFormat"] = "완료 {0}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
+using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Mobile.ViewModels;
@@ -153,8 +154,63 @@ public sealed class ScreenshotTests
             Pump(() => shell.CloseEditorAsync());
         }
 
+        CaptureSeededTodos();
+
         Pump(() => shell.SelectDateAsync(today));
         Pump(() => shell.RefreshAllAsync());
+    }
+
+    /// <summary>
+    /// Turns the <c>-[]</c> lines in the seeded bodies above into to-do entities.
+    /// </summary>
+    /// <remarks>
+    /// The bodies stay written as checkboxes because that is what makes the fixture readable, but
+    /// the panels read entities now, so something has to do the conversion. This is the §8
+    /// migration's own walk — it cannot do it itself, because it runs when the database is opened
+    /// and these notes are written afterwards.
+    /// </remarks>
+    internal static void CaptureSeededTodos()
+    {
+        var provider = TestServices.CurrentProvider
+            ?? throw new InvalidOperationException("No shell is running.");
+        var notes = (INoteRepository)provider.GetService(typeof(INoteRepository))!;
+        var agenda = (IAgendaRepository)provider.GetService(typeof(IAgendaRepository))!;
+
+        Pump(async () =>
+        {
+            foreach (NoteSummary note in await notes.GetAllNotesAsync())
+            {
+                foreach (ScannedTodo todo in TodoBodyScan.Scan(note.Id, note.LocalDate, note.Body))
+                {
+                    await agenda.SaveAsync(new AgendaItem(
+                        todo.Id,
+                        AgendaList.DefaultId,
+                        AgendaKind.Task,
+                        todo.Text,
+                        string.Empty,
+                        "Asia/Seoul",
+                        StartsAt: null,
+                        EndsAt: null,
+                        DueAt: todo.DueAt ?? new WallClock(
+                            new DateTime(note.LocalDate.Year, note.LocalDate.Month, note.LocalDate.Day, 0, 0, 0)),
+                        HasDueTime: todo.HasDueTime,
+                        Rrule: null,
+                        SeriesId: null,
+                        RecurrenceId: null,
+                        todo.Completed ? AgendaStatus.Completed : AgendaStatus.NeedsAction,
+                        CompletedUtc: todo.Completed ? DateTimeOffset.UtcNow : null,
+                        Priority: 0,
+                        TimelineVisibility.Auto,
+                        SourceNoteId: note.Id,
+                        ExceptionDates: [],
+                        // As the migration does it: a line with a stamp reminded, one without
+                        // never did.
+                        todo.DueAt is null ? AgendaAlert.None : AgendaAlert.Default,
+                        DateTimeOffset.UtcNow,
+                        DateTimeOffset.UtcNow));
+                }
+            }
+        });
     }
 
     /// <summary>

@@ -30,6 +30,8 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     private readonly IClock _clock;
     private readonly INoteRepository _repository;
+    private readonly Daynote.Core.Agenda.IAgendaRepository _agenda;
+    private readonly Daynote.Core.Agenda.ToggleAgendaItem _toggleAgenda;
     private readonly ISettingsStore _settings;
     private readonly IThemeApplier _themeApplier;
     private bool _loading;
@@ -41,6 +43,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         IClock clock,
         SearchService searchService,
         INoteRepository repository,
+        Daynote.Core.Agenda.IAgendaRepository agenda,
         AddDayFile addDayFile,
         ListDayFiles listDayFiles,
         DeleteDayFile deleteDayFile,
@@ -53,12 +56,14 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         Notes = notes ?? throw new ArgumentNullException(nameof(notes));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
+        _toggleAgenda = new Daynote.Core.Agenda.ToggleAgendaItem(agenda);
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _themeApplier = themeApplier ?? throw new ArgumentNullException(nameof(themeApplier));
         ArgumentNullException.ThrowIfNull(searchService);
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
-        Todo = new TodoPanelViewModel(repository, clock, ToggleTodoAsync, JumpToTodoAsync);
+        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, JumpToTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);

@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -142,28 +143,42 @@ public sealed partial class MobileShellViewModel
         ClockSnapshot snapshot = _clock.Read();
         DateTimeOffset now = snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset);
         IReadOnlyList<NoteSummary> notes = await _repository.GetAllNotesAsync(cancellationToken).ConfigureAwait(true);
-        IReadOnlyList<TodoLine> lines = TodoParsing.Parse(notes, now);
         TotalNoteCount = notes.Count;
 
-        TodoRowViewModel Row(TodoLine line) => new(new TodoItemViewModel(line, ToggleTodoAsync, JumpToTodoAsync), line);
+        // Everything, rather than this day's: the bands cross dates and the day's rows are a
+        // projection out of the same set, so one read answers both.
+        IReadOnlyList<AgendaItem> items = Todo.All;
+
+        TodoRowViewModel Row(AgendaDayRow row) =>
+            new(Todo.Row(row, now.DateTime), row);
+
+        AgendaOutstandingView owed = AgendaOutstanding.For(DateOnly.FromDateTime(now.DateTime), items);
+        AgendaDayView today = AgendaDay.For(LocalDates.ToDateOnly(SelectedDate), items);
 
         TodoGroups.Clear();
-        foreach (TodoGroupViewModel group in TodoGroupViewModel.Build(lines, now, Row, GroupLabel))
+        foreach (TodoGroupViewModel group in TodoGroupViewModel.Build(
+            [.. owed.Today, .. owed.Later, .. owed.Undated], now, Row, GroupLabel))
         {
             TodoGroups.Add(group);
         }
 
         DayTodos.Clear();
-        foreach (TodoLine line in lines.Where(line => line.Date == SelectedDate))
+        foreach (AgendaDayRow row in today.Open.Concat(today.Done))
         {
-            DayTodos.Add(Row(line));
+            DayTodos.Add(Row(row));
         }
 
         DayTodoCountText = string.Create(
-            CultureInfo.CurrentCulture, $"{DayTodos.Count(row => row.Item.Checked)}/{DayTodos.Count}");
-        _todoCounts = lines
-            .GroupBy(line => line.NoteId)
-            .ToDictionary(group => group.Key, group => (group.Count(line => line.Checked), group.Count()));
+            CultureInfo.CurrentCulture, $"{today.Done.Count}/{DayTodos.Count}");
+
+        // The per-note progress a card shows. Only to-dos captured from a note count towards it;
+        // one made in the list view belongs to no card.
+        _todoCounts = items
+            .Where(static item => item.SourceNoteId is not null && !item.IsSeries)
+            .GroupBy(static item => item.SourceNoteId!.Value)
+            .ToDictionary(
+                static group => group.Key,
+                static group => (group.Count(static i => i.Status == AgendaStatus.Completed), group.Count()));
 
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));
@@ -171,7 +186,7 @@ public sealed partial class MobileShellViewModel
 
         // Everything that changes a to-do - an edit, a tick, a delete, a sync pull, a language
         // switch - comes through here, with every note already read.
-        RefreshReminders(notes);
+        RefreshReminders(items);
     }
 
     private static string GroupLabel(TodoGroupKind kind) => kind switch

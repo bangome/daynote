@@ -462,14 +462,19 @@ The order that makes that safe:
          one daily rule, and §5 reaches the same answer from the export end.
    - [x] `ToggleAgendaItem` — ticking an occurrence writes an override against its
          `RECURRENCE-ID`, never a status on the rule.
-   - [ ] Desktop day panel and the 할 일 tab read them.
+   - [x] All three shells read them: the WPF day panel and 할 일 tab, the Avalonia desktop, and
+         the phone's Day screen and bands.
+   - [x] All three tick through `ToggleAgendaItem` instead of rewriting the note body. The old
+         line-rewriting paths are gone.
+   - [x] `ReminderCoordinator` reads entities.
+   - [x] `TodoCaptureMigration` is registered — in the same change, and that ordering is the
+         point: the panels read entities now, so a database that upgraded without it would open
+         with an empty to-do list and the user's checkboxes sitting in their notes as text.
+   - [ ] The automatic backup §8 requires in front of the migration.
    - [ ] Sidebar lists (§04), and the phone's Lists tab (phone §03).
-   - [ ] Both shells call it instead of rewriting the note body.
-   - [ ] Phone Day screen (phone §04) and the `@` bar (phone §01).
-   - [ ] `ReminderCoordinator` reads entities rather than note bodies.
-   - [ ] Register `TodoCaptureMigration`, with the automatic backup §8 requires in front of it.
-   - [ ] `TodoParsing` stops feeding panels; the desktop's empty-state copy and the phone
-         toolbar's `-[]` button go with it (§99).
+   - [ ] The phone's `@` bar (phone §01) and the creation feedback (phone §02).
+   - [ ] The desktop's empty-state copy and the phone toolbar's `-[]` button still point at the
+         old syntax (§99).
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 

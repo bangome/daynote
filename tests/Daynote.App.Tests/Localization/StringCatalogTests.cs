@@ -120,6 +120,11 @@ public sealed partial class StringCatalogTests
             // own way. Every other readback format differs, because Korean and English
             // disagree about where the meridiem and the separators go.
             nameof(AppStrings.AgendaReadbackRange),
+
+            // A 24-hour clock reading. Korean and English write it the same way, and the
+            // patterns that do differ — where the meridiem and the date parts go — are their
+            // own entries.
+            nameof(AppStrings.TodoRowTimeFormat),
         };
 
         string[] untranslated = [.. korean

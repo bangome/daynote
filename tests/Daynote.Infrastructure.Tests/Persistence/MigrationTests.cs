@@ -16,7 +16,7 @@ public sealed class MigrationTests
         var initialized = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(6, initialized.SchemaVersion);
+        Assert.AreEqual(7, initialized.SchemaVersion);
         using var connection = fixture.Database.OpenReadConnection();
         var objects = ReadSchemaObjects(connection);
         CollectionAssert.AreEquivalent(
@@ -97,9 +97,9 @@ public sealed class MigrationTests
         var reopened = fixture.Database.Initialize();
 
         // Then
-        Assert.AreEqual(6, reopened.SchemaVersion);
+        Assert.AreEqual(7, reopened.SchemaVersion);
         using var verification = fixture.Database.OpenReadConnection();
-        Assert.AreEqual(6L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
+        Assert.AreEqual(7L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM schema_versions;"));
         Assert.AreEqual(1L, TestDatabase.ScalarInt64(verification, "SELECT COUNT(*) FROM settings WHERE key='sentinel' AND value='preserved';"));
     }
 

@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using Daynote.App.Localization;
 using Daynote.Core.Notes;
 using Daynote.Core.Settings;
@@ -32,21 +33,21 @@ public sealed class ReminderCoordinator
     public const string DateOnlyTimeKey = "mobile.reminders.time";
 
     private readonly IReminderScheduler _scheduler;
-    private readonly INoteRepository _repository;
+    private readonly IAgendaRepository _agenda;
     private readonly ISettingsStore _settings;
     private readonly IClock _clock;
     private readonly ReminderStateStore _store;
     private Task? _run;
     private bool _again;
-    private IReadOnlyList<NoteSummary>? _latestNotes;
+    private IReadOnlyList<AgendaItem>? _latestItems;
     private bool _closed;
     private ExactAlarmState? _lastExact;
 
     public ReminderCoordinator(
-        IReminderScheduler scheduler, INoteRepository repository, ISettingsStore settings, IClock clock, ReminderStateStore store)
+        IReminderScheduler scheduler, IAgendaRepository agenda, ISettingsStore settings, IClock clock, ReminderStateStore store)
     {
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -104,13 +105,13 @@ public sealed class ReminderCoordinator
     /// <summary>
     /// Brings the scheduled reminders up to date.
     /// </summary>
-    /// <param name="notes">
-    /// Every note, when the caller has just read them anyway (the to-do refresh does); null reads
-    /// them from the repository.
+    /// <param name="items">
+    /// Every to-do, when the caller has just read them anyway (the to-do refresh does); null
+    /// reads them from the repository.
     /// </param>
-    public Task RefreshAsync(IReadOnlyList<NoteSummary>? notes = null)
+    public Task RefreshAsync(IReadOnlyList<AgendaItem>? items = null)
     {
-        _latestNotes = notes;
+        _latestItems = items;
         if (_run is { IsCompleted: false } running)
         {
             _again = true;
@@ -155,11 +156,11 @@ public sealed class ReminderCoordinator
         do
         {
             _again = false;
-            IReadOnlyList<NoteSummary>? notes = _latestNotes;
-            _latestNotes = null;
+            IReadOnlyList<AgendaItem>? items = _latestItems;
+            _latestItems = null;
             try
             {
-                await RunOnceAsync(notes).ConfigureAwait(true);
+                await RunOnceAsync(items).ConfigureAwait(true);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
@@ -170,7 +171,7 @@ public sealed class ReminderCoordinator
         while (_again && !_closed);
     }
 
-    private async Task RunOnceAsync(IReadOnlyList<NoteSummary>? notes)
+    private async Task RunOnceAsync(IReadOnlyList<AgendaItem>? items)
     {
         if (_closed)
         {
@@ -183,11 +184,18 @@ public sealed class ReminderCoordinator
 
         if (await IsEnabledAsync(_settings).ConfigureAwait(true))
         {
-            notes ??= await _repository.GetAllNotesAsync().ConfigureAwait(true);
+            items ??= await _agenda.GetAllAsync().ConfigureAwait(true);
+            IReadOnlyList<AgendaList> lists = await _agenda.GetListsAsync().ConfigureAwait(true);
             ClockSnapshot snapshot = _clock.Read();
             DateTimeOffset now = snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset);
             TimeSpan dateOnlyTime = await GetDateOnlyTimeAsync(_settings).ConfigureAwait(true);
-            desired = ReminderPlanner.Plan(notes, now, _scheduler.Capacity, dateOnlyTime);
+            desired = ReminderPlanner.Plan(
+                items,
+                now,
+                _scheduler.Capacity,
+                dateOnlyTime,
+                lists.Where(static list => !list.HasBuiltInName)
+                    .ToDictionary(static list => list.Id, static list => list.Name));
 
             // The first time there is something to remind about, and never again.
             if (desired.Count > 0 && permission == ReminderPermission.NotDetermined && !state.PermissionAsked)

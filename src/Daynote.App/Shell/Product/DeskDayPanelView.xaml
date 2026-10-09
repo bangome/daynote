@@ -54,7 +54,10 @@
                                               Data="{DynamicResource Daynote.Desk.Geo.Check}" />
                                     </Button>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock FontSize="13" TextWrapping="Wrap" Text="{Binding Text}">
+                                        <TextBlock FontSize="13" TextWrapping="Wrap">
+                                            <Run Text="{Binding Text, Mode=OneWay}" /><Run
+                                                Text=" &#x21BB;" Foreground="{DynamicResource Daynote.Product.Brush.Text2}"
+                                                FontSize="11" />
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
@@ -66,15 +69,53 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Due}" FontSize="11.5" Margin="0,2,0,0"
-                                                   product:DeskVisual.IsActive="{Binding Overdue}" Text="{Binding DueLabel}"
-                                                   Visibility="{Binding HasDue, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Due}" FontSize="11.5"
+                                                       product:DeskVisual.IsActive="{Binding Overdue}" Text="{Binding DueLabel}"
+                                                       Visibility="{Binding HasDue, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                            <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11.5" Margin="8,0,0,0"
+                                                       Text="{Binding NoteLabel}"
+                                                       Visibility="{Binding HasNoteLabel, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Grid>
                             </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <Expander Margin="20,6,20,0" IsExpanded="False"
+                          Visibility="{Binding HasDayDone, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
+                    <Expander.Header>
+                        <TextBlock Style="{DynamicResource Daynote.Desk.Text.Faint}" FontSize="11.5"
+                                   Text="{Binding DayDoneCountText}" />
+                    </Expander.Header>
+                    <ItemsControl ItemsSource="{Binding DayTodosDone}" Margin="-10,4,-10,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pvm:TodoItemViewModel}">
+                                <Button Style="{DynamicResource Daynote.Desk.Button.Row}" Padding="10,7"
+                                        Command="{Binding JumpCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{DynamicResource Daynote.Desk.Button.Check}"
+                                                Margin="0,1,11,0" Command="{Binding ToggleCommand}"
+                                                AutomationProperties.Name="{Binding Text}">
+                                            <Path Width="9" Height="9" Stretch="Uniform"
+                                                  Style="{DynamicResource Daynote.Desk.Style.CheckMark}"
+                                                  Data="{DynamicResource Daynote.Desk.Geo.Check}" />
+                                        </Button>
+                                        <TextBlock Grid.Column="1" FontSize="13" TextWrapping="Wrap"
+                                                   TextDecorations="Strikethrough" Text="{Binding Text}"
+                                                   Foreground="{DynamicResource Daynote.Product.Brush.Text2}" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
 
                 <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" Margin="20,6,20,10"
                            Visibility="{Binding IsDayTodoEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">

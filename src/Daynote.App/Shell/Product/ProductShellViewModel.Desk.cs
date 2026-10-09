@@ -1,3 +1,5 @@
+using Daynote.Core.Agenda;
+using Daynote.Core.Time;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -60,8 +62,6 @@ public sealed partial class ProductShellViewModel
     /// <summary>The week of the selected date, under the header.</summary>
     public WeekStripViewModel Week { get; private set; } = null!;
 
-    /// <summary>The selected day's to-dos, for the right panel: the full list filtered to one date.</summary>
-    public ObservableCollection<TodoItemViewModel> DayTodos { get; } = [];
 
     /// <summary>The timeline's rows folded into days, for the date-column layout.</summary>
     public ObservableCollection<TimelineDayGroup> TimelineGroups { get; } = [];
@@ -365,31 +365,6 @@ public sealed partial class ProductShellViewModel
     }
 
     private System.Windows.Threading.Dispatcher? _dispatcher;
-
-    private void RefreshDayTodos()
-    {
-        if (_dispatcher is { } dispatcher && !dispatcher.CheckAccess())
-        {
-            _ = dispatcher.BeginInvoke(RefreshDayTodos);
-            return;
-        }
-
-        DayTodos.Clear();
-        int open = 0;
-        foreach (TodoItemViewModel item in Todo.TodayItems.Concat(Todo.Items)
-            .Where(item => item.Date == SelectedDate)
-            .OrderBy(item => item.Checked))
-        {
-            DayTodos.Add(item);
-            if (!item.Checked)
-            {
-                open++;
-            }
-        }
-
-        DayTodoCountText = string.Create(CultureInfo.InvariantCulture, $"{open} / {DayTodos.Count}");
-        IsDayTodoEmpty = DayTodos.Count == 0;
-    }
 
     private void OnTimelineRowsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

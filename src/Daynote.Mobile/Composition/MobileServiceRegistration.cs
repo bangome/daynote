@@ -111,13 +111,17 @@ public static class MobileServiceRegistration
         services.AddSingleton<IFilePicker>(_ => new MobileFilePicker(topLevel, platform.PickPhotos));
         services.AddSingleton<IThumbnailLoader, MobileThumbnailLoader>();
 
+        // To-dos and events (docs/TODOS.md). Both the panels and the reminders read them.
+        services.AddSingleton<Daynote.Core.Agenda.IAgendaRepository>(sp =>
+            new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(sp.GetRequiredService<SqliteDatabase>()));
+
         // To-do reminders. The state file is per device, in the base folder beside profile.json,
         // not in the profile: see ReminderStateStore.
         if (platform.Reminders is { } reminders)
         {
             services.AddSingleton(sp => new Reminders.ReminderCoordinator(
                 reminders,
-                sp.GetRequiredService<INoteRepository>(),
+                sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>(),
                 sp.GetRequiredService<ISettingsStore>(),
                 sp.GetRequiredService<IClock>(),
                 Reminders.ReminderStateStore.InFolder(platform.DataRoot)));
@@ -135,7 +139,8 @@ public static class MobileServiceRegistration
             sp.GetRequiredService<IFilePicker>(),
             sp.GetRequiredService<IThumbnailLoader>(),
             sp.GetRequiredService<ISettingsStore>(),
-            sp.GetRequiredService<IThemeApplier>())
+            sp.GetRequiredService<IThemeApplier>(),
+            sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>())
         {
             Account = sp.GetService<Daynote.App.Account.AccountViewModel>(),
             Store = sp.GetService<MobileStoreViewModel>(),

@@ -167,11 +167,13 @@ internal sealed class WorkspaceTestContext : IAsyncDisposable
         var picker = new FakeFilePicker();
         var theme = new NoOpThemeApplier();
         var settings = new SqliteSettingsStore(_database, Clock);
+        AgendaRepository = new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(_database);
         var shell = new ProductShellViewModel(
             notes,
             Clock,
             SearchService,
             NoteRepository,
+            AgendaRepository,
             new AddDayFile(fileRepository, fileStore),
             new ListDayFiles(fileRepository, fileStore),
             new DeleteDayFile(fileRepository, fileStore),
@@ -183,6 +185,47 @@ internal sealed class WorkspaceTestContext : IAsyncDisposable
     }
 
     /// <summary>A product shell built over the same database, plus its test doubles.</summary>
+    /// <summary>
+    /// Stores one to-do, the way the @ command would. A note is optional: one made in the list
+    /// view has none.
+    /// </summary>
+    internal async Task<Guid> StoreTodoAsync(
+        LocalDate day, string title, TimeOnly? at = null, bool done = false, Guid? note = null)
+    {
+        AgendaRepository ??= new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(_database);
+        Guid id = Guid.NewGuid();
+        await AgendaRepository.SaveAsync(new Daynote.Core.Agenda.AgendaItem(
+            id,
+            Daynote.Core.Agenda.AgendaList.DefaultId,
+            Daynote.Core.Agenda.AgendaKind.Task,
+            title,
+            string.Empty,
+            "Asia/Seoul",
+            StartsAt: null,
+            EndsAt: null,
+            DueAt: new Daynote.Core.Agenda.WallClock(
+                new DateOnly(day.Year, day.Month, day.Day).ToDateTime(at ?? TimeOnly.MinValue)),
+            HasDueTime: at is not null,
+            Rrule: null,
+            SeriesId: null,
+            RecurrenceId: null,
+            done
+                ? Daynote.Core.Agenda.AgendaStatus.Completed
+                : Daynote.Core.Agenda.AgendaStatus.NeedsAction,
+            CompletedUtc: done ? DateTimeOffset.UtcNow : null,
+            Priority: 0,
+            Daynote.Core.Agenda.TimelineVisibility.Auto,
+            SourceNoteId: note,
+            ExceptionDates: [],
+            Daynote.Core.Agenda.AgendaAlert.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow));
+        return id;
+    }
+
+    /// <summary>The to-do store the shell reads, now that panels are fed by entities.</summary>
+    internal Daynote.Infrastructure.Agenda.SqliteAgendaRepository AgendaRepository { get; private set; } = null!;
+
     internal sealed record ProductShellHarness(
         ProductShellViewModel Shell,
         NoteWorkspaceViewModel Notes,

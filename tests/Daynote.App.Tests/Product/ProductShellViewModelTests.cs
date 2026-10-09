@@ -51,25 +51,33 @@ public sealed class ProductShellViewModelTests
     }
 
     [TestMethod]
-    public async Task Todo_ParsesAcrossDatesAndTogglePersistsBody()
+    public async Task Todo_ListsEveryDateAndTickingLeavesTheNoteAlone()
     {
         await using WorkspaceTestContext context = WorkspaceTestContext.Create();
         LocalDate other = LocalDate.Parse("2026-07-18").Value;
-        NoteId a = await context.StoreNoteAsync(Today, "오늘", "-[] 오늘 할 일 (7/25 14:00)");
-        await context.StoreNoteAsync(other, "지난주", "-[] 예전 할 일\n-[x] 완료");
+        NoteId note = await context.StoreNoteAsync(Today, "오늘", "회의 메모");
+        await context.StoreTodoAsync(Today, "오늘 할 일", new TimeOnly(14, 0), note: note.Value);
+        await context.StoreTodoAsync(other, "예전 할 일");
+        await context.StoreTodoAsync(other, "완료", done: true);
         await using WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
 
         await harness.Shell.InitializeAsync();
 
-        Assert.AreEqual(3, harness.Shell.Todo.Items.Count, "Todos parse from every date, not just the selected one.");
-        Assert.AreEqual(2, harness.Shell.Todo.OpenCount);
+        // A finished to-do is absent from this list rather than collapsed in it: the 할 일 tab is
+        // a queue, and a queue of things already done is not a queue.
+        Assert.AreEqual(2, harness.Shell.Todo.OpenCount, "The tab lists what is owed, from every date.");
 
-        TodoItemViewModel first = harness.Shell.Todo.Items.First(i => i.Text == "오늘 할 일");
+        TodoItemViewModel first = harness.Shell.Todo.TodayItems
+            .Concat(harness.Shell.Todo.Items)
+            .First(i => i.Text == "오늘 할 일");
         await ((IAsyncRelayCommand)first.ToggleCommand).ExecuteAsync(null);
 
+        Assert.AreEqual(1, harness.Shell.Todo.OpenCount, "Ticking it did not take it out of the queue.");
+
+        // §7: the body is exactly what was typed, and ticking a to-do is not the app editing the
+        // user's prose. It used to rewrite the checkbox line, because the line *was* the to-do.
         DayWorkspace workspace = await context.NoteRepository.GetDayWorkspaceStateAsync(Today);
-        Note toggled = workspace.Notes.Notes.Single(n => n.Id == a);
-        StringAssert.Contains(toggled.Body, "-[x]", "Toggling rewrites the source note's checkbox line.");
+        Assert.AreEqual("회의 메모", workspace.Notes.Notes.Single(n => n.Id == note).Body);
     }
 
     [TestMethod]
@@ -87,20 +95,21 @@ public sealed class ProductShellViewModelTests
     }
 
     [TestMethod]
-    public async Task Todo_GroupsUncheckedDueTodayOnTop()
+    public async Task Todo_GroupsWhatIsOwedTodayOnTop()
     {
         await using WorkspaceTestContext context = WorkspaceTestContext.Create();
-        await context.StoreNoteAsync(
-            Today, "오늘", "-[] 오늘 마감 (7/20 10:00)\n-[] 나중 마감 (7/25)\n-[x] 완료된 오늘 마감 (7/20)");
+        await context.StoreTodoAsync(Today, "오늘 마감", new TimeOnly(10, 0));
+        await context.StoreTodoAsync(LocalDate.Parse("2026-07-25").Value, "나중 마감");
+        await context.StoreTodoAsync(Today, "완료된 오늘 마감", new TimeOnly(10, 0), done: true);
         await using WorkspaceTestContext.ProductShellHarness harness = context.BuildProductShell();
 
         await harness.Shell.InitializeAsync();
 
         Assert.IsTrue(harness.Shell.Todo.HasToday);
-        Assert.AreEqual(1, harness.Shell.Todo.TodayItems.Count, "Only unchecked todos due today enter the 오늘 group.");
         Assert.AreEqual("오늘 마감", harness.Shell.Todo.TodayItems.Single().Text);
-        Assert.IsFalse(harness.Shell.Todo.Items.Any(i => i.Text == "오늘 마감"), "A due-today todo leaves the general list.");
-        Assert.AreEqual(2, harness.Shell.Todo.Items.Count, "Future-due and checked todos stay in the general list.");
+        Assert.AreEqual("나중 마감", harness.Shell.Todo.Items.Single().Text, "What is ahead sits below it.");
+        // The finished one is in neither: this list is what is still owed.
+        Assert.AreEqual(2, harness.Shell.Todo.OpenCount);
     }
 
     [TestMethod]

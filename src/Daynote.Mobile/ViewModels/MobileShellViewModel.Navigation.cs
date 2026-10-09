@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using Daynote.App.Notes;
 using Daynote.App.Shell.Product;
 using Daynote.Core.Domain;
@@ -13,11 +14,19 @@ namespace Daynote.Mobile.ViewModels;
 /// </summary>
 public sealed partial class MobileShellViewModel
 {
-    private async Task JumpToTodoAsync(TodoLine line)
+    /// <summary>
+    /// Goes to the day a to-do falls on, and opens the note it was captured from if there is one.
+    /// A to-do made in the list view has none, and §3 lets a captured one's note be deleted out
+    /// from under it, so the day is the half of the jump that always works.
+    /// </summary>
+    private async Task JumpToTodoAsync(AgendaDayRow row)
     {
-        if (await SelectDateAsync(line.Date).ConfigureAwait(true))
+        DateOnly day = DateOnly.FromDateTime(row.At?.Value ?? row.Item.Anchor?.Value ?? DateTime.Today);
+        Guid? note = row.Item.SourceNoteId;
+        if (await SelectDateAsync(Daynote.App.Composition.LocalDates.FromDateOnly(day)).ConfigureAwait(true)
+            && note is { } id)
         {
-            await OpenByIdAsync(line.NoteId).ConfigureAwait(true);
+            await OpenByIdAsync(id).ConfigureAwait(true);
         }
     }
 
@@ -71,44 +80,14 @@ public sealed partial class MobileShellViewModel
     }
 
     /// <summary>Toggles a checkbox line in the note that owns it and reloads the editor if it is open on it.</summary>
-    private async Task ToggleTodoAsync(TodoLine line)
+    /// <summary>
+    /// Ticks a to-do. It used to rewrite the <c>-[]</c> line in the note body; on an occurrence of
+    /// a rule this now writes an override rather than touching the rule (docs/TODOS.md §5).
+    /// </summary>
+    private async Task ToggleTodoAsync(AgendaDayRow row)
     {
-        DomainResult<NoteId> id = NoteId.Create(line.NoteId);
-        if (!id.IsSuccess)
-        {
-            return;
-        }
-
-        DayWorkspace workspace = await _repository.GetDayWorkspaceStateAsync(line.Date).ConfigureAwait(true);
-        Note? note = workspace.Notes.Notes.FirstOrDefault(n => !n.IsProjection && n.Id == id.Value);
-        if (note is null)
-        {
-            return;
-        }
-
-        string newBody = TodoParsing.ToggleLine(note.Body, line.LineIndex);
-        if (string.Equals(newBody, note.Body, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var request = new NoteSaveRequest(
-            id.Value, line.Date, note.Title, newBody, workspace.RevisionOf(id.Value), IsNew: false, note.HasCustomTitle);
-        try
-        {
-            await _repository.SaveNoteAsync(request).ConfigureAwait(true);
-        }
-        catch (RecoverableNoteException)
-        {
-            return;
-        }
-
-        if (line.Date == SelectedDate)
-        {
-            await Notes.LoadAsync(SelectedDate).ConfigureAwait(true);
-        }
-
+        await _toggleAgenda.ToggleAsync(row).ConfigureAwait(true);
         await RefreshTodosAsync().ConfigureAwait(true);
-        await RefreshTagsAsync().ConfigureAwait(true);
     }
+
 }

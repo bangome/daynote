@@ -1,3 +1,4 @@
+using Daynote.Core.Agenda;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -93,11 +94,31 @@ public sealed class HomeScreenTests
             DayNoteCardViewModel card = shell.DayCards.Single();
             Assert.AreEqual("회의", card.Tab.Title);
             Assert.AreEqual("안건 정리 · -[] 자료 공유 (9/1 10:00) · -[x] 예약", card.Preview);
+            // The body is still exactly what was typed, and a `-[]` in it is now text that looks
+            // like a checkbox — the panels read to-do entities. The one-time migration carries an
+            // existing user's lines across; a line typed afterwards is prose.
+            Assert.AreEqual(0, card.TodoTotal);
+            Assert.IsTrue(shell.Week.Single(d => d.IsSelected).HasNotes, "The day's dot did not appear.");
+            Assert.IsFalse(shell.IsDayEmpty);
+        });
+    }
+
+    [TestMethod]
+    public void A_cards_progress_counts_the_to_dos_captured_from_that_note()
+    {
+        TestServices.WithInitialisedShell((_, shell) =>
+        {
+            WriteNote(shell, "회의", "안건 정리");
+            Guid note = shell.Notes.SelectedTab!.Id.Value;
+
+            AddTodo(shell, note, "자료 공유", done: false);
+            AddTodo(shell, note, "예약", done: true);
+            AddTodo(shell, note, "메모", done: false);
+
+            DayNoteCardViewModel card = shell.DayCards.Single();
             Assert.AreEqual(1, card.TodoDone);
             Assert.AreEqual(3, card.TodoTotal);
             Assert.AreEqual("1 / 3", card.TodoText);
-            Assert.IsTrue(shell.Week.Single(d => d.IsSelected).HasNotes, "The day's dot did not appear.");
-            Assert.IsFalse(shell.IsDayEmpty);
         });
     }
 
@@ -106,7 +127,10 @@ public sealed class HomeScreenTests
     {
         TestServices.WithInitialisedShell((_, shell) =>
         {
-            WriteNote(shell, "할 일", "-[] 하나\n-[x] 둘");
+            WriteNote(shell, "할 일", "메모");
+            Guid note = shell.Notes.SelectedTab!.Id.Value;
+            AddTodo(shell, note, "하나", done: false);
+            AddTodo(shell, note, "둘", done: true);
 
             Assert.IsTrue(shell.HasDayTodos);
             Assert.HasCount(2, shell.DayTodos);
@@ -124,21 +148,29 @@ public sealed class HomeScreenTests
     [TestMethod]
     public void To_dos_fall_into_their_bands()
     {
-        var now = new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.FromHours(9));
-        LocalDate day = LocalDates.FromDateOnly(new DateOnly(2026, 9, 30));
-        TodoLine Line(bool done, DateTimeOffset? due, bool overdue) =>
-            new(Guid.NewGuid(), day, "n", 0, done, "t", due is null ? string.Empty : "x", due, overdue);
+        // A to-do is an entity now rather than a parsed line, so a band is decided by its status
+        // and the day it is owed on rather than by flags the parser worked out.
 
-        Assert.AreEqual(TodoGroupKind.Done, TodoGroupViewModel.KindOf(Line(true, now.AddDays(-1), false), now));
-        Assert.AreEqual(TodoGroupKind.Overdue, TodoGroupViewModel.KindOf(Line(false, now.AddHours(-1), true), now));
-        Assert.AreEqual(TodoGroupKind.Today, TodoGroupViewModel.KindOf(Line(false, now.AddHours(5), false), now));
-        Assert.AreEqual(TodoGroupKind.Upcoming, TodoGroupViewModel.KindOf(Line(false, now.AddDays(2), false), now));
-        Assert.AreEqual(TodoGroupKind.NoDate, TodoGroupViewModel.KindOf(Line(false, null, false), now));
+        var now = new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.FromHours(9));
+
+        Assert.AreEqual(TodoGroupKind.Done, TodoGroupViewModel.KindOf(Row(true, now.AddDays(-1)), now));
+        Assert.AreEqual(TodoGroupKind.Overdue, TodoGroupViewModel.KindOf(Row(false, now.AddHours(-1)), now));
+        Assert.AreEqual(TodoGroupKind.Today, TodoGroupViewModel.KindOf(Row(false, now.AddHours(5)), now));
+        Assert.AreEqual(TodoGroupKind.Upcoming, TodoGroupViewModel.KindOf(Row(false, now.AddDays(2)), now));
+        Assert.AreEqual(TodoGroupKind.NoDate, TodoGroupViewModel.KindOf(Row(false, null), now));
 
         IReadOnlyList<TodoGroupViewModel> groups = TodoGroupViewModel.Build(
-            [Line(false, null, false), Line(true, null, false), Line(false, now.AddHours(-1), true)],
+            [Row(false, null), Row(true, null), Row(false, now.AddHours(-1))],
             now,
-            line => new TodoRowViewModel(new Daynote.App.Shell.Product.TodoItemViewModel(line, _ => Task.CompletedTask, _ => Task.CompletedTask), line),
+            row => new TodoRowViewModel(
+                new Daynote.App.Shell.Product.TodoItemViewModel(
+                    row,
+                    Daynote.App.Shell.Product.TodoRowScope.AllDates,
+                    string.Empty,
+                    now.DateTime,
+                    _ => Task.CompletedTask,
+                    _ => Task.CompletedTask),
+                row),
             kind => kind.ToString());
 
         CollectionAssert.AreEqual(
@@ -239,6 +271,42 @@ public sealed class HomeScreenTests
     }
 
     /// <summary>Writes a note on the selected day through the editor, the way a user would.</summary>
+    /// <summary>
+    /// Captures a to-do against a note, the way the @ command will. Written straight through the
+    /// repository because the phone's own capture bar is not built yet (phone §01).
+    /// </summary>
+    private static void AddTodo(MobileShellViewModel shell, Guid note, string title, bool done)
+    {
+        var agenda = (IAgendaRepository)TestServices.CurrentProvider!.GetService(typeof(IAgendaRepository))!;
+        DateOnly day = LocalDates.ToDateOnly(shell.SelectedDate);
+        var item = new AgendaItem(
+            Guid.NewGuid(),
+            AgendaList.DefaultId,
+            AgendaKind.Task,
+            title,
+            string.Empty,
+            "Asia/Seoul",
+            StartsAt: null,
+            EndsAt: null,
+            DueAt: new WallClock(day.ToDateTime(new TimeOnly(10, 0))),
+            HasDueTime: true,
+            Rrule: null,
+            SeriesId: null,
+            RecurrenceId: null,
+            done ? AgendaStatus.Completed : AgendaStatus.NeedsAction,
+            CompletedUtc: done ? DateTimeOffset.UtcNow : null,
+            Priority: 0,
+            TimelineVisibility.Auto,
+            SourceNoteId: note,
+            ExceptionDates: [],
+            AgendaAlert.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+        Pump(() => agenda.SaveAsync(item).AsTask());
+        Pump(shell.RefreshAllAsync);
+    }
+
     private static void WriteNote(MobileShellViewModel shell, string title, string body, params string[] tags)
     {
         Pump(() => shell.NewNoteCommand.ExecuteAsync(null));
@@ -274,5 +342,35 @@ public sealed class HomeScreenTests
 
         task.GetAwaiter().GetResult();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>A to-do owed at <paramref name="due"/>, or owed with no day when it is null.</summary>
+    private static AgendaDayRow Row(bool done, DateTimeOffset? due)
+    {
+        var item = new AgendaItem(
+            Guid.NewGuid(),
+            AgendaList.DefaultId,
+            AgendaKind.Task,
+            "t",
+            string.Empty,
+            "Asia/Seoul",
+            StartsAt: null,
+            EndsAt: null,
+            DueAt: due is { } at ? new WallClock(at.DateTime) : null,
+            HasDueTime: due is not null,
+            Rrule: null,
+            SeriesId: null,
+            RecurrenceId: null,
+            done ? AgendaStatus.Completed : AgendaStatus.NeedsAction,
+            CompletedUtc: null,
+            Priority: 0,
+            TimelineVisibility.Auto,
+            SourceNoteId: null,
+            ExceptionDates: [],
+            AgendaAlert.Default,
+            DateTimeOffset.UnixEpoch,
+            DateTimeOffset.UnixEpoch);
+
+        return new AgendaDayRow(item, null, item.DueAt);
     }
 }

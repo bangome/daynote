@@ -907,6 +907,18 @@ public static class AppStrings
     /// <summary>{0} = the rule's name. Only for a rule the expander cannot read; daily and weekly ones alert normally.</summary>
     public static string AgendaRuleNoAlerts => LocalizationService.Instance[nameof(AgendaRuleNoAlerts)];
 
+    /// <summary>A .NET time pattern: the day panel shows only the clock.</summary>
+    public static string TodoRowTimeFormat => LocalizationService.Instance[nameof(TodoRowTimeFormat)];
+    /// <summary>Date and clock, for the cross-date list.</summary>
+    public static string TodoRowDateTimeFormat => LocalizationService.Instance[nameof(TodoRowDateTimeFormat)];
+    /// <summary>Date alone, for a to-do owed on a day with no clock.</summary>
+    public static string TodoRowDateFormat => LocalizationService.Instance[nameof(TodoRowDateFormat)];
+
+    /// <summary>{0} = how many are left. The day panel heading.</summary>
+    public static string DeskDayTodoRemainingFormat => LocalizationService.Instance[nameof(DeskDayTodoRemainingFormat)];
+    /// <summary>{0} = how many were finished. The collapsed row under them.</summary>
+    public static string DeskDayTodoDoneFormat => LocalizationService.Instance[nameof(DeskDayTodoDoneFormat)];
+
     /// <summary>{0} = the date and time. The 할 일 line.</summary>
     /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>
     /// <summary>{0} = date, {1} = time.</summary>

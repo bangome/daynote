@@ -791,6 +791,15 @@ internal static class EnglishStrings
         ["AgendaRuleOrdinalN"] = "{0}th",
         ["AgendaRuleNoAlerts"] = "Alerts aren’t available for this repeat ({0}) yet. Daily and weekly repeats send alerts.",
 
+        // A to-do row's "when" (design §04). .NET date and time patterns, translated
+        // because the order of month and day is not universal.
+        ["TodoRowTimeFormat"] = "HH:mm",
+        ["TodoRowDateTimeFormat"] = "M/d HH:mm",
+        ["TodoRowDateFormat"] = "M/d",
+
+        ["DeskDayTodoRemainingFormat"] = "{0} left",
+        ["DeskDayTodoDoneFormat"] = "Done {0}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

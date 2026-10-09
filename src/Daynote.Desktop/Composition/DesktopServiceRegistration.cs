@@ -112,11 +112,16 @@ public static class DesktopServiceRegistration
         services.AddSingleton<IFilePicker>(_ => new AvaloniaFilePicker(topLevel));
         services.AddSingleton<Daynote.App.Settings.IBackupArchivePicker>(_ => new AvaloniaBackupArchivePicker(topLevel));
         services.AddSingleton<IThumbnailLoader, AvaloniaThumbnailLoader>();
+        // To-dos and events (docs/TODOS.md).
+        services.AddSingleton<Daynote.Core.Agenda.IAgendaRepository>(sp =>
+            new Daynote.Infrastructure.Agenda.SqliteAgendaRepository(sp.GetRequiredService<SqliteDatabase>()));
+
         services.AddSingleton(sp => new DesktopShellViewModel(
             sp.GetRequiredService<NoteWorkspaceViewModel>(),
             sp.GetRequiredService<IClock>(),
             sp.GetRequiredService<SearchService>(),
             sp.GetRequiredService<INoteRepository>(),
+            sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>(),
             sp.GetRequiredService<AddDayFile>(),
             sp.GetRequiredService<ListDayFiles>(),
             sp.GetRequiredService<DeleteDayFile>(),

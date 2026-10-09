@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Daynote.Core.Agenda;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Notes;
@@ -98,13 +99,33 @@ public enum TodoGroupKind
     Done,
 }
 
-/// <summary>A to-do line as the phone lists it: the shared item, plus the "note · 09/30" caption.</summary>
-public sealed class TodoRowViewModel(TodoItemViewModel item, TodoLine line)
+/// <summary>A to-do as the phone lists it: the shared item, plus its "업무 · 09/30" caption.</summary>
+/// <remarks>
+/// The caption used to name the note the <c>-[]</c> line was parsed out of. A to-do is its own
+/// row now and often has no note behind it at all, so what identifies it is the list it is in —
+/// which is also what the design labels a row with (§04, 4c).
+/// </remarks>
+public sealed class TodoRowViewModel(TodoItemViewModel item, AgendaDayRow row)
 {
     public TodoItemViewModel Item { get; } = item;
 
-    public string NoteCaption { get; } = string.Create(
-        CultureInfo.InvariantCulture, $"{line.NoteTitle} · {line.Date.Month:00}/{line.Date.Day:00}");
+    public string NoteCaption { get; } = Caption(item, row);
+
+    private static string Caption(TodoItemViewModel item, AgendaDayRow row)
+    {
+        string day = row.Item.Anchor is { } anchor
+            ? string.Create(CultureInfo.InvariantCulture, $"{anchor.Value.Month:00}/{anchor.Value.Day:00}")
+            : string.Empty;
+
+        if (item.NoteLabel.Length == 0)
+        {
+            return day;
+        }
+
+        return day.Length == 0
+            ? item.NoteLabel
+            : string.Create(CultureInfo.InvariantCulture, $"{item.NoteLabel} · {day}");
+    }
 }
 
 /// <summary>One band of the Lists page's to-do tab: 지남, 오늘, 예정, 날짜 없음, 완료.</summary>
@@ -133,14 +154,14 @@ public sealed class TodoGroupViewModel(TodoGroupKind kind, string label, IReadOn
     /// empty ones.
     /// </summary>
     public static IReadOnlyList<TodoGroupViewModel> Build(
-        IReadOnlyList<TodoLine> lines,
+        IReadOnlyList<AgendaDayRow> lines,
         DateTimeOffset now,
-        Func<TodoLine, TodoRowViewModel> row,
+        Func<AgendaDayRow, TodoRowViewModel> row,
         Func<TodoGroupKind, string> label)
     {
         ArgumentNullException.ThrowIfNull(lines);
         var bands = new Dictionary<TodoGroupKind, List<TodoRowViewModel>>();
-        foreach (TodoLine line in lines)
+        foreach (AgendaDayRow line in lines)
         {
             TodoGroupKind kind = KindOf(line, now);
             if (!bands.TryGetValue(kind, out List<TodoRowViewModel>? band))
@@ -157,14 +178,24 @@ public sealed class TodoGroupViewModel(TodoGroupKind kind, string label, IReadOn
             .Select(kind => new TodoGroupViewModel(kind, label(kind), bands[kind]))];
     }
 
-    public static TodoGroupKind KindOf(TodoLine line, DateTimeOffset now) => line switch
+    public static TodoGroupKind KindOf(AgendaDayRow row, DateTimeOffset now)
     {
-        { Checked: true } => TodoGroupKind.Done,
-        { Overdue: true } => TodoGroupKind.Overdue,
-        { Due: { } due } when due.Date <= now.Date => TodoGroupKind.Today,
-        { Due: not null } => TodoGroupKind.Upcoming,
-        _ => TodoGroupKind.NoDate,
-    };
+        if (row.IsDone)
+        {
+            return TodoGroupKind.Done;
+        }
+
+        if (row.IsOverdue(now.DateTime))
+        {
+            return TodoGroupKind.Overdue;
+        }
+
+        // Owed on a day: today or before it is today's problem, later is upcoming. A to-do with
+        // no day at all is neither, and gets the band that says so.
+        return row.Item.Anchor is not { } anchor
+            ? TodoGroupKind.NoDate
+            : anchor.Value.Date <= now.Date ? TodoGroupKind.Today : TodoGroupKind.Upcoming;
+    }
 }
 
 /// <summary>A tag on the Lists page's tag tab, and the notes that carry it.</summary>
