@@ -179,6 +179,21 @@ public static class MobileCatalog
         ["StoreRenewsFormat"] = "다음 갱신일 {0}",
         ["StoreEndsFormat"] = "{0}까지 이용",
         ["StoreStorageFormat"] = "저장 공간 {0}",
+        // The home-screen widgets (Android). Drawn outside the app, in the app's language.
+        ["WidgetToday"] = "오늘",
+        ["WidgetRemainingFormat"] = "남은 {0}",
+        ["WidgetUpNext"] = "다음 일정",
+        ["WidgetNoEvent"] = "다가오는 일정 없음",
+        ["WidgetEmpty"] = "오늘 남은 할 일이 없어요",
+        ["WidgetLocked"] = "잠겨 있습니다. 앱에서 잠금을 풀면 보입니다.",
+        ["WidgetNewNote"] = "+ 노트",
+        ["WidgetNewTodo"] = "@ 할 일",
+        ["WidgetAddTodo"] = "할 일 추가",
+        ["WidgetCompleteFormat"] = "{0} 완료",
+        ["WidgetReopenFormat"] = "{0} 완료 취소",
+        ["WidgetMoreFormat"] = "외 {0}개",
+        ["WidgetTomorrow"] = "내일",
+        ["WidgetAllDay"] = "종일",
     };
 
     public static readonly IReadOnlyDictionary<string, string> English = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -309,6 +324,20 @@ public static class MobileCatalog
         ["StoreRenewsFormat"] = "Renews {0}",
         ["StoreEndsFormat"] = "Active until {0}",
         ["StoreStorageFormat"] = "Storage {0}",
+        ["WidgetToday"] = "Today",
+        ["WidgetRemainingFormat"] = "{0} left",
+        ["WidgetUpNext"] = "Up next",
+        ["WidgetNoEvent"] = "Nothing scheduled",
+        ["WidgetEmpty"] = "Nothing left for today",
+        ["WidgetLocked"] = "Locked. Unlock in the app to see your day.",
+        ["WidgetNewNote"] = "+ Note",
+        ["WidgetNewTodo"] = "@ To-do",
+        ["WidgetAddTodo"] = "Add a to-do",
+        ["WidgetCompleteFormat"] = "Complete {0}",
+        ["WidgetReopenFormat"] = "Reopen {0}",
+        ["WidgetMoreFormat"] = "+{0} more",
+        ["WidgetTomorrow"] = "Tomorrow",
+        ["WidgetAllDay"] = "All day",
     };
 
     /// <summary>"노트 3개" / "3 notes", and "1 note" rather than "1 notes".</summary>

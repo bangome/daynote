@@ -94,6 +94,15 @@ public partial class App : Application
             MobileShellViewModel shell = _shell;
             account.FlushEditor = async () => (await shell.FlushAsync(FlushReason.Quit).ConfigureAwait(true)).CanProceed;
             account.ProfileSwitchRequested += OnProfileSwitchRequested;
+
+            // Locked or unlocked here or by another device: the widgets show the day, or nothing.
+            account.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(Daynote.App.Account.AccountViewModel.IsLocked))
+                {
+                    platform.AgendaChanged?.Invoke();
+                }
+            };
         }
 
         _ = StartAsync(_shell);
@@ -240,6 +249,11 @@ public partial class App : Application
             _pendingReminder = null;
             await shell.OpenReminderAsync(tapped.Date, tapped.NoteId).ConfigureAwait(true);
         }
+        else if (_pendingWidget is { } launch)
+        {
+            _pendingWidget = null;
+            await shell.OpenFromWidgetAsync(launch).ConfigureAwait(true);
+        }
 
         if (shell.Account is { } account)
         {
@@ -275,6 +289,34 @@ public partial class App : Application
 
         _pendingReminder = (day.Value, note);
     }
+
+    /// <summary>A widget tap that arrived before the shell was ready, typically the one that launched the app.</summary>
+    private static WidgetLaunch? _pendingWidget;
+
+    /// <summary>
+    /// A home-screen widget was tapped. The head calls this on the UI thread; as with a reminder,
+    /// the app acts now if it is running and as soon as the day has loaded if the tap launched it.
+    /// </summary>
+    public static void OpenFromWidget(WidgetLaunch launch)
+    {
+        if (Current is App { _shell: { } shell } && ReferenceEquals(shell, _initialised))
+        {
+            _ = shell.OpenFromWidgetAsync(launch);
+            return;
+        }
+
+        _pendingWidget = launch;
+    }
+
+    /// <summary>
+    /// The running composition and its shell, once the day has loaded; null before that, after a
+    /// failed switch, and when the process was started for a broadcast and has no UI. What the
+    /// widgets read through instead of opening the database a second time.
+    /// </summary>
+    internal static (IServiceProvider Services, MobileShellViewModel Shell)? Live =>
+        Current is App { _provider: { } provider, _shell: { } shell } && ReferenceEquals(shell, _initialised)
+            ? (provider, shell)
+            : null;
 
     /// <summary>
     /// The app came back to the foreground. Each head calls this; it is when a phone most likely

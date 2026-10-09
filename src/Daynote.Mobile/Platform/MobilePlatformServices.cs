@@ -65,6 +65,10 @@ namespace Daynote.Mobile.Platform;
 /// <c>AlarmManager</c> on Android. Null (tests, a head without it) leaves the settings row out and
 /// schedules nothing.
 /// </param>
+/// <param name="AgendaChanged">
+/// Redraws the home-screen widgets, on Android; called whenever the to-dos may have changed. Null
+/// on a head without widgets.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
@@ -75,7 +79,8 @@ public sealed record MobilePlatformServices(
     Func<string, byte[], Task<bool>>? OpenFile = null,
     Func<CancellationToken, Task<IReadOnlyList<string>>>? PickPhotos = null,
     IStorePurchases? Store = null,
-    Daynote.Mobile.Reminders.IReminderScheduler? Reminders = null)
+    Daynote.Mobile.Reminders.IReminderScheduler? Reminders = null,
+    Action? AgendaChanged = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

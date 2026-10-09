@@ -42,16 +42,38 @@ public partial class EditorPage : UserControl
         if (_observed is { } previous)
         {
             previous.TitleRenameStarted -= OnTitleRenameStarted;
+            previous.CaptureRequested -= OnCaptureRequested;
         }
 
         _observed = DataContext as MobileShellViewModel;
         if (_observed is { } shell)
         {
             shell.TitleRenameStarted += OnTitleRenameStarted;
+            shell.CaptureRequested += OnCaptureRequested;
         }
     }
 
     private void OnTitleRenameStarted(object? sender, EventArgs e) => FocusTitleBox();
+
+    /// <summary>
+    /// The widget's @ 할 일: the caret at the end of the new note's body and an @ typed there, which
+    /// is what opens the bar — the same as pressing the @ button, so the bar has one way in.
+    /// </summary>
+    /// <remarks>
+    /// Posted at a low priority for the reason <see cref="FocusTitleBox"/> is: the editor has only
+    /// just been asked to show, and a box that is not laid out yet takes neither focus nor a caret.
+    /// </remarks>
+    private void OnCaptureRequested(object? sender, EventArgs e) => Dispatcher.UIThread.Post(() =>
+    {
+        if (BodyBox is not { } box)
+        {
+            return;
+        }
+
+        box.Focus();
+        box.CaretIndex = (box.Text ?? string.Empty).Length;
+        OnInsertAt(sender, new RoutedEventArgs());
+    }, DispatcherPriority.Background);
 
     /// <summary>
     /// Runs the helper toolbar's fill under the home indicator, with its buttons kept above it; on a
