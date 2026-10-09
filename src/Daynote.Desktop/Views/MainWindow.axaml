@@ -493,7 +493,7 @@
                     <Button Classes="row" CornerRadius="0" Padding="18,14" Command="{Binding JumpCommand}">
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <views:DeskTodoCheck Grid.Column="0" Classes="large" Margin="0,0,14,0"
-                                             IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" />
+                                             IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                           <Panel HorizontalAlignment="Left">
                             <TextBlock FontSize="14" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
@@ -649,14 +649,15 @@
               </StackPanel>
               <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
               <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0"
-                            motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}">
+                            motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}"
+                            motion:RowArrivals.KnownItems="{Binding DayTodosDone}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:TodoItemViewModel">
                     <Panel Classes="todorow">
                       <Border Classes="rowflash" />
                       <Button Classes="row rowcontent" Padding="10,9" Command="{Binding JumpCommand}">
                         <Grid ColumnDefinitions="Auto,*">
-                          <views:DeskTodoCheck Grid.Column="0" Margin="0,1,11,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" />
+                          <views:DeskTodoCheck Grid.Column="0" Margin="0,1,11,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
                           <StackPanel Grid.Column="1">
                             <Panel HorizontalAlignment="Left">
                               <TextBlock FontSize="13" LineHeight="18.85" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />

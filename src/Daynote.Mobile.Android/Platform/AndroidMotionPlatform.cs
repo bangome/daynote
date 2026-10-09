@@ -119,6 +119,7 @@ internal sealed class AndroidDeviceShape : IDeviceShape
 
         _tracker = null;
         _listener = null;
+        _activity = null;
     }
 
     /// <summary>The configuration changed (a keyboard came or went).</summary>
@@ -127,13 +128,22 @@ internal sealed class AndroidDeviceShape : IDeviceShape
     private void OnLayout(WindowLayoutInfo info)
     {
         float density = _activity?.Resources?.DisplayMetrics?.Density ?? 1f;
+
+        // The bounds are in the window's pixels; the app draws in its content view, which need not
+        // start at the window's corner (a cutout, a system bar on the left in landscape).
+        int[] origin = [0, 0];
+        _activity?.FindViewById(global::Android.Resource.Id.Content)?.GetLocationInWindow(origin);
+
         _hinge = null;
         foreach (IDisplayFeature feature in info.DisplayFeatures)
         {
             if (feature is IFoldingFeature { IsSeparating: true } fold && fold.Bounds is { } bounds)
             {
                 _hinge = new Avalonia.Rect(
-                    bounds.Left / density, bounds.Top / density, bounds.Width() / density, bounds.Height() / density);
+                    (bounds.Left - origin[0]) / density,
+                    (bounds.Top - origin[1]) / density,
+                    bounds.Width() / density,
+                    bounds.Height() / density);
             }
         }
 

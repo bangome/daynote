@@ -120,6 +120,57 @@ public sealed class MotionTests
         });
     }
 
+    /// <summary>
+    /// Two ticks inside the 600 ms wait: the first one's write rebuilds the day panel under the
+    /// second, which must still be written once, and a quit writes whatever is still held.
+    /// </summary>
+    [TestMethod]
+    public void M3_ticks_held_across_a_rebuild_are_all_written()
+    {
+        TestServices.WithInitialisedShell((window, shell) =>
+        {
+            AddTodo(shell, "회의실 예약 확인");
+            AddTodo(shell, "퇴근 전 로그 확인");
+            AddTodo(shell, "릴리즈 노트 작성");
+            Settle(window);
+
+            var gates = new List<TaskCompletionSource>();
+            MotionEnvironment.Instant = false;
+            shell.Ticks.Delay = (_, token) =>
+            {
+                var gate = new TaskCompletionSource();
+                token.Register(() => gate.TrySetCanceled(token));
+                gates.Add(gate);
+                return gate.Task;
+            };
+
+            Click(window, Check(window, "회의실 예약 확인"));
+            Click(window, Check(window, "퇴근 전 로그 확인"));
+            Click(window, Check(window, "릴리즈 노트 작성"));
+            Assert.AreEqual(3, shell.Ticks.Count);
+
+            gates[0].SetResult();
+            Wait(Task.Delay(100));
+            Settle(window);
+            Assert.AreEqual(2, shell.Ticks.Count);
+
+            gates[1].SetResult();
+            Wait(Task.Delay(100));
+            Settle(window);
+
+            // Quitting writes the one still held.
+            Wait(shell.Ticks.CommitAll());
+            Wait(shell.Todo.RefreshAsync());
+            Settle(window);
+            Assert.IsEmpty(shell.DayTodos, "Every held tick should have been written, once.");
+            Assert.HasCount(3, shell.DayTodosDone);
+        });
+    }
+
+    private static DeskTodoCheck Check(MainWindow window, string title) =>
+        window.FindControl<ItemsControl>("DayTodoList")!.GetVisualDescendants().OfType<DeskTodoCheck>()
+            .Single(c => (c.DataContext as Daynote.App.Shell.Product.TodoItemViewModel)?.Text == title);
+
     private static void Intercept(List<Storyboard> captured)
     {
         MotionEnvironment.Instant = false;

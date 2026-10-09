@@ -22,7 +22,10 @@ namespace Daynote.Mobile.Platform;
 /// </remarks>
 public interface IDeviceShape
 {
-    /// <summary>The hinge's bounds in the window, in points, while it divides the window; otherwise null.</summary>
+    /// <summary>
+    /// The hinge's bounds, in points, from the corner of the app's own view (not the screen's),
+    /// while it divides the window; otherwise null. The view subtracts its own safe-area inset.
+    /// </summary>
     Rect? Hinge { get; }
 
     bool HasHardwareKeyboard { get; }

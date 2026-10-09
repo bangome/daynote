@@ -88,7 +88,7 @@
                       <Border Classes="rule todorow" Padding="0,11">
                         <Grid ColumnDefinitions="22,*,Auto">
                           <views:TodoCheck Grid.Column="0" VerticalAlignment="Top" Margin="-11,-10,-11,-12"
-                                           IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
+                                           IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
                           <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" HorizontalContentAlignment="Left"
                                   Command="{Binding Item.JumpCommand}">
                             <StackPanel>

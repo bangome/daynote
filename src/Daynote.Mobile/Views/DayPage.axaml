@@ -13,9 +13,6 @@
   <ScrollViewer>
     <StackPanel Margin="20,4,20,120">
 
-      <!-- Room for the tablet's sidebar button, which sits over the top left of the day. -->
-      <Border Height="48" IsVisible="{Binding IsSidebarButtonShown}" />
-
       <!--
         The month, which opens the sheet, and the way back to today when the day is another. Not on
         a tablet, whose sidebar holds the month; nor the week strip below, for the same reason.
@@ -197,7 +194,7 @@
               <Panel Classes="todorow">
                 <Border Classes="rowflash" />
                 <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44">
-                  <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
+                  <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
                   <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
                           Command="{Binding Item.JumpCommand}">
                     <Panel HorizontalAlignment="Left">

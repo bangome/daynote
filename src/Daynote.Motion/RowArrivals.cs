@@ -35,6 +35,18 @@ public static class RowArrivals
     public static readonly AttachedProperty<object?> ContextProperty =
         AvaloniaProperty.RegisterAttached<ItemsControl, object?>("Context", typeof(RowArrivals));
 
+    /// <summary>
+    /// Rows that count as already seen although this list does not show them: the done rows of a
+    /// panel that folds them away. Unticking one moves it into the list, and that is a row coming
+    /// back, not a new one arriving.
+    /// </summary>
+    public static readonly AttachedProperty<System.Collections.IEnumerable?> KnownItemsProperty =
+        AvaloniaProperty.RegisterAttached<ItemsControl, System.Collections.IEnumerable?>("KnownItems", typeof(RowArrivals));
+
+    public static System.Collections.IEnumerable? GetKnownItems(ItemsControl list) => list.GetValue(KnownItemsProperty);
+
+    public static void SetKnownItems(ItemsControl list, System.Collections.IEnumerable? value) => list.SetValue(KnownItemsProperty, value);
+
     private sealed class Seen
     {
         public HashSet<string>? Keys;
@@ -148,7 +160,11 @@ public static class RowArrivals
         Dispatcher.UIThread.Post(() =>
         {
             seen.CommitQueued = false;
-            seen.Keys = [.. list.Items.Select(KeyOf).OfType<string>()];
+            seen.Keys =
+            [
+                .. list.Items.Select(KeyOf).OfType<string>(),
+                .. (GetKnownItems(list)?.Cast<object?>() ?? []).Select(KeyOf).OfType<string>(),
+            ];
             seen.Context = GetContext(list);
         }, DispatcherPriority.Background);
     }

@@ -39,7 +39,7 @@
                 <Panel Classes="todorow">
                   <Border Classes="rowflash" Margin="-2,0" />
                   <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44" Margin="8,0">
-                    <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
+                    <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
                     <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
                             Command="{Binding Item.JumpCommand}">
                       <Panel HorizontalAlignment="Left">
@@ -66,7 +66,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TodoRowViewModel">
               <Grid Classes="todorow" ColumnDefinitions="22,*" MinHeight="44" Margin="14,0,8,0">
-                <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" />
+                <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
                 <TextBlock Grid.Column="1" Classes="todo line done" Margin="12,0,0,0" FontSize="14.5" VerticalAlignment="Center"
                            Text="{Binding Item.Text}" />
               </Grid>

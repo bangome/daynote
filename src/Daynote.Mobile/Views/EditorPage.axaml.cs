@@ -180,22 +180,42 @@ public partial class EditorPage : UserControl
     }
 
     /// <summary>The ×: down and out (220 ms ease-in), and only then closed (M1).</summary>
+    /// <remarks>
+    /// The bar is still live while it leaves: a second × is ignored, and if Enter makes the item
+    /// meanwhile, or the @ the bar was reading is gone or replaced by another, there is nothing
+    /// left for this × to dismiss.
+    /// </remarks>
     private async void OnDismissCapture(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MobileShellViewModel shell)
+        if (_dismissing || DataContext is not MobileShellViewModel { Capture.IsOpen: true } shell)
         {
             return;
         }
 
-        if (this.FindControl<StackPanel>("CaptureBar") is { } bar)
+        _dismissing = true;
+        int reading = shell.Capture.AtIndex;
+        try
         {
-            await MotionPlayer.Play(bar, "m1", Choreography.AtBarDismiss(bar, bar.Bounds.Height + 8)).ConfigureAwait(true);
-            MotionTransform.For(bar).Reset();
-            bar.Opacity = 1;
-        }
+            if (this.FindControl<StackPanel>("CaptureBar") is { } bar)
+            {
+                await MotionPlayer.Play(bar, "m1", Choreography.AtBarDismiss(bar, bar.Bounds.Height + 8)).ConfigureAwait(true);
+                MotionTransform.For(bar).Reset();
+                bar.Opacity = 1;
+            }
 
-        shell.DismissCaptureCommand.Execute(null);
+            if (shell.Capture.IsOpen && shell.Capture.AtIndex == reading)
+            {
+                shell.DismissCaptureCommand.Execute(null);
+            }
+        }
+        finally
+        {
+            _dismissing = false;
+        }
     }
+
+    /// <summary>The × is playing its exit (M1); a second one waits for nothing.</summary>
+    private bool _dismissing;
 
     /// <summary>
     /// What was just made opens its row in place; when it settles back into the count, the count

@@ -38,8 +38,8 @@ public sealed partial class MobileShellViewModel
     /// </summary>
     public bool IsNoteBesidePanel => Layout == MobileLayout.TwoPane;
 
-    /// <summary>The menu button that opens the folded-away sidebar: on the compact tablet, over the day only.</summary>
-    public bool IsSidebarButtonShown => Layout == MobileLayout.TabletCompact && IsDayPage;
+    /// <summary>The menu button that opens the folded-away sidebar: on the compact tablet, over every page.</summary>
+    public bool IsSidebarButtonShown => Layout == MobileLayout.TabletCompact;
 
     /// <summary>The page column shows, which on a tablet means the editor is not standing in for it.</summary>
     public bool ShowPageColumn => !IsTabletLayout || !IsEditorOpen;

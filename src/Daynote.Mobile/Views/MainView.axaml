@@ -28,18 +28,21 @@
     <Grid x:Name="Frame" ColumnDefinitions="0,0,*,0">
       <views:NavRail x:Name="Rail" Grid.Column="0" IsVisible="{Binding IsTwoPaneLayout}" />
       <views:TabletSidebar x:Name="Sidebar" Grid.Column="0" IsVisible="{Binding IsSidebarDocked}" />
-      <Panel x:Name="PageColumn" Grid.Column="2" IsVisible="{Binding ShowPageColumn}">
-        <views:DayPage IsVisible="{Binding IsDayPage}" />
-        <views:SearchPage IsVisible="{Binding IsSearchPage}" />
-        <views:ListsPage IsVisible="{Binding IsListsPage}" />
-        <views:SettingsPage IsVisible="{Binding IsSettingsPage}" />
-        <!-- The tablet with its sidebar folded away: the button that brings it over the day (T6, T7). -->
-        <Button x:Name="SidebarButton" Classes="iconbtn" Width="44" Height="44" Margin="8,4,0,0"
-                HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding IsSidebarButtonShown}"
+      <Grid x:Name="PageColumn" Grid.Column="2" RowDefinitions="Auto,*" IsVisible="{Binding ShowPageColumn}">
+        <!--
+          The tablet with its sidebar folded away: the button that brings it over the page (T6, T7),
+          in a row of its own above every page, since the sidebar is the only way between them.
+        -->
+        <Button x:Name="SidebarButton" Grid.Row="0" Classes="iconbtn" Width="44" Height="44" Margin="8,4,0,0"
+                HorizontalAlignment="Left" IsVisible="{Binding IsSidebarButtonShown}"
                 Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="{Binding Strings[MobileWideSidebar]}">
           <views:Glyph Kind="Menu" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
         </Button>
-      </Panel>
+        <views:DayPage Grid.Row="1" IsVisible="{Binding IsDayPage}" />
+        <views:SearchPage Grid.Row="1" IsVisible="{Binding IsSearchPage}" />
+        <views:ListsPage Grid.Row="1" IsVisible="{Binding IsListsPage}" />
+        <views:SettingsPage Grid.Row="1" IsVisible="{Binding IsSettingsPage}" />
+      </Grid>
       <views:EditorPage x:Name="Editor" Grid.Column="2" IsVisible="{Binding ShowEditor}" />
       <views:DayTodoPanel x:Name="DayPanel" Grid.Column="3" IsVisible="{Binding IsTabletLayout}" />
     </Grid>

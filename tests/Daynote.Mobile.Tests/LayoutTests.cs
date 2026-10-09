@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
 using Daynote.Mobile.Platform;
@@ -183,6 +184,162 @@ public sealed class LayoutTests
         });
     }
 
+    /// <summary>
+    /// Settings - and the account, the plans and the profile switch behind it - is reachable in
+    /// every layout, by a tap on what is on screen, and so is the way back to the day. The tablet
+    /// has no tab bar and an iPad no back gesture, so this is not a given.
+    /// </summary>
+    [TestMethod]
+    [DataRow(402, 874, MobileLayout.Phone)]
+    [DataRow(690, 829, MobileLayout.TwoPane)]
+    [DataRow(1032, 1376, MobileLayout.TabletCompact)]
+    [DataRow(1210, 834, MobileLayout.Tablet)]
+    public void Every_layout_reaches_settings_and_comes_back(double width, double height, MobileLayout layout)
+    {
+        TestServices.WithInitialisedShell(width, height, (view, shell) =>
+        {
+            Settle(view);
+            Assert.AreEqual(layout, shell.Layout);
+
+            foreach (MobilePage page in new[] { MobilePage.Lists, MobilePage.Search, MobilePage.Settings })
+            {
+                shell.GoToPageCommand.Execute(page);
+                Settle(view);
+                if (layout == MobileLayout.TabletCompact)
+                {
+                    Assert.IsTrue(view.FindControl<Button>("SidebarButton")!.IsEffectivelyVisible, $"No way to the sidebar from {page}.");
+                }
+            }
+
+            shell.GoToPageCommand.Execute(MobilePage.Day);
+            Settle(view);
+            OpenSidebarIfFolded(view, layout);
+            Click(view, VisibleButton(view, b => b.Command == shell.GoToPageCommand && Equals(b.CommandParameter, MobilePage.Settings)));
+            Assert.IsTrue(shell.IsSettingsPage, $"{layout}: no tap reached settings.");
+            Assert.IsFalse(shell.IsSidebarOpen, "The overlay should close behind the choice.");
+
+            OpenSidebarIfFolded(view, layout);
+            Click(view, VisibleButton(view, b => b.Command == shell.GoToTodayPageCommand));
+            Assert.IsTrue(shell.IsDayPage, $"{layout}: no tap came back to the day.");
+        });
+
+        static void OpenSidebarIfFolded(MainView view, MobileLayout layout)
+        {
+            if (layout == MobileLayout.TabletCompact)
+            {
+                Click(view, view.FindControl<Button>("SidebarButton")!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// M6's drag lives in the sheet's top strip, which also holds buttons: a tap on the month
+    /// sheet's year arrow must still be a tap, and a pull down must still close the sheet.
+    /// </summary>
+    [TestMethod]
+    public void A_sheet_s_top_strip_keeps_its_taps_and_still_drags_closed()
+    {
+        TestServices.WithInitialisedShell(402, 874, (view, shell) =>
+        {
+            shell.OpenMonthPickerCommand.Execute(null);
+            Settle(view);
+            int year = shell.PickerYear;
+
+            Button next = VisibleButton(view, b => b.Command == shell.PickerNextYearCommand);
+            Border sheet = view.FindControl<Border>("Sheet")!;
+            Point inSheet = next.TranslatePoint(default, sheet)!.Value;
+            Assert.IsLessThan(56, inSheet.Y, "The arrow should sit in the draggable strip for this to test anything.");
+            Click(view, next);
+            Assert.AreEqual(year + 1, shell.PickerYear, "The tap in the strip was swallowed by the drag.");
+            Assert.IsTrue(shell.IsMonthPickerOpen);
+
+            var window = (Window)TopLevel.GetTopLevel(view)!;
+            Point top = sheet.TranslatePoint(new Point(sheet.Bounds.Width / 2, 8), window)!.Value;
+            window.MouseDown(top, Avalonia.Input.MouseButton.Left);
+            for (int dy = 4; dy <= 360; dy += 24)
+            {
+                window.MouseMove(top + new Point(0, dy));
+            }
+
+            window.MouseUp(top + new Point(0, 360), Avalonia.Input.MouseButton.Left);
+            Settle(view);
+            Assert.IsFalse(shell.IsMonthPickerOpen, "Pulled most of the way down, the sheet should close.");
+        });
+    }
+
+    /// <summary>The head's device source outlives a view; a view that has gone must not stay subscribed to it.</summary>
+    [TestMethod]
+    public void A_view_lets_go_of_the_device_when_it_is_detached()
+    {
+        var device = new FakeDevice();
+        TestServices.WithInitialisedShell(690, 829, (view, _) =>
+        {
+            view.Device = device;
+            Assert.AreEqual(1, device.Listeners, "Attached, the view follows the device.");
+
+            var window = (Window)TopLevel.GetTopLevel(view)!;
+            window.Content = null;
+            Settle(window);
+            Assert.AreEqual(0, device.Listeners, "Detached, it still listens: a profile switch would leak it.");
+
+            window.Content = view;
+            Settle(window);
+            Assert.AreEqual(1, device.Listeners, "Back on screen, it follows again.");
+        });
+    }
+
+    /// <summary>
+    /// Unticking a finished row on the tablet's day panel brings it back out of the fold; it is not
+    /// a new to-do, so no orange and no success haptic (M2).
+    /// </summary>
+    [TestMethod]
+    public void Unticking_a_done_row_on_the_tablet_is_not_an_arrival()
+    {
+        TestServices.WithInitialisedShell(1210, 834, (view, shell) =>
+        {
+            ScreenshotTests.Seed(shell, LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now)));
+            Settle(view);
+            DayTodoPanel panel = view.FindControl<DayTodoPanel>("DayPanel")!;
+            Click(view, panel.FindControl<Button>("DoneToggle")!);
+
+            var arrived = new List<string>();
+            MotionPlayer.Interceptor = (_, channel, board) =>
+            {
+                arrived.Add(channel);
+                board.Seek(board.Duration);
+                return Task.FromResult(true);
+            };
+
+            TodoCheck done = panel.FindControl<ItemsControl>("DoneList")!.GetVisualDescendants().OfType<TodoCheck>().First();
+            string key = done.Key!;
+            Click(view, done);
+            for (int i = 0; i < 20; i++)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+
+            Settle(view);
+            Assert.IsTrue(panel.FindControl<ItemsControl>("OpenList")!.GetVisualDescendants().OfType<TodoCheck>().Any(c => c.Key == key),
+                "The unticked row should be back among the open ones.");
+            Assert.DoesNotContain("arrive", arrived, "An unticked row replayed the new-to-do arrival.");
+        });
+    }
+
+    private static Button VisibleButton(Control view, Func<Button, bool> match) =>
+        view.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Bounds.Width > 0 && match(b));
+
+    private static void Click(Control view, Control target)
+    {
+        var window = (Window)TopLevel.GetTopLevel(view)!;
+        Settle(view);
+        Point centre = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(centre, Avalonia.Input.MouseButton.Left);
+        window.MouseUp(centre, Avalonia.Input.MouseButton.Left);
+        window.MouseMove(new Point(1, 1));
+        Settle(view);
+    }
+
     private static void Settle(Control view)
     {
         for (int i = 0; i < 5; i++)
@@ -194,12 +351,20 @@ public sealed class LayoutTests
 
     private sealed class FakeDevice : IDeviceShape
     {
+        private EventHandler? _changed;
+
         public Rect? Hinge { get; set; }
 
         public bool HasHardwareKeyboard { get; set; }
 
-        public event EventHandler? Changed;
+        public int Listeners => _changed?.GetInvocationList().Length ?? 0;
 
-        public void Raise() => Changed?.Invoke(this, EventArgs.Empty);
+        public event EventHandler? Changed
+        {
+            add => _changed += value;
+            remove => _changed -= value;
+        }
+
+        public void Raise() => _changed?.Invoke(this, EventArgs.Empty);
     }
 }

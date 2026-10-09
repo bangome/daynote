@@ -554,7 +554,8 @@
       "daynote.motion": {
         "type": "Project",
         "dependencies": {
-          "Avalonia": "[12.1.2, )"
+          "Avalonia": "[12.1.2, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )"
         }
       },
       "daynote.presentation": {

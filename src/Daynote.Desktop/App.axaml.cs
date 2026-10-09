@@ -92,7 +92,10 @@ public partial class App : Application
         if (shell.Account is { } account)
         {
             account.FlushEditor = async () =>
-                (await shell.Notes.FlushAsync(FlushReason.Quit).ConfigureAwait(true)).CanProceed;
+            {
+                await shell.Ticks.CommitAll().ConfigureAwait(true);
+                return (await shell.Notes.FlushAsync(FlushReason.Quit).ConfigureAwait(true)).CanProceed;
+            };
             account.ProfileSwitchRequested += OnProfileSwitchRequested;
         }
 
@@ -101,7 +104,12 @@ public partial class App : Application
             desktop,
             window,
             LoadTrayIcon(),
-            (reason, token) => shell.Notes.FlushAsync(reason, token),
+            // A tick still held for its 600 ms (motion spec M3) is written before anything closes.
+            async (reason, token) =>
+            {
+                await shell.Ticks.CommitAll().ConfigureAwait(true);
+                return await shell.Notes.FlushAsync(reason, token).ConfigureAwait(true);
+            },
             Program.SingleInstance);
 
         // Global chords: the summon key restores the window; ⌥` creates today's note as a post-it.

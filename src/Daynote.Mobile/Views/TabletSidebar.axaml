@@ -122,6 +122,27 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <!--
+          Settings and the account, at the bottom as on the desktop: the tablet has no tab bar and
+          an iPad no back gesture, so this is the only way to them - the plans and a profile switch
+          included, which live behind both.
+        -->
+        <Border Height="1" Margin="4,14,4,10" Background="{DynamicResource Mobile.Stroke2}" />
+        <Button Classes="siderow" Classes.on="{Binding IsSettingsPage}"
+                Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Settings}">
+          <Grid ColumnDefinitions="Auto,*">
+            <views:Glyph Kind="TabSettings" Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.Text2}" Fill="{DynamicResource Mobile.Panel}" />
+            <TextBlock Grid.Column="1" Classes="sidename" Text="{Binding Strings[Settings]}" />
+          </Grid>
+        </Button>
+        <Button Classes="siderow" IsVisible="{Binding HasAccount}" Command="{Binding OpenAccountCommand}">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Classes="sidename" Text="{Binding AccountBarTitle}" />
+            <TextBlock Classes="faint line" FontSize="11.5" Text="{Binding AccountBarSubtitle}" />
+          </StackPanel>
+        </Button>
       </StackPanel>
     </ScrollViewer>
   </Border>

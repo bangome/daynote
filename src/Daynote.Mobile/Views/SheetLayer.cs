@@ -31,7 +31,11 @@ public sealed class SheetLayer : Panel
     /// <summary>How much of the sheet's top answers to a drag, in points.</summary>
     private const double GrabHeight = 56;
 
+    /// <summary>How far, in points, a press in the strip has to move before it is a drag rather than a tap.</summary>
+    private const double DragSlop = 8;
+
     private Point? _dragStart;
+    private bool _dragging;
     private double _offset;
     private (double Y, ulong At) _last;
     private double _velocity;
@@ -42,7 +46,21 @@ public sealed class SheetLayer : Panel
         AddHandler(PointerPressedEvent, OnPressed, handledEventsToo: true);
         AddHandler(PointerMovedEvent, OnMoved, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnReleased, handledEventsToo: true);
-        AddHandler(PointerCaptureLostEvent, (_, _) => _dragStart = null);
+        AddHandler(PointerCaptureLostEvent, (_, _) =>
+        {
+            if (!_dragging)
+            {
+                return;
+            }
+
+            // Lost mid-drag (the system took the touch): the sheet goes back up.
+            _dragging = false;
+            _dragStart = null;
+            if (Sheet is { } sheet)
+            {
+                _ = MotionPlayer.Play(this, "m6", Choreography.SheetSettle(sheet, _offset));
+            }
+        });
     }
 
     public bool IsOpen
@@ -125,8 +143,15 @@ public sealed class SheetLayer : Panel
         }
     }
 
+    /// <summary>
+    /// A press in the top strip only notes where it began. Nothing is captured yet, so a tap on a
+    /// button up there (the month sheet's year arrows) is still a tap; the drag starts once the
+    /// finger has moved far enough down or up to mean it.
+    /// </summary>
     private void OnPressed(object? sender, PointerPressedEventArgs e)
     {
+        _dragStart = null;
+        _dragging = false;
         if (Sheet is not { } sheet || !IsOpen)
         {
             return;
@@ -142,8 +167,6 @@ public sealed class SheetLayer : Panel
         _offset = 0;
         _velocity = 0;
         _last = (0, e.Timestamp);
-        MotionPlayer.Stop(this, "m6");
-        e.Pointer.Capture(this);
     }
 
     private void OnMoved(object? sender, PointerEventArgs e)
@@ -153,9 +176,24 @@ public sealed class SheetLayer : Panel
             return;
         }
 
+        Point now = e.GetPosition(this);
+        double dy = now.Y - start.Y;
+        if (!_dragging)
+        {
+            if (Math.Abs(dy) < DragSlop || Math.Abs(dy) < Math.Abs(now.X - start.X))
+            {
+                return;
+            }
+
+            // From here it is a drag: the sheet takes the pointer, which also stops a button under
+            // the finger from treating the release as its click.
+            _dragging = true;
+            MotionPlayer.Stop(this, "m6");
+            e.Pointer.Capture(this);
+        }
+
         // Down follows the finger; up resists, a third of the way, so the sheet cannot be pulled
         // off its edge.
-        double dy = e.GetPosition(this).Y - start.Y;
         _offset = dy >= 0 ? dy : dy / 3;
         MotionTransform.For(sheet).Y = _offset;
 
@@ -169,12 +207,14 @@ public sealed class SheetLayer : Panel
 
     private void OnReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_dragStart is null || Sheet is not { } sheet)
+        bool dragged = _dragging;
+        _dragStart = null;
+        _dragging = false;
+        if (!dragged || Sheet is not { } sheet)
         {
             return;
         }
 
-        _dragStart = null;
         e.Pointer.Capture(null);
         if (_offset <= 0.5)
         {

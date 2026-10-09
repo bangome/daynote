@@ -691,7 +691,19 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     }
 
     /// <summary>Flushes the open note. The head calls this when the OS suspends the app.</summary>
-    public Task<FlushResult> FlushAsync(FlushReason reason) => Notes.FlushAsync(reason);
+    public async Task<FlushResult> FlushAsync(FlushReason reason)
+    {
+        // Ticks still held for their 600 ms (motion spec M3) are written first. Going to the
+        // background is flushed synchronously on the UI thread by the heads, where waiting for a
+        // write that resumes on that thread would never return, so there they are only started.
+        Task ticks = Ticks.CommitAll();
+        if (reason != FlushReason.Hide)
+        {
+            await ticks.ConfigureAwait(true);
+        }
+
+        return await Notes.FlushAsync(reason).ConfigureAwait(true);
+    }
 
     /// <summary>Re-reads every list the pages show: the day, the week, the month, to-dos, favourites and tags.</summary>
     public Task RefreshAllAsync() => RefreshAfterStructureChangeAsync();

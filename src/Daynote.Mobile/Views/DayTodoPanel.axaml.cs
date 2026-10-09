@@ -35,6 +35,9 @@ public partial class DayTodoPanel : UserControl
         if (this.FindControl<ItemsControl>("OpenList") is { } open)
         {
             open.ItemsSource = _open;
+
+            // An unticked row comes back from the done fold; it is not a new to-do arriving (M2).
+            Daynote.Motion.RowArrivals.SetKnownItems(open, _done);
         }
 
         if (this.FindControl<ItemsControl>("DoneList") is { } done)

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -11,9 +12,11 @@ namespace Daynote.Motion;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The tick shows at once and the toggle runs <see cref="Choreography.CheckSettleMs"/> later. The
-/// toggle is what moves the row down into 완료, and the spec holds that move back so a mistaken tap
-/// can be taken back: a second tap inside the wait cancels the tick, and nothing is written.
+/// The tick shows at once and is written <see cref="Choreography.CheckSettleMs"/> later. Writing it
+/// is what moves the row down into 완료, and the spec holds that move back so a mistaken tap can be
+/// taken back: a second tap inside the wait cancels the tick, and nothing is written. The wait is
+/// held by the screen's shell (<see cref="PendingTicks"/>, under the row's <see cref="Key"/>), not
+/// by this box, which a rebuild of the list can replace in the middle of it.
 /// Unticking is not held: it runs at once, with the fill shrinking away.
 /// </para>
 /// <para>
@@ -31,7 +34,15 @@ public abstract class TickButton : Button
     public static readonly StyledProperty<ICommand?> ToggleProperty =
         AvaloniaProperty.Register<TickButton, ICommand?>(nameof(Toggle));
 
-    private CancellationTokenSource? _pending;
+    /// <summary>Which row this is across rebuilds (the to-do's <c>Key</c>), so a held tick survives one.</summary>
+    public static readonly StyledProperty<string?> KeyProperty =
+        AvaloniaProperty.Register<TickButton, string?>(nameof(Key));
+
+    /// <summary>
+    /// Where the ticks are held when nothing above the box owns them (a box on its own in a test):
+    /// one per box, which is the old behaviour and loses its tick if the box goes away.
+    /// </summary>
+    private PendingTicks? _ownTicks;
 
     protected override Type StyleKeyOverride => typeof(Button);
 
@@ -47,6 +58,12 @@ public abstract class TickButton : Button
         set => SetValue(ToggleProperty, value);
     }
 
+    public string? Key
+    {
+        get => GetValue(KeyProperty);
+        set => SetValue(KeyProperty, value);
+    }
+
     /// <summary>The fill that grows out of the box's middle.</summary>
     protected abstract Visual Fill { get; }
 
@@ -56,29 +73,41 @@ public abstract class TickButton : Button
     /// <summary>Draws the check stroke to a fraction, 0 to 1.</summary>
     protected abstract void DrawMark(double fraction);
 
+    /// <summary>The shell's held ticks, found through the screen's data context.</summary>
+    private PendingTicks Ticks =>
+        this.GetVisualAncestors().Select(static v => (v as StyledElement)?.DataContext).OfType<IPendingTickOwner>().FirstOrDefault()?.Ticks
+            ?? (_ownTicks ??= new PendingTicks());
+
+    /// <summary>The key a tick is held under: the row's, or this box itself when it has none.</summary>
+    private string TickKey => Key ?? RuntimeHelpers.GetHashCode(this).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Ticked, or held as ticked: what the box should look like at rest.</summary>
+    private bool ShownChecked => IsChecked || Ticks.IsPending(TickKey);
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == IsCheckedProperty && _pending is null)
+        if (change.Property == IsCheckedProperty || change.Property == KeyProperty)
         {
-            ShowResting(IsChecked);
+            ShowResting(ShownChecked);
         }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        ShowResting(IsChecked);
+        ShowResting(ShownChecked);
     }
 
     protected override void OnClick()
     {
         base.OnClick();
+        PendingTicks ticks = Ticks;
 
-        if (_pending is { } waiting)
+        // A second tap while the tick is held takes it back: nothing has been written yet. The
+        // tick may have been made on a box the list has since rebuilt; the key is what is held.
+        if (ticks.Cancel(TickKey))
         {
-            _pending = null;
-            waiting.Cancel();
             PseudoClasses.Set(":checked", false);
             _ = MotionPlayer.Play(this, "check", Choreography.Uncheck(Parts()));
             return;
@@ -92,27 +121,10 @@ public abstract class TickButton : Button
             return;
         }
 
-        _ = TickAsync();
-    }
-
-    private async Task TickAsync()
-    {
-        using var pending = new CancellationTokenSource();
-        _pending = pending;
+        // The command is captured now: by the time the wait ends this box may be gone.
         PseudoClasses.Set(":checked", true);
         _ = MotionPlayer.Play(this, "check", Choreography.Check(Parts()));
-        try
-        {
-            TimeSpan settle = MotionEnvironment.Instant ? TimeSpan.Zero : TimeSpan.FromMilliseconds(Choreography.CheckSettleMs);
-            await Task.Delay(settle, pending.Token).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        _pending = null;
-        Toggle?.Execute(null);
+        ticks.Begin(TickKey, Toggle);
     }
 
     /// <summary>The resting state, with nothing in motion: filled and drawn, or empty.</summary>

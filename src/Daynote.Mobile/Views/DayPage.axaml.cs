@@ -107,8 +107,8 @@ public partial class DayPage : UserControl
 
     private async Task SlideWeekAsync(Panel live, Image? ghost, int direction)
     {
-        await MotionPlayer.Play(live, "m5", Choreography.WeekSlide(live, ghost, live.Bounds.Width, direction)).ConfigureAwait(true);
-        if (ghost is not null)
+        // Stopped by a newer change, the ghost is that change's now; only a finished push clears it.
+        if (await MotionPlayer.Play(live, "m5", Choreography.WeekSlide(live, ghost, live.Bounds.Width, direction)).ConfigureAwait(true) && ghost is not null)
         {
             MotionSnapshot.Clear(ghost);
         }
@@ -116,8 +116,8 @@ public partial class DayPage : UserControl
 
     private static async Task PushContentAsync(Control content, Image? ghost, int direction)
     {
-        await MotionPlayer.Play(content, "m5", Choreography.ContentPush(content, ghost, direction)).ConfigureAwait(true);
-        if (ghost is not null)
+        // Stopped by a newer change, the ghost is that change's now; only a finished push clears it.
+        if (await MotionPlayer.Play(content, "m5", Choreography.ContentPush(content, ghost, direction)).ConfigureAwait(true) && ghost is not null)
         {
             MotionSnapshot.Clear(ghost);
         }

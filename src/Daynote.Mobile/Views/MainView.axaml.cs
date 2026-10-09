@@ -82,6 +82,7 @@ public partial class MainView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        FollowDevice(true);
 
         if (TopLevel.GetTopLevel(this) is not { InsetsManager: { } insets } top)
         {
@@ -134,6 +135,7 @@ public partial class MainView : UserControl
     {
         _detach?.Invoke();
         _detach = null;
+        FollowDevice(false);
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -266,19 +268,40 @@ public partial class MainView : UserControl
         get => _device;
         set
         {
-            if (_device is not null)
+            // The source is the head's, one per process, and outlives this view: a profile switch
+            // builds a new view, and a subscription held past detach would keep the old view and its
+            // shell alive. So it is held only while attached.
+            if (_device is not null && _deviceFollowed)
             {
                 _device.Changed -= OnDeviceChanged;
+                _deviceFollowed = false;
             }
 
             _device = value;
-            if (_device is not null)
-            {
-                _device.Changed += OnDeviceChanged;
-            }
-
+            FollowDevice(TopLevel.GetTopLevel(this) is not null);
             OnDeviceChanged(null, EventArgs.Empty);
         }
+    }
+
+    private bool _deviceFollowed;
+
+    private void FollowDevice(bool follow)
+    {
+        if (_device is null || follow == _deviceFollowed)
+        {
+            return;
+        }
+
+        if (follow)
+        {
+            _device.Changed += OnDeviceChanged;
+        }
+        else
+        {
+            _device.Changed -= OnDeviceChanged;
+        }
+
+        _deviceFollowed = follow;
     }
 
     private void OnDeviceChanged(object? sender, EventArgs e) =>
@@ -303,7 +326,7 @@ public partial class MainView : UserControl
         double width = size.Width;
         if (width <= 0 || DataContext is not ViewModels.MobileShellViewModel shell ||
             this.FindControl<Grid>("Frame") is not { } frame ||
-            this.FindControl<Panel>("PageColumn") is not { } pages)
+            this.FindControl<Grid>("PageColumn") is not { } pages)
         {
             return;
         }
@@ -338,9 +361,13 @@ public partial class MainView : UserControl
     /// </summary>
     internal double PanelWidth(double width)
     {
-        if (_device?.Hinge is { } hinge && hinge.Height >= hinge.Width && hinge.X > RailWidth + 200 && hinge.X < width - 200)
+        // The frame starts after the left safe-area inset (a cutout in landscape), the hinge at the
+        // view's own corner.
+        double left = (_previewSafeArea ?? _safeArea).Left;
+        if (_device?.Hinge is { } hinge && hinge.Height >= hinge.Width &&
+            hinge.X - left > RailWidth + 200 && hinge.X - left < width - 200)
         {
-            return hinge.X - RailWidth;
+            return hinge.X - left - RailWidth;
         }
 
         return Math.Clamp((width / 2) - RailWidth, 280, 360);

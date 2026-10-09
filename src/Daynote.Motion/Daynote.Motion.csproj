@@ -15,5 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />
+    <!-- For the ticks held in M3, which run the rows' async toggles and wait for them on a flush. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 </Project>
