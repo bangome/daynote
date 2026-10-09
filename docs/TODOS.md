@@ -520,8 +520,17 @@ The order that makes that safe:
          away in Korean, and §12 took the `-[]` button away without putting anything in its place.
    - [x] The copy and the buttons stopped pointing at a syntax the app no longer reads (§99).
          The empty state says to type `@`; the phone toolbar's `-[]` button is gone, because the
-         only thing it could insert now is text that looks like a checkbox. Date and time stay —
-         they stamp ordinary prose, which still reads, and nothing parses what they write.
+         only thing it could insert now is text that looks like a checkbox.
+   - [x] The phone's to-do sheet (1.6.0 feedback). The toolbar's @ button no longer types an `@`
+         into the note: it opens a bottom sheet with 할 일 / 일정, 내용, 날짜 (the note's own day,
+         or 날짜 없음 for a to-do), 시간 (시간 없음 for a to-do; an event starts on the next whole
+         hour and lasts an hour until its end is picked) and 목록 when there is more than one. 추가
+         writes the row through `AgendaCapture.Compose` with the sheet's day and time as the
+         reading, so DUE/DTSTART, HasDueTime and the alert are the @ command's; only the list, an
+         event's own end and an undated to-do are set on top. Nothing is written into the body.
+         The widgets' "@ 할 일" and `daynote://capture?at=1` open the same sheet. The date and
+         time stamps left the toolbar with it. Typing `@` in the body still opens the bar — the
+         path shared with the desktop.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 
