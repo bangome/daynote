@@ -25,6 +25,7 @@ public partial class App : Application
     private ServiceProvider? _provider;
     private ResidentLifecycle? _lifecycle;
     private MenuBarController? _menuBar;
+    private Platform.MacWidgetBridge? _widgets;
 
     /// <summary>Set when a restore was staged: Program relaunches the process after the lifetime ends.</summary>
     internal static bool RelaunchAfterExit { get; private set; }
@@ -134,12 +135,22 @@ public partial class App : Application
         Daynote.Motion.MotionEnvironment.Flavor = Daynote.Motion.MotionFlavor.Desktop;
         Daynote.Motion.MotionEnvironment.Platform = motion;
 
+        // The desktop widgets, when this bundle was built with them (native/mac).
+        _widgets = Platform.MacWidgetBridge.TryAttach(
+            this,
+            shell,
+            _provider.GetRequiredService<Core.Agenda.IAgendaRepository>(),
+            _provider.GetRequiredService<INoteRepository>(),
+            _provider.GetRequiredService<Core.Time.IClock>(),
+            () => _lifecycle?.ShowWindow());
+
         // Back from the tray, the Dock or another app: pick up what other devices wrote meanwhile,
         // and a reduced-motion setting changed in System Settings meanwhile.
         window.Activated += (_, _) =>
         {
             shell.NotifyActivated();
             motion.Recheck();
+            _widgets?.NotifyActivated();
         };
 
         window.Show();
