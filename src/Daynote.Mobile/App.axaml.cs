@@ -259,6 +259,12 @@ public partial class App : Application
             await shell.OpenFromWidgetAsync(launch).ConfigureAwait(true);
         }
 
+        if (_pendingLink is { } link)
+        {
+            _pendingLink = null;
+            await shell.OpenLinkAsync(link).ConfigureAwait(true);
+        }
+
         if (shell.Account is { } account)
         {
             await account.InitializeAsync().ConfigureAwait(true);
@@ -321,6 +327,30 @@ public partial class App : Application
         Current is App { _provider: { } provider, _shell: { } shell } && ReferenceEquals(shell, _initialised)
             ? (provider, shell)
             : null;
+
+    /// <summary>A widget, control or watch link that arrived before the shell was ready.</summary>
+    private static Uri? _pendingLink;
+
+    /// <summary>
+    /// A <c>daynote://</c> link opened the app — a widget, a Control Center control, the watch.
+    /// Each head calls this on the UI thread; it is followed now if the day has loaded and as soon
+    /// as it has if the link is what launched the app.
+    /// </summary>
+    public static void OpenLink(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? link) || link.Scheme != "daynote")
+        {
+            return;
+        }
+
+        if (Current is App { _shell: { } shell } && ReferenceEquals(shell, _initialised))
+        {
+            _ = shell.OpenLinkAsync(link);
+            return;
+        }
+
+        _pendingLink = link;
+    }
 
     /// <summary>
     /// The app came back to the foreground. Each head calls this; it is when a phone most likely

@@ -45,6 +45,9 @@ public sealed partial class MobileShellViewModel
         // The user may be back from the exact-alarm page, so the row reads the platform again.
         RefreshReminderRow();
         RefreshReminders();
+
+        // Ticks on a widget and captures from the watch, waiting since the app was last open.
+        _ = RunQuietlyAsync(DrainGlanceAsync);
     }
 
     private async Task RefreshAfterSyncAsync(SyncReloadResult reload)

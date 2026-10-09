@@ -244,8 +244,8 @@ public partial class EditorPage : UserControl
     private void OnTitleRenameStarted(object? sender, EventArgs e) => FocusTitleBox();
 
     /// <summary>
-    /// The widget's @ 할 일: the caret at the end of the new note's body and an @ typed there, which
-    /// is what opens the bar — the same as pressing the @ button, so the bar has one way in.
+    /// A widget's or Control Center's @ 할 일: an @ typed at the end of the note's body, on a line of
+    /// its own, which is what opens the bar — as if the user had typed it there.
     /// </summary>
     /// <remarks>
     /// Posted at a low priority for the reason <see cref="FocusTitleBox"/> is: the editor has only
@@ -258,9 +258,12 @@ public partial class EditorPage : UserControl
             return;
         }
 
+        // A new line when the note already has words on its last one: the line left of the @ is
+        // the item's title, and today's note opened from an iPhone widget is rarely empty.
         box.Focus();
-        box.CaretIndex = (box.Text ?? string.Empty).Length;
-        OnInsertAt(sender, new RoutedEventArgs());
+        string text = box.Text ?? string.Empty;
+        string insert = text.Length == 0 || text.EndsWith('\n') ? "@" : "\n@";
+        Write(text + insert, text.Length + insert.Length);
     }, DispatcherPriority.Background);
 
     /// <summary>

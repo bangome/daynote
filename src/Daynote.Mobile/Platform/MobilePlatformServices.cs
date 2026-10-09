@@ -78,6 +78,10 @@ namespace Daynote.Mobile.Platform;
 /// What the window cannot say about itself: a hinge across it, and whether a hardware keyboard is
 /// attached (tablet §02). Null reads as no hinge and no keyboard.
 /// </param>
+/// <param name="Glance">
+/// The widgets and the watch: the App Group folder they read, and what to poke when it changes
+/// (docs/APPLE_EXTENSIONS.md). iOS only; null writes nothing anywhere.
+/// </param>
 public sealed record MobilePlatformServices(
     string DataRoot,
     ISecretProtector? SecretProtector,
@@ -91,7 +95,8 @@ public sealed record MobilePlatformServices(
     Daynote.Mobile.Reminders.IReminderScheduler? Reminders = null,
     Action? AgendaChanged = null,
     Daynote.Motion.IMotionPlatform? Motion = null,
-    IDeviceShape? Device = null)
+    IDeviceShape? Device = null,
+    IGlanceHost? Glance = null)
 {
     /// <summary>
     /// The phone has no login item, no global hotkey, no MCP registration and no updater; the store

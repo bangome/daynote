@@ -434,6 +434,9 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         await RefreshTagsAsync(cancellationToken).ConfigureAwait(true);
         await LoadRecentSearchesAsync(cancellationToken).ConfigureAwait(true);
         RefreshHeader();
+
+        // What the widgets and the watch did while the app was not running.
+        await DrainGlanceAsync().ConfigureAwait(true);
     }
 
     /// <summary>Switches the selected date after an autosave-safe flush; cancels on save failure.</summary>

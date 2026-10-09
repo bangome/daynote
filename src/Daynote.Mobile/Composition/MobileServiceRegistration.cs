@@ -130,6 +130,16 @@ public static class MobileServiceRegistration
                 Reminders.ReminderStateStore.InFolder(platform.DataRoot)));
         }
 
+        // Widgets and the watch (docs/APPLE_EXTENSIONS.md), where the head has them.
+        if (platform.Glance is { } glance)
+        {
+            services.AddSingleton(sp => new Glance.GlanceCoordinator(
+                glance,
+                sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>(),
+                sp.GetRequiredService<INoteRepository>(),
+                sp.GetRequiredService<IClock>()));
+        }
+
         services.AddSingleton(sp => new MobileShellViewModel(
             sp.GetRequiredService<NoteWorkspaceViewModel>(),
             sp.GetRequiredService<IClock>(),
@@ -149,6 +159,7 @@ public static class MobileServiceRegistration
             Store = sp.GetService<MobileStoreViewModel>(),
             Reminders = sp.GetService<Reminders.ReminderCoordinator>(),
             AgendaChanged = platform.AgendaChanged,
+            Glance = sp.GetService<Glance.GlanceCoordinator>(),
             OpenFileExternally = platform.OpenFile ?? ((name, bytes) => LaunchAsync(topLevel, name, bytes)),
             PendingFileUploads = sp.GetService<ISyncStore>() is SqliteSyncStore syncStore
                 ? async token => await syncStore.ReadQueuedFileIdsAsync(token).ConfigureAwait(false)

@@ -198,6 +198,7 @@ public sealed partial class MobileShellViewModel
         // read the store themselves; they only need telling.
         RefreshReminders(items);
         AgendaChanged?.Invoke();
+        RefreshGlance(items);
     }
 
     private static string GroupLabel(TodoGroupKind kind) => kind switch
@@ -242,6 +243,9 @@ public sealed partial class MobileShellViewModel
         }
 
         OnPropertyChanged(nameof(IsFavoritesListEmpty));
+
+        // The favourites widget reads the same notes.
+        RefreshGlance();
     }
 
     /// <summary>The shared tag panel, and the phone's chips built from the same notes.</summary>
