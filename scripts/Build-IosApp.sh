@@ -137,9 +137,12 @@ check_group_in_profiles() {
   local bundle file
   for bundle in cc.arachat.daynote cc.arachat.daynote.widgets cc.arachat.daynote.watchkitapp cc.arachat.daynote.watchkitapp.widgets; do
     file="$(profile_named "$bundle")"
-    if ! security cms -D -i "$file" 2>/dev/null \
-         | plutil -extract Entitlements.com\.apple\.security\.application-groups xml1 -o - - 2>/dev/null \
-         | grep -q "<string>$GROUP</string>"; then
+    # Read whole before matching: grep -q stops early, and under pipefail the writer's broken pipe
+    # would read as "not granted".
+    local groups
+    groups="$(security cms -D -i "$file" 2>/dev/null \
+      | plutil -extract 'Entitlements.com\.apple\.security\.application-groups' xml1 -o - - 2>/dev/null || true)"
+    if [[ "$groups" != *"<string>$GROUP</string>"* ]]; then
       echo "error: the profile for $bundle does not grant $GROUP." >&2
       echo "  Create the App Group in the developer portal, assign it to the four App IDs, and run" >&2
       echo "  scripts/New-AppleGlanceProfiles.py (and regenerate DAYNOTE_IOS_PROVISIONING) — or build" >&2
