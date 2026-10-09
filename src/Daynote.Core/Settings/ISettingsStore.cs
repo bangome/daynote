@@ -27,6 +27,17 @@ public static class ShortcutSettings
     /// <summary>Default summon hotkey applied when nothing is persisted yet.</summary>
     public const string SummonHotkeyDefault = "Ctrl+Alt+D";
 
+    /// <summary>The global chord that opens the menu bar / tray quick capture.</summary>
+    public const string CaptureHotkeyKey = "shortcuts.capture";
+
+    /// <summary>⌥⌘Space on the Mac (Meta is ⌘ there), Ctrl+Alt+Space on Windows (menu bar design §01).</summary>
+    public const string CaptureHotkeyDefaultMac = "Alt+Win+Space";
+
+    public const string CaptureHotkeyDefaultWindows = "Ctrl+Alt+Space";
+
+    /// <summary>Whether the menu bar status item is shown (Mac). On by default.</summary>
+    public const string MenuBarVisibleKey = "ui.menubar.visible";
+
     /// <summary>Per-action in-app shortcut override key (value = the chord's display string).</summary>
     public static string ActionKey(string actionId) => $"shortcuts.action.{actionId}";
 }
