@@ -10,6 +10,10 @@ const template = readFileSync(join(here, 'template.html'), 'utf8');
 // Until the Store listing is live this searches the Store for the app; replace with the
 // listing URL (https://apps.microsoft.com/detail/<ProductId>) once Partner Center assigns one.
 const STORE_URL = 'https://apps.microsoft.com/search?query=Daynote';
+// The Mac app is a notarized Developer ID build, attached to the newest GitHub release under fixed
+// names so these links never change between versions.
+const MAC_URL = 'https://github.com/bangome/daynote/releases/latest/download/Daynote-mac-arm64.zip';
+const MAC_INTEL_URL = 'https://github.com/bangome/daynote/releases/latest/download/Daynote-mac-x64.zip';
 
 // ── Phone stores ──
 // Neither listing is public yet. While a switch is false its badge renders without a link
@@ -78,7 +82,7 @@ function calDays(today, dots, dots2) {
 }
 const cal = { calDays: calDays(27, [3, 8, 14, 15, 21, 22, 27, 29], [15, 27]) };
 
-const common = { storeUrl: STORE_URL };
+const common = { storeUrl: STORE_URL, macUrl: MAC_URL, macIntelUrl: MAC_INTEL_URL };
 
 const linksKo = {
   pricingHref: '/pricing/', termsHref: '/terms/', refundHref: '/refund/', supportHref: '/support/',
@@ -98,11 +102,11 @@ const ko = {
   title: 'Daynote — 하루를 더 또렷하게 정리하세요',
   description: '날짜별 노트, 할 일, 파일을 하나의 일일 작업공간에. 기본은 내 PC에만 저장하고, 원하면 Google 로그인으로 여러 PC에 동기화하는 Windows 노트 앱, Daynote.',
   skip: '본문으로 건너뛰기', navLabel: '주 메뉴', navFeatures: '기능', navSync: '동기화', navPrivacy: '프라이버시', navDownload: '다운로드', navGet: 'Store에서 받기',
-  heroEyebrow: '날짜별 노트 · Windows · iPhone · Android',
+  heroEyebrow: '날짜별 노트 · Windows · Mac · iPhone · Android',
   heroTitle: '하루를 더 <em>또렷하게</em><br>정리하세요.',
   heroLede: '노트, 할 일, 파일을 하나의 집중된 일일 작업공간에 모으세요. 캘린더에서 날짜를 고르면 그날의 모든 것이 거기 있습니다.',
-  heroCta: 'Microsoft Store에서 받기', heroSecondary: '어떻게 다른지 보기',
-  heroMeta: '무료 · Windows 11 / 10 (x64) · 노트 동기화 무료, 파일 동기화는 Pro',
+  heroCta: 'Microsoft Store에서 받기', heroMac: 'Mac용 다운로드', heroSecondary: '어떻게 다른지 보기',
+  heroMeta: '무료 · Windows 11 / 10 (x64) · macOS 12 이상 · 노트 동기화 무료, 파일 동기화는 Pro',
   heroAlt: 'Daynote 메인 화면. 왼쪽에 검색과 노트·할 일·태그·파일 사이드바와 달력, 가운데에 노트 편집기, 오른쪽에 이 날의 할 일과 파일.',
   calMonth: '2026년 7월', calDow: calDow(['일', '월', '화', '수', '목', '금', '토']),
   thesisTitle: '폴더 대신 날짜.',
@@ -159,8 +163,8 @@ const ko = {
   p5K: '결제', p5V: 'Daynote는 카드 정보를 보지 않습니다. 결제는 판매자 Paddle의 페이지에서 이뤄지고, 서비스에는 구독 상태와 갱신일만 전달됩니다.',
   dlTitle: '오늘부터 시작하세요.',
   dlLede: 'Microsoft Store에서 무료로 설치합니다. 설치 후 첫 실행에서 짧은 튜토리얼이 기능을 안내합니다.',
-  dlCta: 'Microsoft Store에서 받기',
-  s1K: '지원 OS', s1V: 'Windows 11, Windows 10 21H2 LTSC / Enterprise (x64)',
+  dlCta: 'Microsoft Store에서 받기', dlMac: 'Mac용 다운로드', dlMacIntel: 'Intel Mac용은 여기', dlMacNote: 'Apple Silicon용 · Apple 공증 완료',
+  s1K: '지원 OS', s1V: 'Windows 11, Windows 10 21H2 LTSC / Enterprise (x64), macOS 12 이상 (Apple Silicon, Intel)',
   s2K: '가격', s2V: '무료',
   s5K: '동기화', s5V: '노트·할 일 동기화는 무료. 이미지·파일 동기화(Pro)는 월 ₩2,900 또는 연 ₩24,000, 14일 무료 체험',
   s3K: '데이터 위치',
@@ -182,11 +186,11 @@ const en = {
   title: 'Daynote — See your day clearly',
   description: 'Notes, to-dos, and files gathered by date in one focused daily workspace. A Windows notes app that keeps everything on your PC by default, with optional Google sign-in sync across PCs.',
   skip: 'Skip to content', navLabel: 'Main', navFeatures: 'Features', navSync: 'Sync', navPrivacy: 'Privacy', navDownload: 'Download', navGet: 'Get it on Store',
-  heroEyebrow: 'Dated notes · Windows · iPhone · Android',
+  heroEyebrow: 'Dated notes · Windows · Mac · iPhone · Android',
   heroTitle: 'See your day<br><em>clearly.</em>',
   heroLede: 'Notes, to-dos, and files in one focused daily workspace. Pick a date on the calendar and everything from that day is right there.',
-  heroCta: 'Get it from Microsoft Store', heroSecondary: 'See how it works',
-  heroMeta: 'Free · Windows 11 / 10 (x64) · Note sync free, file sync is Pro',
+  heroCta: 'Get it from Microsoft Store', heroMac: 'Download for Mac', heroSecondary: 'See how it works',
+  heroMeta: 'Free · Windows 11 / 10 (x64) · macOS 12 or later · Note sync free, file sync is Pro',
   heroAlt: 'Daynote main window: search, a sidebar of notes, to-dos, tags and files with a calendar on the left, the note editor in the middle, and the to-dos and files for that day on the right.',
   calMonth: 'July 2026', calDow: calDow(['S', 'M', 'T', 'W', 'T', 'F', 'S']),
   thesisTitle: 'Dates, not folders.',
@@ -243,8 +247,8 @@ const en = {
   p5K: 'Payment', p5V: 'Daynote never sees your card. Checkout happens on a page run by Paddle, the merchant of record; the service receives only a subscription status and a renewal date.',
   dlTitle: 'Start today.',
   dlLede: 'Install it free from the Microsoft Store. A short tour on first launch walks you through the features.',
-  dlCta: 'Get it from Microsoft Store',
-  s1K: 'Supported', s1V: 'Windows 11, Windows 10 21H2 LTSC / Enterprise (x64)',
+  dlCta: 'Get it from Microsoft Store', dlMac: 'Download for Mac', dlMacIntel: 'Intel Mac? Get it here', dlMacNote: 'For Apple Silicon · notarized by Apple',
+  s1K: 'Supported', s1V: 'Windows 11, Windows 10 21H2 LTSC / Enterprise (x64), macOS 12 or later (Apple Silicon, Intel)',
   s2K: 'Price', s2V: 'Free',
   s5K: 'Sync', s5V: 'Notes and to-dos sync free. Image and file sync (Pro) is $2.49 a month or $19.99 a year, 14-day free trial',
   s3K: 'Data location',

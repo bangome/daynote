@@ -319,6 +319,9 @@ kbd {
 .download { padding-block: clamp(72px, 10vw, 144px); }
 .download__grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 6vw, 96px); align-items: center; }
 .download__lede { margin: var(--sp-4) 0 var(--sp-8); font-size: 18px; color: var(--ink-2); max-width: 44ch; }
+.download .btn--lg { margin: 0 var(--sp-3) var(--sp-3) 0; }
+.download__mac { margin-top: var(--sp-2); font-size: 14px; color: var(--ink-2); }
+.download__mac a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .specs { border-top: 1px solid var(--rule); }
 .specs > div { display: grid; grid-template-columns: minmax(110px, 1fr) 2fr; gap: var(--sp-4); padding: var(--sp-3) 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
 .specs dt { color: var(--ink-soft); }
