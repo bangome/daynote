@@ -16,12 +16,41 @@
     scroll position and keyboard focus across a tab switch, which recreating them would throw away.
   -->
   <Panel>
-    <views:DayPage IsVisible="{Binding IsDayPage}" />
-    <views:SearchPage IsVisible="{Binding IsSearchPage}" />
-    <views:ListsPage IsVisible="{Binding IsListsPage}" />
-    <views:SettingsPage IsVisible="{Binding IsSettingsPage}" />
+    <!--
+      The frame the width chooses (MobileLayout; MainView.axaml.cs places each part in it). On a
+      phone the page fills it and the editor covers the page. Between 600 and 839 points the rail,
+      the page as a panel and the note stand side by side (Foldables §01). From 840 the tablet's
+      Desktop B: the sidebar (from 1100), the day or the note in the middle, and the day panel.
 
-    <views:EditorPage x:Name="Editor" IsVisible="{Binding IsEditorOpen}" />
+      The same page and editor instances move between columns rather than being rebuilt per
+      layout, so a fold or a Split View resize keeps the scroll, the draft and the caret.
+    -->
+    <Grid x:Name="Frame" ColumnDefinitions="0,0,*,0">
+      <views:NavRail x:Name="Rail" Grid.Column="0" IsVisible="{Binding IsTwoPaneLayout}" />
+      <views:TabletSidebar x:Name="Sidebar" Grid.Column="0" IsVisible="{Binding IsSidebarDocked}" />
+      <Panel x:Name="PageColumn" Grid.Column="2" IsVisible="{Binding ShowPageColumn}">
+        <views:DayPage IsVisible="{Binding IsDayPage}" />
+        <views:SearchPage IsVisible="{Binding IsSearchPage}" />
+        <views:ListsPage IsVisible="{Binding IsListsPage}" />
+        <views:SettingsPage IsVisible="{Binding IsSettingsPage}" />
+        <!-- The tablet with its sidebar folded away: the button that brings it over the day (T6, T7). -->
+        <Button x:Name="SidebarButton" Classes="iconbtn" Width="44" Height="44" Margin="8,4,0,0"
+                HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding IsSidebarButtonShown}"
+                Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="{Binding Strings[MobileWideSidebar]}">
+          <views:Glyph Kind="Menu" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
+        </Button>
+      </Panel>
+      <views:EditorPage x:Name="Editor" Grid.Column="2" IsVisible="{Binding ShowEditor}" />
+      <views:DayTodoPanel x:Name="DayPanel" Grid.Column="3" IsVisible="{Binding IsTabletLayout}" />
+    </Grid>
+
+    <!-- The folded-away sidebar, over the day, closed by a tap beside it. -->
+    <Panel x:Name="SidebarLayer" IsVisible="{Binding IsSidebarOpen}">
+      <Button Classes="scrim" Command="{Binding ToggleSidebarCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileClose]}" />
+      <views:TabletSidebar x:Name="SidebarOverlay" HorizontalAlignment="Left" />
+    </Panel>
+
     <views:AccountPage IsVisible="{Binding IsAccountOpen}" />
     <views:StorePage IsVisible="{Binding IsStoreOpen}" />
 

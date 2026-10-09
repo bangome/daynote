@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.NavRail"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    The two-pane layout's rail (Foldables §01, F1-F5): the floating tab bar would cover the note, so
+    its four tabs stand down the left edge, with ＋ at the top. Items and order are the bar's.
+  -->
+  <Border Width="72" Background="{DynamicResource Mobile.Panel}" BorderBrush="{DynamicResource Mobile.Stroke2}"
+          BorderThickness="0,0,1,0">
+    <StackPanel Margin="0,12,0,0" Spacing="10" HorizontalAlignment="Center">
+      <Button Width="48" Height="48" CornerRadius="16" Background="{DynamicResource Mobile.Pri}" Margin="0,0,0,10"
+              Command="{Binding NewNoteCommand}" AutomationProperties.Name="{Binding Strings[AddNote]}">
+        <views:Glyph Kind="Plus" Width="20" Height="20" Foreground="{DynamicResource Mobile.OnPri}" />
+      </Button>
+      <Button Classes="railtab" Classes.active="{Binding IsDayPage}" Command="{Binding GoToTodayPageCommand}"
+              AutomationProperties.Name="{Binding Strings[Today]}">
+        <StackPanel Spacing="3">
+          <views:Glyph Kind="TabToday" Width="22" Height="22" Foreground="{Binding $parent[Button].Foreground}" />
+          <TextBlock Text="{Binding Strings[Today]}" />
+        </StackPanel>
+      </Button>
+      <Button Classes="railtab" Classes.active="{Binding IsSearchPage}"
+              Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Search}"
+              AutomationProperties.Name="{Binding Strings[TabSearch]}">
+        <StackPanel Spacing="3">
+          <views:Glyph Kind="TabSearch" Width="22" Height="22" Foreground="{Binding $parent[Button].Foreground}" />
+          <TextBlock Text="{Binding Strings[TabSearch]}" />
+        </StackPanel>
+      </Button>
+      <Button Classes="railtab" Classes.active="{Binding IsListsPage}"
+              Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Lists}"
+              AutomationProperties.Name="{Binding Strings[TabLists]}">
+        <StackPanel Spacing="3">
+          <views:Glyph Kind="TabLists" Width="22" Height="22" Foreground="{Binding $parent[Button].Foreground}" />
+          <TextBlock Text="{Binding Strings[TabLists]}" />
+        </StackPanel>
+      </Button>
+      <Button Classes="railtab" Classes.active="{Binding IsSettingsPage}"
+              Command="{Binding GoToPageCommand}" CommandParameter="{x:Static vm:MobilePage.Settings}"
+              AutomationProperties.Name="{Binding Strings[Settings]}">
+        <StackPanel Spacing="3">
+          <views:Glyph Kind="TabSettings" Width="22" Height="22" Foreground="{Binding $parent[Button].Foreground}"
+                       Fill="{DynamicResource Mobile.Panel}" />
+          <TextBlock Text="{Binding Strings[Settings]}" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </Border>
+
+  <UserControl.Styles>
+    <!-- A rail tab: 56 wide and 56 tall, the mark over its label, lit on the page it is. -->
+    <Style Selector="Button.railtab">
+      <Setter Property="Width" Value="56" />
+      <Setter Property="Height" Value="56" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Button.railtab.active">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text}" />
+    </Style>
+    <Style Selector="Button.railtab TextBlock">
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

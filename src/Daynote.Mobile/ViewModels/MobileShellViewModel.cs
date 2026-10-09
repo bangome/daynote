@@ -180,10 +180,15 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     /// The floating tab bar and the new-note button: on every tab, and gone while something covers
     /// the tabs - the editor, the account page or the month sheet.
     /// </summary>
-    public bool ShowDock => !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
+    public bool ShowDock => IsPhoneLayout && !IsEditorOpen && !IsAccountOpen && !IsStoreOpen && !IsMonthPickerOpen && !IsFileLayerOpen
         && !IsReminderTimeSheetOpen && !IsAgendaListSheetOpen && !IsNoteItemsSheetOpen;
 
-    partial void OnIsEditorOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
+    partial void OnIsEditorOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDock));
+        OnPropertyChanged(nameof(ShowPageColumn));
+        OnPropertyChanged(nameof(ShowEditor));
+    }
 
     partial void OnIsAccountOpenChanged(bool value) => OnPropertyChanged(nameof(ShowDock));
 
@@ -218,6 +223,9 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(IsSearchPage));
         OnPropertyChanged(nameof(IsListsPage));
         OnPropertyChanged(nameof(IsSettingsPage));
+        OnPropertyChanged(nameof(IsSidebarButtonShown));
+        OnPropertyChanged(nameof(IsSidebarFavorites));
+        OnPropertyChanged(nameof(IsSidebarTags));
     }
 
     [RelayCommand]
@@ -226,10 +234,14 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         // Leaving for another tab closes the editor: the phone's back gesture is the only thing that
         // should put the user back on the day, and a hidden editor holding an unsaved draft under a
         // tab they cannot see is exactly the state autosave exists to avoid.
-        if (IsEditorOpen && page != Page)
+        //
+        // Beside the panel (two panes) the note is not hidden by another tab, so it stays open.
+        if (IsEditorOpen && page != Page && !IsNoteBesidePanel)
         {
             _ = CloseEditorAsync();
         }
+
+        IsSidebarOpen = false;
 
         IsAccountOpen = false;
         IsStoreOpen = false;
@@ -312,7 +324,8 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             return true;
         }
 
-        return await CloseEditorAsync().ConfigureAwait(true);
+        // Beside the panel the note is part of the screen, not a layer over it: back leaves the app.
+        return !IsNoteBesidePanel && await CloseEditorAsync().ConfigureAwait(true);
     }
 
     /// <summary>The editor's own back arrow, which must flush first.</summary>
@@ -376,6 +389,8 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         OnPropertyChanged(nameof(IsTodoList));
         OnPropertyChanged(nameof(IsFavoritesList));
         OnPropertyChanged(nameof(IsTagsList));
+        OnPropertyChanged(nameof(IsSidebarFavorites));
+        OnPropertyChanged(nameof(IsSidebarTags));
     }
 
     [RelayCommand]

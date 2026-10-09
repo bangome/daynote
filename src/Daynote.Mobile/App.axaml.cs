@@ -78,7 +78,7 @@ public partial class App : Application
         var options = DaynoteAppOptions.ForBaseRoot(platform.DataRoot);
         _activeFolder = options.DataRoot;
 
-        var view = new MainView();
+        var view = new MainView { Device = platform.Device };
 
         var services = new ServiceCollection();
         services.AddDaynoteMobile(options, this, () => TopLevel.GetTopLevel(view), platform);

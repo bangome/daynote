@@ -43,6 +43,16 @@ public sealed class DeviceSafeAreaTests
     [DataRow("pixel-3-button", 412, 915, 0, 52, 0, 48)]
     [DataRow("iphone-16-pro-landscape", 874, 402, 62, 0, 62, 21)]
     [DataRow("pixel-3-button-landscape", 915, 412, 0, 24, 48, 0)]
+    // The wide layouts (Daynote Tablet, Mobile B Foldables). An 11-inch iPad reports 24 above and
+    // 20 below the home indicator either way up; a Galaxy Z Fold its 28-point status bar and, with
+    // the three-button bar, 48 below - inside (690 by 829, two panes) and on the cover (344 wide, a
+    // phone). An unfolded Z Flip is a tall phone.
+    [DataRow("ipad-11-portrait", 834, 1210, 0, 24, 0, 20)]
+    [DataRow("ipad-11-landscape", 1210, 834, 0, 24, 0, 20)]
+    [DataRow("z-fold-inner", 690, 829, 0, 28, 0, 48)]
+    [DataRow("z-fold-inner-landscape", 829, 690, 0, 28, 0, 48)]
+    [DataRow("z-fold-cover", 344, 882, 0, 28, 0, 48)]
+    [DataRow("z-flip", 411, 1006, 0, 28, 0, 48)]
     public void Nothing_tappable_sits_under_the_notch_or_the_bottom_strip(
         string device, double width, double height, double left, double top, double right, double bottom)
     {

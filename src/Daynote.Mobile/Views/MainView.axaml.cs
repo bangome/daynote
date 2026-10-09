@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Input.TextInput;
 using Avalonia.Markup.Xaml;
+using Daynote.Mobile.ViewModels;
 
 namespace Daynote.Mobile.Views;
 
@@ -200,6 +201,7 @@ public partial class MainView : UserControl
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
+        PlaceFrame(Bounds.Size);
         if (DataContext is ViewModels.MobileShellViewModel shell)
         {
             shell.PropertyChanged += (_, args) =>
@@ -240,6 +242,199 @@ public partial class MainView : UserControl
             image.RenderTransform = new ScaleTransform(_zoom, _zoom);
         }
     }
+
+    // ── The layout by width (Daynote Tablet §00, Foldables §00) ─────────────────────────────────
+
+    private Platform.IDeviceShape? _device;
+    private MobileLayout? _shownLayout;
+    private Avalonia.Threading.DispatcherTimer? _settle;
+    private IReadOnlyList<Control> _waiting = [];
+
+    /// <summary>The rail's width in the two-pane layout.</summary>
+    private const double RailWidth = 72;
+
+    /// <summary>The tablet's sidebar and day panel.</summary>
+    private const double SidebarWidth = 260;
+
+    private const double DayPanelWidth = 300;
+
+    /// <summary>
+    /// The hinge and the keyboard, from the head. Null off a device, where there is neither.
+    /// </summary>
+    public Platform.IDeviceShape? Device
+    {
+        get => _device;
+        set
+        {
+            if (_device is not null)
+            {
+                _device.Changed -= OnDeviceChanged;
+            }
+
+            _device = value;
+            if (_device is not null)
+            {
+                _device.Changed += OnDeviceChanged;
+            }
+
+            OnDeviceChanged(null, EventArgs.Empty);
+        }
+    }
+
+    private void OnDeviceChanged(object? sender, EventArgs e) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => PlaceFrame(Bounds.Size));
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        PlaceFrame(e.NewSize);
+    }
+
+    /// <summary>
+    /// Chooses the layout for <paramref name="size"/> and puts the parts in their columns.
+    /// </summary>
+    /// <remarks>
+    /// Runs on every size change: a Split View or Stage Manager resize goes through every width in
+    /// between, and the layout follows it live. The panel that a new layout brings in (M7) waits
+    /// until the width has stopped changing, so the app's one movement does not race the system's.
+    /// </remarks>
+    private void PlaceFrame(Size size)
+    {
+        double width = size.Width;
+        if (width <= 0 || DataContext is not ViewModels.MobileShellViewModel shell ||
+            this.FindControl<Grid>("Frame") is not { } frame ||
+            this.FindControl<Panel>("PageColumn") is not { } pages)
+        {
+            return;
+        }
+
+        MobileLayout layout = MobileLayouts.For(width, size.Height);
+        shell.Layout = layout;
+
+        double rail = layout == MobileLayout.TwoPane ? RailWidth : 0;
+        double panel = layout == MobileLayout.TwoPane ? PanelWidth(width) : 0;
+        double sidebar = layout == MobileLayout.Tablet ? SidebarWidth : 0;
+        double day = layout is MobileLayout.Tablet or MobileLayout.TabletCompact ? DayPanelWidth : 0;
+        SetColumns(frame, Math.Max(rail, sidebar), panel, day);
+        Grid.SetColumn(pages, layout == MobileLayout.TwoPane ? 1 : 2);
+
+        // The @ card under the caret needs a keyboard to have keys, and a screen with room beside
+        // the caret; a phone keeps its bar either way.
+        this.FindControl<EditorPage>("Editor")?.SetHardwareKeyboard(
+            _device?.HasHardwareKeyboard == true && layout != MobileLayout.Phone);
+
+        if (_shownLayout is { } previous && previous != layout)
+        {
+            AwaitSettledWidth(Appearing(previous, layout));
+        }
+
+        _shownLayout = layout;
+    }
+
+    /// <summary>
+    /// The panel's width beside the note. On a foldable whose hinge runs down the window, the
+    /// panel ends where the hinge begins, so nothing straddles the fold (Foldables §01); otherwise
+    /// half the window, within what a list reads well at.
+    /// </summary>
+    internal double PanelWidth(double width)
+    {
+        if (_device?.Hinge is { } hinge && hinge.Height >= hinge.Width && hinge.X > RailWidth + 200 && hinge.X < width - 200)
+        {
+            return hinge.X - RailWidth;
+        }
+
+        return Math.Clamp((width / 2) - RailWidth, 280, 360);
+    }
+
+    private static void SetColumns(Grid frame, double side, double panel, double day)
+    {
+        frame.ColumnDefinitions[0].Width = new GridLength(side);
+        frame.ColumnDefinitions[1].Width = new GridLength(panel);
+        frame.ColumnDefinitions[3].Width = new GridLength(day);
+    }
+
+    /// <summary>What a change of layout brings in from the side: the panels, never the note (M7).</summary>
+    private IReadOnlyList<Control> Appearing(MobileLayout from, MobileLayout to)
+    {
+        var appearing = new List<Control>();
+        void Add(string name)
+        {
+            if (this.FindControl<Control>(name) is { } control)
+            {
+                appearing.Add(control);
+            }
+        }
+
+        if (to == MobileLayout.TwoPane && from != MobileLayout.TwoPane)
+        {
+            Add("PageColumn");
+        }
+
+        if (to is MobileLayout.Tablet or MobileLayout.TabletCompact && from is MobileLayout.Phone or MobileLayout.TwoPane)
+        {
+            Add("DayPanel");
+        }
+
+        if (to == MobileLayout.Tablet && from != MobileLayout.Tablet)
+        {
+            Add("Sidebar");
+        }
+
+        return appearing;
+    }
+
+    /// <summary>
+    /// Holds the appearing panels out of sight while the window is still being resized, then plays
+    /// M7 on them once it has been still for a moment.
+    /// </summary>
+    private void AwaitSettledWidth(IReadOnlyList<Control> appearing)
+    {
+        // A resize that crossed another boundary before the last one settled: what that one held
+        // back is shown again, and only what this one brings in waits.
+        foreach (Control waiting in _waiting.Except(appearing))
+        {
+            waiting.Opacity = 1;
+        }
+
+        _waiting = appearing;
+        _settle?.Stop();
+        if (appearing.Count == 0)
+        {
+            return;
+        }
+
+        foreach (Control panel in appearing)
+        {
+            panel.Opacity = 0;
+        }
+
+        _settle = new Avalonia.Threading.DispatcherTimer { Interval = SettleDelay };
+        _settle.Tick += (_, _) =>
+        {
+            _settle?.Stop();
+            _waiting = [];
+            foreach (Control panel in appearing)
+            {
+                _ = Daynote.Motion.MotionPlayer.Play(panel, "m7", Daynote.Motion.Choreography.PanelAppear(panel));
+            }
+        };
+
+        if (Daynote.Motion.MotionEnvironment.Instant)
+        {
+            _waiting = [];
+            foreach (Control panel in appearing)
+            {
+                _ = Daynote.Motion.MotionPlayer.Play(panel, "m7", Daynote.Motion.Choreography.PanelAppear(panel));
+            }
+
+            return;
+        }
+
+        _settle.Start();
+    }
+
+    /// <summary>How long the width has to stay put before the new panel comes in.</summary>
+    private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(120);
 
     /// <summary>The floating tab bar's bottom margin over a bottom inset of <paramref name="bottom"/> points.</summary>
     public static double DockBottomMargin(double bottom) => bottom > 0 ? 12 : 16;

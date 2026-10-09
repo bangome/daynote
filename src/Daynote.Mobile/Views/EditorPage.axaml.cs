@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Daynote.Mobile.ViewModels;
 using Daynote.Motion;
 
@@ -72,14 +73,23 @@ public partial class EditorPage : UserControl
             return;
         }
 
+        if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.IsOpen))
+        {
+            PlaceCapturePopover();
+        }
+
         if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.IsOpen) && shell.Capture.IsOpen)
         {
             PlaceCaptureHighlight();
-            bar.Opacity = 0;
+            Visual moving = _popover && this.FindControl<Border>("CapturePopover") is { } card ? card : bar;
+            moving.Opacity = 0;
             Dispatcher.UIThread.Post(() =>
             {
-                bar.Opacity = 1;
-                _ = MotionPlayer.Play(bar, "m1", Choreography.AtBarRise(bar, bar.Bounds.Height + 8));
+                moving.Opacity = 1;
+                PlaceCapturePopover();
+                _ = MotionPlayer.Play(moving, "m1", _popover
+                    ? Choreography.AtPopupOpen(moving)
+                    : Choreography.AtBarRise(bar, bar.Bounds.Height + 8));
             }, DispatcherPriority.Loaded);
         }
         else if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.Kind) &&
@@ -88,6 +98,74 @@ public partial class EditorPage : UserControl
             double to = HighlightY(shell.Capture.IsTaskSelected);
             _ = MotionPlayer.Play(highlight, "m1", Choreography.AtBarSwitch(highlight, HighlightY(!shell.Capture.IsTaskSelected), to));
         }
+    }
+
+    // ── The @ card, with a hardware keyboard (tablet §02) ─────────────────────────────────────────
+
+    private bool _popover;
+
+    /// <summary>
+    /// A hardware keyboard came or went: the @ reading moves between the bar over the soft
+    /// keyboard and the card under the caret. Whatever is being typed stays as it is.
+    /// </summary>
+    public void SetHardwareKeyboard(bool attached)
+    {
+        if (attached == _popover || this.FindControl<StackPanel>("CaptureBar") is not { } bar ||
+            this.FindControl<Border>("CapturePopover") is not { } card)
+        {
+            return;
+        }
+
+        _popover = attached;
+        if (attached && bar.Parent is Panel home)
+        {
+            _barHome = home;
+            home.Children.Remove(bar);
+            card.Child = bar;
+        }
+        else if (!attached && _barHome is { } original)
+        {
+            card.Child = null;
+            original.Children.Add(bar);
+        }
+
+        if (this.FindControl<TextBlock>("CaptureHints") is { } hints)
+        {
+            hints.IsVisible = attached;
+        }
+
+        PlaceCapturePopover();
+    }
+
+    /// <summary>Where the bar lives when it is a bar, to put it back.</summary>
+    private Panel? _barHome;
+
+    /// <summary>
+    /// Puts the card under the caret's line, or over it when the line is too near the bottom - the
+    /// desktop's flip, growing from the edge nearest the caret.
+    /// </summary>
+    private void PlaceCapturePopover()
+    {
+        if (this.FindControl<Border>("CapturePopover") is not { } card || _observed is not { } shell)
+        {
+            return;
+        }
+
+        card.IsVisible = _popover && shell.Capture.IsOpen;
+        if (!card.IsVisible || BodyBox is not { } body ||
+            body.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.TextPresenter>().FirstOrDefault() is not { } presenter)
+        {
+            return;
+        }
+
+        Rect caret = presenter.TextLayout.HitTestTextPosition(Math.Clamp(body.CaretIndex, 0, (body.Text ?? string.Empty).Length));
+        Point at = presenter.TranslatePoint(caret.BottomLeft, body) ?? default;
+        double height = card.Bounds.Height > 0 ? card.Bounds.Height : 180;
+        bool above = at.Y + 6 + height > body.Bounds.Height;
+        double top = above ? at.Y - caret.Height - 6 - height : at.Y + 6;
+        double left = Math.Clamp(at.X - 12, 8, Math.Max(8, body.Bounds.Width - card.Width - 8));
+        card.Margin = new Thickness(left, Math.Max(0, top), 0, 0);
+        card.RenderTransformOrigin = new RelativePoint(0, above ? 1 : 0, RelativeUnit.Relative);
     }
 
     /// <summary>The highlight under the task line, or under the event line one row (44 and the 2 between) down.</summary>
@@ -271,6 +349,7 @@ public partial class EditorPage : UserControl
         {
             shell.Notes.UpdateCapture(Math.Clamp(box.CaretIndex, 0, (box.Text ?? string.Empty).Length));
             UpdateCaptureBarRoom();
+            PlaceCapturePopover();
         }
     }
 
@@ -281,14 +360,28 @@ public partial class EditorPage : UserControl
     /// </summary>
     private void OnBodyKeyDown(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
     {
-        if (args is not KeyEventArgs { Key: Key.Enter } e
-            || DataContext is not MobileShellViewModel { Capture: { IsOpen: true, IsPrompting: false } } shell)
+        if (args is not KeyEventArgs e || DataContext is not MobileShellViewModel { Capture.IsOpen: true } shell)
         {
             return;
         }
 
-        e.Handled = true;
-        shell.CommitCaptureCommand.Execute(null);
+        // A hardware keyboard has the desktop's other two keys (tablet T3): Tab switches the
+        // reading and Esc lets it go, as the card's hint line says.
+        switch (e.Key)
+        {
+            case Key.Enter when !shell.Capture.IsPrompting:
+                e.Handled = true;
+                shell.CommitCaptureCommand.Execute(null);
+                break;
+            case Key.Tab when !shell.Capture.IsPrompting:
+                e.Handled = true;
+                shell.Capture.ToggleKind();
+                break;
+            case Key.Escape:
+                e.Handled = true;
+                shell.DismissCaptureCommand.Execute(null);
+                break;
+        }
     }
 
     /// <summary>

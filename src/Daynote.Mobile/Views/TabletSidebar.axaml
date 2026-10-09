@@ -1,0 +1,212 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Daynote.Mobile.ViewModels"
+             xmlns:pvm="using:Daynote.App.Shell.Product"
+             xmlns:views="using:Daynote.Mobile.Views"
+             x:Class="Daynote.Mobile.Views.TabletSidebar"
+             x:DataType="vm:MobileShellViewModel">
+  <!--
+    The tablet's sidebar (Daynote Tablet T1/T2): Desktop B's, in the phone's colours, with rows
+    grown to 44 points. The new-note button and search, the month, the three views, and the to-do
+    lists with what is left in each. Docked at 1100 points and wider; over the day, from the button
+    at the top left, between 840 and 1099.
+  -->
+  <Border Width="260" Background="{DynamicResource Mobile.Panel}" BorderBrush="{DynamicResource Mobile.Stroke2}"
+          BorderThickness="0,0,1,0">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="14,12,14,20">
+        <Grid ColumnDefinitions="Auto,*,Auto" Height="44">
+          <Image Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center"
+                 Source="avares://Daynote.Mobile/Assets/daynote-favicon-v1.png" />
+          <TextBlock Grid.Column="1" Margin="8,0,0,0" FontSize="15" FontWeight="ExtraBold" VerticalAlignment="Center"
+                     Text="Daynote" />
+          <Button Grid.Column="2" Height="34" Padding="12,0" CornerRadius="17" VerticalAlignment="Center"
+                  Background="{DynamicResource Mobile.Pri}" Command="{Binding NewNoteCommand}">
+            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}"
+                       Text="{Binding Strings[MobileWideNewNote]}" />
+          </Button>
+        </Grid>
+
+        <!-- Search: a field to look at, the search page to use. -->
+        <Button Classes="sidesearch" Margin="0,10,0,14" Command="{Binding GoToPageCommand}"
+                CommandParameter="{x:Static vm:MobilePage.Search}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <views:Glyph Kind="Search" Width="15" Height="15" Foreground="{DynamicResource Mobile.Text3}" VerticalAlignment="Center" />
+            <TextBlock Classes="faint" FontSize="14" VerticalAlignment="Center" Text="{Binding Strings[TabSearch]}" />
+          </StackPanel>
+        </Button>
+
+        <!-- The month. -->
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="2,0,0,6">
+          <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" VerticalAlignment="Center"
+                     Text="{Binding Calendar.MonthLabel}" />
+          <Button Grid.Column="1" Width="32" Height="32" Command="{Binding Calendar.PreviousMonthCommand}"
+                  AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
+            <views:Glyph Kind="ChevronLeft" Width="10" Height="10" Foreground="{DynamicResource Mobile.Text2}" />
+          </Button>
+          <Button Grid.Column="2" Width="32" Height="32" Command="{Binding Calendar.NextMonthCommand}"
+                  AutomationProperties.Name="{Binding Strings[NextMonth]}">
+            <views:Glyph Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource Mobile.Text2}" />
+          </Button>
+        </Grid>
+        <UniformGrid Columns="7">
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdaySun]}" Foreground="{DynamicResource Mobile.Sunday}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdayMon]}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdayTue]}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdayWed]}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdayThu]}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdayFri]}" />
+          <TextBlock Classes="sidewd" Text="{Binding Strings[WeekdaySat]}" />
+        </UniformGrid>
+        <ItemsControl ItemsSource="{Binding Calendar.Cells}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
+              <Button Classes="sidecell" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
+                      Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
+                      Command="{Binding SelectCommand}" IsHitTestVisible="{Binding IsInMonth}">
+                <Panel>
+                  <Border Classes="sideface">
+                    <TextBlock Text="{Binding DayText}" />
+                  </Border>
+                  <Ellipse Width="3" Height="3" Fill="{DynamicResource Mobile.Sun}" VerticalAlignment="Bottom"
+                           HorizontalAlignment="Center" Margin="0,0,0,1" IsVisible="{Binding HasNotes}" />
+                </Panel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- The views. -->
+        <StackPanel Margin="0,14,0,0" Spacing="2">
+          <Button Classes="siderow" Classes.on="{Binding IsDayPage}" Command="{Binding GoToTodayPageCommand}">
+            <TextBlock Classes="sidename" Text="{Binding Strings[MobileWideToday]}" />
+          </Button>
+          <Button Classes="siderow" Classes.on="{Binding IsSidebarFavorites}"
+                  Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="sidename" Text="{Binding Strings[SegmentFavorites]}" />
+              <TextBlock Grid.Column="1" Classes="sidecount" Text="{Binding FavoriteCards.Count}" />
+            </Grid>
+          </Button>
+          <Button Classes="siderow" Classes.on="{Binding IsSidebarTags}"
+                  Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Tags}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="sidename" Text="{Binding Strings[SegmentTags]}" />
+              <TextBlock Grid.Column="1" Classes="sidecount" Text="{Binding TagChips.Count}" />
+            </Grid>
+          </Button>
+        </StackPanel>
+
+        <!-- 할 일 · 17, then each list and what is left in it. -->
+        <StackPanel Orientation="Horizontal" Margin="10,16,0,6">
+          <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Text="{Binding Strings[SegmentTodo]}" />
+          <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Text=" · " />
+          <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Text="{Binding Todo.OpenCount}" />
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding Todo.Lists}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="pvm:AgendaListRowViewModel">
+              <Button Classes="siderow" Classes.on="{Binding IsSelected}"
+                      Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).ShowAgendaListCommand}"
+                      CommandParameter="{Binding Id}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Ellipse Width="11" Height="11" StrokeThickness="1.6" Stroke="{DynamicResource Mobile.Text3}"
+                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                  <TextBlock Grid.Column="1" Classes="sidename" Text="{Binding Name}" />
+                  <TextBlock Grid.Column="2" Classes="sidecount" Text="{Binding CountText}" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+
+  <UserControl.Styles>
+    <Style Selector="Button.sidesearch">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
+    </Style>
+    <Style Selector="TextBlock.sidewd">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,2,0,4" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <!-- A day: 32 points, a rounded square when selected, a ring for today. -->
+    <Style Selector="Button.sidecell">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.sidecell:pressed">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Border.sideface">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.sideface TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.sidecell.sunday Border.sideface TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Sunday}" />
+    </Style>
+    <Style Selector="Button.sidecell.today Border.sideface">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="Button.sidecell.selected Border.sideface">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.sidecell.selected Border.sideface TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+    </Style>
+    <Style Selector="Button.sidecell.outside">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <!-- A row: 44 points, the tablet's touch size, filled in sun when it is the view on screen. -->
+    <Style Selector="Button.siderow">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="10" />
+    </Style>
+    <Style Selector="Button.siderow.on">
+      <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
+    </Style>
+    <Style Selector="TextBlock.sidename">
+      <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style Selector="Button.siderow.on TextBlock.sidename">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="TextBlock.sidecount">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

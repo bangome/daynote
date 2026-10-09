@@ -15,7 +15,8 @@
 
     <!-- Back, the note's date, and the two actions worth a permanent place. -->
     <Grid Grid.Row="0" Height="48" Margin="6,0" ColumnDefinitions="44,*,44,44">
-      <Button Grid.Column="0" Classes="iconbtn" Command="{Binding CloseEditorCommand}"
+      <!-- Not beside the panel: there the note is part of the screen, not a layer to close. -->
+      <Button Grid.Column="0" Classes="iconbtn" Command="{Binding CloseEditorCommand}" IsVisible="{Binding !IsNoteBesidePanel}"
               AutomationProperties.Name="{Binding Strings[Back]}">
         <views:Glyph Kind="Back" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
       </Button>
@@ -92,6 +93,15 @@
              TextInputOptions.Multiline="True" TextInputOptions.ReturnKeyType="Return"
              PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}"
              PropertyChanged="OnBodyPropertyChanged" />
+
+    <!--
+      The @ input with a hardware keyboard (Daynote Tablet §02, T3): the desktop's card under the
+      caret, with the key hints, instead of the bar above a keyboard that is not there. The bar's
+      own panel is moved in here while a keyboard is attached (EditorPage.axaml.cs), so there is one
+      reading drawn in one place, never two.
+    -->
+    <Border Grid.Row="2" x:Name="CapturePopover" Classes="cappopover" IsVisible="False"
+            HorizontalAlignment="Left" VerticalAlignment="Top" />
 
     <!--
       The writing helpers. The note body carries a small syntax - a checkbox opens a line, a (M/D) or
@@ -311,6 +321,9 @@
             remind yet. Absent when there is nothing to warn about, so its presence is the signal.
           -->
           <TextBlock Classes="capnote" IsVisible="{Binding Capture.HasNote}" Text="{Binding Capture.Note}" />
+          <!-- Only on the card: Enter makes it, Tab switches the reading, Esc lets it go. -->
+          <TextBlock x:Name="CaptureHints" Classes="faint" FontSize="11.5" Margin="4,2,4,2" IsVisible="False"
+                     Text="{Binding Capture.KeyHints}" />
         </StackPanel>
       </Panel>
     </Border>
@@ -427,6 +440,15 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.cappopover">
+      <Setter Property="Width" Value="360" />
+      <Setter Property="Padding" Value="0,0,0,8" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Card}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BoxShadow" Value="0 12 32 0 #2a161a36" />
     </Style>
     <Style Selector="Border.caphighlight">
       <Setter Property="Height" Value="44" />

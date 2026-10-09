@@ -13,8 +13,14 @@
   <ScrollViewer>
     <StackPanel Margin="20,4,20,120">
 
-      <!-- The month, which opens the sheet, and the way back to today when the day is another. -->
-      <Grid ColumnDefinitions="Auto,*,Auto" Height="44">
+      <!-- Room for the tablet's sidebar button, which sits over the top left of the day. -->
+      <Border Height="48" IsVisible="{Binding IsSidebarButtonShown}" />
+
+      <!--
+        The month, which opens the sheet, and the way back to today when the day is another. Not on
+        a tablet, whose sidebar holds the month; nor the week strip below, for the same reason.
+      -->
+      <Grid ColumnDefinitions="Auto,*,Auto" Height="44" IsVisible="{Binding !IsTabletLayout}">
         <Button Grid.Column="0" Height="44" CornerRadius="0" Command="{Binding OpenMonthPickerCommand}"
                 AutomationProperties.Name="{Binding Strings[CalendarMonth]}">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -50,7 +56,7 @@
       </StackPanel>
 
       <!-- The week strip. -->
-      <Grid x:Name="WeekStrip" ColumnDefinitions="24,*,24" Margin="-8,0,-8,22"
+      <Grid x:Name="WeekStrip" ColumnDefinitions="24,*,24" Margin="-8,0,-8,22" IsVisible="{Binding !IsTabletLayout}"
             SwipeGesture="OnWeekStripSwipe" SwipeGestureEnded="OnWeekStripSwipeEnded">
         <Grid.GestureRecognizers>
           <SwipeGestureRecognizer CanHorizontallySwipe="True" CanVerticallySwipe="False" />
@@ -170,7 +176,11 @@
         </Panel>
       </Button>
 
-      <!-- 이 날의 할 일: the to-dos written on this day, ticked off here without opening the note. -->
+      <!--
+        이 날의 할 일: the to-dos written on this day, ticked off here without opening the note. A
+        tablet shows them in its day panel instead (DayTodoPanel).
+      -->
+      <Panel IsVisible="{Binding !IsTabletLayout}">
       <StackPanel IsVisible="{Binding HasDayTodos}">
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,26,0,10">
           <TextBlock Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
@@ -203,6 +213,7 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
+      </Panel>
 
       <!--
         파일 n: what was attached to this day. Compact rows as in the desktop's day panel - a tile with

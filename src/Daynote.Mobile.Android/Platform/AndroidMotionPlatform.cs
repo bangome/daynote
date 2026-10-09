@@ -1,6 +1,7 @@
 using Android.Content;
 using Android.Database;
 using Android.OS;
+using Android.Provider;
 using Android.Views;
 using AndroidX.Core.Content;
 using AndroidX.Window.Java.Layout;
@@ -104,7 +105,7 @@ internal sealed class AndroidDeviceShape : IDeviceShape
         _activity = activity;
         _tracker = new WindowInfoTrackerCallbackAdapter(WindowInfoTracker.Companion.GetOrCreate(activity));
         _listener = new LayoutListener(this);
-        _tracker.AddWindowLayoutInfoListener(activity, ContextCompat.GetMainExecutor(activity), _listener);
+        _tracker.AddWindowLayoutInfoListener(activity, ContextCompat.GetMainExecutor(activity)!, _listener);
         Refresh();
     }
 
