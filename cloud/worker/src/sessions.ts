@@ -19,7 +19,14 @@ import type { Env } from './env';
  * the response when the OS suspends the app mid-request or the request times out after the server
  * has already rotated, and then presents the old token again. Within {@link REUSE_GRACE_SECONDS} of
  * the rotation, and only while its successor has never been used, that is answered with a fresh pair
- * in the same family (the unused successor is revoked) rather than by revoking the family.
+ * in the same family (the unused successor is retired) rather than by revoking the family.
+ *
+ * Every retirement is a conditional `UPDATE … WHERE revoked_utc IS NULL` batched with an `INSERT`
+ * that only happens if that update set `replaced_by` to the new token's hash. A D1 batch is one
+ * transaction, so of two concurrent requests retiring the same token exactly one issues a successor:
+ * there is never a fork into two live chains. Only a token retired by an ordinary rotation
+ * (`revoke_reason = 'rotated'`) is grace-eligible, never one the grace itself retired, so the grace
+ * cannot be chained.
  */
 
 const TOKEN_BYTES = 32;
@@ -29,6 +36,8 @@ const TOKEN_BYTES = 32;
  * it only has to cover a lost response and the client's immediate retry.
  */
 export const REUSE_GRACE_SECONDS = 60;
+
+type RevokeReason = 'rotated' | 'grace_retired' | 'logout' | 'family';
 
 export interface IssuedSession {
   readonly token: string;
@@ -43,6 +52,8 @@ interface TokenRow {
   device_name: string;
   expires_utc: string;
   revoked_utc: string | null;
+  revoke_reason: string | null;
+  replaced_by: string | null;
 }
 
 function newToken(): { token: string; hashPromise: Promise<string> } {
@@ -83,82 +94,115 @@ export async function rotateSession(
   ttlDays: number,
 ): Promise<{ userId: string; session: IssuedSession }> {
   const presentedHash = await sha256Hex(presentedToken);
-  const row = await env.DB.prepare(
-    `SELECT token_hash, user_id, family_id, device_name, expires_utc, revoked_utc
-       FROM refresh_tokens WHERE token_hash = ?1`,
-  )
-    .bind(presentedHash)
-    .first<TokenRow>();
 
-  if (row === null) {
-    throw new ApiError('unauthorized', 'The refresh token is not valid.');
-  }
+  // A second pass only follows a rotation lost to a concurrent request for the same token; by then
+  // the token is revoked, so the second pass never rotates and the loop cannot go round again.
+  for (let pass = 0; pass < 2; pass += 1) {
+    const row = await env.DB.prepare(
+      `SELECT token_hash, user_id, family_id, device_name, expires_utc, revoked_utc, revoke_reason,
+              replaced_by
+         FROM refresh_tokens WHERE token_hash = ?1`,
+    )
+      .bind(presentedHash)
+      .first<TokenRow>();
 
-  // The token being retired: the presented one, or — for a retry inside the grace window — its
-  // unused successor, which the client never received.
-  let retiring = presentedHash;
-  if (row.revoked_utc !== null) {
-    const successor = await unusedSuccessor(env, row, now);
-    if (successor === null) {
-      // Reuse of a rotated token: assume theft and burn the whole chain, including the copy the
-      // legitimate client is holding. Forcing a fresh sign-in is the correct outcome here.
-      await revokeFamily(env, row.family_id, now);
+    if (row === null) {
       throw new ApiError('unauthorized', 'The refresh token is not valid.');
     }
-    retiring = successor;
-  }
 
-  if (row.expires_utc <= canonicalUtc(now)) {
+    if (row.revoked_utc === null) {
+      if (row.expires_utc <= canonicalUtc(now)) {
+        throw new ApiError('unauthorized', 'The refresh token is not valid.');
+      }
+      const session = await retireAndIssue(env, row, presentedHash, 'rotated', now, ttlDays);
+      if (session !== null) {
+        return { userId: row.user_id, session };
+      }
+      // Another request rotated this token first. Read it again: its rotation is now what decides
+      // between the grace and a revocation.
+      continue;
+    }
+
+    // A retry inside the grace window retires the presented token's unused successor, which the
+    // client never received. The retirement only succeeds while that successor is still live, so
+    // a successor that has been used, or a second retry racing this one, falls through to theft.
+    if (graceEligible(row, now) && row.expires_utc > canonicalUtc(now)) {
+      const session = await retireAndIssue(env, row, row.replaced_by!, 'grace_retired', now, ttlDays);
+      if (session !== null) {
+        console.log(
+          `refresh grace applied: user ${row.user_id.slice(0, 8)} family ${row.family_id.slice(0, 8)}`,
+        );
+        return { userId: row.user_id, session };
+      }
+    }
+
+    // Reuse of a rotated token: assume theft and burn the whole chain, including the copy the
+    // legitimate client is holding. Forcing a fresh sign-in is the correct outcome here.
+    console.warn(
+      `refresh token reuse, family revoked: user ${row.user_id.slice(0, 8)} family ${row.family_id.slice(0, 8)}`,
+    );
+    await revokeFamily(env, row.family_id, now);
     throw new ApiError('unauthorized', 'The refresh token is not valid.');
   }
 
-  const { token, hashPromise } = newToken();
-  const nowUtc = canonicalUtc(now);
-  const expiresUtc = canonicalUtc(addSeconds(now, ttlDays * DAY_SECONDS));
-
-  // One batch so a crash cannot leave the old token revoked without a replacement, which would log
-  // the user out silently.
-  await env.DB.batch([
-    env.DB.prepare('UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1')
-      .bind(retiring, nowUtc),
-    env.DB.prepare(
-      `INSERT INTO refresh_tokens
-         (token_hash, user_id, family_id, device_name, issued_utc, expires_utc, revoked_utc)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL)`,
-    ).bind(await hashPromise, row.user_id, row.family_id, row.device_name, nowUtc, expiresUtc),
-  ]);
-
-  return {
-    userId: row.user_id,
-    session: { token, familyId: row.family_id, expiresUtc },
-  };
+  throw new ApiError('unauthorized', 'The refresh token is not valid.');
 }
 
 /**
- * The token a rotation of `row` issued, if the rotation was less than {@link REUSE_GRACE_SECONDS}
- * ago and that token has not been used (rotated) or revoked since. A rotation writes the old token's
- * `revoked_utc` and the new token's `issued_utc` from the same instant, which is how the two are
- * paired. A logout or a family revocation leaves no live token issued at that instant, so it never
- * qualifies.
+ * A token retired by an ordinary rotation less than {@link REUSE_GRACE_SECONDS} ago. Logged-out,
+ * family-revoked and grace-retired tokens never qualify, nor does a row revoked before
+ * `revoke_reason` existed.
  */
-async function unusedSuccessor(env: Env, row: TokenRow, now: Date): Promise<string | null> {
-  const revoked = row.revoked_utc!;
-  if (revoked < canonicalUtc(addSeconds(now, -REUSE_GRACE_SECONDS))) {
-    return null;
-  }
-
-  const successor = await env.DB.prepare(
-    `SELECT token_hash FROM refresh_tokens
-      WHERE family_id = ?1 AND issued_utc = ?2 AND revoked_utc IS NULL AND token_hash <> ?3`,
-  )
-    .bind(row.family_id, revoked, row.token_hash)
-    .first<{ token_hash: string }>();
-  return successor?.token_hash ?? null;
+function graceEligible(row: TokenRow, now: Date): boolean {
+  return row.revoke_reason === 'rotated'
+    && row.replaced_by !== null
+    && row.revoked_utc! >= canonicalUtc(addSeconds(now, -REUSE_GRACE_SECONDS));
 }
 
+/**
+ * Revokes `retiring` and issues its replacement in `row`'s family, or does nothing and returns null
+ * when `retiring` was already revoked. The insert reads the new hash back from `replaced_by`, which
+ * only this call's update can have written, so it happens exactly when the update did. One batch, so
+ * a crash cannot leave the old token revoked without a replacement either.
+ */
+async function retireAndIssue(
+  env: Env,
+  row: TokenRow,
+  retiring: string,
+  reason: RevokeReason,
+  now: Date,
+  ttlDays: number,
+): Promise<IssuedSession | null> {
+  const { token, hashPromise } = newToken();
+  const hash = await hashPromise;
+  const nowUtc = canonicalUtc(now);
+  const expiresUtc = canonicalUtc(addSeconds(now, ttlDays * DAY_SECONDS));
+
+  const [, inserted] = await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE refresh_tokens SET revoked_utc = ?2, revoke_reason = ?3, replaced_by = ?4
+        WHERE token_hash = ?1 AND revoked_utc IS NULL`,
+    ).bind(retiring, nowUtc, reason, hash),
+    env.DB.prepare(
+      `INSERT INTO refresh_tokens
+         (token_hash, user_id, family_id, device_name, issued_utc, expires_utc, revoked_utc)
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, NULL
+         FROM refresh_tokens WHERE token_hash = ?7 AND replaced_by = ?1`,
+    ).bind(hash, row.user_id, row.family_id, row.device_name, nowUtc, expiresUtc, retiring),
+  ]);
+
+  return inserted?.meta.changes === 1 ? { token, familyId: row.family_id, expiresUtc } : null;
+}
+
+/**
+ * Logout revokes the presented token's whole family, not just the token: a token that has already
+ * been rotated would otherwise leave its successor alive for the rest of its 60 days.
+ */
 export async function revokeToken(env: Env, presentedToken: string, now: Date): Promise<void> {
   await env.DB.prepare(
-    'UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1 AND revoked_utc IS NULL',
+    `UPDATE refresh_tokens SET revoked_utc = ?2, revoke_reason = 'logout'
+      WHERE family_id = (SELECT family_id FROM refresh_tokens WHERE token_hash = ?1)
+        AND revoked_utc IS NULL`,
   )
     .bind(await sha256Hex(presentedToken), canonicalUtc(now))
     .run();
@@ -166,7 +210,8 @@ export async function revokeToken(env: Env, presentedToken: string, now: Date): 
 
 export async function revokeFamily(env: Env, familyId: string, now: Date): Promise<void> {
   await env.DB.prepare(
-    'UPDATE refresh_tokens SET revoked_utc = ?2 WHERE family_id = ?1 AND revoked_utc IS NULL',
+    `UPDATE refresh_tokens SET revoked_utc = ?2, revoke_reason = 'family'
+      WHERE family_id = ?1 AND revoked_utc IS NULL`,
   )
     .bind(familyId, canonicalUtc(now))
     .run();
@@ -175,7 +220,8 @@ export async function revokeFamily(env: Env, familyId: string, now: Date): Promi
 /** Used by password change and (later) password reset: every device must sign in again. */
 export async function revokeAllForUser(env: Env, userId: string, now: Date): Promise<void> {
   await env.DB.prepare(
-    'UPDATE refresh_tokens SET revoked_utc = ?2 WHERE user_id = ?1 AND revoked_utc IS NULL',
+    `UPDATE refresh_tokens SET revoked_utc = ?2, revoke_reason = 'family'
+      WHERE user_id = ?1 AND revoked_utc IS NULL`,
   )
     .bind(userId, canonicalUtc(now))
     .run();

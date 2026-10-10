@@ -18,18 +18,19 @@ import { canonicalUtc } from '../src/time';
 
 beforeEach(resetDatabase);
 
-/**
- * Moves a rotation `secondsAgo` into the past: the old token's revocation and its successor's issue
- * share one instant, which is how the server pairs them.
- */
-async function ageRotation(oldToken: string, newToken: string, secondsAgo: number): Promise<void> {
+/** Moves the rotation that retired `oldToken` `secondsAgo` into the past. */
+async function ageRotation(oldToken: string, secondsAgo: number): Promise<void> {
   const then = canonicalUtc(new Date(Date.now() - secondsAgo * 1000));
-  await env.DB.batch([
-    env.DB.prepare('UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1')
-      .bind(await sha256HexOf(oldToken), then),
-    env.DB.prepare('UPDATE refresh_tokens SET issued_utc = ?2 WHERE token_hash = ?1')
-      .bind(await sha256HexOf(newToken), then),
-  ]);
+  await env.DB.prepare('UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1')
+    .bind(await sha256HexOf(oldToken), then)
+    .run();
+}
+
+async function liveTokens(userId: string): Promise<number> {
+  const row = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM refresh_tokens WHERE user_id = ?1 AND revoked_utc IS NULL',
+  ).bind(userId).first<{ n: number }>();
+  return row!.n;
 }
 
 function signInBody(code: string, overrides: Record<string, unknown> = {}) {
@@ -181,7 +182,7 @@ describe('sessions', () => {
   it('revokes the whole family when a rotated token is presented after the grace window', async () => {
     const account = await signIn();
     const rotated = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
-    await ageRotation(account.refreshToken, rotated.body.refresh_token, REUSE_GRACE_SECONDS + 5);
+    await ageRotation(account.refreshToken, REUSE_GRACE_SECONDS + 5);
 
     const replay = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
     expect(replay.status).toBe(401);
@@ -195,7 +196,7 @@ describe('sessions', () => {
     // and on resume it presents the old one again.
     const account = await signIn();
     const lost = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
-    await ageRotation(account.refreshToken, lost.body.refresh_token, REUSE_GRACE_SECONDS - 10);
+    await ageRotation(account.refreshToken, REUSE_GRACE_SECONDS - 10);
 
     const retry = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
     expect(retry.status).toBe(200);
@@ -209,6 +210,109 @@ describe('sessions', () => {
       'SELECT COUNT(DISTINCT family_id) AS n FROM refresh_tokens WHERE user_id = ?1',
     ).bind(account.userId).first<{ n: number }>();
     expect(families?.n).toBe(1);
+    expect(await liveTokens(account.userId)).toBe(1);
+  });
+
+  it('lets only one of two concurrent retries of a rotated token through, never two chains', async () => {
+    const account = await signIn();
+    const lost = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect(lost.status).toBe(200);
+
+    const retries = await Promise.all([
+      post('/v1/auth/refresh', { refresh_token: account.refreshToken }),
+      post('/v1/auth/refresh', { refresh_token: account.refreshToken }),
+    ]);
+
+    expect(retries.filter((retry) => retry.status === 200).length).toBeLessThanOrEqual(1);
+    expect(await liveTokens(account.userId)).toBeLessThanOrEqual(1);
+    for (const retry of retries.filter((retry) => retry.status === 200)) {
+      const onward = await post('/v1/auth/refresh', { refresh_token: retry.body.refresh_token });
+      // Either the one winner carries on, or the loser's reuse burned the family it belonged to.
+      expect([200, 401]).toContain(onward.status);
+    }
+    expect(await liveTokens(account.userId)).toBeLessThanOrEqual(1);
+  });
+
+  it('never forks a chain when the same live token is refreshed twice at once', async () => {
+    const account = await signIn();
+
+    const refreshes = await Promise.all([
+      post('/v1/auth/refresh', { refresh_token: account.refreshToken }),
+      post('/v1/auth/refresh', { refresh_token: account.refreshToken }),
+    ]);
+
+    expect(refreshes.some((refresh) => refresh.status === 200)).toBe(true);
+    expect(await liveTokens(account.userId)).toBe(1);
+    // Exactly one rotation of the presented token: the loser was answered by the grace or refused.
+    const rotations = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM refresh_tokens WHERE user_id = ?1 AND revoke_reason = 'rotated'`,
+    ).bind(account.userId).first<{ n: number }>();
+    expect(rotations?.n).toBe(1);
+    const working = [];
+    for (const refresh of refreshes.filter((refresh) => refresh.status === 200)) {
+      const row = await env.DB.prepare('SELECT revoked_utc FROM refresh_tokens WHERE token_hash = ?1')
+        .bind(await sha256HexOf(refresh.body.refresh_token))
+        .first<{ revoked_utc: string | null }>();
+      if (row?.revoked_utc === null) {
+        working.push(refresh);
+      }
+    }
+    expect(working.length).toBe(1);
+  });
+
+  it('revokes the family when the successor a grace retired is used', async () => {
+    const account = await signIn();
+    const lost = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    const retry = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect(retry.status).toBe(200);
+
+    const retired = await post('/v1/auth/refresh', { refresh_token: lost.body.refresh_token });
+    expect(retired.status).toBe(401);
+    expect(await liveTokens(account.userId)).toBe(0);
+    expect((await post('/v1/auth/refresh', { refresh_token: retry.body.refresh_token })).status).toBe(401);
+  });
+
+  it('stops two holders from alternating through the grace', async () => {
+    // A thief and the client share A. The client rotates A to B; the thief replays A inside the
+    // window and gets C, which retires B. B must not then be grace-eligible itself.
+    const account = await signIn();
+    const client = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    const thief = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect(thief.status).toBe(200);
+
+    expect((await post('/v1/auth/refresh', { refresh_token: client.body.refresh_token })).status).toBe(401);
+    expect((await post('/v1/auth/refresh', { refresh_token: thief.body.refresh_token })).status).toBe(401);
+    expect((await post('/v1/auth/refresh', { refresh_token: account.refreshToken })).status).toBe(401);
+    expect(await liveTokens(account.userId)).toBe(0);
+  });
+
+  it('does not grant a second grace to the same rotated token', async () => {
+    const account = await signIn();
+    await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect((await post('/v1/auth/refresh', { refresh_token: account.refreshToken })).status).toBe(200);
+    expect((await post('/v1/auth/refresh', { refresh_token: account.refreshToken })).status).toBe(401);
+    expect(await liveTokens(account.userId)).toBe(0);
+  });
+
+  it('logs out the whole family when the token presented has already been rotated', async () => {
+    const account = await signIn();
+    const rotated = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    await ageRotation(account.refreshToken, REUSE_GRACE_SECONDS + 5);
+
+    expect((await post('/v1/auth/logout', { refresh_token: account.refreshToken })).status).toBe(204);
+    expect(await liveTokens(account.userId)).toBe(0);
+    expect((await post('/v1/auth/refresh', { refresh_token: rotated.body.refresh_token })).status).toBe(401);
+  });
+
+  it('does not let a token revoked before revoke_reason existed through the grace', async () => {
+    const account = await signIn();
+    await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    await env.DB.prepare(
+      'UPDATE refresh_tokens SET revoke_reason = NULL, replaced_by = NULL WHERE token_hash = ?1',
+    ).bind(await sha256HexOf(account.refreshToken)).run();
+
+    expect((await post('/v1/auth/refresh', { refresh_token: account.refreshToken })).status).toBe(401);
+    expect(await liveTokens(account.userId)).toBe(0);
   });
 
   it('does not let a logged-out token back in through the grace window', async () => {

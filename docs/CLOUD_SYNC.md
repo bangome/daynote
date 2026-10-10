@@ -426,6 +426,19 @@ lose access to their notes, and after the fact is the worst possible moment to f
   **rotated on every refresh**; presenting an already-rotated token revokes the whole family —
   except within 60 s of the rotation while its successor is still unused, which is a client that
   lost the response (an app suspended mid-request, a timeout) and gets a fresh pair in the same family.
+  - The grace is granted once per rotated token. It applies only to a token whose `revoke_reason`
+    is `'rotated'` (migration 0014), and it pairs the token with its successor through
+    `replaced_by`. A successor the grace retired is `'grace_retired'` and never eligible, so two
+    holders of one token cannot alternate through the grace. Presenting it revokes the family.
+  - Every rotation is one D1 batch (one transaction): `UPDATE … WHERE revoked_utc IS NULL`, then
+    an `INSERT … SELECT` that runs only if that update wrote the new hash into `replaced_by`. Two
+    concurrent refreshes or retries of one token therefore issue at most one successor. The loser
+    of a normal refresh falls into the grace; the loser of a grace revokes the family. There are
+    never two live chains.
+  - Logout revokes the presented token's whole family, so logging out with an already-rotated
+    token does not leave its successor alive.
+  - A grace and a reuse revocation are both logged (user and family id prefixes, never a token)
+    and show up in `wrangler tail`.
 
 ### 4.11 Client-side secret storage
 
@@ -497,7 +510,9 @@ CREATE TABLE refresh_tokens (
     device_name TEXT NOT NULL,
     issued_utc  TEXT NOT NULL,
     expires_utc TEXT NOT NULL,
-    revoked_utc TEXT
+    revoked_utc TEXT,
+    revoke_reason TEXT,                       -- 0014: rotated | grace_retired | logout | family
+    replaced_by TEXT                          -- 0014: token_hash a rotation issued in its place
 );
 CREATE INDEX refresh_tokens_user ON refresh_tokens(user_id);
 
