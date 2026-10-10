@@ -15,7 +15,7 @@
       versionCode must rise with every upload; versionName is what Play shows. Kept in step with the
       desktop's 1.5.0 so one number describes the product on every platform.
     -->
-    <ApplicationVersion>16</ApplicationVersion>
+    <ApplicationVersion>17</ApplicationVersion>
     <ApplicationDisplayVersion>1.6.0</ApplicationDisplayVersion>
     <!-- Android 8.0. Below that there is no adaptive icon and no usable KeyStore AES-GCM. -->
     <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
