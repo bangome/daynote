@@ -27,8 +27,12 @@ namespace Daynote.Mobile.Views;
 /// <b>Nothing is taken from a tap or a scroll.</b> A press only notes where it began; the row takes
 /// the pointer once the finger has gone <see cref="DirectionLock"/> points sideways, and a press
 /// that goes further up or down first is left to the scroll. A press within
-/// <see cref="EdgeGuard"/> of the screen's left edge is the system's back gesture and is never a
-/// swipe.
+/// <see cref="EdgeGuard"/> of either edge of the screen is the system's back gesture (Android takes
+/// it from both) and is never a swipe.
+/// </para>
+/// <para>
+/// A right-click, or a long press, opens the row on its buttons as a swipe would: a trackpad on an
+/// iPad or a mouse on a tablet has no comfortable way to drag a row sideways.
 /// </para>
 /// <para>
 /// One row is open at a time. A press anywhere else closes it, which is also what closes it when a
@@ -54,7 +58,7 @@ public sealed class SwipeRow : Panel
     /// <summary>How far, in points, a finger moves before the row decides between a swipe and a scroll.</summary>
     public const double DirectionLock = 10;
 
-    /// <summary>A press this close to the screen's left edge is the system's back gesture.</summary>
+    /// <summary>A press this close to either edge of the screen is the system's back gesture.</summary>
     public const double EdgeGuard = 20;
 
     /// <summary>The width of each of the two buttons a left swipe opens on.</summary>
@@ -106,7 +110,8 @@ public sealed class SwipeRow : Panel
         _deleteLabel = Label();
         _deleteLabel.Foreground = Brushes.White;
         _delete = new Border { Child = _deleteLabel, ClipToBounds = true };
-        _delete.Bind(Border.BackgroundProperty, this.GetResourceObservable("Mobile.Danger"));
+        // Solid red in both themes: the dark theme's lighter danger red does not hold white text.
+        _delete.Bind(Border.BackgroundProperty, this.GetResourceObservable("Mobile.DangerSolid"));
         _delete.Tapped += (_, e) =>
         {
             e.Handled = true;
@@ -136,6 +141,11 @@ public sealed class SwipeRow : Panel
         AddHandler(PointerPressedEvent, OnPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerMovedEvent, OnMoved, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnReleased, handledEventsToo: true);
+        ContextRequested += (_, e) =>
+        {
+            e.Handled = true;
+            Settle(-OpenWidth);
+        };
         AddHandler(PointerCaptureLostEvent, (_, _) =>
         {
             if (_swiping)
@@ -252,8 +262,9 @@ public sealed class SwipeRow : Panel
             return;
         }
 
-        // The system's back gesture starts at the left edge; it is never a row's swipe.
-        if (TopLevel.GetTopLevel(this) is { } top && e.GetPosition(top).X < EdgeGuard)
+        // The system's back gesture starts at either edge; it is never a row's swipe.
+        if (TopLevel.GetTopLevel(this) is { } top &&
+            (e.GetPosition(top).X < EdgeGuard || e.GetPosition(top).X > top.Bounds.Width - EdgeGuard))
         {
             return;
         }

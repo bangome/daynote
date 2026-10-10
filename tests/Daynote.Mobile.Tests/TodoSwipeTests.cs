@@ -137,6 +137,44 @@ public sealed class TodoSwipeTests
     }
 
     [TestMethod]
+    public void A_swipe_from_the_right_edge_is_left_to_the_system_too()
+    {
+        WithDay((view, shell) =>
+        {
+            SwipeRow row = Row(view, Report);
+            var window = (Window)TopLevel.GetTopLevel(view)!;
+            Point start = row.TranslatePoint(new Point(0, row.Bounds.Height / 2), window)!.Value
+                .WithX(window.Bounds.Width - (SwipeRow.EdgeGuard / 2));
+            DragFrom(view, start, dx: -300, dy: 0);
+
+            Assert.AreEqual(0, row.Offset, "A swipe from the right edge moved the row.");
+            Assert.IsNotNull(Find(Report));
+        });
+    }
+
+    [TestMethod]
+    public void A_right_click_on_a_tablet_row_opens_its_buttons()
+    {
+        WithDay(1180, 820, (view, shell) =>
+        {
+            SwipeRow row = view.GetVisualDescendants().OfType<DayTodoPanel>().Single()
+                .GetVisualDescendants().OfType<SwipeRow>()
+                .Single(each => (each.DataContext as TodoRowViewModel)?.Item.Text == Call);
+            var window = (Window)TopLevel.GetTopLevel(view)!;
+            Settle(view);
+            Point centre = row.TranslatePoint(new Point(row.Bounds.Width / 2, row.Bounds.Height / 2), window)!.Value;
+            window.MouseMove(centre);
+            window.MouseDown(centre, MouseButton.Right);
+            window.MouseUp(centre, MouseButton.Right);
+            Settle(view);
+
+            Assert.IsTrue(row.IsOpen, "A right-click did not open the row on its buttons.");
+            Tap(view, Action(row, "MobileTodoDelete"));
+            Assert.IsNull(Find(Call), "삭제 from a right-click did not delete.");
+        });
+    }
+
+    [TestMethod]
     public void Edit_opens_the_sheet_filled_in_and_saves_over_the_item()
     {
         WithDay((view, shell) =>

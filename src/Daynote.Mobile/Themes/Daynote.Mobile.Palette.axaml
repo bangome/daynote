@@ -77,6 +77,8 @@
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
+  <!-- A to-do row's swiped-open 삭제: one solid red under white text in both themes. -->
+  <SolidColorBrush x:Key="Mobile.DangerSolid" Color="#cf4a3f" />
   <!-- The saved dot in the editor, the same green in both themes. -->
   <SolidColorBrush x:Key="Mobile.Saved" Color="#2fb574" />
   <!-- The avatar letter, dark ink on the sun circle in both themes. -->
