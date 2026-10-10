@@ -21,18 +21,43 @@ public enum TodoEntryPicker
     Date,
     Time,
     End,
+    Repeat,
 }
 
 /// <summary>
-/// The draft behind the to-do sheet: what it is called, which kind, its day, its time and its list,
-/// entered in fields of their own rather than typed into the note.
+/// 반복: the repeats the sheet offers, each one an RRULE <see cref="AgendaRecurrence"/> expands.
+/// </summary>
+public enum TodoRepeat
+{
+    None,
+    Daily,
+
+    /// <summary>Monday to Friday.</summary>
+    Weekdays,
+
+    /// <summary>On the date's weekday, which is what a plain FREQ=WEEKLY means and what @ 매주 writes.</summary>
+    Weekly,
+
+    /// <summary>On the date's day of the month; a month without it is skipped.</summary>
+    Monthly,
+
+    /// <summary>On the date's month and day.</summary>
+    Yearly,
+}
+
+/// <summary>
+/// The draft behind the to-do sheet: what it is called, which kind, its day, its time, how it
+/// repeats, a few lines about it and its list, entered in fields of their own rather than typed
+/// into the note.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The item it makes is <see cref="AgendaCapture.Compose"/>'s, with the sheet's day and time as the
 /// reading: DUE or DTSTART, HasDueTime and the event's hour follow the same rules as an @ phrase,
 /// so reminders, widgets, sync and the day panel cannot tell the two apart. Only what @ has no
-/// words for is set on top — a list, an event's own end, and a to-do with no date.
+/// words for is set on top — a list, an event's own end, a description and a to-do with no date.
+/// A repeat goes in as the reading's rule, so a repeating item is anchored exactly as @ 매일 anchors
+/// one: a to-do carries the anchor in DTSTART as well as DUE (<see cref="AgendaItem.Anchor"/>).
 /// </para>
 /// <para>
 /// The note's own day is the default, as the date helper's was: someone writing up Monday means
@@ -61,6 +86,11 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     {
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Calendar = new CalendarMonthViewModel(clock, repository, PickDateAsync);
+        RepeatOptions =
+        [
+            .. new[] { TodoRepeat.None, TodoRepeat.Daily, TodoRepeat.Weekdays, TodoRepeat.Weekly, TodoRepeat.Monthly, TodoRepeat.Yearly }
+                .Select(static repeat => new TodoRepeatOption(repeat)),
+        ];
     }
 
     /// <summary>The month grid under the date row: the month sheet's own, picking for the draft instead of the day.</summary>
@@ -74,19 +104,23 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     public bool IsEvent => Kind == AgendaKind.Event;
 
-    /// <summary>내용. One line; the item's title.</summary>
+    /// <summary>제목. One line; the item's title.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanAdd))]
-    private string _text = string.Empty;
+    private string _title = string.Empty;
 
     /// <summary>추가 waits for a title: an item with no name is a row nobody can identify.</summary>
-    public bool CanAdd => !string.IsNullOrWhiteSpace(Text);
+    public bool CanAdd => !string.IsNullOrWhiteSpace(Title);
+
+    /// <summary>내용. A few optional lines kept with the item, never in its title.</summary>
+    [ObservableProperty]
+    private string _description = string.Empty;
 
     public string TitlePlaceholder => MobileStrings.Get(IsEvent ? "MobileTodoEventPlaceholder" : "MobileTodoTaskPlaceholder");
 
     /// <summary>The day, or null for a to-do with none.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasDate), nameof(DateText), nameof(CanPickTime))]
+    [NotifyPropertyChangedFor(nameof(HasDate), nameof(DateText), nameof(CanPickTime), nameof(CanRepeat), nameof(RepeatText))]
     private DateOnly? _date;
 
     public bool HasDate => Date is not null;
@@ -123,11 +157,59 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     /// <summary>A time needs a day to be on. An undated to-do's time row is greyed until it has one.</summary>
     public bool CanPickTime => HasDate;
 
+    /// <summary>How it repeats. Only with a date: a rule needs a day to count from.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDatePickerOpen), nameof(IsTimePickerOpen))]
+    [NotifyPropertyChangedFor(nameof(Repeats), nameof(RepeatText))]
+    private TodoRepeat _repeat;
+
+    public bool Repeats => Repeat != TodoRepeat.None;
+
+    /// <summary>An undated to-do cannot repeat; its 반복 row is greyed until it has a day.</summary>
+    public bool CanRepeat => HasDate;
+
+    public IReadOnlyList<TodoRepeatOption> RepeatOptions { get; }
+
+    /// <summary>What the 반복 row says: the repeat spelled out against the chosen day, "매주 금요일".</summary>
+    public string RepeatText
+    {
+        get
+        {
+            if (Date is not { } day)
+            {
+                return MobileStrings.Get("MobileTodoRepeatNeedsDate");
+            }
+
+            CultureInfo culture = LocalizationService.Instance.Culture;
+            return Repeat switch
+            {
+                TodoRepeat.Weekly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatWeeklyOn"),
+                    culture.DateTimeFormat.GetDayName(day.DayOfWeek)),
+                TodoRepeat.Monthly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatMonthlyOn"), day.Day),
+                TodoRepeat.Yearly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatYearlyOn"),
+                    day.ToString(MobileStrings.Get("MobileTodoRepeatYearlyFormat"), culture)),
+                _ => MobileStrings.Get("MobileTodoRepeat" + Repeat),
+            };
+        }
+    }
+
+    /// <summary>The rule 추가 writes, in the forms <see cref="AgendaRecurrence"/> expands and @ 매일 / 매주 writes.</summary>
+    public string? Rrule => Repeat switch
+    {
+        TodoRepeat.Daily => "FREQ=DAILY",
+        TodoRepeat.Weekdays => "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        TodoRepeat.Weekly => "FREQ=WEEKLY",
+        TodoRepeat.Monthly => "FREQ=MONTHLY",
+        TodoRepeat.Yearly => "FREQ=YEARLY",
+        _ => null,
+    };
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDatePickerOpen), nameof(IsTimePickerOpen), nameof(IsRepeatPickerOpen))]
     private TodoEntryPicker _picker;
 
     public bool IsDatePickerOpen => Picker == TodoEntryPicker.Date;
+
+    public bool IsRepeatPickerOpen => Picker == TodoEntryPicker.Repeat;
 
     /// <summary>The hour and minute grid, for the to-do's time, the event's start or the event's end.</summary>
     public bool IsTimePickerOpen => Picker is TodoEntryPicker.Time or TodoEntryPicker.End;
@@ -160,9 +242,12 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         _eventLength = AgendaPhraseParser.DefaultEventLength;
         _timeFilledIn = false;
         Kind = AgendaKind.Task;
-        Text = string.Empty;
+        Title = string.Empty;
+        Description = string.Empty;
         Date = noteDate;
         Time = null;
+        Repeat = TodoRepeat.None;
+        MarkRepeat();
         Picker = TodoEntryPicker.None;
         ListId = AgendaList.DefaultId;
 
@@ -212,7 +297,8 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     [RelayCommand]
     private async Task TogglePicker(TodoEntryPicker picker)
     {
-        if (picker is TodoEntryPicker.Time or TodoEntryPicker.End && !CanPickTime)
+        if ((picker is TodoEntryPicker.Time or TodoEntryPicker.End && !CanPickTime) ||
+            (picker == TodoEntryPicker.Repeat && !CanRepeat))
         {
             return;
         }
@@ -247,6 +333,10 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Time = null;
         _timeFilledIn = false;
         Picker = TodoEntryPicker.None;
+
+        // A rule counts from a day; with none there is nothing for it to repeat on.
+        Repeat = TodoRepeat.None;
+        MarkRepeat();
     }
 
     /// <summary>시간 없음. A to-do only: an event cannot be all day from here.</summary>
@@ -275,6 +365,20 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Picker = TodoEntryPicker.None;
     }
 
+    /// <summary>A repeat pill. Refused without a date, which the greyed row already says.</summary>
+    [RelayCommand]
+    private void PickRepeat(TodoRepeat repeat)
+    {
+        if (repeat != TodoRepeat.None && !CanRepeat)
+        {
+            return;
+        }
+
+        Repeat = repeat;
+        Picker = TodoEntryPicker.None;
+        MarkRepeat();
+    }
+
     [RelayCommand]
     private void PickList(Guid id)
     {
@@ -295,12 +399,16 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         var reading = new AgendaPhrase(
             new WallClock(day.ToDateTime(Time ?? TimeOnly.MinValue)),
             HasTime,
-            Rrule: null,
+            Date is null ? null : Rrule,
             RolledToTomorrow: false,
             Length: 0);
-        var state = new AgendaCaptureState(0, 0, Text.Trim(), string.Empty, reading);
+        var state = new AgendaCaptureState(0, 0, Title.Trim(), string.Empty, reading);
 
-        AgendaItem made = AgendaCapture.Compose(state, Kind, noteId, itemId, now) with { ListId = ListId };
+        AgendaItem made = AgendaCapture.Compose(state, Kind, noteId, itemId, now) with
+        {
+            ListId = ListId,
+            Description = Description.Trim(),
+        };
         if (IsEvent && HasTime)
         {
             made = made with { EndsAt = new WallClock(reading.At.Value + _eventLength) };
@@ -369,6 +477,14 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         }
     }
 
+    private void MarkRepeat()
+    {
+        foreach (TodoRepeatOption option in RepeatOptions)
+        {
+            option.IsCurrent = option.Repeat == Repeat;
+        }
+    }
+
     /// <summary>The next o'clock after now: an event made at 14:20 starts at 15:00.</summary>
     private TimeOnly NextWholeHour()
     {
@@ -394,6 +510,17 @@ public sealed partial class TodoListOption(Guid id, string name, IBrush dot) : O
     public string Name { get; } = name;
 
     public IBrush Dot { get; } = dot;
+
+    [ObservableProperty]
+    private bool _isCurrent;
+}
+
+/// <summary>One pill in the 반복 row.</summary>
+public sealed partial class TodoRepeatOption(TodoRepeat repeat) : ObservableObject
+{
+    public TodoRepeat Repeat { get; } = repeat;
+
+    public string Label => MobileStrings.Get("MobileTodoRepeat" + Repeat);
 
     [ObservableProperty]
     private bool _isCurrent;

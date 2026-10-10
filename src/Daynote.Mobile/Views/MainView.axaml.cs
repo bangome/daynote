@@ -386,11 +386,6 @@ public partial class MainView : UserControl
         SetColumns(frame, Math.Max(rail, sidebar), panel, day);
         Grid.SetColumn(pages, layout == MobileLayout.TwoPane ? 1 : 2);
 
-        // The @ card under the caret needs a keyboard to have keys, and a screen with room beside
-        // the caret; a phone keeps its bar either way.
-        this.FindControl<EditorPage>("Editor")?.SetHardwareKeyboard(
-            _device?.HasHardwareKeyboard == true && layout != MobileLayout.Phone);
-
         if (_shownLayout is { } previous && previous != layout)
         {
             AwaitSettledWidth(Appearing(previous, layout));

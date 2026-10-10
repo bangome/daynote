@@ -461,217 +461,256 @@
     </views:SheetLayer>
 
     <!--
-      The to-do sheet: a to-do or an event in fields of its own - 내용, 날짜, 시간, 목록 - rather
-      than typed into the note. Opened from the editor's @ button, a widget's "@ 할 일" and the
-      capture link. The title field takes the keyboard as the sheet opens, and the sheet then sits on
-      the keyboard rather than under it (MainView.axaml.cs). Each picker opens under its own row,
-      one at a time, so the sheet never grows past what a phone can show.
+      The to-do sheet: a to-do or an event in fields of its own - 제목, 날짜, 시간, 반복, 내용, 목록 -
+      rather than typed into the note. Opened from the editor's + button, an @ typed at the start of
+      a line, a widget's "@ 할 일" and the capture link. The title field takes the keyboard as the
+      sheet opens, and the sheet then sits on the keyboard rather than under it (MainView.axaml.cs).
+      Each picker opens under its own row, one at a time. The kind switch stays at the top and
+      취소 / 추가 at the bottom; only the fields between them scroll, so on a small phone with the
+      keyboard up 추가 is still in reach.
     -->
     <views:SheetLayer IsOpen="{Binding IsTodoSheetOpen}">
       <Button Classes="scrim" Command="{Binding CloseTodoSheetCommand}"
               AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
       <Border x:Name="TodoSheet" Classes="sheet todosheet" VerticalAlignment="Bottom">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-          <StackPanel Margin="16,10,16,0" Spacing="10">
-            <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,2" />
+        <DockPanel Margin="16,10,16,0">
+          <Border DockPanel.Dock="Top" Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,12" />
 
-            <!-- 할 일 or 일정: the same two words, in the same order, as the @ bar's two readings. -->
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
-                <Button x:Name="TodoKindTask" Classes="pill small" Classes.on="{Binding Entry.IsTask}"
-                        Command="{Binding Entry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
-                  <TextBlock Text="{Binding Strings[AgendaCaptureTask]}" />
-                </Button>
-                <Button x:Name="TodoKindEvent" Classes="pill small" Classes.on="{Binding Entry.IsEvent}"
-                        Command="{Binding Entry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}">
-                  <TextBlock Text="{Binding Strings[AgendaCaptureEvent]}" />
-                </Button>
-              </StackPanel>
-              <Button Grid.Column="1" Classes="iconbtn" Width="36" Height="36" Command="{Binding CloseTodoSheetCommand}"
-                      AutomationProperties.Name="{Binding Strings[MobileClose]}">
-                <views:Glyph Kind="Close" Width="13" Height="13" Foreground="{DynamicResource Mobile.Text2}" />
+          <!-- 할 일 or 일정: the same two words, in the same order, as the desktop's @ card. -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
+              <Button x:Name="TodoKindTask" Classes="pill small" Classes.on="{Binding Entry.IsTask}"
+                      Command="{Binding Entry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
+                <TextBlock Text="{Binding Strings[AgendaCaptureTask]}" />
               </Button>
-            </Grid>
+              <Button x:Name="TodoKindEvent" Classes="pill small" Classes.on="{Binding Entry.IsEvent}"
+                      Command="{Binding Entry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}">
+                <TextBlock Text="{Binding Strings[AgendaCaptureEvent]}" />
+              </Button>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="iconbtn" Width="36" Height="36" Command="{Binding CloseTodoSheetCommand}"
+                    AutomationProperties.Name="{Binding Strings[MobileClose]}">
+              <views:Glyph Kind="Close" Width="13" Height="13" Foreground="{DynamicResource Mobile.Text2}" />
+            </Button>
+          </Grid>
 
-            <!-- 내용. One line; the keyboard's return key adds, as 완료 does on the list sheet. -->
-            <TextBox x:Name="TodoTextBox" Text="{Binding Entry.Text, Mode=TwoWay}"
-                     PlaceholderText="{Binding Entry.TitlePlaceholder}"
-                     AutomationProperties.Name="{Binding Strings[MobileTodoText]}"
-                     TextInputOptions.ReturnKeyType="Done">
-              <TextBox.KeyBindings>
-                <KeyBinding Gesture="Enter" Command="{Binding CommitTodoSheetCommand}" />
-              </TextBox.KeyBindings>
-            </TextBox>
+          <!-- Docked before the fields, so they get what is left over and scroll inside it. -->
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,10,*" Margin="0,10,0,0">
+            <Button Grid.Column="0" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding CloseTodoSheetCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+            </Button>
+            <Button Grid.Column="2" x:Name="TodoAdd" Classes="solid" HorizontalAlignment="Stretch"
+                    IsEnabled="{Binding Entry.CanAdd}" Command="{Binding CommitTodoSheetCommand}">
+              <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[MobileTodoAdd]}" />
+            </Button>
+          </Grid>
 
-            <!-- 날짜 and 시간, as rows on one card: what each says is the value, and a tap opens its picker. -->
-            <Border Classes="todofields">
-              <StackPanel>
-                <Button x:Name="TodoDateRow" Classes="todofield" Classes.open="{Binding Entry.IsDatePickerOpen}"
-                        Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.Date}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[MobileTodoDate]}" />
-                    <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !Entry.HasDate}" Text="{Binding Entry.DateText}" />
-                    <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
-                                 Foreground="{DynamicResource Mobile.Text3}" />
-                  </Grid>
-                </Button>
+          <ScrollViewer x:Name="TodoFields" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+              <!-- 제목. One line; the keyboard's return key adds, as 완료 does on the list sheet. -->
+              <TextBox x:Name="TodoTextBox" Text="{Binding Entry.Title, Mode=TwoWay}"
+                       PlaceholderText="{Binding Entry.TitlePlaceholder}"
+                       AutomationProperties.Name="{Binding Strings[MobileTodoTitle]}"
+                       TextInputOptions.ReturnKeyType="Done">
+                <TextBox.KeyBindings>
+                  <KeyBinding Gesture="Enter" Command="{Binding CommitTodoSheetCommand}" />
+                </TextBox.KeyBindings>
+              </TextBox>
 
-                <!-- The month sheet's grid, a size down, under its row. -->
-                <StackPanel IsVisible="{Binding Entry.IsDatePickerOpen}" Margin="8,0,8,10">
-                  <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,4">
-                    <Button Grid.Column="0" Width="40" Height="40" Command="{Binding Entry.Calendar.PreviousMonthCommand}"
-                            AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
-                      <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
-                    </Button>
-                    <TextBlock Grid.Column="1" FontSize="15" FontWeight="ExtraBold" TextAlignment="Center" VerticalAlignment="Center"
-                               Text="{Binding Entry.Calendar.MonthLabel}" />
-                    <Button Grid.Column="2" Width="40" Height="40" Command="{Binding Entry.Calendar.NextMonthCommand}"
-                            AutomationProperties.Name="{Binding Strings[NextMonth]}">
-                      <views:Glyph Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
-                    </Button>
-                  </Grid>
-                  <UniformGrid Columns="7">
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdaySun]}" Foreground="{DynamicResource Mobile.Sunday}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayMon]}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayTue]}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayWed]}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayThu]}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayFri]}" />
-                    <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdaySat]}" Foreground="{DynamicResource Mobile.Text}" />
-                  </UniformGrid>
-                  <ItemsControl ItemsSource="{Binding Entry.Calendar.Cells}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
-                        <Button Classes="cell" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
-                                Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
-                                Command="{Binding SelectCommand}" IsHitTestVisible="{Binding IsInMonth}">
-                          <Border Classes="cellday">
-                            <TextBlock Text="{Binding DayText}" />
-                          </Border>
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <!-- A to-do may be owed with no day at all; an event is a block of one. -->
-                  <Button Classes="pill small" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding Entry.IsTask}"
-                          Classes.on="{Binding !Entry.HasDate}" Command="{Binding Entry.ClearDateCommand}">
-                    <TextBlock Text="{Binding Strings[MobileTodoNoDate]}" />
-                  </Button>
-                </StackPanel>
-
-                <Border Classes="fieldrule" />
-
-                <!-- A to-do's time, or an event's start. Greyed while an undated to-do has no day to put it on. -->
-                <Button x:Name="TodoTimeRow" Classes="todofield" Classes.open="{Binding Entry.IsTimePickerOpen}"
-                        IsEnabled="{Binding Entry.CanPickTime}"
-                        Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.Time}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Panel Grid.Column="0">
-                      <TextBlock Classes="fieldlabel" IsVisible="{Binding Entry.IsTask}" Text="{Binding Strings[MobileTodoTime]}" />
-                      <TextBlock Classes="fieldlabel" IsVisible="{Binding Entry.IsEvent}" Text="{Binding Strings[MobileTodoStart]}" />
-                    </Panel>
-                    <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !Entry.HasTime}" Text="{Binding Entry.TimeText}" />
-                    <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
-                                 Foreground="{DynamicResource Mobile.Text3}" />
-                  </Grid>
-                </Button>
-
-                <!-- An event's end: an hour after its start until it is picked. -->
-                <StackPanel IsVisible="{Binding Entry.IsEvent}">
-                  <Border Classes="fieldrule" />
-                  <Button x:Name="TodoEndRow" Classes="todofield"
-                          Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.End}">
+              <!-- 날짜 and 시간, as rows on one card: what each says is the value, and a tap opens its picker. -->
+              <Border Classes="todofields">
+                <StackPanel>
+                  <Button x:Name="TodoDateRow" Classes="todofield" Classes.open="{Binding Entry.IsDatePickerOpen}"
+                          Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.Date}">
                     <Grid ColumnDefinitions="Auto,*,Auto">
-                      <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[MobileTodoEnd]}" />
-                      <TextBlock Grid.Column="1" Classes="fieldvalue" Text="{Binding Entry.EndText}" />
+                      <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[MobileTodoDate]}" />
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !Entry.HasDate}" Text="{Binding Entry.DateText}" />
                       <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
                                    Foreground="{DynamicResource Mobile.Text3}" />
                     </Grid>
                   </Button>
-                </StackPanel>
 
-                <!--
-                  The reminder sheet's grid of pills: an hour, then a minute, two taps for any time.
-                  Avalonia has no touch-native wheel, and a grid is every option at full size.
-                -->
-                <StackPanel IsVisible="{Binding Entry.IsTimePickerOpen}" Margin="10,0,10,12" Spacing="6">
-                  <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Margin="4,0,0,0" Text="{Binding Strings[ReminderTimeHour]}" />
-                  <ItemsControl ItemsSource="{Binding Entry.HourOptions}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:TimeOption">
-                        <Button Classes="pill time todotime" Classes.on="{Binding IsCurrent}" Margin="2"
-                                Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickHourCommand}"
-                                CommandParameter="{Binding Value}">
-                          <TextBlock Text="{Binding Label}" />
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Margin="4,2,0,0" Text="{Binding Strings[ReminderTimeMinute]}" />
-                  <ItemsControl ItemsSource="{Binding Entry.MinuteOptions}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:TimeOption">
-                        <Button Classes="pill time todotime" Classes.on="{Binding IsCurrent}" Margin="2"
-                                Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickMinuteCommand}"
-                                CommandParameter="{Binding Value}">
-                          <TextBlock Text="{Binding Label}" />
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <!-- A to-do may have a day and no time; an event always has a start. -->
-                  <Button Classes="pill small" HorizontalAlignment="Left" Margin="0,4,0,0" IsVisible="{Binding Entry.IsTask}"
-                          Classes.on="{Binding !Entry.HasTime}" Command="{Binding Entry.ClearTimeCommand}">
-                    <TextBlock Text="{Binding Strings[MobileTodoNoTime]}" />
-                  </Button>
-                </StackPanel>
-              </StackPanel>
-            </Border>
-
-            <!-- 목록, only when there is more than the built-in one to choose from. -->
-            <StackPanel IsVisible="{Binding Entry.ShowLists}" Spacing="8">
-              <TextBlock Classes="faint" FontSize="12.5" FontWeight="Bold" Margin="4,0,0,0" Text="{Binding Strings[MobileTodoList]}" />
-              <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Entry.ListOptions}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:TodoListOption">
-                      <Button Classes="pill small" Classes.on="{Binding IsCurrent}"
-                              Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickListCommand}"
-                              CommandParameter="{Binding Id}">
-                        <StackPanel Orientation="Horizontal" Spacing="7">
-                          <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{Binding Dot}" />
-                          <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
-                        </StackPanel>
+                  <!-- The month sheet's grid, a size down, under its row. -->
+                  <StackPanel IsVisible="{Binding Entry.IsDatePickerOpen}" Margin="8,0,8,10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,4">
+                      <Button Grid.Column="0" Width="40" Height="40" Command="{Binding Entry.Calendar.PreviousMonthCommand}"
+                              AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
+                        <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
                       </Button>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </StackPanel>
+                      <TextBlock Grid.Column="1" FontSize="15" FontWeight="ExtraBold" TextAlignment="Center" VerticalAlignment="Center"
+                                 Text="{Binding Entry.Calendar.MonthLabel}" />
+                      <Button Grid.Column="2" Width="40" Height="40" Command="{Binding Entry.Calendar.NextMonthCommand}"
+                              AutomationProperties.Name="{Binding Strings[NextMonth]}">
+                        <views:Glyph Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
+                      </Button>
+                    </Grid>
+                    <UniformGrid Columns="7">
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdaySun]}" Foreground="{DynamicResource Mobile.Sunday}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayMon]}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayTue]}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayWed]}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayThu]}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdayFri]}" />
+                      <TextBlock Classes="sheetwd" Text="{Binding Strings[WeekdaySat]}" Foreground="{DynamicResource Mobile.Text}" />
+                    </UniformGrid>
+                    <ItemsControl ItemsSource="{Binding Entry.Calendar.Cells}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
+                          <Button Classes="cell" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
+                                  Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
+                                  Command="{Binding SelectCommand}" IsHitTestVisible="{Binding IsInMonth}">
+                            <Border Classes="cellday">
+                              <TextBlock Text="{Binding DayText}" />
+                            </Border>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- A to-do may be owed with no day at all; an event is a block of one. -->
+                    <Button Classes="pill small" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding Entry.IsTask}"
+                            Classes.on="{Binding !Entry.HasDate}" Command="{Binding Entry.ClearDateCommand}">
+                      <TextBlock Text="{Binding Strings[MobileTodoNoDate]}" />
+                    </Button>
+                  </StackPanel>
 
-            <Grid ColumnDefinitions="*,10,*" Margin="0,2,0,0">
-              <Button Grid.Column="0" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding CloseTodoSheetCommand}">
-                <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
-              </Button>
-              <Button Grid.Column="2" x:Name="TodoAdd" Classes="solid" HorizontalAlignment="Stretch"
-                      IsEnabled="{Binding Entry.CanAdd}" Command="{Binding CommitTodoSheetCommand}">
-                <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[MobileTodoAdd]}" />
-              </Button>
-            </Grid>
-          </StackPanel>
-        </ScrollViewer>
+                  <Border Classes="fieldrule" />
+
+                  <!-- A to-do's time, or an event's start. Greyed while an undated to-do has no day to put it on. -->
+                  <Button x:Name="TodoTimeRow" Classes="todofield" Classes.open="{Binding Entry.IsTimePickerOpen}"
+                          IsEnabled="{Binding Entry.CanPickTime}"
+                          Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.Time}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Panel Grid.Column="0">
+                        <TextBlock Classes="fieldlabel" IsVisible="{Binding Entry.IsTask}" Text="{Binding Strings[MobileTodoTime]}" />
+                        <TextBlock Classes="fieldlabel" IsVisible="{Binding Entry.IsEvent}" Text="{Binding Strings[MobileTodoStart]}" />
+                      </Panel>
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !Entry.HasTime}" Text="{Binding Entry.TimeText}" />
+                      <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
+                                   Foreground="{DynamicResource Mobile.Text3}" />
+                    </Grid>
+                  </Button>
+
+                  <!-- An event's end: an hour after its start until it is picked. -->
+                  <StackPanel IsVisible="{Binding Entry.IsEvent}">
+                    <Border Classes="fieldrule" />
+                    <Button x:Name="TodoEndRow" Classes="todofield"
+                            Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.End}">
+                      <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[MobileTodoEnd]}" />
+                        <TextBlock Grid.Column="1" Classes="fieldvalue" Text="{Binding Entry.EndText}" />
+                        <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
+                                     Foreground="{DynamicResource Mobile.Text3}" />
+                      </Grid>
+                    </Button>
+                  </StackPanel>
+
+                  <!--
+                    The reminder sheet's grid of pills: an hour, then a minute, two taps for any time.
+                    Avalonia has no touch-native wheel, and a grid is every option at full size.
+                  -->
+                  <StackPanel IsVisible="{Binding Entry.IsTimePickerOpen}" Margin="10,0,10,12" Spacing="6">
+                    <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Margin="4,0,0,0" Text="{Binding Strings[ReminderTimeHour]}" />
+                    <ItemsControl ItemsSource="{Binding Entry.HourOptions}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TimeOption">
+                          <Button Classes="pill time todotime" Classes.on="{Binding IsCurrent}" Margin="2"
+                                  Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickHourCommand}"
+                                  CommandParameter="{Binding Value}">
+                            <TextBlock Text="{Binding Label}" />
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="faint" FontSize="12" FontWeight="Bold" Margin="4,2,0,0" Text="{Binding Strings[ReminderTimeMinute]}" />
+                    <ItemsControl ItemsSource="{Binding Entry.MinuteOptions}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TimeOption">
+                          <Button Classes="pill time todotime" Classes.on="{Binding IsCurrent}" Margin="2"
+                                  Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickMinuteCommand}"
+                                  CommandParameter="{Binding Value}">
+                            <TextBlock Text="{Binding Label}" />
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- A to-do may have a day and no time; an event always has a start. -->
+                    <Button Classes="pill small" HorizontalAlignment="Left" Margin="0,4,0,0" IsVisible="{Binding Entry.IsTask}"
+                            Classes.on="{Binding !Entry.HasTime}" Command="{Binding Entry.ClearTimeCommand}">
+                      <TextBlock Text="{Binding Strings[MobileTodoNoTime]}" />
+                    </Button>
+                  </StackPanel>
+
+                  <Border Classes="fieldrule" />
+
+                  <!-- 반복, spelled out against the chosen day. Greyed while an undated to-do has no day to count from. -->
+                  <Button x:Name="TodoRepeatRow" Classes="todofield" Classes.open="{Binding Entry.IsRepeatPickerOpen}"
+                          IsEnabled="{Binding Entry.CanRepeat}"
+                          Command="{Binding Entry.TogglePickerCommand}" CommandParameter="{x:Static vm:TodoEntryPicker.Repeat}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[MobileTodoRepeat]}" />
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !Entry.Repeats}" Text="{Binding Entry.RepeatText}" />
+                      <views:Glyph Grid.Column="2" Kind="ChevronDown" Width="11" Height="11" Margin="10,0,0,0"
+                                   Foreground="{DynamicResource Mobile.Text3}" />
+                    </Grid>
+                  </Button>
+                  <ItemsControl IsVisible="{Binding Entry.IsRepeatPickerOpen}" Margin="12,0,12,12" ItemsSource="{Binding Entry.RepeatOptions}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TodoRepeatOption">
+                        <Button Classes="pill time todotime" Classes.on="{Binding IsCurrent}" Margin="2"
+                                Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickRepeatCommand}"
+                                CommandParameter="{Binding Repeat}">
+                          <TextBlock Text="{Binding Label}" />
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <!-- 내용: a few lines about it, kept apart from the title. Three lines tall, growing to six. -->
+              <TextBox x:Name="TodoNotesBox" Classes="todonotes" Text="{Binding Entry.Description, Mode=TwoWay}"
+                       PlaceholderText="{Binding Strings[MobileTodoNotesPlaceholder]}"
+                       AutomationProperties.Name="{Binding Strings[MobileTodoNotes]}"
+                       TextInputOptions.Multiline="True" TextInputOptions.ReturnKeyType="Return" />
+
+              <!-- 목록, only when there is more than the built-in one to choose from. -->
+              <StackPanel IsVisible="{Binding Entry.ShowLists}" Spacing="8">
+                <TextBlock Classes="faint" FontSize="12.5" FontWeight="Bold" Margin="4,0,0,0" Text="{Binding Strings[MobileTodoList]}" />
+                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding Entry.ListOptions}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TodoListOption">
+                        <Button Classes="pill small" Classes.on="{Binding IsCurrent}"
+                                Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).Entry.PickListCommand}"
+                                CommandParameter="{Binding Id}">
+                          <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{Binding Dot}" />
+                            <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
       </Border>
     </views:SheetLayer>
   </Panel>
@@ -835,6 +874,13 @@
     </Style>
     <Style Selector="Button.pill.time.todotime">
       <Setter Property="Height" Value="38" />
+    </Style>
+    <Style Selector="TextBox.todonotes">
+      <Setter Property="AcceptsReturn" Value="True" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+      <Setter Property="MinHeight" Value="84" />
+      <Setter Property="MaxHeight" Value="150" />
     </Style>
     <Style Selector="Border.todosheet Button.cell">
       <Setter Property="Height" Value="40" />

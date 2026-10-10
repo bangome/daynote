@@ -275,53 +275,6 @@ public sealed class MotionTests
         });
     }
 
-    /// <summary>
-    /// M1's × plays a 220 ms exit before it dismisses. During it a second × does nothing, and an
-    /// item made with Enter meanwhile is not followed by a dismiss of a bar that has already gone.
-    /// </summary>
-    [TestMethod]
-    public void The_at_bar_s_exit_ignores_a_second_close_and_a_commit_during_it()
-    {
-        TestServices.WithInitialisedShell(402, 874, (view, shell) =>
-        {
-            ScreenshotTests.Seed(shell, LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now)));
-            ScreenshotTests.Pump(() => shell.OpenNoteCommand.ExecuteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
-            Settle(view);
-            EditorPage editor = view.FindControl<EditorPage>("Editor")!;
-            TextBox body = editor.FindControl<TextBox>("Body")!;
-            body.Text += "\n회의자료 초안 공유 @오늘 5시";
-            body.CaretIndex = body.Text!.Length;
-            Settle(view);
-            Assert.IsTrue(shell.Capture.IsOpen);
-
-            var exits = new List<TaskCompletionSource<bool>>();
-            MotionEnvironment.Instant = false;
-            MotionPlayer.Interceptor = (_, channel, _) =>
-            {
-                var exit = new TaskCompletionSource<bool>();
-                if (channel == "m1")
-                {
-                    exits.Add(exit);
-                    return exit.Task;
-                }
-
-                return Task.FromResult(true);
-            };
-
-            Button close = editor.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("capclose") && b.IsEffectivelyVisible);
-            close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-            close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-            Assert.HasCount(1, exits, "A second × started a second exit.");
-
-            int before = shell.NoteItems.Count;
-            ScreenshotTests.Pump(() => shell.CommitCaptureCommand.ExecuteAsync(null));
-            exits[0].SetResult(true);
-            Settle(view);
-            Assert.AreEqual(before + 1, shell.NoteItems.Count, "Enter during the exit should still make the item.");
-            Assert.IsFalse(shell.Capture.IsOpen);
-        });
-    }
-
     private static void AddTodo(MobileShellViewModel shell, string title)
     {
         var agenda = (Daynote.Core.Agenda.IAgendaRepository)TestServices.CurrentProvider!.GetService(typeof(Daynote.Core.Agenda.IAgendaRepository))!;

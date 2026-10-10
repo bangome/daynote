@@ -7,14 +7,14 @@ using Daynote.Core.Time;
 namespace Daynote.Mobile.ViewModels;
 
 /// <summary>
-/// The to-do sheet: a to-do or an event made in fields of its own — 내용, 날짜, 시간, 목록 — rather
-/// than typed into the note's body.
+/// The to-do sheet: a to-do or an event made in fields of its own — 제목, 날짜, 시간, 반복, 내용,
+/// 목록 — rather than typed into the note's body.
 /// </summary>
 /// <remarks>
-/// The editor's @ button opens it, and so do the widgets' "@ 할 일" and the
-/// <c>daynote://capture?at=1</c> link. Typing @ in the body still opens the bar
-/// (<see cref="Capture"/>), the path shared with the desktop; this sheet writes nothing into the
-/// note, and the item only points back at it through <see cref="AgendaItem.SourceNoteId"/>.
+/// The editor's + button opens it, and so does an @ typed at the start of a line, the widgets'
+/// "@ 할 일" and the <c>daynote://capture?at=1</c> link. It is the phone's only way to a to-do:
+/// the desktop's inline @ reading is not used here. The sheet writes nothing into the note, and
+/// the item only points back at it through <see cref="AgendaItem.SourceNoteId"/>.
 /// </remarks>
 public sealed partial class MobileShellViewModel
 {
@@ -38,8 +38,6 @@ public sealed partial class MobileShellViewModel
             return;
         }
 
-        // One way in at a time: a half-read @ phrase in the body is left as text.
-        Capture.Dismiss();
         await Entry.ResetAsync(LocalDates.ToDateOnly(SelectedDate), Todo.Lists, IsDark).ConfigureAwait(true);
         IsTodoSheetOpen = true;
     }
@@ -49,7 +47,7 @@ public sealed partial class MobileShellViewModel
 
     /// <summary>
     /// 추가: writes the item, closes the sheet, and lets the note's own collection say it arrived
-    /// (phone §02), as 만들기 on the @ bar does.
+    /// (phone §02).
     /// </summary>
     [RelayCommand]
     private async Task CommitTodoSheet()

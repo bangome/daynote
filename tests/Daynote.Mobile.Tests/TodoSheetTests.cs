@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
@@ -15,8 +17,9 @@ namespace Daynote.Mobile.Tests;
 /// The to-do sheet: a to-do or an event made in fields of its own, never typed into the note.
 /// </summary>
 /// <remarks>
-/// Opened the way a thumb opens it — the editor's @ button — and checked against what reached the
-/// agenda store, since that row is what reminders, widgets, sync and the day panel all read.
+/// Opened the way a thumb opens it — the editor's + button, or an @ typed at the start of a line —
+/// and checked against what reached the agenda store, since that row is what reminders, widgets,
+/// sync and the day panel all read.
 /// </remarks>
 [TestClass]
 public sealed class TodoSheetTests
@@ -51,7 +54,6 @@ public sealed class TodoSheetTests
 
             Assert.IsTrue(shell.IsTodoSheetOpen);
             Assert.AreEqual(Body, body.Text, "The @ button typed into the note.");
-            Assert.IsFalse(shell.Capture.IsOpen, "The inline @ bar opened as well.");
             Assert.IsFalse(shell.ShowDock);
             Assert.IsTrue(view.FindControl<TextBox>("TodoTextBox")!.IsFocused, "The title does not take the keyboard.");
 
@@ -88,7 +90,7 @@ public sealed class TodoSheetTests
             Button add = view.FindControl<Button>("TodoAdd")!;
 
             Assert.IsFalse(add.IsEffectivelyEnabled, "추가 is live with nothing to call the item.");
-            shell.Entry.Text = "   ";
+            shell.Entry.Title = "   ";
             Settle(view);
             Assert.IsFalse(add.IsEffectivelyEnabled, "Spaces are not a title.");
 
@@ -96,7 +98,7 @@ public sealed class TodoSheetTests
             Assert.IsEmpty(Items(), "An untitled item was written.");
             Assert.IsTrue(shell.IsTodoSheetOpen);
 
-            shell.Entry.Text = "보고서";
+            shell.Entry.Title = "보고서";
             Settle(view);
             Assert.IsTrue(add.IsEffectivelyEnabled);
         });
@@ -109,7 +111,7 @@ public sealed class TodoSheetTests
         {
             TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
-            shell.Entry.Text = "우유 사기";
+            shell.Entry.Title = "우유 사기";
             shell.Entry.ClearDateCommand.Execute(null);
             Assert.AreEqual(MobileStrings.Get("MobileTodoNoDate"), shell.Entry.DateText);
             Assert.IsFalse(shell.Entry.CanPickTime, "A time with no day to put it on.");
@@ -134,7 +136,7 @@ public sealed class TodoSheetTests
         {
             TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
-            shell.Entry.Text = "보고서 보내기";
+            shell.Entry.Title = "보고서 보내기";
 
             AgendaItem made = Add(view, shell);
 
@@ -156,7 +158,7 @@ public sealed class TodoSheetTests
         {
             TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
-            shell.Entry.Text = "업체에 전화";
+            shell.Entry.Title = "업체에 전화";
 
             // Another day, from the grid under the date row.
             Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Date));
@@ -193,7 +195,7 @@ public sealed class TodoSheetTests
         {
             TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
-            shell.Entry.Text = "디자인 리뷰";
+            shell.Entry.Title = "디자인 리뷰";
 
             shell.Entry.SelectKindCommand.Execute(AgendaKind.Event);
             Assert.IsNotNull(shell.Entry.Time, "An event needs a start, so switching gives it one.");
@@ -251,7 +253,7 @@ public sealed class TodoSheetTests
 
             TodoListOption groceries = shell.Entry.ListOptions.Single(option => option.Name == "장보기");
             shell.Entry.PickListCommand.Execute(groceries.Id);
-            shell.Entry.Text = "두부";
+            shell.Entry.Title = "두부";
 
             Assert.AreEqual(groceries.Id, Add(view, shell).ListId);
         });
@@ -268,7 +270,6 @@ public sealed class TodoSheetTests
             Assert.IsTrue(shell.IsEditorOpen);
             Assert.IsTrue(shell.IsTodoSheetOpen, "The link did not open the sheet.");
             Assert.DoesNotContain("@", shell.Notes.EditorText, "The link typed into the note.");
-            Assert.IsFalse(shell.Capture.IsOpen);
 
             Pump(() => shell.CloseEditorAsync());
             Pump(() => shell.OpenFromWidgetAsync(WidgetLaunch.Capture));
@@ -304,6 +305,253 @@ public sealed class TodoSheetTests
             bottom = sheet.TranslatePoint(new Avalonia.Point(0, sheet.Bounds.Height), root)!.Value.Y;
             Assert.AreEqual(root.ClientSize.Height, bottom, 0.5, "Without a keyboard it runs under the home indicator like the others.");
         });
+    }
+
+    // ── @ at the start of a line ─────────────────────────────────────────────────
+
+    [TestMethod]
+    public void An_at_typed_at_the_start_of_the_note_opens_the_sheet_and_leaves_the_body_unchanged()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+            body.Text = string.Empty;
+            Settle(view);
+
+            TypeAt(view, body, 0);
+
+            Assert.IsTrue(shell.IsTodoSheetOpen, "An @ at the start did not open the sheet.");
+            Assert.AreEqual(string.Empty, body.Text, "The @ stayed in the note.");
+            Assert.AreEqual(string.Empty, shell.Notes.EditorText);
+            Assert.AreEqual(string.Empty, shell.Entry.Title, "The sheet should open empty, not read what was typed.");
+            Assert.IsTrue(shell.Entry.IsTask);
+            Assert.AreEqual(LocalDates.ToDateOnly(shell.SelectedDate), shell.Entry.Date, "The defaults are the + button's.");
+            Assert.IsTrue(view.FindControl<TextBox>("TodoTextBox")!.IsFocused, "The keyboard did not go to 제목.");
+        });
+    }
+
+    [TestMethod]
+    [DataRow("\n", DisplayName = "after a newline")]
+    [DataRow("\n  ", DisplayName = "after a newline and spaces")]
+    public void An_at_typed_at_the_start_of_a_later_line_opens_the_sheet(string lead)
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+            string before = Body + lead;
+            body.Text = before;
+            Settle(view);
+
+            TypeAt(view, body, before.Length);
+
+            Assert.IsTrue(shell.IsTodoSheetOpen, "An @ at the start of a line did not open the sheet.");
+            Assert.AreEqual(before, body.Text, "The @ stayed in the note.");
+        });
+    }
+
+    [TestMethod]
+    [DataRow(8, DisplayName = "at the end of a line")]
+    [DataRow(2, DisplayName = "inside a word")]
+    public void An_at_typed_inside_a_line_is_just_a_character(int caret)
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+
+            TypeAt(view, body, caret);
+
+            Assert.IsFalse(shell.IsTodoSheetOpen, "An @ in the middle of a line opened the sheet.");
+            Assert.AreEqual(Body.Insert(caret, "@"), body.Text);
+        });
+    }
+
+    [TestMethod]
+    [DataRow("@", DisplayName = "a lone @")]
+    [DataRow("회의 @내일 3시", DisplayName = "a line with an @")]
+    public void Pasting_an_at_at_the_start_of_a_line_opens_nothing(string pasted)
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+            body.Text = Body + "\n";
+            Settle(view);
+            body.Focus();
+            body.CaretIndex = body.Text.Length;
+            Pump(() => TopLevel.GetTopLevel(view)!.Clipboard!.SetTextAsync(pasted));
+
+            body.Paste();
+            PumpUntil(() => body.Text!.EndsWith(pasted, StringComparison.Ordinal), "The paste did not arrive.");
+            Settle(view);
+
+            Assert.IsFalse(shell.IsTodoSheetOpen, "A paste opened the sheet.");
+            Assert.AreEqual(Body + "\n" + pasted, body.Text);
+
+            // The paste is spent: the next @ typed at a line start still works.
+            body.Text += "\n";
+            Settle(view);
+            TypeAt(view, body, body.Text.Length);
+            Assert.IsTrue(shell.IsTodoSheetOpen, "A typed @ after the paste did not open the sheet.");
+        });
+    }
+
+    [TestMethod]
+    public void A_keyboard_commit_that_carries_more_than_the_at_opens_nothing()
+    {
+        // A composing keyboard hands over a finished syllable and what follows in one commit; that
+        // is text being written, not an @ typed on its own.
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+            body.Text = Body + "\n";
+            Settle(view);
+            body.Focus();
+            body.CaretIndex = body.Text.Length;
+
+            TopLevel.GetTopLevel(view)!.KeyTextInput("@회의");
+            Settle(view);
+
+            Assert.IsFalse(shell.IsTodoSheetOpen);
+            Assert.AreEqual(Body + "\n@회의", body.Text);
+        });
+    }
+
+    // ── 제목, 내용, 반복 ─────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public void The_title_and_the_description_are_saved_apart()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            TextBox body = OpenEditor(view, shell);
+            OpenSheet(view, shell);
+            shell.Entry.Title = "  회의자료 초안 공유 ";
+            shell.Entry.Description = "슬라이드 12장\n예산표 첨부\n";
+
+            AgendaItem made = Add(view, shell);
+
+            Assert.AreEqual("회의자료 초안 공유", made.Title);
+            Assert.AreEqual("슬라이드 12장\n예산표 첨부", made.Description);
+            AssertFromNote(shell, body, made);
+        });
+    }
+
+    [TestMethod]
+    [DataRow(TodoRepeat.None, "", "2026-10-07", "2026-10-08,2026-10-14")]
+    [DataRow(TodoRepeat.Daily, "FREQ=DAILY", "2026-10-07,2026-10-08,2026-10-11", "2026-10-06")]
+    [DataRow(TodoRepeat.Weekdays, "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "2026-10-07,2026-10-09,2026-10-12", "2026-10-10,2026-10-11")]
+    [DataRow(TodoRepeat.Weekly, "FREQ=WEEKLY", "2026-10-07,2026-10-14,2026-10-21", "2026-10-08,2026-10-13")]
+    [DataRow(TodoRepeat.Monthly, "FREQ=MONTHLY", "2026-10-07,2026-11-07,2027-01-07", "2026-10-08,2026-11-08")]
+    [DataRow(TodoRepeat.Yearly, "FREQ=YEARLY", "2026-10-07,2027-10-07", "2026-11-07,2027-10-08")]
+    public void Each_repeat_writes_its_rule_and_lands_on_its_days(TodoRepeat repeat, string rule, string on, string off)
+    {
+        // 7 October 2026, a Wednesday. An empty rule is no repeat: the one day and no other.
+        string? rrule = rule.Length > 0 ? rule : null;
+        var anchor = new DateOnly(2026, 10, 7);
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            OpenEditor(view, shell);
+            OpenSheet(view, shell);
+            shell.Entry.Title = "스트레칭";
+            shell.Entry.Date = anchor;
+            Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Repeat));
+            Assert.IsTrue(shell.Entry.IsRepeatPickerOpen);
+            shell.Entry.PickRepeatCommand.Execute(repeat);
+            Assert.IsFalse(shell.Entry.IsRepeatPickerOpen, "Picking a repeat closes its row.");
+            Assert.AreEqual(repeat, shell.Entry.Repeat);
+
+            AgendaItem made = Add(view, shell);
+
+            Assert.AreEqual(rrule, made.Rrule);
+            Assert.AreEqual(new WallClock(anchor.ToDateTime(TimeOnly.MinValue)), made.DueAt);
+            if (rrule is not null)
+            {
+                // A repeating to-do anchors its rule in DTSTART, as @ 매일 does (AgendaItem.Anchor).
+                Assert.AreEqual(made.DueAt, made.StartsAt);
+                Assert.IsTrue(AgendaRecurrence.CanExpand(rrule), "The rule is one the expander cannot read.");
+            }
+
+            foreach (string day in on.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                Assert.HasCount(1, AgendaDay.For(DateOnly.Parse(day, System.Globalization.CultureInfo.InvariantCulture), [made]).Open,
+                    $"{repeat} is not on {day}.");
+            }
+
+            foreach (string day in off.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                Assert.IsEmpty(AgendaDay.For(DateOnly.Parse(day, System.Globalization.CultureInfo.InvariantCulture), [made]).Open,
+                    $"{repeat} is on {day}.");
+            }
+        });
+    }
+
+    [TestMethod]
+    public void The_repeat_row_spells_the_repeat_out_against_the_day()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            OpenEditor(view, shell);
+            OpenSheet(view, shell);
+            shell.Entry.Date = new DateOnly(2026, 10, 9);
+            Assert.IsFalse(shell.Entry.Repeats);
+            Assert.AreEqual(MobileStrings.Get("MobileTodoRepeatNone"), shell.Entry.RepeatText);
+
+            shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Weekly);
+            Assert.Contains(
+                Daynote.App.Localization.LocalizationService.Instance.Culture.DateTimeFormat.GetDayName(DayOfWeek.Friday),
+                shell.Entry.RepeatText);
+            shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Monthly);
+            Assert.Contains("9", shell.Entry.RepeatText);
+        });
+    }
+
+    [TestMethod]
+    public void A_repeat_needs_a_date()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            OpenEditor(view, shell);
+            OpenSheet(view, shell);
+            shell.Entry.Title = "물 마시기";
+            shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Daily);
+
+            // 날짜 없음 takes the repeat with it, and the row is greyed until there is a day again.
+            shell.Entry.ClearDateCommand.Execute(null);
+            Assert.AreEqual(TodoRepeat.None, shell.Entry.Repeat);
+            Assert.IsFalse(shell.Entry.CanRepeat);
+            Settle(view);
+            Assert.IsFalse(view.FindControl<Button>("TodoRepeatRow")!.IsEffectivelyEnabled, "The 반복 row is live with no date.");
+            Assert.AreEqual(MobileStrings.Get("MobileTodoRepeatNeedsDate"), shell.Entry.RepeatText);
+
+            shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Weekly);
+            Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Repeat));
+            Assert.AreEqual(TodoRepeat.None, shell.Entry.Repeat, "A repeat was set with no day to count from.");
+            Assert.IsFalse(shell.Entry.IsRepeatPickerOpen);
+
+            AgendaItem made = Add(view, shell);
+            Assert.IsNull(made.Rrule);
+            Assert.IsNull(made.Anchor);
+        });
+    }
+
+    /// <summary>
+    /// Types one @ into the body at <paramref name="caret"/>, through the window's text input as a
+    /// keyboard would, and lets whatever it sets off finish.
+    /// </summary>
+    internal static void TypeAt(Control view, TextBox body, int caret)
+    {
+        body.Focus();
+        body.CaretIndex = caret;
+        Settle(view);
+        TopLevel.GetTopLevel(view)!.KeyTextInput("@");
+
+        // Opening the sheet reads the month off the database, which resumes here more than once.
+        for (int i = 0; i < 40; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+
+        Settle(view);
     }
 
     private static TextBox OpenEditor(MainView view, MobileShellViewModel shell)

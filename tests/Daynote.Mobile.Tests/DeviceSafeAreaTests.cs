@@ -109,6 +109,14 @@ public sealed class DeviceSafeAreaTests
             view.PreviewKeyboard = keyboard;
             Check("todo-sheet-keyboard");
             failures.AddRange(AboveKeyboard(view, safe, keyboard).Select(offender => $"{device}/todo-sheet-keyboard: {offender}"));
+
+            // Every field filled and the tallest picker open: the fields scroll, 추가 stays put.
+            shell.Entry.Title = "회의자료 초안 공유";
+            shell.Entry.Description = "슬라이드 12장\n예산표 첨부\n회의실 3층";
+            shell.Entry.SelectKindCommand.Execute(Daynote.Core.Agenda.AgendaKind.Event);
+            ScreenshotTests.Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Repeat));
+            Check("todo-sheet-full-keyboard");
+            failures.AddRange(AboveKeyboard(view, safe, keyboard).Select(offender => $"{device}/todo-sheet-full-keyboard: {offender}"));
             view.PreviewKeyboard = null;
             shell.CloseTodoSheetCommand.Execute(null);
             shell.IsEditorOpen = false;
@@ -287,6 +295,13 @@ public sealed class DeviceSafeAreaTests
         if (sheet.TranslatePoint(new Point(0, sheet.Bounds.Height), root) is { } edge && Math.Abs(edge.Y - top) > 0.5)
         {
             yield return $"the sheet ends at {edge.Y:0.#}, not on the keyboard's top edge {top:0.#}";
+        }
+
+        // 추가 is not merely above the keyboard but whole: a button scrolled half away is no button.
+        if (view.FindControl<Button>("TodoAdd") is not { } add || OnScreen(add, root) is not { } shown ||
+            shown.Height < add.Bounds.Height - 0.5 || shown.Bottom > top + 0.5)
+        {
+            yield return "추가 is not wholly on screen above the keyboard";
         }
 
         foreach (Button button in sheet.GetVisualDescendants().OfType<Button>())

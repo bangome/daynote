@@ -208,7 +208,6 @@ public sealed class GlanceTests
             Assert.IsTrue(shell.IsEditorOpen);
             Assert.IsTrue(shell.IsTodoSheetOpen, "The sheet opens over the note.");
             Assert.IsFalse(shell.Notes.EditorText.Contains('@', StringComparison.Ordinal), "Nothing is typed into the note.");
-            Assert.IsFalse(shell.Capture.IsOpen);
         });
     }
 

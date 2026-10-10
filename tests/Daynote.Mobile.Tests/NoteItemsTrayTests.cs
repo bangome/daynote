@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Daynote.Mobile.Tests;
 
 /// <summary>
-/// Creation feedback (phone §02): the toolbar's "이 노트의 항목 N", the row that rises after 만들기,
+/// Creation feedback (phone §02): the toolbar's "이 노트의 항목 N", the row that rises after 추가,
 /// and the sheet behind the count.
 /// </summary>
 [TestClass]
@@ -20,11 +20,11 @@ public sealed class NoteItemsTrayTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
+            OpenEditor(view, shell);
             Assert.IsFalse(shell.HasNoteItems, "A new note has made nothing, so there is no count to show.");
 
-            Capture(shell, body, "회의실 예약 확인 @오늘");
-            Capture(shell, body, "회의자료 초안 공유 @내일");
+            Capture(shell, "회의실 예약 확인", 0);
+            Capture(shell, "회의자료 초안 공유", 1);
 
             Assert.AreEqual(2, shell.NoteItems.Count);
             Assert.Contains("2", shell.NoteItemCountText);
@@ -39,8 +39,8 @@ public sealed class NoteItemsTrayTests
         // made for Friday, and that item is nowhere else on this screen.
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
-            Capture(shell, body, "업체에 전화 @내일");
+            OpenEditor(view, shell);
+            Capture(shell, "업체에 전화", 1);
 
             Assert.AreEqual("업체에 전화", shell.NoteItems.Single().Text);
 
@@ -60,10 +60,9 @@ public sealed class NoteItemsTrayTests
         {
             var waits = new List<TimeSpan>();
             TaskCompletionSource released = Hold(shell, waits);
-            TextBox body = OpenEditor(view, shell);
+            OpenEditor(view, shell);
 
-            Type(body, "퇴근 전 로그 확인 @오늘");
-            shell.CommitCaptureCommand.Execute(null);
+            Make(shell, "퇴근 전 로그 확인", 0);
             PumpUntil(() => shell.JustMade is not null, "Nothing rose to say the item had been made.");
 
             Assert.IsNotNull(shell.JustMade);
@@ -85,11 +84,10 @@ public sealed class NoteItemsTrayTests
         TestServices.WithInitialisedShell((view, shell) =>
         {
             TaskCompletionSource released = Hold(shell, []);
-            TextBox body = OpenEditor(view, shell);
+            OpenEditor(view, shell);
             Daynote.Core.Domain.LocalDate written = shell.SelectedDate;
 
-            Type(body, "회의자료 초안 공유 @내일");
-            shell.CommitCaptureCommand.Execute(null);
+            Make(shell, "회의자료 초안 공유", 1);
             PumpUntil(() => shell.JustMade is not null, "Nothing rose to say the item had been made.");
 
             Assert.IsTrue(shell.IsJustMadeElsewhere);
@@ -119,12 +117,10 @@ public sealed class NoteItemsTrayTests
                 return gate.Task;
             };
 
-            TextBox body = OpenEditor(view, shell);
-            Type(body, "첫 번째 @오늘");
-            shell.CommitCaptureCommand.Execute(null);
+            OpenEditor(view, shell);
+            Make(shell, "첫 번째", 0);
             PumpUntil(() => shell.JustMade is not null, "The first row never rose.");
-            Type(body, "두 번째 @오늘");
-            shell.CommitCaptureCommand.Execute(null);
+            Make(shell, "두 번째", 0);
             PumpUntil(() => shell.JustMade?.Text == "두 번째", "The second row never replaced the first.");
 
             gates[0].SetResult();
@@ -140,12 +136,12 @@ public sealed class NoteItemsTrayTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
+            OpenEditor(view, shell);
 
             shell.OpenNoteItemsCommand.Execute(null);
             Assert.IsFalse(shell.IsNoteItemsSheetOpen, "There is nothing to list yet.");
 
-            Capture(shell, body, "회의실 예약 확인 @오늘");
+            Capture(shell, "회의실 예약 확인", 0);
             shell.OpenNoteItemsCommand.Execute(null);
 
             Assert.IsTrue(shell.IsNoteItemsSheetOpen);
@@ -167,27 +163,28 @@ public sealed class NoteItemsTrayTests
         return gate;
     }
 
-    private static void Capture(MobileShellViewModel shell, TextBox body, string line)
+    private static void Capture(MobileShellViewModel shell, string title, int daysAhead)
     {
         // These tests are about the count, not the flash; waiting it out would cost 2.5s a line.
         shell.FlashDelay = _ => Task.CompletedTask;
-        Type(body, line);
-        Pump(() => shell.CommitCaptureCommand.ExecuteAsync(null));
-        Type(body, string.Empty);
+        int before = shell.NoteItems.Count;
+        Make(shell, title, daysAhead);
+        PumpUntil(() => shell.NoteItems.Count == before + 1, "추가 did not reach the note's collection.");
     }
 
-    private static TextBox OpenEditor(MainView view, MobileShellViewModel shell)
+    /// <summary>Fills the to-do sheet with a title on a day this many after the note's, and taps 추가.</summary>
+    private static void Make(MobileShellViewModel shell, string title, int daysAhead)
+    {
+        Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+        shell.Entry.Title = title;
+        shell.Entry.Date = Daynote.App.Composition.LocalDates.ToDateOnly(shell.SelectedDate).AddDays(daysAhead);
+        shell.CommitTodoSheetCommand.Execute(null);
+    }
+
+    private static void OpenEditor(MainView view, MobileShellViewModel shell)
     {
         Pump(() => shell.NewNoteCommand.ExecuteAsync(null));
-        return view.GetVisualDescendants().OfType<EditorPage>().Single()
-            .GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "Body");
-    }
-
-    private static void Type(TextBox body, string text)
-    {
-        body.Text = text;
-        body.CaretIndex = text.Length;
-        Dispatcher.UIThread.RunJobs();
+        Assert.IsNotNull(view.GetVisualDescendants().OfType<EditorPage>().SingleOrDefault(), "No editor on screen.");
     }
 
     private static bool Run(Task<bool> task)

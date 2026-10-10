@@ -4,7 +4,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Daynote.Mobile.ViewModels;
 using Daynote.Motion;
 
@@ -20,9 +19,9 @@ public partial class EditorPage : UserControl
     {
         InitializeComponent();
 
-        // On the way down, not on the way up: the box handles Enter itself (that is what puts a
-        // line break in the body), and a handler attached after it would never be reached.
-        BodyBox?.AddHandler(InputElement.KeyDownEvent, OnBodyKeyDown, RoutingStrategies.Tunnel);
+        // A paste is not a typed @, however it starts; see OnBodyPropertyChanged.
+        BodyBox?.AddHandler(TextBox.PastingFromClipboardEvent, (_, _) => _pasting = true, RoutingStrategies.Bubble);
+        BodyBox?.AddHandler(InputElement.TextInputEvent, (_, _) => _pasting = false, RoutingStrategies.Tunnel);
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -44,7 +43,6 @@ public partial class EditorPage : UserControl
         {
             previous.TitleRenameStarted -= OnTitleRenameStarted;
             previous.PropertyChanged -= OnShellPropertyChanged;
-            previous.Capture.PropertyChanged -= OnCapturePropertyChanged;
         }
 
         _observed = DataContext as MobileShellViewModel;
@@ -52,167 +50,10 @@ public partial class EditorPage : UserControl
         {
             shell.TitleRenameStarted += OnTitleRenameStarted;
             shell.PropertyChanged += OnShellPropertyChanged;
-            shell.Capture.PropertyChanged += OnCapturePropertyChanged;
-            PlaceCaptureHighlight();
         }
     }
 
-    // ── Motion (spec M1, M2) ─────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// M1: the bar rises out of the toolbar's bottom edge the moment it opens, and the highlight
-    /// slides between the two readings when the kind changes. The text itself never moves.
-    /// </summary>
-    private void OnCapturePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (_observed is not { } shell || this.FindControl<StackPanel>("CaptureBar") is not { } bar)
-        {
-            return;
-        }
-
-        if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.IsOpen))
-        {
-            PlaceCapturePopover();
-        }
-
-        if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.IsOpen) && shell.Capture.IsOpen)
-        {
-            PlaceCaptureHighlight();
-            Visual moving = _popover && this.FindControl<Border>("CapturePopover") is { } card ? card : bar;
-            moving.Opacity = 0;
-            Dispatcher.UIThread.Post(() =>
-            {
-                moving.Opacity = 1;
-                PlaceCapturePopover();
-                _ = MotionPlayer.Play(moving, "m1", _popover
-                    ? Choreography.AtPopupOpen(moving)
-                    : Choreography.AtBarRise(bar, bar.Bounds.Height + 8));
-            }, DispatcherPriority.Loaded);
-        }
-        else if (e.PropertyName == nameof(Daynote.App.Notes.AgendaCaptureViewModel.Kind) &&
-                 this.FindControl<Border>("CapHighlight") is { } highlight)
-        {
-            double to = HighlightY(shell.Capture.IsTaskSelected);
-            _ = MotionPlayer.Play(highlight, "m1", Choreography.AtBarSwitch(highlight, HighlightY(!shell.Capture.IsTaskSelected), to));
-        }
-    }
-
-    // ── The @ card, with a hardware keyboard (tablet §02) ─────────────────────────────────────────
-
-    private bool _popover;
-
-    /// <summary>
-    /// A hardware keyboard came or went: the @ reading moves between the bar over the soft
-    /// keyboard and the card under the caret. Whatever is being typed stays as it is.
-    /// </summary>
-    public void SetHardwareKeyboard(bool attached)
-    {
-        if (attached == _popover || this.FindControl<StackPanel>("CaptureBar") is not { } bar ||
-            this.FindControl<Border>("CapturePopover") is not { } card)
-        {
-            return;
-        }
-
-        _popover = attached;
-        if (attached && bar.Parent is Panel home)
-        {
-            _barHome = home;
-            home.Children.Remove(bar);
-            card.Child = bar;
-        }
-        else if (!attached && _barHome is { } original)
-        {
-            card.Child = null;
-            original.Children.Add(bar);
-        }
-
-        if (this.FindControl<TextBlock>("CaptureHints") is { } hints)
-        {
-            hints.IsVisible = attached;
-        }
-
-        PlaceCapturePopover();
-    }
-
-    /// <summary>Where the bar lives when it is a bar, to put it back.</summary>
-    private Panel? _barHome;
-
-    /// <summary>
-    /// Puts the card under the caret's line, or over it when the line is too near the bottom - the
-    /// desktop's flip, growing from the edge nearest the caret.
-    /// </summary>
-    private void PlaceCapturePopover()
-    {
-        if (this.FindControl<Border>("CapturePopover") is not { } card || _observed is not { } shell)
-        {
-            return;
-        }
-
-        card.IsVisible = _popover && shell.Capture.IsOpen;
-        if (!card.IsVisible || BodyBox is not { } body ||
-            body.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.TextPresenter>().FirstOrDefault() is not { } presenter)
-        {
-            return;
-        }
-
-        Rect caret = presenter.TextLayout.HitTestTextPosition(Math.Clamp(body.CaretIndex, 0, (body.Text ?? string.Empty).Length));
-        Point at = presenter.TranslatePoint(caret.BottomLeft, body) ?? default;
-        double height = card.Bounds.Height > 0 ? card.Bounds.Height : 180;
-        bool above = at.Y + 6 + height > body.Bounds.Height;
-        double top = above ? at.Y - caret.Height - 6 - height : at.Y + 6;
-        double left = Math.Clamp(at.X - 12, 8, Math.Max(8, body.Bounds.Width - card.Width - 8));
-        card.Margin = new Thickness(left, Math.Max(0, top), 0, 0);
-        card.RenderTransformOrigin = new RelativePoint(0, above ? 1 : 0, RelativeUnit.Relative);
-    }
-
-    /// <summary>The highlight under the task line, or under the event line one row (44 and the 2 between) down.</summary>
-    private static double HighlightY(bool task) => task ? 0 : 46;
-
-    private void PlaceCaptureHighlight()
-    {
-        if (_observed is { } shell && this.FindControl<Border>("CapHighlight") is { } highlight)
-        {
-            MotionTransform.For(highlight).Y = HighlightY(shell.Capture.IsTaskSelected);
-        }
-    }
-
-    /// <summary>The ×: down and out (220 ms ease-in), and only then closed (M1).</summary>
-    /// <remarks>
-    /// The bar is still live while it leaves: a second × is ignored, and if Enter makes the item
-    /// meanwhile, or the @ the bar was reading is gone or replaced by another, there is nothing
-    /// left for this × to dismiss.
-    /// </remarks>
-    private async void OnDismissCapture(object? sender, RoutedEventArgs e)
-    {
-        if (_dismissing || DataContext is not MobileShellViewModel { Capture.IsOpen: true } shell)
-        {
-            return;
-        }
-
-        _dismissing = true;
-        int reading = shell.Capture.AtIndex;
-        try
-        {
-            if (this.FindControl<StackPanel>("CaptureBar") is { } bar)
-            {
-                await MotionPlayer.Play(bar, "m1", Choreography.AtBarDismiss(bar, bar.Bounds.Height + 8)).ConfigureAwait(true);
-                MotionTransform.For(bar).Reset();
-                bar.Opacity = 1;
-            }
-
-            if (shell.Capture.IsOpen && shell.Capture.AtIndex == reading)
-            {
-                shell.DismissCaptureCommand.Execute(null);
-            }
-        }
-        finally
-        {
-            _dismissing = false;
-        }
-    }
-
-    /// <summary>The × is playing its exit (M1); a second one waits for nothing.</summary>
-    private bool _dismissing;
+    // ── Motion (spec M2) ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// What was just made opens its row in place; when it settles back into the count, the count
@@ -270,10 +111,6 @@ public partial class EditorPage : UserControl
         {
             toolbar.Padding = new Thickness(0, 0, 0, bottom > 0 ? bottom : 8);
         }
-
-        // The page has just been shortened to sit above the keyboard, which is the measurement the
-        // bar folds on.
-        UpdateCaptureBarRoom();
     }
 
     /// <summary>
@@ -328,86 +165,92 @@ public partial class EditorPage : UserControl
         }
     }
 
-    // ── The @ command (phone §01) ────────────────────────────────────────────────
+    // ── @ at the start of a line ─────────────────────────────────────────────────
 
     /// <summary>
-    /// A caret move can open or close the bar just as a keystroke can — tapping away from a
-    /// half-typed "@내일" has to dismiss it — so both are the same question, asked here because the
-    /// box is the only thing that knows where the caret ended up.
+    /// An @ typed as the first thing on a line opens the to-do sheet, as the toolbar's + does, and
+    /// is taken back out of the note: it was a way in, not part of the text. Anywhere else in a
+    /// line an @ is just a character — "jiwon@aegisep.com", "@지원 님께".
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Read off the text rather than a key event, because a phone's keyboard does not always send
+    /// one: what is checked is that the box gained exactly one character, an @, with nothing but
+    /// spaces between it and the line's start. A Korean syllable being composed is not in the text
+    /// until it is committed, and a commit that carries it along with an @ is two characters, so
+    /// composition never trips it.
+    /// </para>
+    /// <para>
+    /// A paste never does either, even of a lone @: the box says it is about to paste, and the
+    /// change that follows is skipped. Keys typed after a paste that came to nothing clear that.
+    /// </para>
+    /// </remarks>
     private void OnBodyPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property != TextBox.CaretIndexProperty && e.Property != TextBox.TextProperty)
+        if (e.Property != TextBox.TextProperty)
         {
             return;
         }
 
-        if (DataContext is MobileShellViewModel shell && BodyBox is { } box)
+        if (_pasting)
         {
-            shell.Notes.UpdateCapture(Math.Clamp(box.CaretIndex, 0, (box.Text ?? string.Empty).Length));
-            UpdateCaptureBarRoom();
-            PlaceCapturePopover();
+            _pasting = false;
+            return;
         }
+
+        if (DataContext is not MobileShellViewModel { IsEditorOpen: true } shell || BodyBox is not { IsFocused: true } box ||
+            TypedAtLineStart(e.GetOldValue<string?>() ?? string.Empty, e.GetNewValue<string?>() ?? string.Empty) is not { } at)
+        {
+            return;
+        }
+
+        // After the box has finished with the keystroke: changing its text from inside its own
+        // text change would be undone by the caret move that follows it.
+        Dispatcher.UIThread.Post(() =>
+        {
+            (string text, _) = Read();
+            if (at < text.Length && text[at] == '@')
+            {
+                Write(text.Remove(at, 1), at);
+            }
+
+            shell.OpenTodoSheetCommand.Execute(null);
+        });
     }
+
+    /// <summary>True between the box announcing a paste and the text change it makes.</summary>
+    private bool _pasting;
 
     /// <summary>
-    /// The return key, while the bar is up and has read something: it makes the item instead of a
-    /// line break. The one key on a phone keyboard that can be given a second job, and only for as
-    /// long as the bar is there to say so.
+    /// Where the @ went when <paramref name="after"/> is <paramref name="before"/> with one @
+    /// added at the start of a line (spaces and tabs before it allowed), or null.
     /// </summary>
-    private void OnBodyKeyDown(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
+    internal static int? TypedAtLineStart(string before, string after)
     {
-        if (args is not KeyEventArgs e || DataContext is not MobileShellViewModel { Capture.IsOpen: true } shell)
+        if (after.Length != before.Length + 1)
         {
-            return;
+            return null;
         }
 
-        // A hardware keyboard has the desktop's other two keys (tablet T3): Tab switches the
-        // reading and Esc lets it go, as the card's hint line says.
-        switch (e.Key)
+        int at = 0;
+        while (at < before.Length && before[at] == after[at])
         {
-            case Key.Enter when !shell.Capture.IsPrompting:
-                e.Handled = true;
-                shell.CommitCaptureCommand.Execute(null);
-                break;
-            case Key.Tab when !shell.Capture.IsPrompting:
-                e.Handled = true;
-                shell.Capture.ToggleKind();
-                break;
-            case Key.Escape:
-                e.Handled = true;
-                shell.DismissCaptureCommand.Execute(null);
-                break;
+            at += 1;
         }
+
+        if (after[at] != '@' || !after.AsSpan(at + 1).SequenceEqual(before.AsSpan(at)))
+        {
+            return null;
+        }
+
+        int start = at;
+        while (start > 0 && after[start - 1] is ' ' or '\t')
+        {
+            start -= 1;
+        }
+
+        return start == 0 || after[start - 1] == '\n' ? at : null;
     }
-
-    /// <summary>A tap on an example types it, so the parser reads it like anything else.</summary>
-    private void OnCaptureExample(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is not string example)
-        {
-            return;
-        }
-
-        (string text, int caret) = Read();
-        Write(text.Insert(caret, example), caret + example.Length);
-    }
-
-    /// <summary>
-    /// Whether the bar still has room for both readings (§01 ⑤). Measured rather than guessed from
-    /// the screen size: a split-screen window and a tall keyboard leave the same gap as a small
-    /// phone, and the bar should fold for all three.
-    /// </summary>
-    private void UpdateCaptureBarRoom()
-    {
-        if (DataContext is MobileShellViewModel shell)
-        {
-            shell.IsCaptureBarCompact = Bounds.Height > 0 && Bounds.Height < CaptureBarTwoLineRoom;
-        }
-    }
-
-    /// <summary>The design's threshold: under this much above the keyboard, one line.</summary>
-    private const double CaptureBarTwoLineRoom = 230;
 
     /// <summary>The note body, looked up by name rather than held in a field.</summary>
     private TextBox? BodyBox => this.FindControl<TextBox>("Body");

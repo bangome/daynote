@@ -30,7 +30,7 @@ public sealed class WideScreenshotTests
     [TestMethod]
     [DataRow("t1-ipad-landscape-light-ko", 1210, 834, false, "ko", "day", false)]
     [DataRow("t2-ipad-landscape-dark-en", 1210, 834, true, "en", "day", false)]
-    [DataRow("t3-ipad-keyboard-card-light-ko", 1210, 834, false, "ko", "capture", true)]
+    [DataRow("t3-ipad-todo-sheet-light-ko", 1210, 834, false, "ko", "capture", true)]
     [DataRow("t4-ipad-note-open-light-ko", 1210, 834, false, "ko", "editor", false)]
     [DataRow("t6-ipad-portrait-light-ko", 834, 1210, false, "ko", "day", false)]
     [DataRow("t6b-ipad-13-portrait-light-ko", 1032, 1376, false, "ko", "day", false)]
@@ -65,9 +65,8 @@ public sealed class WideScreenshotTests
                     case "capture":
                         ScreenshotTests.Pump(() => shell.OpenNoteCommand.ExecuteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
                         Settle(view);
-                        TextBox body = view.FindControl<EditorPage>("Editor")!.FindControl<TextBox>("Body")!;
-                        body.Text += "\n회의자료 초안 공유 @오늘 5시";
-                        body.CaretIndex = body.Text!.Length;
+                        ScreenshotTests.Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+                        shell.Entry.Title = "회의자료 초안 공유";
                         break;
                     case "lists":
                         shell.GoToPageCommand.Execute(MobilePage.Lists);

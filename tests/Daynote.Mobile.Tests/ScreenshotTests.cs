@@ -83,9 +83,17 @@ public sealed class ScreenshotTests
             Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
             Capture(view, $"todo-sheet-{suffix}");
             view.PreviewKeyboard = 336;
-            shell.Entry.Text = "회의자료 초안 공유";
+            shell.Entry.Title = "회의자료 초안 공유";
             Capture(view, $"todo-sheet-keyboard-{suffix}");
+
+            // Every field filled: a description, a weekly repeat, and the repeat row open.
+            shell.Entry.Description = "슬라이드 12장 정리\n예산표 첨부\n회의실 3층";
+            shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Weekly);
+            Capture(view, $"todo-sheet-full-keyboard-{suffix}");
             view.PreviewKeyboard = null;
+            Capture(view, $"todo-sheet-full-{suffix}");
+            Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Repeat));
+            Capture(view, $"todo-sheet-repeat-{suffix}");
             Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Date));
             Capture(view, $"todo-sheet-date-{suffix}");
             shell.Entry.SelectKindCommand.Execute(AgendaKind.Event);

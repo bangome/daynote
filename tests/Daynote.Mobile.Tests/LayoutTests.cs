@@ -152,7 +152,7 @@ public sealed class LayoutTests
     }
 
     [TestMethod]
-    public void A_hardware_keyboard_turns_the_at_bar_into_the_card_under_the_caret()
+    public void With_a_hardware_keyboard_an_at_at_a_line_start_opens_the_sheet_and_no_card()
     {
         var device = new FakeDevice { HasHardwareKeyboard = true };
         TestServices.WithInitialisedShell(1210, 834, (view, shell) =>
@@ -163,24 +163,15 @@ public sealed class LayoutTests
             Settle(view);
 
             EditorPage editor = view.GetVisualDescendants().OfType<EditorPage>().Single();
-            Border card = editor.FindControl<Border>("CapturePopover")!;
-            StackPanel bar = editor.FindControl<StackPanel>("CaptureBar")!;
-            Assert.AreSame(card, bar.Parent, "With a keyboard, the reading lives in the card.");
-
+            Assert.IsNull(editor.FindControl<Border>("CapturePopover"), "The @ card is still in the editor.");
             TextBox body = editor.FindControl<TextBox>("Body")!;
-            body.Text += "\n회의자료 초안 공유 @오늘 5시";
-            body.CaretIndex = body.Text!.Length;
-            Settle(view);
-            Assert.IsTrue(shell.Capture.IsOpen, "The @ did not open a reading.");
-            Assert.IsTrue(card.IsVisible, "The card is not up.");
-            Assert.IsTrue(editor.FindControl<TextBlock>("CaptureHints")!.IsVisible, "The key hints belong on the card.");
+            body.Text += "\n";
+            string before = body.Text!;
 
-            device.HasHardwareKeyboard = false;
-            device.Raise();
-            Settle(view);
-            Assert.AreNotSame(card, bar.Parent, "Without one it goes back to being the bar.");
-            Assert.IsFalse(card.IsVisible);
-            Assert.IsTrue(shell.Capture.IsOpen, "Changing shape kept what was being typed.");
+            TodoSheetTests.TypeAt(view, body, before.Length);
+
+            Assert.IsTrue(shell.IsTodoSheetOpen, "The @ did not open the sheet.");
+            Assert.AreEqual(before, body.Text, "The @ stayed in the note.");
         });
     }
 
