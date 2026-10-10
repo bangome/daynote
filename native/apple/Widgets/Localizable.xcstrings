@@ -126,13 +126,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open today’s note, or add a to-do or event with @."
+            "value": "Open today’s note, or add a to-do or event."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "오늘 노트를 열거나 @ 바로 할 일·일정을 만듭니다."
+            "value": "오늘 노트를 열거나 할 일·일정을 추가합니다."
           }
         }
       }
@@ -143,13 +143,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Go straight to today’s note with the @ bar open."
+            "value": "Go straight to adding a to-do."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "@ 바가 열린 오늘 노트로 바로 갑니다."
+            "value": "바로 할 일을 추가합니다."
           }
         }
       }

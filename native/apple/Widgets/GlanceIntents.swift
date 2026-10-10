@@ -34,7 +34,7 @@ struct CompleteTodoIntent: AppIntent {
     }
 }
 
-/// Control Center's two buttons (design §07): today's note, or a new line with the @ bar open.
+/// Control Center's two buttons (design §07): today's note, or the to-do sheet.
 /// The app is opened on a `daynote://` link, which is all a .NET app can be asked to do.
 @available(iOS 18.0, *)
 struct OpenCaptureIntent: AppIntent {

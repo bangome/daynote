@@ -37,8 +37,8 @@ public struct GlanceText: Sendable {
     public var newNote: String { t("+ 새 노트", "+ New note") }
     public var newNoteControl: String { t("새 노트", "New note") }
     public var todayNote: String { t("오늘 노트", "Today’s note") }
-    public var atTodoEvent: String { t("@ 할 일·일정", "@ To-do · Event") }
-    public var atTodo: String { t("@ 할 일", "@ To-do") }
+    public var atTodoEvent: String { t("+ 할 일·일정", "+ To-do · Event") }
+    public var atTodo: String { t("+ 할 일", "+ To-do") }
     public var todoEvent: String { t("할 일·일정", "To-do · Event") }
     public var todoEventShort: String { t("할 일·일정", "To-do") }
 

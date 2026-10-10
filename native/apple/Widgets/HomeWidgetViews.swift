@@ -172,7 +172,7 @@ struct SmallQuickCaptureView: View {
     }
 }
 
-/// "+ 새 노트" and "@ 할 일·일정", stacked or side by side.
+/// "+ 새 노트" and "+ 할 일·일정", stacked or side by side.
 struct CaptureButtons: View {
     var entry: GlanceEntry
     var theme: GlanceTheme

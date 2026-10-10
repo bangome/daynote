@@ -96,7 +96,7 @@ struct CircularRemainingView: View {
     }
 }
 
-/// Circular: straight to the @ bar.
+/// Circular: straight to the to-do sheet.
 struct CircularCaptureView: View {
     var entry: GlanceEntry
 

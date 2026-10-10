@@ -15,7 +15,7 @@
   <string name="widget_day_description">This week, the next event and today\'s to-dos.</string>
 
   <string name="widget_new_note">+ Note</string>
-  <string name="widget_new_todo">@ To-do</string>
+  <string name="widget_new_todo">+ To-do</string>
   <string name="widget_preview_today">Today</string>
   <string name="widget_preview_date">Wednesday, Oct 7</string>
   <string name="widget_preview_left">4 left</string>

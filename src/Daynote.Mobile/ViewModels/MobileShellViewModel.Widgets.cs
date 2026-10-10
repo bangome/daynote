@@ -12,7 +12,7 @@ public enum WidgetLaunch
     /// <summary>+ 노트: a new note on today, in the editor.</summary>
     NewNote,
 
-    /// <summary>@ 할 일 and the + beside 오늘: the day screen on today, with the to-do sheet up over it.</summary>
+    /// <summary>+ 할 일 and the + beside 오늘: the day screen on today, with the to-do sheet up over it.</summary>
     Capture,
 }
 

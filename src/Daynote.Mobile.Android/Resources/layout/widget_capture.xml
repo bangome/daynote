@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 2×1 빠른 기록: + 노트 and @ 할 일, side by side in one pill. Its own picker preview too. -->
+<!-- 2×1 빠른 기록: + 노트 and + 할 일, side by side in one pill. Its own picker preview too. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"

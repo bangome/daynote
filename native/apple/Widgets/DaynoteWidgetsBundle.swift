@@ -217,7 +217,7 @@ struct AtCaptureControl: ControlWidget {
                 Label {
                     Text(GlanceText(GlanceStore.shared?.load()).todoEvent)
                 } icon: {
-                    Image(systemName: "at")
+                    Image(systemName: "checklist")
                 }
             }
         }

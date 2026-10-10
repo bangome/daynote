@@ -116,7 +116,7 @@ public sealed partial class MobileShellViewModel
     /// <item><c>daynote://capture</c> — "+ 새 노트": today's note, opened. Today's first note
     /// rather than another empty one, because the control is called "오늘 노트" and a tap a day
     /// would otherwise leave a trail of blank notes.</item>
-    /// <item><c>daynote://capture?at=1</c> — "@ 할 일·일정": today's day screen with the to-do
+    /// <item><c>daynote://capture?at=1</c> — "+ 할 일·일정": today's day screen with the to-do
     /// sheet open over it. No note is opened: to-dos and notes are separate.</item>
     /// <item><c>daynote://day?date=yyyy-MM-dd</c> — that day.</item>
     /// <item><c>daynote://note?date=yyyy-MM-dd&amp;id=…</c> — that note, as a reminder tap opens it.</item>

@@ -332,8 +332,8 @@ public sealed class TodoSheetTests
             Pump(() => shell.OpenFromWidgetAsync(WidgetLaunch.Capture));
             Settle(view);
 
-            Assert.IsFalse(shell.IsEditorOpen, "The widget's @ 할 일 left a note open under the sheet.");
-            Assert.IsTrue(shell.IsTodoSheetOpen, "The Android widget's @ 할 일 did not open the sheet.");
+            Assert.IsFalse(shell.IsEditorOpen, "The widget's + 할 일 left a note open under the sheet.");
+            Assert.IsTrue(shell.IsTodoSheetOpen, "The Android widget's + 할 일 did not open the sheet.");
             Assert.IsTrue(shell.IsDayPage);
 
             shell.Entry.Title = "위젯에서";

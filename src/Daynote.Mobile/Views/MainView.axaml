@@ -419,7 +419,7 @@
     <!--
       The to-do sheet: a to-do or an event in fields of its own - 제목, 날짜, 시간, 반복, 내용, 목록 -
       opened from the to-do surfaces (the day's 할 일, the 할 일 tab, the tablet's day panel), a
-      widget's "@ 할 일" and the capture link, and never from a note. The title field takes the
+      widget's "+ 할 일" and the capture link, and never from a note. The title field takes the
       keyboard as the sheet opens, and the sheet then sits on the keyboard (MainView.axaml.cs).
       Each picker opens under its own row, one at a time. The kind switch stays at the top and
       취소 / 추가 at the bottom; only the fields between them scroll, so on a small phone with the
