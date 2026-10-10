@@ -529,8 +529,17 @@ The order that makes that safe:
          reading, so DUE/DTSTART, HasDueTime and the alert are the @ command's; only the list, an
          event's own end and an undated to-do are set on top. Nothing is written into the body.
          The widgets' "@ 할 일" and `daynote://capture?at=1` open the same sheet. The date and
-         time stamps left the toolbar with it. Typing `@` in the body still opens the bar — the
-         path shared with the desktop.
+         time stamps left the toolbar with it.
+   - [x] On the phone, `@` is a way into the sheet, not a phrase to parse (1.6.0 feedback). An
+         `@` typed as the first thing on a line (spaces before it allowed) opens the sheet empty,
+         with the keyboard on 제목, and is taken back out of the body; anywhere else in a line it
+         is an ordinary character, and a paste or a multi-character keyboard commit never opens
+         anything. The inline @ bar and the hardware-keyboard @ card are gone from the phone and
+         tablet; the desktop's @ popup and the shared `AgendaCapture` code are unchanged. The sheet
+         gained 반복 (안 함 / 매일 / 평일 / 매주 / 매월 / 매년, written as the RRULE @ 매일 / 매주 would
+         write and anchored the same way; only with a date) and 내용, the item's description, kept
+         apart from its 제목. `AgendaRecurrence` now expands a plain `FREQ=MONTHLY` / `FREQ=YEARLY`
+         on the anchor's day for this; rules that name their days are still refused.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 
