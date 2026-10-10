@@ -155,11 +155,20 @@ public enum AccountFailure
     /// being offline or a server fault.
     /// </summary>
     SessionExpired,
+
+    /// <summary>
+    /// The server's rate limit (a 429). Passing, like <see cref="ServerError"/>, but asking again
+    /// before <see cref="AccountException.RetryAfter"/> only spends more of the same limit.
+    /// </summary>
+    RateLimited,
 }
 
 public sealed class AccountException(AccountFailure failure, string message) : Exception(message)
 {
     public AccountFailure Failure { get; } = failure;
+
+    /// <summary>How long the server asked the caller to wait (its <c>Retry-After</c>), when it said.</summary>
+    public TimeSpan? RetryAfter { get; init; }
 
     public DomainError ToError() => new(DomainErrorCode.AccountOperationFailed, Message);
 }

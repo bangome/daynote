@@ -120,6 +120,38 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// </summary>
     private bool _heldUntilSignIn;
 
+    /// <summary>
+    /// Subscriptions the server has answered for in this run of the app — recorded, or refused for
+    /// good. StoreKit 1 hands back every unfinished renewal on each launch and resume (a sandbox
+    /// subscription renews many times a day), and each costs the account a slot of the server's limit;
+    /// the rest of a subscription answered once are finished without asking again.
+    /// </summary>
+    private readonly HashSet<string> _settled = new(StringComparer.Ordinal);
+
+    /// <summary>The first wait after a 429 or 5xx that named none; it doubles up to <see cref="MaxBackoff"/>.</summary>
+    public static TimeSpan FirstBackoff { get; } = TimeSpan.FromSeconds(30);
+
+    public static TimeSpan MaxBackoff { get; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// The longest the page says "구매를 확인하는 중" before it settles on "will apply on its own",
+    /// whatever the server answers meanwhile.
+    /// </summary>
+    public static TimeSpan ConfirmBudget { get; } = TimeSpan.FromSeconds(90);
+
+    /// <summary>No transaction is sent before this: the server answered 429 or 5xx.</summary>
+    private DateTimeOffset? _blockedUntil;
+
+    private TimeSpan _backoff = FirstBackoff;
+
+    /// <summary>The product whose purchase sheet is up, so its transaction is told from a replay.</summary>
+    private string? _buying;
+
+    /// <summary>The fresh purchase being confirmed right now.</summary>
+    private string? _confirming;
+
+    private readonly Func<DateTimeOffset> _clock;
+
     public MobileStoreViewModel(
         IStorePurchases store,
         AccountViewModel account,
@@ -127,7 +159,8 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         Func<string, CancellationToken, ValueTask<(Entitlement Entitlement, BillingLinks Links)>> submit,
         Func<Task>? refreshBilling = null,
         Action<string>? openExternal = null,
-        Func<TimeSpan, Task>? delay = null)
+        Func<TimeSpan, Task>? delay = null,
+        Func<DateTimeOffset>? clock = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(account);
@@ -138,6 +171,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         _refreshBilling = refreshBilling ?? (() => account.RefreshBillingCommand.ExecuteAsync(null));
         _openExternal = openExternal;
         _delay = delay ?? (wait => Task.Delay(wait));
+        _clock = clock ?? (static () => DateTimeOffset.UtcNow);
 
         account.PropertyChanged += (_, e) =>
         {
@@ -424,7 +458,17 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             }
 
             bool wasOnApple = HasAppleSubscription && Account.IsPaying;
-            StorePurchaseResult result = await _store.PurchaseAsync(product.ProductId, token, CancellationToken.None).ConfigureAwait(true);
+            StorePurchaseResult result;
+            _buying = product.ProductId;
+            try
+            {
+                result = await _store.PurchaseAsync(product.ProductId, token, CancellationToken.None).ConfigureAwait(true);
+            }
+            finally
+            {
+                _buying = null;
+            }
+
             switch (result.Status)
             {
                 case StorePurchaseStatus.Purchased when result.TransactionId is { } id && _confirmed.Contains(id):
@@ -463,20 +507,37 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// that it will finish on its own; the transaction stays with StoreKit, and coming back to the
     /// app (<see cref="NotifyResumed"/>) tries once more.
     /// </summary>
+    /// <remarks>
+    /// Bounded twice over: by <see cref="ConfirmDelays"/>, and by <see cref="ConfirmBudget"/> of
+    /// wall-clock time, so slow answers cannot stretch it. A 429 asking for longer than the budget has
+    /// left ends it at once — waiting it out behind a spinner would tell the person nothing.
+    /// </remarks>
     private async Task ConfirmAsync(string productId, string transactionId, BillingTier tier, bool wasOnApple)
     {
         IsConfirming = true;
         StatusMessage = MobileStrings.Get("StoreConfirming");
+        _confirming = transactionId;
+        DateTimeOffset deadline = _clock() + ConfirmBudget;
         try
         {
             foreach (TimeSpan wait in ConfirmDelays)
             {
+                if (_blockedUntil is { } until && until >= deadline)
+                {
+                    break;
+                }
+
                 await _delay(wait).ConfigureAwait(true);
                 if (await IsConfirmedAsync(productId, transactionId).ConfigureAwait(true))
                 {
                     _unconfirmed = null;
                     StatusMessage = Done(tier, wasOnApple);
                     return;
+                }
+
+                if (_clock() >= deadline)
+                {
+                    break;
                 }
             }
 
@@ -485,6 +546,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         }
         finally
         {
+            _confirming = null;
             IsConfirming = false;
         }
     }
@@ -607,9 +669,19 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// delivers it again on the next launch: signed out, offline, or the server could not reach Apple.
     /// </summary>
     /// <remarks>
-    /// One call per subscription at a time: a transaction whose subscription is already being sent
-    /// takes that call's answer. Nothing is sent while signed out, or after the server refused the
-    /// session, until the next sign-in (which calls <see cref="IStorePurchases.RetryHeld"/>).
+    /// <para>
+    /// The person's own purchase comes first. While one is on the sheet, being confirmed, or still
+    /// unconfirmed, old transactions StoreKit replays are held back so they cannot spend the
+    /// server's per-account limit (60 in 15 minutes) that the purchase's confirmation needs.
+    /// </para>
+    /// <para>
+    /// Replays are sent once per subscription (by original transaction, or for a renewal StoreKit 1
+    /// gives no original for, by product): a transaction whose subscription is being sent takes that
+    /// call's answer, and one whose subscription was answered earlier in this run is finished without
+    /// asking. Nothing is sent while signed out, or after the server refused the session, until the
+    /// next sign-in (which calls <see cref="IStorePurchases.RetryHeld"/>); nor, after a 429 or 5xx,
+    /// until its <c>Retry-After</c>, or a wait starting at <see cref="FirstBackoff"/> and doubling.
+    /// </para>
     /// </remarks>
     internal async Task<bool> HandleTransactionAsync(StoreTransaction transaction)
     {
@@ -618,9 +690,34 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             return false;
         }
 
+        bool fresh = !transaction.IsRestore
+            && (string.Equals(_buying, transaction.ProductId, StringComparison.Ordinal)
+                || string.Equals(_confirming, transaction.TransactionId, StringComparison.Ordinal)
+                || string.Equals(_unconfirmed?.TransactionId, transaction.TransactionId, StringComparison.Ordinal));
+        if (IsBlocked)
+        {
+            return false;
+        }
+
+        if (fresh)
+        {
+            return await SubmitAsync(transaction, fresh: true).ConfigureAwait(true);
+        }
+
         string subscription = transaction.OriginalTransactionId is { Length: > 0 } original ? original
             : transaction.ProductId is { Length: > 0 } product ? product
             : transaction.TransactionId;
+        if (_settled.Contains(subscription))
+        {
+            _confirmed.Add(transaction.TransactionId);
+            return true;
+        }
+
+        if (_buying is not null || _confirming is not null || _unconfirmed is not null)
+        {
+            return false;
+        }
+
         if (_recording.TryGetValue(subscription, out Task<bool>? sending))
         {
             bool recorded = await sending.ConfigureAwait(true);
@@ -632,11 +729,17 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             return recorded;
         }
 
-        Task<bool> send = SubmitAsync(transaction);
+        Task<bool> send = SubmitAsync(transaction, fresh: false);
         _recording[subscription] = send;
         try
         {
-            return await send.ConfigureAwait(true);
+            bool finished = await send.ConfigureAwait(true);
+            if (finished)
+            {
+                _settled.Add(subscription);
+            }
+
+            return finished;
         }
         finally
         {
@@ -644,12 +747,23 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         }
     }
 
-    private async Task<bool> SubmitAsync(StoreTransaction transaction)
+    private bool IsBlocked => _blockedUntil is { } until && _clock() < until;
+
+    /// <summary>A 429 or 5xx: nothing more is sent until the server's wait, or the next of ours, is over.</summary>
+    private void BackOff(TimeSpan? retryAfter)
+    {
+        _blockedUntil = _clock() + (retryAfter ?? _backoff);
+        _backoff = TimeSpan.FromTicks(Math.Min(_backoff.Ticks * 2, MaxBackoff.Ticks));
+    }
+
+    private async Task<bool> SubmitAsync(StoreTransaction transaction, bool fresh)
     {
         try
         {
             (Entitlement entitlement, BillingLinks links) = await _submit(transaction.TransactionId, CancellationToken.None)
                 .ConfigureAwait(true);
+            _blockedUntil = null;
+            _backoff = FirstBackoff;
             Account.Entitlement = entitlement;
             Account.Billing = links;
             _confirmed.Add(transaction.TransactionId);
@@ -665,6 +779,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             // Said only when someone is buying or restoring here. A renewal of another account's
             // subscription arriving in the background is that account's business, and the
             // server's notifications keep its row current.
+            System.Diagnostics.Trace.TraceInformation($"App Store transaction {transaction.TransactionId} belongs to another account; finished.");
             if (IsBusy)
             {
                 ErrorMessage = MobileStrings.Get("StoreOtherAccount");
@@ -675,6 +790,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         catch (AccountException failure) when (failure.Failure == AccountFailure.PurchaseRefused)
         {
             // Never going to be accepted; finishing it stops it coming back on every launch.
+            System.Diagnostics.Trace.TraceInformation($"App Store transaction {transaction.TransactionId} refused for good; finished.");
             if (IsBusy)
             {
                 ErrorMessage = MobileStrings.Get("StoreFailed");
@@ -692,6 +808,14 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 await Account.EndRejectedSessionAsync().ConfigureAwait(true);
             }
 
+            return false;
+        }
+        catch (AccountException failure) when (failure.Failure == AccountFailure.RateLimited
+            || (failure.Failure == AccountFailure.ServerError && !fresh))
+        {
+            // A fresh purchase's 5xx is mostly Apple not knowing it yet (purchase_pending), which
+            // its own confirmation schedule retries; a 429 is the account's limit, whoever asked.
+            BackOff(failure.RetryAfter);
             return false;
         }
         catch (AccountException)

@@ -343,6 +343,126 @@ public sealed class StoreTests
     });
 
     [TestMethod]
+    public void A_subscription_answered_once_is_not_sent_again_this_run() => WithStore((store, server, fake, _) =>
+    {
+        var first = new StoreTransaction("3000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false);
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(first)));
+
+        // The next launch's or resume's replay of more renewals of it: finished, nothing sent.
+        for (int i = 2; i <= 6; i++)
+        {
+            Assert.IsTrue(Pump2(fake.TransactionHandler!(
+                new StoreTransaction($"300000000000000{i}", "cc.arachat.daynote.pro.monthly", IsRestore: false))));
+        }
+
+        Assert.HasCount(1, server.Submitted);
+    });
+
+    [TestMethod]
+    [DataRow(AccountFailure.PurchaseBelongsToAnotherAccount)]
+    [DataRow(AccountFailure.PurchaseRefused)]
+    public void A_subscription_refused_for_good_is_finished_and_not_sent_again(AccountFailure refusal) => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(refusal, "refused");
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(new StoreTransaction("3000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false))));
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(new StoreTransaction("3000000000000002", "cc.arachat.daynote.pro.monthly", IsRestore: false))));
+
+        Assert.HasCount(1, server.Submitted, "StoreKit would keep handing a refused subscription back.");
+    });
+
+    [TestMethod]
+    public void A_429_holds_everything_until_its_Retry_After() => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(AccountFailure.RateLimited, "429") { RetryAfter = TimeSpan.FromMinutes(5) };
+        var renewal = new StoreTransaction("3000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false);
+        var other = new StoreTransaction("4000000000000001", "cc.arachat.daynote.premium.annual", IsRestore: false);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+
+        server.Failure = null;
+        Now += TimeSpan.FromMinutes(4);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)), "A held transaction was sent inside the server's Retry-After.");
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(other)));
+        Pump(store.NotifyResumed);
+        Assert.HasCount(1, server.Submitted);
+
+        Now += TimeSpan.FromMinutes(1);
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(2, server.Submitted);
+    });
+
+    [TestMethod]
+    public void A_5xx_without_Retry_After_backs_off_from_30_seconds_and_doubles() => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(AccountFailure.ServerError, "503");
+        var renewal = new StoreTransaction("3000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false);
+
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Now += TimeSpan.FromSeconds(29);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(1, server.Submitted, "Sent again before the first 30 seconds were up.");
+
+        Now += TimeSpan.FromSeconds(1);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(2, server.Submitted);
+
+        // The second wait is twice the first.
+        Now += TimeSpan.FromSeconds(59);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(2, server.Submitted);
+        Now += TimeSpan.FromSeconds(1);
+        server.Failure = null;
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(3, server.Submitted);
+    });
+
+    [TestMethod]
+    public void The_persons_purchase_goes_before_replays_of_old_renewals() => WithStore((store, server, fake, _) =>
+    {
+        // Old renewals StoreKit holds are replayed while the sheet is up and while it is confirmed:
+        // none of them may spend the limit the purchase's own confirmation needs.
+        fake.ReplayDuringPurchase = [.. Enumerable.Range(1, 10).Select(i =>
+            new StoreTransaction($"30000000000000{i:00}", "cc.arachat.daynote.premium.monthly", IsRestore: false))];
+        server.FailTimes = 1;
+
+        Run(store.ProCard.BuyCommand);
+
+        CollectionAssert.AreEqual(new[] { "1000000000000001", "1000000000000001" }, server.Submitted,
+            "Replays of old renewals were sent ahead of, or beside, the purchase.");
+        Assert.AreEqual("Pro 구독이 시작되었습니다.", store.StatusMessage);
+
+        // With the purchase confirmed, the replays go — once for their subscription.
+        fake.RetryHeld();
+        Assert.HasCount(3, server.Submitted);
+    });
+
+    [TestMethod]
+    public void A_429_while_confirming_ends_calmly_instead_of_spinning() => WithStore((store, server, fake, _) =>
+    {
+        server.Failure = new AccountException(AccountFailure.RateLimited, "429") { RetryAfter = TimeSpan.FromMinutes(10) };
+
+        Run(store.ProCard.BuyCommand);
+
+        Assert.IsFalse(store.IsConfirming, "The page is still spinning.");
+        Assert.AreEqual(MobileStrings.Get("StoreConfirmLater"), store.StatusMessage);
+        Assert.IsNull(store.ErrorMessage, "A purchase that went through was shown an error.");
+        Assert.HasCount(1, server.Submitted, "The purchase was sent again inside the server's Retry-After.");
+    });
+
+    [TestMethod]
+    public void Confirming_has_a_hard_time_limit_however_slow_the_answers() => WithStore((store, server, fake, _) =>
+    {
+        // Every billing read takes a minute: the budget runs out long before the delays do.
+        server.Failure = new AccountException(AccountFailure.ServerError, "purchase_pending");
+        RefreshHook = () => Now += TimeSpan.FromMinutes(1);
+
+        Run(store.ProCard.BuyCommand);
+
+        Assert.IsFalse(store.IsConfirming);
+        Assert.AreEqual(MobileStrings.Get("StoreConfirmLater"), store.StatusMessage);
+        Assert.IsLessThan(MobileStoreViewModel.ConfirmDelays.Count, Waits.Count, "The time limit did not stop it.");
+    });
+
+    [TestMethod]
     public void A_billing_state_that_will_not_load_offers_a_retry() => WithStorePage(
         Entitlement.Unknown,
         BillingLinks.None,
@@ -511,6 +631,9 @@ public sealed class StoreTests
 
     private static int RefreshCount;
 
+    /// <summary>The page's clock: moved on by every wait, and by a test that lets time pass.</summary>
+    private static DateTimeOffset Now;
+
     private static Action? RefreshHook;
 
     private static bool Pump2(Task<bool> task)
@@ -535,6 +658,7 @@ public sealed class StoreTests
         Waits.Clear();
         RefreshCount = 0;
         RefreshHook = null;
+        Now = new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero);
         var fake = new FakeStore();
         var server = new FakeServer();
         using var data = new TempDataRoot();
@@ -556,8 +680,10 @@ public sealed class StoreTests
                     wait =>
                     {
                         Waits.Add(wait);
+                        Now += wait;
                         return Task.CompletedTask;
-                    }))));
+                    },
+                    () => Now))));
             var shell = provider.GetRequiredService<MobileShellViewModel>();
 
             // 390x844 logical, the narrowest mainstream iPhone; scaled as a whole for a store image.
@@ -709,6 +835,9 @@ public sealed class StoreTests
 
         public bool RenewalDuringPurchase { get; set; }
 
+        /// <summary>Held transactions StoreKit hands back while the sheet is up, as a launch replay would.</summary>
+        public StoreTransaction[] ReplayDuringPurchase { get; set; } = [];
+
         public string? LastPurchase { get; private set; }
 
         public string? LastAccountToken { get; private set; }
@@ -749,6 +878,18 @@ public sealed class StoreTests
             {
                 case StorePurchaseStatus.Purchased:
                     string id = $"10000000000000{++serial:00}";
+                    foreach (StoreTransaction replay in ReplayDuringPurchase)
+                    {
+                        if (await TransactionHandler!(replay).ConfigureAwait(true))
+                        {
+                            Finished.Add(replay.TransactionId);
+                        }
+                        else
+                        {
+                            held.Add(replay);
+                        }
+                    }
+
                     var purchased = new StoreTransaction(id, productId, IsRestore: false);
                     if (await TransactionHandler!(purchased).ConfigureAwait(true))
                     {

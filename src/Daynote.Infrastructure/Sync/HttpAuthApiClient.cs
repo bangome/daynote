@@ -285,6 +285,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         AccountFailure failure = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => AccountFailure.InvalidCredentials,
+            HttpStatusCode.TooManyRequests => AccountFailure.RateLimited,
             _ => AccountFailure.ServerError,
         };
 
@@ -297,8 +298,17 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             _ => $"The sync service returned an error ({(int)response.StatusCode}).",
         };
 
-        throw new AccountException(failure, message);
+        throw new AccountException(failure, message) { RetryAfter = RetryAfterOf(response) };
     }
+
+    /// <summary>The <c>Retry-After</c> header, in either of its forms, when the server sent one.</summary>
+    private static TimeSpan? RetryAfterOf(HttpResponseMessage response) =>
+        response.Headers.RetryAfter switch
+        {
+            { Delta: { } delta } => delta,
+            { Date: { } date } => date - DateTimeOffset.UtcNow is { Ticks: > 0 } wait ? wait : TimeSpan.Zero,
+            _ => null,
+        };
 
     /// <summary>The Worker's code for "a paid subscription would outlive the account".</summary>
     private const string SubscriptionActiveCode = "subscription_active";

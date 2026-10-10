@@ -174,11 +174,30 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.AreEqual(AccountFailure.ServerError, later.Failure, "A server not set up yet must leave the purchase to be sent again.");
     }
 
+    [TestMethod]
+    public async Task A_429_says_so_and_carries_the_servers_wait()
+    {
+        var limited = new StubHandler("""{ "error": "rate_limited", "message": "Too many attempts. Try again later." }""")
+        {
+            Status = HttpStatusCode.TooManyRequests,
+            RetryAfter = TimeSpan.FromSeconds(420),
+        };
+        var client = new HttpAuthApiClient(new HttpClient(limited) { BaseAddress = new Uri("https://daynote.test/") });
+
+        AccountException refused = await Assert.ThrowsExactlyAsync<AccountException>(
+            async () => await client.SubmitAppStoreTransactionAsync("token", "2000000000000001"));
+
+        Assert.AreEqual(AccountFailure.RateLimited, refused.Failure);
+        Assert.AreEqual(TimeSpan.FromSeconds(420), refused.RetryAfter);
+    }
+
     private sealed class StubHandler(string response) : HttpMessageHandler
     {
         public string Response { get; set; } = response;
 
         public HttpStatusCode Status { get; init; } = HttpStatusCode.OK;
+
+        public TimeSpan? RetryAfter { get; init; }
 
         public string? LastPath { get; private set; }
 
@@ -188,10 +207,16 @@ public sealed class HttpAuthApiClientBillingTests
         {
             LastPath = request.RequestUri?.AbsolutePath;
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(Status)
+            var answer = new HttpResponseMessage(Status)
             {
                 Content = new StringContent(Response, Encoding.UTF8, "application/json"),
             };
+            if (RetryAfter is { } wait)
+            {
+                answer.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(wait);
+            }
+
+            return answer;
         }
     }
 }
