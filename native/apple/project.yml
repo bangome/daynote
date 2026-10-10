@@ -18,7 +18,7 @@ settings:
     DEVELOPMENT_TEAM: 4T8C76SP99
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.6.0"
-    CURRENT_PROJECT_VERSION: "16"
+    CURRENT_PROJECT_VERSION: "17"
     # Manual signing: the build script hands each target its own App Store profile, and an
     # unsigned simulator build needs none.
     CODE_SIGN_STYLE: Manual
