@@ -470,7 +470,7 @@
             </Button>
           </Grid>
 
-          <ScrollViewer x:Name="TodoFields" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer x:Name="TodoFields" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
             <StackPanel Spacing="10">
               <!-- 제목. One line; the keyboard's return key adds, as 완료 does on the list sheet. -->
               <TextBox x:Name="TodoTextBox" Text="{Binding Entry.Title, Mode=TwoWay}"
