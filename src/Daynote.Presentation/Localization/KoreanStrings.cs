@@ -282,7 +282,7 @@ internal static class KoreanStrings
         ["DeskFilesDropFormat"] = "파일을 끌어 놓거나 클릭해서 {0}에 보관",
         ["DeskFileDelete"] = "삭제",
         ["DeskDayTodoTitle"] = "이 날의 할 일",
-        ["DeskDayTodoEmptySuffix"] = " 로 이 날의 할 일을 추가하세요.",
+        ["DeskDayTodoEmptySuffix"] = " 로 추가하세요.",
         ["DeskFilesAdd"] = "+ 추가",
         ["DeskFilesEmpty"] = "보관된 파일이 없습니다.",
         ["DeskPalettePlaceholder"] = "노트, 파일, 날짜를 검색하세요",
@@ -355,7 +355,7 @@ internal static class KoreanStrings
 
         // Todo tab
         ["TodoEmptyText"] = "(내용 없음)",
-        ["TodoEmptyPrefix"] = "",
+        ["TodoEmptyPrefix"] = "할 일은 ",
         ["TodoEmptyCode"] = "+ 할 일",
         ["TodoEmptySuffix"] = " 로 추가하면 여기에 모입니다",
 
@@ -855,6 +855,9 @@ internal static class KoreanStrings
         ["TodoEntryEnd"] = "종료",
         ["TodoEntryList"] = "목록",
         ["TodoEntryAdd"] = "추가",
+        ["TodoEntryCancel"] = "취소",
+        ["TodoAddButton"] = "+ 할 일",
+        ["TodoAddTitle"] = "할 일 추가",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",

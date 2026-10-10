@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Daynote.App.Input;
 using Daynote.Desktop.ViewModels;
 
@@ -37,6 +38,11 @@ public partial class MainWindow : Window
                     if (args.PropertyName == nameof(DesktopShellViewModel.IsRenamingTitle) && _shell.IsRenamingTitle)
                     {
                         FocusTitleEditor();
+                    }
+                    else if (args.PropertyName == nameof(DesktopShellViewModel.IsAddTodoOpen) && _shell.IsAddTodoOpen)
+                    {
+                        // The card's title takes the keys as it opens, as the phone sheet's does.
+                        Dispatcher.UIThread.Post(() => AddTodoTitle.Focus(), DispatcherPriority.Loaded);
                     }
                 };
             }
@@ -135,8 +141,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Escape closes whatever is on top: the palette, then the checkout, then the account card, then
-    /// settings — the order the design checks them in. The palette's own query box handles it first when focused.
+    /// Escape closes whatever is on top: the palette, then the add-to-do card, then the checkout, then
+    /// the account card, then settings — the order the design checks them in. The palette's own query box handles it first when focused.
     /// </summary>
     private void DismissOverlayOnEscape(KeyEventArgs e)
     {
@@ -148,6 +154,10 @@ public partial class MainWindow : Window
         if (shell.IsPaletteOpen)
         {
             shell.ClosePaletteCommand.Execute(null);
+        }
+        else if (shell.IsAddTodoOpen)
+        {
+            shell.CloseAddTodoCommand.Execute(null);
         }
         else if (shell.Account is { IsCheckoutOpen: true } account)
         {

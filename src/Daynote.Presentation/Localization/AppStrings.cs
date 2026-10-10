@@ -1000,6 +1000,11 @@ public static class AppStrings
     public static string TodoEntryEnd => LocalizationService.Instance[nameof(TodoEntryEnd)];
     public static string TodoEntryList => LocalizationService.Instance[nameof(TodoEntryList)];
     public static string TodoEntryAdd => LocalizationService.Instance[nameof(TodoEntryAdd)];
+    public static string TodoEntryCancel => LocalizationService.Instance[nameof(TodoEntryCancel)];
+    /// <summary>The desktop's way to a new to-do, in the day panel and the 할 일 view.</summary>
+    public static string TodoAddButton => LocalizationService.Instance[nameof(TodoAddButton)];
+    /// <summary>The desktop's add-to-do card heading.</summary>
+    public static string TodoAddTitle => LocalizationService.Instance[nameof(TodoAddTitle)];
 
     /// <summary>{0} = the date and time. The 할 일 line.</summary>
     /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>

@@ -865,6 +865,9 @@ internal static class EnglishStrings
         ["TodoEntryEnd"] = "Ends",
         ["TodoEntryList"] = "List",
         ["TodoEntryAdd"] = "Add",
+        ["TodoEntryCancel"] = "Cancel",
+        ["TodoAddButton"] = "+ To-do",
+        ["TodoAddTitle"] = "New to-do",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",

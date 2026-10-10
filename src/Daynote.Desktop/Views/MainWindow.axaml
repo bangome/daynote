@@ -6,6 +6,7 @@
         xmlns:views="using:Daynote.Desktop.Views"
         xmlns:motion="using:Daynote.Motion"
         xmlns:account="using:Daynote.App.Account"
+        xmlns:agenda="using:Daynote.Core.Agenda"
         x:Class="Daynote.Desktop.Views.MainWindow"
         x:DataType="vm:DesktopShellViewModel"
         Title="Daynote"
@@ -480,10 +481,13 @@
         <!-- Lists: to-dos, favourites, tags, files. -->
         <ScrollViewer Grid.Column="0" Padding="28,32,28,48" IsVisible="{Binding IsListMode}">
           <StackPanel MaxWidth="760">
-            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,20">
-              <TextBlock FontSize="26" FontWeight="ExtraBold" LetterSpacing="-0.8" VerticalAlignment="Bottom" Text="{Binding ListTitle}" />
-              <TextBlock Classes="muted" FontSize="13" VerticalAlignment="Bottom" Margin="0,0,0,4" Text="{Binding ListSubtitle}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,20">
+              <TextBlock Grid.Column="0" FontSize="26" FontWeight="ExtraBold" LetterSpacing="-0.8" VerticalAlignment="Bottom" Text="{Binding ListTitle}" />
+              <TextBlock Grid.Column="1" Classes="muted" FontSize="13" VerticalAlignment="Bottom" Margin="10,0,0,4" Text="{Binding ListSubtitle}" />
+              <!-- On the 할 일 view: a to-do on today, in the list being looked at. -->
+              <Button Grid.Column="3" x:Name="ListAddTodo" Classes="accent pill small" VerticalAlignment="Bottom"
+                      IsVisible="{Binding TabIsTodo}" Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddListTodoCommand}" />
+            </Grid>
 
             <!-- To-dos, every note on every date. -->
             <StackPanel IsVisible="{Binding TabIsTodo}">
@@ -643,10 +647,13 @@
                 IsVisible="{Binding !RightCollapsed}" DragDrop.AllowDrop="True">
           <ScrollViewer>
             <StackPanel x:Name="DayPanelContent">
-              <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,20,20,10">
-                <TextBlock FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Strings[DeskDayTodoTitle]}" />
-                <TextBlock Classes="faint" FontSize="12" VerticalAlignment="Bottom" Margin="0,0,0,1" Text="{Binding DayTodoCountText}" />
-              </StackPanel>
+              <!-- + 할 일: the way to a to-do on this date. A note's body never makes one. -->
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,20,20,10">
+                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Strings[DeskDayTodoTitle]}" />
+                <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Bottom" Margin="8,0,0,1" Text="{Binding DayTodoCountText}" />
+                <Button Grid.Column="3" x:Name="DayAddTodo" Classes="link sun" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Bottom"
+                        Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddDayTodoCommand}" />
+              </Grid>
               <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
               <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0"
                             motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}"
@@ -732,6 +739,291 @@
     <Border Grid.ColumnSpan="2" Classes="scrim" ZIndex="20" IsVisible="False" motion:Popover.IsOpen="{Binding IsSettingsOpen}"
             PointerPressed="OnSettingsScrimPressed">
       <views:SettingsPanel x:Name="SettingsDialog" MaxWidth="760" MaxHeight="560" Margin="24" />
+    </Border>
+
+    <!--
+      Add a to-do (the phone's to-do sheet, as a card): 할 일 / 일정, 제목, 날짜, 시간 or start and end,
+      반복, 내용 and 목록, over the window. Opened from + 할 일 in the day panel and the 할 일 view; a
+      note's body never makes a to-do. Each picker opens under its own row, one at a time.
+    -->
+    <Border x:Name="AddTodoScrim" Grid.ColumnSpan="2" Classes="scrim" ZIndex="22" IsVisible="False"
+            motion:Popover.IsOpen="{Binding IsAddTodoOpen}" PointerPressed="OnAddTodoScrimPressed">
+      <Border x:Name="AddTodoCard" Classes="modal" Width="460" MaxHeight="660" Margin="24" Padding="22,18,22,18"
+              VerticalAlignment="Center" HorizontalAlignment="Center">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoAddTitle]}" />
+            <Button Grid.Column="1" Classes="ghost small" Command="{Binding CloseAddTodoCommand}"
+                    AutomationProperties.Name="{Binding Strings[TodoEntryCancel]}">
+              <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Close}" />
+            </Button>
+          </Grid>
+
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,12">
+            <Button x:Name="AddTodoKindTask" Classes="opt" Classes.on="{Binding TodoEntry.IsTask}"
+                    Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}"
+                    Content="{Binding Strings[AgendaCaptureTask]}" />
+            <Button x:Name="AddTodoKindEvent" Classes="opt" Classes.on="{Binding TodoEntry.IsEvent}"
+                    Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}"
+                    Content="{Binding Strings[AgendaCaptureEvent]}" />
+          </StackPanel>
+
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" Margin="0,14,0,0">
+            <Button Grid.Column="1" Classes="quiet" Margin="0,0,8,0" Padding="16,8" FontSize="13"
+                    Command="{Binding CloseAddTodoCommand}" Content="{Binding Strings[TodoEntryCancel]}" />
+            <Button Grid.Column="2" x:Name="AddTodoCommit" Classes="accent" Padding="20,8"
+                    IsEnabled="{Binding TodoEntry.CanAdd}" Command="{Binding CommitAddTodoCommand}"
+                    Content="{Binding Strings[TodoEntryAdd]}" />
+          </Grid>
+
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+              <!-- 제목. Enter adds, as the phone's return key does. -->
+              <TextBox x:Name="AddTodoTitle" Classes="inline" FontSize="14" MinHeight="38"
+                       Text="{Binding TodoEntry.Title, Mode=TwoWay}" PlaceholderText="{Binding TodoEntry.TitlePlaceholder}"
+                       AutomationProperties.Name="{Binding Strings[TodoEntryTitle]}">
+                <TextBox.KeyBindings>
+                  <KeyBinding Gesture="Enter" Command="{Binding CommitAddTodoCommand}" />
+                </TextBox.KeyBindings>
+              </TextBox>
+
+              <Border Classes="panel" CornerRadius="12">
+                <StackPanel>
+                  <Button x:Name="AddTodoDateRow" Classes="field" Classes.open="{Binding TodoEntry.IsDatePickerOpen}"
+                          Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Date}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[TodoEntryDate]}" />
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !TodoEntry.HasDate}" Text="{Binding TodoEntry.DateText}" />
+                    </Grid>
+                  </Button>
+                  <StackPanel IsVisible="{Binding TodoEntry.IsDatePickerOpen}" Margin="12,0,12,10">
+                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="2,0,2,6">
+                      <TextBlock Grid.Column="0" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding TodoEntry.Calendar.MonthLabel}" />
+                      <Button Grid.Column="1" Classes="ghost small" Command="{Binding TodoEntry.Calendar.PreviousMonthCommand}"
+                              AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
+                        <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
+                      </Button>
+                      <Button Grid.Column="2" Classes="ghost small" Command="{Binding TodoEntry.Calendar.NextMonthCommand}"
+                              AutomationProperties.Name="{Binding Strings[NextMonth]}">
+                        <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
+                      </Button>
+                    </Grid>
+                    <UniformGrid Columns="7">
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySun}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayMon}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayTue}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayWed}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayThu}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayFri}" />
+                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySat}" />
+                    </UniformGrid>
+                    <ItemsControl ItemsSource="{Binding TodoEntry.Calendar.Cells}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:CalendarDayCellViewModel">
+                          <Button Classes="minicell" Classes.outside="{Binding !IsInMonth}" Classes.sunday="{Binding IsSunday}"
+                                  Classes.today="{Binding IsToday}" Classes.selected="{Binding IsSelected}"
+                                  IsHitTestVisible="{Binding IsInMonth}" Command="{Binding SelectCommand}">
+                            <Border Classes="face">
+                              <TextBlock Text="{Binding DayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="opt" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding TodoEntry.IsTask}"
+                            Classes.on="{Binding !TodoEntry.HasDate}" Command="{Binding TodoEntry.ClearDateCommand}"
+                            Content="{Binding Strings[TodoEntryNoDate]}" />
+                  </StackPanel>
+
+                  <Border Classes="fieldrule" />
+                  <Button x:Name="AddTodoTimeRow" Classes="field" Classes.open="{Binding TodoEntry.IsTimePickerOpen}"
+                          IsEnabled="{Binding TodoEntry.CanPickTime}"
+                          Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Time}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <Panel Grid.Column="0">
+                        <TextBlock Classes="fieldlabel" IsVisible="{Binding TodoEntry.IsTask}" Text="{Binding Strings[TodoEntryTime]}" />
+                        <TextBlock Classes="fieldlabel" IsVisible="{Binding TodoEntry.IsEvent}" Text="{Binding Strings[TodoEntryStart]}" />
+                      </Panel>
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !TodoEntry.HasTime}" Text="{Binding TodoEntry.TimeText}" />
+                    </Grid>
+                  </Button>
+                  <StackPanel IsVisible="{Binding TodoEntry.IsEvent}">
+                    <Border Classes="fieldrule" />
+                    <Button x:Name="AddTodoEndRow" Classes="field"
+                            Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.End}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[TodoEntryEnd]}" />
+                        <TextBlock Grid.Column="1" Classes="fieldvalue" Text="{Binding TodoEntry.EndText}" />
+                      </Grid>
+                    </Button>
+                  </StackPanel>
+                  <StackPanel IsVisible="{Binding TodoEntry.IsTimePickerOpen}" Margin="12,0,12,12" Spacing="5">
+                    <TextBlock Classes="faint" FontSize="11.5" FontWeight="SemiBold" Text="{Binding Strings[ReminderTimeHour]}" />
+                    <ItemsControl ItemsSource="{Binding TodoEntry.HourOptions}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="8" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:TimeOption">
+                          <Button Classes="opt cell" Classes.on="{Binding IsCurrent}" Margin="2" Content="{Binding Label}"
+                                  Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).TodoEntry.PickHourCommand}"
+                                  CommandParameter="{Binding Value}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="faint" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0" Text="{Binding Strings[ReminderTimeMinute]}" />
+                    <ItemsControl ItemsSource="{Binding TodoEntry.MinuteOptions}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="8" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:TimeOption">
+                          <Button Classes="opt cell" Classes.on="{Binding IsCurrent}" Margin="2" Content="{Binding Label}"
+                                  Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).TodoEntry.PickMinuteCommand}"
+                                  CommandParameter="{Binding Value}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="opt" HorizontalAlignment="Left" Margin="0,4,0,0" IsVisible="{Binding TodoEntry.IsTask}"
+                            Classes.on="{Binding !TodoEntry.HasTime}" Command="{Binding TodoEntry.ClearTimeCommand}"
+                            Content="{Binding Strings[TodoEntryNoTime]}" />
+                  </StackPanel>
+
+                  <Border Classes="fieldrule" />
+                  <Button x:Name="AddTodoRepeatRow" Classes="field" Classes.open="{Binding TodoEntry.IsRepeatPickerOpen}"
+                          IsEnabled="{Binding TodoEntry.CanRepeat}"
+                          Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Repeat}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <TextBlock Grid.Column="0" Classes="fieldlabel" Text="{Binding Strings[TodoEntryRepeat]}" />
+                      <TextBlock Grid.Column="1" Classes="fieldvalue" Classes.none="{Binding !TodoEntry.Repeats}" Text="{Binding TodoEntry.RepeatText}" />
+                    </Grid>
+                  </Button>
+                  <ItemsControl IsVisible="{Binding TodoEntry.IsRepeatPickerOpen}" Margin="10,0,10,12" ItemsSource="{Binding TodoEntry.RepeatOptions}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="pvm:TodoRepeatOption">
+                        <Button Classes="opt cell" Classes.on="{Binding IsCurrent}" Margin="2" Content="{Binding Label}"
+                                Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).TodoEntry.PickRepeatCommand}"
+                                CommandParameter="{Binding Repeat}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <!-- 내용: a few lines kept with the item, apart from its title. -->
+              <TextBox x:Name="AddTodoNotes" Classes="inline" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxHeight="140"
+                       VerticalContentAlignment="Top" Text="{Binding TodoEntry.Description, Mode=TwoWay}"
+                       PlaceholderText="{Binding Strings[TodoEntryNotesPlaceholder]}"
+                       AutomationProperties.Name="{Binding Strings[TodoEntryNotes]}" />
+
+              <!-- 목록, only when there is more than the built-in one to choose from. -->
+              <StackPanel IsVisible="{Binding TodoEntry.ShowLists}" Spacing="6">
+                <TextBlock Classes="faint" FontSize="11.5" FontWeight="SemiBold" Text="{Binding Strings[TodoEntryList]}" />
+                <ItemsControl ItemsSource="{Binding TodoEntry.ListOptions}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel ItemSpacing="6" LineSpacing="6" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="pvm:TodoListOption">
+                      <Button Classes="opt" Classes.on="{Binding IsCurrent}"
+                              Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).TodoEntry.PickListCommand}"
+                              CommandParameter="{Binding Id}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Ellipse Width="7" Height="7" VerticalAlignment="Center" Fill="{Binding Dot}" />
+                          <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+        <Border.Styles>
+          <Style Selector="Button.opt">
+            <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+            <Setter Property="CornerRadius" Value="99" />
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+          </Style>
+          <Style Selector="Button.opt.cell">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0,5" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+          </Style>
+          <Style Selector="Button.opt:pointerover">
+            <Setter Property="Opacity" Value="0.85" />
+          </Style>
+          <Style Selector="Button.opt.on">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+          </Style>
+          <Style Selector="Button.field">
+            <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="14,11" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+          </Style>
+          <Style Selector="Button.field:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+          </Style>
+          <Style Selector="Button.field:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+          </Style>
+          <Style Selector="TextBlock.fieldlabel">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+            <Setter Property="Width" Value="64" />
+          </Style>
+          <Style Selector="TextBlock.fieldvalue">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextAlignment" Value="Right" />
+          </Style>
+          <Style Selector="TextBlock.fieldvalue.none">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+          </Style>
+          <Style Selector="Border.fieldrule">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="14,0" />
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+          </Style>
+          <Style Selector="TextBlock.wd">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+          </Style>
+          <Style Selector="Button.minicell">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+          </Style>
+          <Style Selector="Button.minicell.outside">
+            <Setter Property="Opacity" Value="0.35" />
+          </Style>
+          <Style Selector="Button.minicell.today Border.face">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+          </Style>
+          <Style Selector="Button.minicell.selected">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
+          </Style>
+          <Style Selector="Button.minicell.selected Border.face">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.Pri}" />
+          </Style>
+        </Border.Styles>
+      </Border>
     </Border>
 
     <!-- Account: the cloud account card (sign-in, lock, subscription), opened from the popover or settings. -->

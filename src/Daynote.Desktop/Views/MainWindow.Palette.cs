@@ -212,4 +212,14 @@ public partial class MainWindow
             e.Handled = true;
         }
     }
+
+    /// <summary>A click on the dim around the add-to-do card closes it, as with settings.</summary>
+    private void OnAddTodoScrimPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (ReferenceEquals(e.Source, sender) && _shell is { } shell)
+        {
+            shell.CloseAddTodoCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 }
