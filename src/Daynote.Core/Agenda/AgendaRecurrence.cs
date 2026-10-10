@@ -60,8 +60,10 @@ public readonly record struct RecurrenceSummary(
 /// what "every Monday" means.
 /// <para>
 /// <b>Supported:</b> <c>FREQ=DAILY</c> and <c>FREQ=WEEKLY</c>, with <c>INTERVAL</c>, <c>BYDAY</c>,
-/// <c>COUNT</c> and <c>UNTIL</c>. That is everything the <c>@</c> command can produce and the
-/// common shape of what a calendar sends. Anything else — monthly, yearly, <c>BYSETPOS</c> — is
+/// <c>COUNT</c> and <c>UNTIL</c>, and a plain <c>FREQ=MONTHLY</c> or <c>FREQ=YEARLY</c> that repeats
+/// on its anchor's own day — what the phone's to-do sheet offers as 매월 and 매년. That is everything
+/// the <c>@</c> command and the sheet can produce and the common shape of what a calendar sends.
+/// Anything else — <c>BYMONTHDAY</c>, "the second Monday", <c>BYSETPOS</c> — is
 /// <b>reported as unreadable and expands to nothing</b>, because a rule half-understood puts
 /// occurrences on the wrong days, and a to-do that silently appears on the wrong day is worse than
 /// one that visibly does not appear at all.
@@ -276,7 +278,7 @@ public static class AgendaRecurrence
 
     /// <summary>The part of an RRULE this build understands.</summary>
     private readonly record struct Rule(
-        bool Weekly,
+        RecurrenceFrequency Frequency,
         int Interval,
         IReadOnlyList<DayOfWeek> Days,
         int? Count,
@@ -290,8 +292,7 @@ public static class AgendaRecurrence
                 return false;
             }
 
-            bool weekly = false;
-            bool daily = false;
+            var frequency = RecurrenceFrequency.Unknown;
             int interval = 1;
             List<DayOfWeek> days = [];
             int? count = null;
@@ -311,9 +312,15 @@ public static class AgendaRecurrence
                 switch (name)
                 {
                     case "FREQ":
-                        weekly = value.Equals("WEEKLY", StringComparison.OrdinalIgnoreCase);
-                        daily = value.Equals("DAILY", StringComparison.OrdinalIgnoreCase);
-                        if (!weekly && !daily)
+                        frequency = value.ToUpperInvariant() switch
+                        {
+                            "DAILY" => RecurrenceFrequency.Daily,
+                            "WEEKLY" => RecurrenceFrequency.Weekly,
+                            "MONTHLY" => RecurrenceFrequency.Monthly,
+                            "YEARLY" => RecurrenceFrequency.Yearly,
+                            _ => RecurrenceFrequency.Unknown,
+                        };
+                        if (frequency == RecurrenceFrequency.Unknown)
                         {
                             return false;
                         }
@@ -370,12 +377,15 @@ public static class AgendaRecurrence
                 }
             }
 
-            if (!weekly && !daily)
+            // A monthly or yearly rule that names days is a shape ("the second Monday", "every
+            // Monday in March") this does not do; only the plain one, on the anchor's own day.
+            if (frequency == RecurrenceFrequency.Unknown
+                || (frequency is RecurrenceFrequency.Monthly or RecurrenceFrequency.Yearly && days.Count > 0))
             {
                 return false;
             }
 
-            rule = new Rule(weekly, interval, days, count, until);
+            rule = new Rule(frequency, interval, days, count, until);
             return true;
         }
 
@@ -386,7 +396,36 @@ public static class AgendaRecurrence
             DateOnly start = DateOnly.FromDateTime(anchor.Value);
             int emitted = 0;
 
-            if (!Weekly)
+            if (Frequency is RecurrenceFrequency.Monthly or RecurrenceFrequency.Yearly)
+            {
+                // The anchor's day of the month, every Interval months (or years). A month without
+                // that day — the 31st in April, the 29th of February outside a leap year — is
+                // skipped, as iCalendar says, rather than moved to its last day.
+                int step = Frequency == RecurrenceFrequency.Yearly ? 12 * Interval : Interval;
+                for (int months = 0; ; months += step)
+                {
+                    DateOnly month = new DateOnly(start.Year, start.Month, 1).AddMonths(months);
+                    if (start.Day > DateTime.DaysInMonth(month.Year, month.Month))
+                    {
+                        if (Until is { } last && month > last)
+                        {
+                            yield break;
+                        }
+
+                        continue;
+                    }
+
+                    DateOnly date = new(month.Year, month.Month, start.Day);
+                    if (!Allowed(date, ref emitted))
+                    {
+                        yield break;
+                    }
+
+                    yield return new WallClock(date.ToDateTime(time));
+                }
+            }
+
+            if (Frequency == RecurrenceFrequency.Daily)
             {
                 for (DateOnly day = start; ; day = day.AddDays(Interval))
                 {

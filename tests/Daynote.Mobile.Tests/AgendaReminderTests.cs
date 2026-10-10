@@ -218,7 +218,7 @@ public sealed class AgendaReminderTests
     [TestMethod]
     public void A_rule_this_build_cannot_read_is_silent_rather_than_wrong()
     {
-        // AgendaRecurrence refuses monthly and yearly rather than guessing. A to-do that silently
+        // AgendaRecurrence refuses a monthly rule that names its day rather than guessing. A to-do that silently
         // reminds on the wrong day is worse than one that visibly does not remind at all.
         AgendaItem monthly = Repeating("FREQ=MONTHLY;BYMONTHDAY=3", new DateTime(2026, 10, 3, 14, 0, 0));
 

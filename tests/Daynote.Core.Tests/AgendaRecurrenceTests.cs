@@ -131,7 +131,8 @@ public sealed class AgendaRecurrenceTests
         foreach (string unreadable in new[]
         {
             "FREQ=MONTHLY;BYMONTHDAY=1",
-            "FREQ=YEARLY",
+            "FREQ=MONTHLY;BYDAY=2MO",
+            "FREQ=YEARLY;BYDAY=MO",
             "FREQ=WEEKLY;BYDAY=2MO",
             "FREQ=WEEKLY;BYSETPOS=-1",
             "nonsense",
@@ -142,6 +143,39 @@ public sealed class AgendaRecurrenceTests
         }
 
         Assert.IsTrue(AgendaRecurrence.CanExpand("FREQ=WEEKLY;BYDAY=MO;INTERVAL=2;COUNT=5"));
+    }
+
+    [TestMethod]
+    public void A_plain_monthly_rule_lands_on_the_anchor_s_day_and_skips_months_without_it()
+    {
+        // The 31st: November, February, April and June have none, and are skipped rather than
+        // moved to their last day.
+        AgendaItem series = Series("FREQ=MONTHLY", new DateTime(2026, 10, 31, 9, 0, 0));
+
+        IReadOnlyList<AgendaOccurrence> found = AgendaRecurrence.Expand(
+            series, [], new DateOnly(2026, 10, 1), new DateOnly(2027, 7, 31));
+
+        CollectionAssert.AreEqual(
+            new[] { new DateTime(2026, 10, 31, 9, 0, 0), new DateTime(2026, 12, 31, 9, 0, 0), new DateTime(2027, 1, 31, 9, 0, 0),
+                new DateTime(2027, 3, 31, 9, 0, 0), new DateTime(2027, 5, 31, 9, 0, 0), new DateTime(2027, 7, 31, 9, 0, 0) },
+            found.Select(static o => o.Start.Value).ToArray());
+        Assert.IsTrue(AgendaRecurrence.CanExpand("FREQ=MONTHLY;INTERVAL=2;COUNT=3"));
+    }
+
+    [TestMethod]
+    public void A_plain_yearly_rule_lands_once_a_year_and_a_leap_day_only_in_leap_years()
+    {
+        AgendaItem birthday = Series("FREQ=YEARLY", new DateTime(2026, 10, 7, 0, 0, 0));
+        Assert.AreEqual(
+            3,
+            AgendaRecurrence.Expand(birthday, [], new DateOnly(2026, 1, 1), new DateOnly(2028, 12, 31))
+                .Count(static o => o.Start.Value is { Month: 10, Day: 7 }));
+
+        AgendaItem leap = Series("FREQ=YEARLY", new DateTime(2028, 2, 29, 0, 0, 0));
+        CollectionAssert.AreEqual(
+            new[] { 2028, 2032 },
+            AgendaRecurrence.Expand(leap, [], new DateOnly(2028, 1, 1), new DateOnly(2033, 12, 31))
+                .Select(static o => o.Start.Value.Year).ToArray());
     }
 
     [TestMethod]
