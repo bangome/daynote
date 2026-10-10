@@ -29,6 +29,7 @@ public sealed class WideScreenshotTests
 
     [TestMethod]
     [DataRow("t1-ipad-landscape-light-ko", 1210, 834, false, "ko", "day", false)]
+    [DataRow("t1b-ipad-landscape-dark-ko", 1210, 834, true, "ko", "day", false)]
     [DataRow("t2-ipad-landscape-dark-en", 1210, 834, true, "en", "day", false)]
     [DataRow("t3-ipad-todo-sheet-light-ko", 1210, 834, false, "ko", "capture", true)]
     [DataRow("t4-ipad-note-open-light-ko", 1210, 834, false, "ko", "editor", false)]

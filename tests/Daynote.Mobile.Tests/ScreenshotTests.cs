@@ -53,6 +53,11 @@ public sealed class ScreenshotTests
             shell.GoToPageCommand.Execute(MobilePage.Day);
             Capture(view, $"day-{suffix}");
 
+            // 이 날의 할 일 and its + 할 일, scrolled into view.
+            view.GetVisualDescendants().OfType<Views.DayPage>().Single()
+                .GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddTodoButton").BringIntoView();
+            Capture(view, $"day-todos-{suffix}");
+
             // The files section, scrolled into view under the to-dos.
             ScrollViewer dayScroller = view.GetVisualDescendants().OfType<Views.DayPage>().Single()
                 .GetVisualDescendants().OfType<ScrollViewer>().First();

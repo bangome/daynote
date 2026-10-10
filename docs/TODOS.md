@@ -19,7 +19,7 @@
 | --- | --- |
 | Where a to-do lives | **Its own entity**, not a line of note body. The body goes back to being prose |
 | Relationship to the note | **None, beyond a one-way `source_note_id` used only for navigation.** No references in the text, no round-trip, no markers |
-| Creating one | An **`@` command in the editor**. It reads the line it sits on, creates the entity, and leaves the typed text alone as plain prose |
+| Creating one | **Never from a note's body** (2026-10-10). Notes and to-dos are separate: a to-do is added from the to-do surfaces — the day's 할 일, the 할 일 list, the tablet's day panel, the widgets, the menu bar's quick-capture box — in a form of its own. `@` in a note is an ordinary character. Superseded: an `@` command in the editor (§7) |
 | To-dos and events | **One entity** with a `kind` discriminator, not two. They differ by whether a time range is set |
 | Recurrence | **RRULE**, even where the UI offers three choices. Exceptions as **EXDATE** + **RECURRENCE-ID** overrides |
 | Times | **Wall-clock time plus an IANA zone id**, never a UTC instant. See §6 |
@@ -164,6 +164,29 @@ The model knows the offset is meaningless and the type still carries it. Fix it 
 the split, not after.
 
 ## 7. Creating one from the body: the `@` command
+
+> **Superseded 2026-10-10: to-dos are never created from a note body; notes and to-dos are
+> separate.** No editor reads `@` any more — not the phone's, not the desktop's, not the Windows
+> (WPF) one — and an `@` typed in a note is a character like any other. A to-do is made in the
+> to-do form (the phone's sheet, the desktop's card), opened from:
+>
+> - **Phone / tablet:** "+ 할 일" in the day screen's 이 날의 할 일 (on that day); "+ 할 일" beside
+>   the 할 일 tab's title (on today, in the list whose chip is lit); "+ 할 일 추가" at the foot of
+>   the tablet's day panel (on its day); the widgets' "@ 할 일" / "+" and
+>   `daynote://capture?at=1`, which open the form over today's day screen rather than a note.
+>   "+ 노트" still opens a new note.
+> - **Desktop (Mac / Windows Avalonia):** "+ 할 일" in the day panel (on the selected date) and in
+>   the 할 일 view's header (on today, in the list being looked at). Both open one card with the
+>   phone sheet's fields — 할 일 / 일정, 제목, 날짜, 시간 or start and end, 반복, 내용, 목록 — built on
+>   the same `TodoEntryViewModel`, now in `Daynote.Presentation`.
+> - **The menu bar's quick-capture box** (Mac menu bar, Windows tray) is not a note body and keeps
+>   its `@` reading through `AgendaCaptureViewModel`; a plain line there is still appended to
+>   today's note.
+>
+> Whatever these make has `source_note_id` null. Existing items keep the link they have (no
+> migration), and a row that has one may still show its note's name; nothing creates a new one.
+> `AgendaCapture` / `AgendaPhraseParser` stay for the menu bar, the watch and the form's own
+> composition. The rest of this section is the history of the `@` command.
 
 Typing is the only entry point worth optimising; a day-note app loses if capturing a task means
 leaving the note.
@@ -540,6 +563,13 @@ The order that makes that safe:
          write and anchored the same way; only with a date) and 내용, the item's description, kept
          apart from its 제목. `AgendaRecurrence` now expands a plain `FREQ=MONTHLY` / `FREQ=YEARLY`
          on the anchor's day for this; rules that name their days are still refused.
+   - [x] **2026-10-10: to-dos are never created from a note body; notes and to-dos are separate.**
+         The phone and tablet editor lost the `@` trigger, the "+ 할 일·일정" button, the "이 노트의
+         항목 N" count and sheet and the just-made row; its toolbar is the files row and the
+         paperclip. The sheet opens from the day screen, the 할 일 tab, the tablet panel and the
+         widgets (§7), with no note behind it. The desktop gained the same form as a card from
+         "+ 할 일" in its day panel and 할 일 view. The Windows (WPF) editor's `@` popup and the note
+         workspace's capture half are removed. The menu bar's quick capture is unchanged.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 
