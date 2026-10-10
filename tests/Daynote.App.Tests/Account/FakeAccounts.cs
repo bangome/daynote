@@ -17,15 +17,27 @@ internal sealed class FakeAccounts
     private readonly StubAuth auth;
     private readonly StubIdentity identity;
 
-    internal FakeAccounts(ISyncStore? store = null)
+    /// <param name="withTokens">
+    /// Composes the real token provider, as the apps do, so a 401 is answered by a refresh.
+    /// </param>
+    internal FakeAccounts(ISyncStore? store = null, bool withTokens = false)
     {
         auth = new StubAuth(this);
         identity = new StubIdentity(this);
         Store = store ?? new FakeSyncStore();
         Service = new AccountService(
             auth, identity, new Daynote.Infrastructure.Sync.AesGcmSyncCrypto(), sessions, Store,
-            () => "Test PC");
+            () => "Test PC",
+            tokens: withTokens ? new Daynote.Infrastructure.Sync.SyncTokenProvider(auth, sessions) : null);
     }
+
+    /// <summary>Thrown by every refresh while set: a revoked token (401), a 5xx, or no network.</summary>
+    internal AccountException? RefreshFailure { get; set; }
+
+    /// <summary>Thrown by every billing read while set, as a server refusing the access token would.</summary>
+    internal AccountException? BillingFailure { get; set; }
+
+    internal int RefreshCalls { get; private set; }
 
     internal AccountService Service { get; }
 
@@ -115,6 +127,12 @@ internal sealed class FakeAccounts
             string refreshToken,
             CancellationToken cancellationToken = default)
         {
+            owner.RefreshCalls += 1;
+            if (owner.RefreshFailure is { } refused)
+            {
+                throw refused;
+            }
+
             Throw();
             return ValueTask.FromResult(Session(includeKeys: false));
         }
@@ -190,6 +208,11 @@ internal sealed class FakeAccounts
             string accessToken,
             CancellationToken cancellationToken = default)
         {
+            if (owner.BillingFailure is { } refused)
+            {
+                throw refused;
+            }
+
             Throw();
             return ValueTask.FromResult((owner.Entitlement, owner.Billing));
         }

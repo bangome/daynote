@@ -7,21 +7,6 @@ using Daynote.Core.Sync;
 
 namespace Daynote.Infrastructure.Sync;
 
-/// <summary>
-/// Supplies the bearer token for a request and refreshes it once on a 401.
-/// </summary>
-/// <remarks>
-/// Token lifecycle lives above this client (with the account view model), so the transport does not
-/// have to know about passwords, refresh rotation, or the locked state.
-/// </remarks>
-public interface ISyncTokenProvider
-{
-    ValueTask<string> GetAccessTokenAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>Exchanges the refresh token. Returns false when the user must sign in again.</summary>
-    ValueTask<bool> TryRefreshAsync(CancellationToken cancellationToken = default);
-}
-
 public sealed partial class HttpSyncApiClient : ISyncApiClient
 {
     private static readonly JsonSerializerOptions Json = new()

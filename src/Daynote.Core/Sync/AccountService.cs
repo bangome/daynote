@@ -27,11 +27,16 @@ public sealed partial class AccountService
     private readonly Func<string> deviceName;
     private readonly IAppleIdentityProvider? apple;
     private readonly IProfileHost? profiles;
+    private readonly ISyncTokenProvider? tokens;
 
     /// <param name="profiles">
     /// The per-account stores (docs/PROFILES.md). Null composes a single-root service whose data root
     /// is taken to be the signed-in account's own folder, which is what the pre-profile layout and
     /// the tests that exercise one root are.
+    /// </param>
+    /// <param name="tokens">
+    /// The sync transport's token provider, so a billing call renews an expired access token through
+    /// the same gate as sync rather than racing it. Null sends the stored access token as it is.
     /// </param>
     public AccountService(
         IAuthApiClient auth,
@@ -41,10 +46,12 @@ public sealed partial class AccountService
         ISyncStore store,
         Func<string>? deviceName = null,
         IAppleIdentityProvider? apple = null,
-        IProfileHost? profiles = null)
+        IProfileHost? profiles = null,
+        ISyncTokenProvider? tokens = null)
     {
         this.apple = apple;
         this.profiles = profiles;
+        this.tokens = tokens;
         this.auth = auth ?? throw new ArgumentNullException(nameof(auth));
         this.crypto = crypto ?? throw new ArgumentNullException(nameof(crypto));
         this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -149,6 +156,27 @@ public sealed partial class AccountService
         // No server logout: the tokens died with the account.
         await ForgetLocallyAsync(cancellationToken).ConfigureAwait(false);
         return AccountDeletion.Deleted;
+    }
+
+    /// <summary>
+    /// Ends a session the server has rejected (<see cref="AccountFailure.SessionExpired"/>): the
+    /// stored tokens and cached key go, and nothing else. There is no server logout — the refresh
+    /// token is already dead, and asking would only be another 401.
+    /// </summary>
+    /// <remarks>
+    /// In an account profile the device stays on that account's folder, signed out: its notes stay on
+    /// screen, its outbox and cursor are kept, and signing in again as the same account carries on
+    /// from there (the database keeps its owner, so <see cref="ResumeAsync"/> sees a folder with an
+    /// owner and no session, which is how the next start knows to say the session ended). Without
+    /// profiles it is the ordinary local sign-out.
+    /// </remarks>
+    public async ValueTask EndRejectedSessionAsync(CancellationToken cancellationToken = default)
+    {
+        await sessions.ClearAsync(cancellationToken).ConfigureAwait(false);
+        if (!IsAccountProfile)
+        {
+            await store.SignOutAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async ValueTask ForgetLocallyAsync(CancellationToken cancellationToken)
@@ -345,17 +373,19 @@ public sealed partial class AccountService
     public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> ReadBillingAsync(
         CancellationToken cancellationToken = default)
     {
-        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
-        if (credentials is null)
+        if (!await HoldsSessionAsync(cancellationToken).ConfigureAwait(false))
         {
             return (Entitlement.Unknown, BillingLinks.None);
         }
 
-        using (credentials)
-        {
-            return await auth.GetBillingAsync(credentials.AccessToken, cancellationToken)
-                .ConfigureAwait(false);
-        }
+        return await WithAccessTokenAsync(auth.GetBillingAsync, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<bool> HoldsSessionAsync(CancellationToken cancellationToken)
+    {
+        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+        credentials?.Dispose();
+        return credentials is not null;
     }
 
     /// <summary>
@@ -414,19 +444,53 @@ public sealed partial class AccountService
     public ValueTask<string> CreatePortalSessionAsync(CancellationToken cancellationToken = default) =>
         WithAccessTokenAsync(auth.CreatePortalSessionAsync, cancellationToken);
 
+    /// <summary>
+    /// Makes an authorized call. With a token provider, an expired access token is renewed first and a
+    /// 401 is answered by one refresh and one retry; a refresh the server rejects ends in
+    /// <see cref="AccountFailure.SessionExpired"/>, and one it could not be asked ends in
+    /// <see cref="AccountFailure.Offline"/>, which keeps the session.
+    /// </summary>
     private async ValueTask<T> WithAccessTokenAsync<T>(
         Func<string, CancellationToken, ValueTask<T>> call,
         CancellationToken cancellationToken)
     {
-        SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
-        if (credentials is null)
+        if (tokens is null)
         {
-            throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
+            SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
+            if (credentials is null)
+            {
+                throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
+            }
+
+            using (credentials)
+            {
+                return await call(credentials.AccessToken, cancellationToken).ConfigureAwait(false);
+            }
         }
 
-        using (credentials)
+        try
         {
-            return await call(credentials.AccessToken, cancellationToken).ConfigureAwait(false);
+            string token = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await call(token, cancellationToken).ConfigureAwait(false);
+            }
+            catch (AccountException failure) when (failure.Failure == AccountFailure.InvalidCredentials)
+            {
+                // Retried once only: a second 401 straight after a good refresh is the server's
+                // answer, and another round would turn it into a refresh loop.
+                if (!await tokens.TryRefreshAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    throw new AccountException(AccountFailure.SessionExpired, "The session expired.");
+                }
+
+                token = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+                return await call(token, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (SyncTransportException transport)
+        {
+            throw new AccountException(AccountFailure.Offline, transport.Message);
         }
     }
 

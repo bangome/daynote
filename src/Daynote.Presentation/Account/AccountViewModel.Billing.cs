@@ -73,6 +73,13 @@ public sealed partial class AccountViewModel
         }
     }
 
+    /// <summary>
+    /// The last billing read failed — offline, or a server fault — so what is on screen may be stale
+    /// or, if nothing was ever read, empty. The phone's plans page offers a retry on it.
+    /// </summary>
+    [ObservableProperty]
+    private bool isBillingUnavailable;
+
     /// <summary>Re-reads the billing state. Cheap, and safe to call whenever the panel opens.</summary>
     [RelayCommand]
     private async Task RefreshBillingAsync()
@@ -90,11 +97,18 @@ public sealed partial class AccountViewModel
 
             Entitlement = entitlement;
             Billing = links;
+            IsBillingUnavailable = false;
         }
-        catch (AccountException failure) when (failure.Failure == AccountFailure.Offline)
+        catch (AccountException failure) when (failure.Failure == AccountFailure.SessionExpired)
+        {
+            await EndRejectedSessionAsync().ConfigureAwait(true);
+        }
+        catch (AccountException)
         {
             // Not knowing the billing state is not worth an error banner: sync will report the
-            // truth on its next attempt, and the last known state is still on screen.
+            // truth on its next attempt, and the last known state is still on screen. Callers that
+            // have nothing else to show read IsBillingUnavailable.
+            IsBillingUnavailable = true;
         }
     }
 

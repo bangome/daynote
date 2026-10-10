@@ -31,6 +31,12 @@ public enum SyncOutcome
     SignInRequired,
 
     /// <summary>
+    /// The server rejected the session's refresh token mid-run. The device ends the session, keeping
+    /// its notes, and asks for a sign-in (<see cref="AccountFailure.SessionExpired"/>).
+    /// </summary>
+    SessionExpired,
+
+    /// <summary>
     /// Cloud sync is not paid for. Not an error and not a sign-out: the session is fine, the notes
     /// on this PC are untouched, and the copy already uploaded is kept until there is a
     /// subscription again (docs/CLOUD_SYNC.md §14).
@@ -181,7 +187,7 @@ public sealed partial class SyncEngine
             return tally.ToReport(transport switch
             {
                 { RequiresSubscription: true } => SyncOutcome.SubscriptionRequired,
-                { RequiresSignIn: true } => SyncOutcome.SignInRequired,
+                { RequiresSignIn: true } => SyncOutcome.SessionExpired,
                 _ => SyncOutcome.Offline,
             });
         }

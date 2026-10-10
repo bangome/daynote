@@ -414,6 +414,10 @@ public static class AppStrings
 
     public static string AccountDeletedSessionGone => LocalizationService.Instance[nameof(AccountDeletedSessionGone)];
 
+    public static string AccountSessionEnded => LocalizationService.Instance[nameof(AccountSessionEnded)];
+
+    public static string BillingLoadFailed => LocalizationService.Instance[nameof(BillingLoadFailed)];
+
     public static string AccountAppleFallbackName => LocalizationService.Instance[nameof(AccountAppleFallbackName)];
 
     public static string AccountAppleOnlyNote => LocalizationService.Instance[nameof(AccountAppleOnlyNote)];

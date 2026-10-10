@@ -728,7 +728,8 @@ public sealed class HttpAuthApiClient : IAuthApiClient
 /// <remarks>
 /// A failed refresh deliberately leaves the cached data key alone. Only an explicit sign-out
 /// discards it, so a network outage or an expired session never costs the user local access to
-/// their own notes.
+/// their own notes. Only a 401 from the refresh endpoint reports the session as gone; anything else
+/// is thrown as a <see cref="SyncTransportException"/> for the caller to retry later.
 /// </remarks>
 public sealed class SyncTokenProvider : ISyncTokenProvider
 {
@@ -768,7 +769,7 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
 
         if (!await TryRefreshAsync(cancellationToken).ConfigureAwait(false))
         {
-            throw new AccountException(AccountFailure.InvalidCredentials, "The session expired.");
+            throw new AccountException(AccountFailure.SessionExpired, "The session expired.");
         }
 
         SyncCredentials? renewed = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
@@ -814,15 +815,18 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
                     cancellationToken).ConfigureAwait(false);
                 return true;
             }
-            catch (AccountException failure) when (failure.Failure == AccountFailure.Offline)
+            catch (AccountException failure) when (failure.Failure == AccountFailure.InvalidCredentials)
             {
-                // Offline is not a revoked session. Reporting failure here would push the UI into
-                // "sign in again" every time the network hiccups.
+                // A 401 from the refresh endpoint: the token was revoked or ran out. The one answer
+                // that ends the session.
                 return false;
             }
-            catch (AccountException)
+            catch (AccountException failure)
             {
-                return false;
+                // Offline, a 5xx or a 429 is not a revoked session. Reporting it as one would sign
+                // the user out every time the network or the server hiccups; the token is kept and
+                // the next attempt refreshes it.
+                throw new SyncTransportException("The session could not be renewed right now.", null, failure);
             }
         }
         finally

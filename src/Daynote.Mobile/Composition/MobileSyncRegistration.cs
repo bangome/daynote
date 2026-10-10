@@ -63,7 +63,8 @@ public static class MobileSyncRegistration
             sp.GetRequiredService<ISyncSessionStore>(),
             sp.GetRequiredService<ISyncStore>(),
             apple: platform.AppleIdentity,
-            profiles: sp.GetRequiredService<IProfileHost>()));
+            profiles: sp.GetRequiredService<IProfileHost>(),
+            tokens: sp.GetRequiredService<ISyncTokenProvider>()));
         services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(
             sp.GetRequiredService<SqliteDatabase>(),
             sp.GetRequiredService<IFileAssetStore>()));

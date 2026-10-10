@@ -32,8 +32,12 @@ public sealed partial class AccountViewModel
     {
         AccountNotice.Deleted => AppStrings.AccountDeleted,
         AccountNotice.SessionAlreadyGone => AppStrings.AccountDeletedSessionGone,
+        AccountNotice.SessionEnded => AppStrings.AccountSessionEnded,
         _ => null,
     };
+
+    /// <summary>The server ended the session and the device signed out; the notice says so until a sign-in.</summary>
+    public bool IsSessionEnded => notice == AccountNotice.SessionEnded;
 
     private AccountNotice Notice
     {
@@ -44,6 +48,7 @@ public sealed partial class AccountViewModel
             {
                 notice = value;
                 OnPropertyChanged(nameof(NoticeMessage));
+                OnPropertyChanged(nameof(IsSessionEnded));
             }
         }
     }
@@ -129,5 +134,6 @@ public sealed partial class AccountViewModel
         None,
         Deleted,
         SessionAlreadyGone,
+        SessionEnded,
     }
 }

@@ -147,6 +147,14 @@ public enum AccountFailure
     PurchaseRefused,
 
     ServerError,
+
+    /// <summary>
+    /// The server rejected the refresh token: the session was revoked or ran out, and only a fresh
+    /// sign-in will help. Distinct from <see cref="InvalidCredentials"/>, which also covers an access
+    /// token that is merely stale, because this one ends the session on the device. Never raised for
+    /// being offline or a server fault.
+    /// </summary>
+    SessionExpired,
 }
 
 public sealed class AccountException(AccountFailure failure, string message) : Exception(message)

@@ -75,7 +75,10 @@ public sealed partial class MobileShellViewModel
 
             if (!IsSignedIn)
             {
-                return MobileStrings.Get("MobileAccountSignInSubtitle");
+                // The server ended the session: the card says so, not just "sign in to sync".
+                return Account.IsSessionEnded && Account.NoticeMessage is { } ended
+                    ? ended
+                    : MobileStrings.Get("MobileAccountSignInSubtitle");
             }
 
             string count = MobileCatalog.NoteCount(TotalNoteCount);

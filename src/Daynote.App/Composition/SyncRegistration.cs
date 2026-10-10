@@ -72,7 +72,8 @@ public static class SyncRegistration
             sp.GetRequiredService<ISyncCrypto>(),
             sp.GetRequiredService<ISyncSessionStore>(),
             sp.GetRequiredService<ISyncStore>(),
-            profiles: sp.GetRequiredService<IProfileHost>()));
+            profiles: sp.GetRequiredService<IProfileHost>(),
+            tokens: sp.GetRequiredService<ISyncTokenProvider>()));
         // The attachment bytes, which turn the engine's file phase on (SyncEngine.Files.cs). An
         // engine built without this syncs text only.
         services.AddSingleton<ISyncAssetStore>(sp => new SqliteFileSyncAssetStore(

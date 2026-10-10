@@ -134,6 +134,12 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
                 IsChoosingDeletedNotes = true;
             }
         }
+        else if (resumed.State == ResumeState.SignedOut && accounts.IsAccountProfile && state.IsSignedIn)
+        {
+            // The account's own folder, still owned, with no session: the server ended it
+            // (EndRejectedSessionAsync) and the user has not signed in again since.
+            Notice = AccountNotice.SessionEnded;
+        }
 
         ApplyLastSync(state.LastSyncUtc);
         RefreshStatus(signedIn ? state : state with { UserId = null });
@@ -192,6 +198,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
     {
         Entitlement = Entitlement.Unknown;
         Billing = BillingLinks.None;
+        IsBillingUnavailable = false;
         SignedInEmail = null;
         IsKeyMissing = false;
         IsLocked = false;
@@ -239,6 +246,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         }
 
         isSyncing = true;
+        bool sessionEnded = false;
         var finished = new TaskCompletionSource();
         syncInFlight = finished.Task;
         Status = new SyncStatusView(SyncStatusKind.Syncing);
@@ -249,6 +257,12 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             {
                 // Signed out while the run was on the wire. What it found belongs to the old
                 // session, and the status it would set would contradict the signed-out screen.
+                return true;
+            }
+
+            if (report.Outcome == SyncOutcome.SessionExpired)
+            {
+                sessionEnded = true;
                 return true;
             }
 
@@ -265,6 +279,10 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
             ApplyLastSync(state.LastSyncUtc);
             Status = FromReport(report);
             Synced?.Invoke(this, report);
+        }
+        catch (AccountException failure) when (failure.Failure == AccountFailure.SessionExpired)
+        {
+            sessionEnded = true;
         }
         catch (AccountException failure)
         {
@@ -287,9 +305,49 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         {
             isSyncing = false;
             finished.SetResult();
+            if (sessionEnded)
+            {
+                // After the run has let go of syncInFlight, so nothing here waits on itself.
+                await EndRejectedSessionAsync().ConfigureAwait(true);
+            }
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The server rejected the refresh token — revoked, or run out — so every call from here would be
+    /// a 401. The device signs out at once and says why, rather than showing an account that can do
+    /// nothing. The notes stay where they are (<see cref="AccountService.EndRejectedSessionAsync"/>).
+    /// </summary>
+    /// <remarks>
+    /// Only ever reached on <see cref="AccountFailure.SessionExpired"/> or
+    /// <see cref="SyncOutcome.SessionExpired"/>, both of which mean a 401 from the refresh endpoint;
+    /// being offline or a server fault keeps the session.
+    /// </remarks>
+    public async Task EndRejectedSessionAsync()
+    {
+        if (!IsSignedIn)
+        {
+            return;
+        }
+
+        try
+        {
+            await accounts.EndRejectedSessionAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not (OperationCanceledException or OutOfMemoryException))
+        {
+            // The keystore refused to clear: the screen still has to stop claiming a session that the
+            // server has ended. The next start reads the session again and the server refuses it again.
+            System.Diagnostics.Debug.WriteLine($"Ending a rejected session failed: {exception}");
+        }
+
+        IsChoosingSignOut = false;
+        IsConfirmingRemoveUnsynced = false;
+        ResetToSignedOut();
+        ErrorMessage = null;
+        Notice = AccountNotice.SessionEnded;
     }
 
     [RelayCommand]
@@ -321,6 +379,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         // Offline is a state, not a fault: no message, and the next cycle retries.
         SyncOutcome.Offline => new SyncStatusView(SyncStatusKind.Offline),
         SyncOutcome.SignInRequired => new SyncStatusView(SyncStatusKind.Error),
+        SyncOutcome.SessionExpired => SyncStatusView.Hidden,
         SyncOutcome.SubscriptionRequired => new SyncStatusView(SyncStatusKind.Unpaid),
         // An unreadable record is not a transient hiccup: something is wrong with the key or the data
         // and the user needs to know rather than wonder why a note never arrived.
@@ -362,6 +421,10 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
         {
             await action().ConfigureAwait(true);
         }
+        catch (AccountException failure) when (failure.Failure == AccountFailure.SessionExpired && IsSignedIn)
+        {
+            await EndRejectedSessionAsync().ConfigureAwait(true);
+        }
         catch (AccountException failure)
         {
             ErrorMessage = Describe(failure.Failure);
@@ -391,7 +454,7 @@ public sealed partial class AccountViewModel : ObservableObject, ILanguageAware
 
     private static string Describe(AccountFailure failure) => failure switch
     {
-        AccountFailure.InvalidCredentials => AppStrings.AccountErrorInvalidCredentials,
+        AccountFailure.InvalidCredentials or AccountFailure.SessionExpired => AppStrings.AccountErrorInvalidCredentials,
         // The lock failures were the whole point of asking for a passphrase, so each one says what
         // the user can actually do about it rather than falling through to "try again later".
         AccountFailure.InvalidPassphrase => AppStrings.AccountErrorInvalidPassphrase,

@@ -16,5 +16,6 @@
          here too: that suite targets Windows and cannot run on the macOS machine this one does. -->
     <Compile Include="..\Daynote.App.Tests\Account\FakeAccounts.cs" Link="Account\FakeAccounts.cs" />
     <Compile Include="..\Daynote.App.Tests\Account\FakeSyncStore.cs" Link="Account\FakeSyncStore.cs" />
+    <Compile Include="..\Daynote.App.Tests\Account\SessionExpiryTests.cs" Link="Account\SessionExpiryTests.cs" />
   </ItemGroup>
 </Project>
