@@ -35,6 +35,8 @@ public sealed partial class TodoItemViewModel : ObservableObject
     private readonly DateTime now;
     private readonly Func<AgendaDayRow, Task> onToggle;
     private readonly Func<AgendaDayRow, Task> onJump;
+    private readonly Func<AgendaDayRow, Task>? onEdit;
+    private readonly Func<AgendaDayRow, Task>? onDelete;
 
     public TodoItemViewModel(
         AgendaDayRow row,
@@ -42,7 +44,9 @@ public sealed partial class TodoItemViewModel : ObservableObject
         string listName,
         DateTime now,
         Func<AgendaDayRow, Task> onToggle,
-        Func<AgendaDayRow, Task> onJump)
+        Func<AgendaDayRow, Task> onJump,
+        Func<AgendaDayRow, Task>? onEdit = null,
+        Func<AgendaDayRow, Task>? onDelete = null)
     {
         this.row = row;
         this.scope = scope;
@@ -50,6 +54,8 @@ public sealed partial class TodoItemViewModel : ObservableObject
         this.now = now;
         this.onToggle = onToggle ?? throw new ArgumentNullException(nameof(onToggle));
         this.onJump = onJump ?? throw new ArgumentNullException(nameof(onJump));
+        this.onEdit = onEdit;
+        this.onDelete = onDelete;
     }
 
     public bool Checked => row.IsDone;
@@ -117,4 +123,12 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     [RelayCommand]
     private Task Jump() => onJump(row);
+
+    /// <summary>편집, from a row's menu. A repeating one asks first which of its days is meant.</summary>
+    [RelayCommand]
+    private Task Edit() => onEdit?.Invoke(row) ?? Task.CompletedTask;
+
+    /// <summary>삭제, from a row's menu or its Delete key. A repeating one asks first.</summary>
+    [RelayCommand]
+    private Task Delete() => onDelete?.Invoke(row) ?? Task.CompletedTask;
 }

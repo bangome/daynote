@@ -25,18 +25,24 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
     private readonly IClock clock;
     private readonly Func<AgendaDayRow, Task> onToggle;
     private readonly Func<AgendaDayRow, Task> onJump;
+    private readonly Func<AgendaDayRow, Task>? onEdit;
+    private readonly Func<AgendaDayRow, Task>? onDelete;
     private IReadOnlyDictionary<Guid, string> listNames = new Dictionary<Guid, string>();
 
     public TodoPanelViewModel(
         IAgendaRepository agenda,
         IClock clock,
         Func<AgendaDayRow, Task> onToggle,
-        Func<AgendaDayRow, Task> onJump)
+        Func<AgendaDayRow, Task> onJump,
+        Func<AgendaDayRow, Task>? onEdit = null,
+        Func<AgendaDayRow, Task>? onDelete = null)
     {
         this.agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
         this.onToggle = onToggle ?? throw new ArgumentNullException(nameof(onToggle));
         this.onJump = onJump ?? throw new ArgumentNullException(nameof(onJump));
+        this.onEdit = onEdit;
+        this.onDelete = onDelete;
         LocalizationService.Instance.Observe(this);
     }
 
@@ -217,5 +223,5 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
 
     /// <summary>Builds one row, in whichever scope the caller is showing.</summary>
     public TodoItemViewModel Row(AgendaDayRow row, DateTime now, TodoRowScope scope = TodoRowScope.AllDates) =>
-        new(row, scope, listNames.GetValueOrDefault(row.Item.ListId, string.Empty), now, onToggle, onJump);
+        new(row, scope, listNames.GetValueOrDefault(row.Item.ListId, string.Empty), now, onToggle, onJump, onEdit, onDelete);
 }

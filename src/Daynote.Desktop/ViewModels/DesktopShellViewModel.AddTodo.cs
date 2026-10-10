@@ -46,12 +46,21 @@ public sealed partial class DesktopShellViewModel
     [RelayCommand]
     private void CloseAddTodo() => IsAddTodoOpen = false;
 
-    /// <summary>추가: writes the item and closes the card. The day panel and the list show it arriving.</summary>
+    /// <summary>
+    /// 추가: writes the item and closes the card. The day panel and the list show it arriving. In
+    /// its editing face the button is 저장 and writes over the item (DesktopShellViewModel.TodoActions).
+    /// </summary>
     [RelayCommand]
     private async Task CommitAddTodo()
     {
         if (!IsAddTodoOpen || !TodoEntry.CanAdd)
         {
+            return;
+        }
+
+        if (TodoEntry.IsEditing)
+        {
+            await SaveEditedTodoAsync().ConfigureAwait(true);
             return;
         }
 

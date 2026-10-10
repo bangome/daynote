@@ -495,6 +495,15 @@
                 <DataTemplate x:Key="TodoListRow" x:DataType="pvm:TodoItemViewModel">
                   <Border Classes="todorow" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
                     <Button Classes="row" CornerRadius="0" Padding="18,14" Command="{Binding JumpCommand}">
+                      <Button.KeyBindings>
+                        <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
+                      </Button.KeyBindings>
+                      <Button.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowEdit]}" Command="{Binding EditCommand}" />
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
+                        </ContextMenu>
+                      </Button.ContextMenu>
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <views:DeskTodoCheck Grid.Column="0" Classes="large" Margin="0,0,14,0"
                                              IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
@@ -663,6 +672,15 @@
                     <Panel Classes="todorow">
                       <Border Classes="rowflash" />
                       <Button Classes="row rowcontent" Padding="10,9" Command="{Binding JumpCommand}">
+                        <Button.KeyBindings>
+                          <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
+                        </Button.KeyBindings>
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowEdit]}" Command="{Binding EditCommand}" />
+                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
+                          </ContextMenu>
+                        </Button.ContextMenu>
                         <Grid ColumnDefinitions="Auto,*">
                           <views:DeskTodoCheck Grid.Column="0" Margin="0,1,11,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
                           <StackPanel Grid.Column="1">
@@ -742,6 +760,54 @@
     </Border>
 
     <!--
+      A repeating to-do's question, before a delete or an edit from its row's menu: this day only,
+      or every repeat. Over the add-to-do card, which an edit opens after it.
+    -->
+    <Border x:Name="RepeatChoiceScrim" Grid.ColumnSpan="2" Classes="scrim" ZIndex="23" IsVisible="False"
+            motion:Popover.IsOpen="{Binding IsRepeatChoiceOpen}" PointerPressed="OnRepeatChoiceScrimPressed">
+      <Border Classes="modal" Width="340" Margin="24" Padding="22,18" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="h1" TextTrimming="CharacterEllipsis" Text="{Binding RepeatChoiceTitle}" />
+          <TextBlock Classes="muted" FontSize="13" Margin="0,0,0,6" Text="{Binding Strings[TodoRepeatQuestion]}" />
+          <StackPanel Spacing="8" IsVisible="{Binding IsRepeatChoiceDelete}">
+            <Button x:Name="DeleteThisOccurrence" Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Padding="12,9" FontSize="13" Command="{Binding ChooseThisOccurrenceCommand}">
+              <TextBlock Foreground="{DynamicResource Daynote.Product.Brush.Danger}" Text="{Binding Strings[TodoRepeatDeleteThis]}" />
+            </Button>
+            <Button x:Name="DeleteEveryRepeat" Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Padding="12,9" FontSize="13" Command="{Binding ChooseEveryRepeatCommand}">
+              <TextBlock Foreground="{DynamicResource Daynote.Product.Brush.Danger}" Text="{Binding Strings[TodoRepeatDeleteAll]}" />
+            </Button>
+          </StackPanel>
+          <StackPanel Spacing="8" IsVisible="{Binding !IsRepeatChoiceDelete}">
+            <Button x:Name="EditThisOccurrence" Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Padding="12,9" FontSize="13" Command="{Binding ChooseThisOccurrenceCommand}"
+                    Content="{Binding Strings[TodoRepeatEditThis]}" />
+            <Button x:Name="EditEveryRepeat" Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Padding="12,9" FontSize="13" Command="{Binding ChooseEveryRepeatCommand}"
+                    Content="{Binding Strings[TodoRepeatEditAll]}" />
+          </StackPanel>
+          <Button Classes="quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12,9" FontSize="13"
+                  Margin="0,4,0,0" Command="{Binding CloseRepeatChoiceCommand}" Content="{Binding Strings[TodoEntryCancel]}" />
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- 삭제됨 · 실행 취소: four seconds after a to-do is deleted, at the foot of the window. -->
+    <Border x:Name="UndoNotice" Grid.ColumnSpan="2" ZIndex="21" IsVisible="False" motion:Popover.IsOpen="{Binding IsUndoShown}"
+            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,24" Padding="16,0,6,0" Height="44"
+            CornerRadius="12" Background="{DynamicResource Daynote.Product.Brush.Text}" BoxShadow="{DynamicResource Daynote.Desk.Shadow.Pop}">
+      <StackPanel Orientation="Horizontal" Spacing="14">
+        <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Daynote.Product.Brush.Panel}"
+                   Text="{Binding Strings[TodoDeleted]}" />
+        <Button x:Name="UndoDeleteButton" Theme="{StaticResource Daynote.Bare}" Padding="10,6" VerticalAlignment="Center"
+                Command="{Binding UndoDeleteCommand}">
+          <TextBlock FontSize="13" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.Sun}" Text="{Binding Strings[TodoUndo]}" />
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <!--
       Add a to-do (the phone's to-do sheet, as a card): 할 일 / 일정, 제목, 날짜, 시간 or start and end,
       반복, 내용 and 목록, over the window. Opened from + 할 일 in the day panel and the 할 일 view; a
       note's body never makes a to-do. Each picker opens under its own row, one at a time.
@@ -752,7 +818,10 @@
               VerticalAlignment="Center" HorizontalAlignment="Center">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <TextBlock Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoAddTitle]}" />
+            <TextBlock Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoAddTitle]}"
+                       IsVisible="{Binding !TodoEntry.IsEditing}" />
+            <TextBlock x:Name="EditTodoHeading" Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoEditTitle]}"
+                       IsVisible="{Binding TodoEntry.IsEditing}" />
             <Button Grid.Column="1" Classes="ghost small" Command="{Binding CloseAddTodoCommand}"
                     AutomationProperties.Name="{Binding Strings[TodoEntryCancel]}">
               <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Close}" />
@@ -772,8 +841,12 @@
             <Button Grid.Column="1" Classes="quiet" Margin="0,0,8,0" Padding="16,8" FontSize="13"
                     Command="{Binding CloseAddTodoCommand}" Content="{Binding Strings[TodoEntryCancel]}" />
             <Button Grid.Column="2" x:Name="AddTodoCommit" Classes="accent" Padding="20,8"
-                    IsEnabled="{Binding TodoEntry.CanAdd}" Command="{Binding CommitAddTodoCommand}"
-                    Content="{Binding Strings[TodoEntryAdd]}" />
+                    IsEnabled="{Binding TodoEntry.CanAdd}" Command="{Binding CommitAddTodoCommand}">
+              <Panel>
+                <TextBlock Text="{Binding Strings[TodoEntryAdd]}" IsVisible="{Binding !TodoEntry.IsEditing}" />
+                <TextBlock Text="{Binding Strings[TodoEditSave]}" IsVisible="{Binding TodoEntry.IsEditing}" />
+              </Panel>
+            </Button>
           </Grid>
 
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">

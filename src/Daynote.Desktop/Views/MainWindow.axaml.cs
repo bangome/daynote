@@ -141,7 +141,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Escape closes whatever is on top: the palette, then the add-to-do card, then the checkout, then
+    /// Escape closes whatever is on top: the palette, then the repeat question, then the add-to-do card, then the checkout, then
     /// the account card, then settings — the order the design checks them in. The palette's own query box handles it first when focused.
     /// </summary>
     private void DismissOverlayOnEscape(KeyEventArgs e)
@@ -154,6 +154,10 @@ public partial class MainWindow : Window
         if (shell.IsPaletteOpen)
         {
             shell.ClosePaletteCommand.Execute(null);
+        }
+        else if (shell.IsRepeatChoiceOpen)
+        {
+            shell.CloseRepeatChoiceCommand.Execute(null);
         }
         else if (shell.IsAddTodoOpen)
         {

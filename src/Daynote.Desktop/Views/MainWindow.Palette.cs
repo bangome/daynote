@@ -222,4 +222,14 @@ public partial class MainWindow
             e.Handled = true;
         }
     }
+
+    /// <summary>A click beside the repeat question is its 취소.</summary>
+    private void OnRepeatChoiceScrimPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (ReferenceEquals(e.Source, sender) && _shell is { } shell)
+        {
+            shell.CloseRepeatChoiceCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 }
