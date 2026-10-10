@@ -1,15 +1,17 @@
 import Foundation
+import StoreKit
+import UIKit
 import WidgetKit
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
 
-// The .NET app's way into two Swift-only frameworks (docs/APPLE_EXTENSIONS.md §6).
+// The .NET app's way into three Swift-only APIs (docs/APPLE_EXTENSIONS.md §6).
 //
 // WidgetKit's WidgetCenter and ActivityKit have no Objective-C surface, so .NET for iOS has no
-// binding for either. This framework is linked into the app and exports plain C functions, which
-// the app calls with [DllImport("__Internal")]. Everything else the app needs — the App Group
-// folder, WatchConnectivity — it reaches through its own bindings.
+// binding for either; nor has StoreKit 2's subscription sheet. This framework is linked into the
+// app and exports plain C functions, which the app calls with [DllImport("__Internal")]. Everything
+// else the app needs — the App Group folder, WatchConnectivity — it reaches through its own bindings.
 
 /// Asks WidgetKit to redraw every Daynote widget and control from the snapshot just written.
 @_cdecl("daynote_glance_reload")
@@ -32,6 +34,23 @@ public func daynoteGlanceSyncActivity() {
     guard #available(iOS 16.2, *) else { return }
     Task { await EventActivityDriver.sync(now: Date()) }
     #endif
+}
+
+/// Shows the App Store's own sheet for managing this app's subscriptions, over the app.
+///
+/// Unlike the account web page, the sheet lists a TestFlight or sandbox subscription too, and it
+/// lets an upgrade, a downgrade or a cancellation happen without leaving the app. Returns 0 when
+/// there is no active window scene to show it in, so the caller can open the web page instead.
+@_cdecl("daynote_store_manage_subscriptions")
+public func daynoteStoreManageSubscriptions() -> Int32 {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first else {
+        return 0
+    }
+    Task { @MainActor in
+        try? await AppStore.showManageSubscriptions(in: scene)
+    }
+    return 1
 }
 
 #if canImport(ActivityKit)

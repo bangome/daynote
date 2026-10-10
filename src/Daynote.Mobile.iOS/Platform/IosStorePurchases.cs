@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia.Threading;
 using Daynote.Mobile.Platform;
 using Foundation;
@@ -225,11 +226,35 @@ public sealed class IosStorePurchases : IStorePurchases
         }
     }
 
-    public void OpenSubscriptionManagement()
+    /// <summary>
+    /// StoreKit 2's sheet over the app, through DaynoteBridge: it lists a TestFlight or sandbox
+    /// subscription as well, which the web page does not. The web page when the sheet cannot show.
+    /// </summary>
+    public unsafe void OpenSubscriptionManagement()
     {
+        if (ManageBridge.Show != 0 && ((delegate* unmanaged<int>)ManageBridge.Show)() != 0)
+        {
+            return;
+        }
+
         if (NSUrl.FromString(ManageUrl) is { } url)
         {
             UIApplication.SharedApplication.OpenUrl(url, new UIApplicationOpenUrlOptions(), null);
+        }
+    }
+
+    /// <summary>The bridge's sheet export, found once; zero when the framework is not in the bundle.</summary>
+    private static class ManageBridge
+    {
+        internal static readonly nint Show;
+
+        static ManageBridge()
+        {
+            string path = Path.Combine(NSBundle.MainBundle.PrivateFrameworksPath ?? string.Empty, "DaynoteBridge.framework", "DaynoteBridge");
+            if (NativeLibrary.TryLoad(path, out nint library))
+            {
+                NativeLibrary.TryGetExport(library, "daynote_store_manage_subscriptions", out Show);
+            }
         }
     }
 
