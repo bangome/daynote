@@ -5,16 +5,16 @@ using Daynote.Core.Agenda;
 namespace Daynote.App.Notes;
 
 /// <summary>
-/// The <c>@</c> popup, as the editor binds to it (docs/TODOS.md §7,
+/// The <c>@</c> readback of the menu bar's quick-capture box (docs/TODOS.md §7,
 /// docs/design-renewal/Daynote B Tasks - Events 01 - Command).
 /// </summary>
 /// <remarks>
 /// A thin skin over <see cref="AgendaCapture"/> and <see cref="AgendaReadback"/>: everything that
-/// decides anything is in those two, and what is here is only what a view can bind to. The phone's
-/// keyboard bar will bind to the same thing at <see cref="ReadbackWidth.Compact"/>.
+/// decides anything is in those two, and what is here is only what a view can bind to. No note
+/// editor binds to it: a note's body never makes a to-do (docs/TODOS.md, 2026-10-10).
 /// <para>
 /// It is told where the caret is rather than watching the text itself, because only the view knows
-/// that — WPF's caret moves for reasons no view model can see.
+/// that.
 /// </para>
 /// </remarks>
 public sealed partial class AgendaCaptureViewModel(ReadbackWidth width = ReadbackWidth.Full)

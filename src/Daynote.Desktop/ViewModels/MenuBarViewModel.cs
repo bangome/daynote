@@ -27,10 +27,10 @@ public enum MenuBarAppendResult
 /// <remarks>
 /// One view model for both shells: the date, a capture box, the next event and today's to-dos.
 /// <para>
-/// <b>The box is the editor's <c>@</c> command, not a second parser.</b> Typing an <c>@</c> reads
-/// back through the same <see cref="AgendaCaptureViewModel"/> the note editor uses, so a phrase
-/// cannot mean one thing in a note and another here. Without one, Enter adds the line to today's
-/// note — the watch's "노트에 한 줄", by the same rule.
+/// <b>The box is a quick-capture box, not a note body.</b> Typing an <c>@</c> reads back through
+/// <see cref="AgendaCaptureViewModel"/>, the one <c>@</c> reader left: a note's body never makes a
+/// to-do (docs/TODOS.md, 2026-10-10). Without one, Enter adds the line to today's note — the
+/// watch's "노트에 한 줄", by the same rule.
 /// </para>
 /// <para>
 /// <b>It stays open after Enter.</b> M9: what was made has to be seen arriving, so a to-do for

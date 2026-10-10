@@ -118,7 +118,6 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
     private void OnBodyTextChanged(object sender, TextChangedEventArgs e)
     {
         RebuildHighlight(BodyBox.Text);
-        RefreshCapture();
     }
 
     private void RebuildHighlight(string text)

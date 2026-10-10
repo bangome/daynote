@@ -753,7 +753,6 @@ internal static class KoreanStrings
         ["AgendaReadbackEveningHint"] = "H'시'",
 
         // The @ popup itself (docs/design-renewal/… 01 - Command).
-        ["AgendaCaptureTitleLabel"] = "제목",
         ["AgendaCaptureTask"] = "할 일",
         ["AgendaCaptureEvent"] = "일정",
         ["AgendaCaptureKeyHints"] = "Enter 만들기 · Tab 종류 전환 · Esc 취소",
@@ -793,7 +792,6 @@ internal static class KoreanStrings
 
         // The built-in to-do list stores no name, so that it reads in whichever language
         // the app is in. A rename writes a real one and it stops being translated.
-        ["AgendaCaptureCreate"] = "만들기",
         ["AgendaListDefaultName"] = "내 할 일",
 
         ["AgendaListNew"] = "+ 새 리스트",

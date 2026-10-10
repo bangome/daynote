@@ -104,10 +104,7 @@ public static class MobileServiceRegistration
             sp.GetRequiredService<DeleteNote>(),
             sp.GetRequiredService<Func<NoteId>>(),
             toggleFavorite: sp.GetRequiredService<ToggleNoteFavorite>(),
-            setTags: sp.GetRequiredService<SetNoteTags>(),
-            // Without this the @ bar would read a phrase back and then make nothing.
-            agenda: sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>(),
-            captureWidth: ReadbackWidth.Compact));
+            setTags: sp.GetRequiredService<SetNoteTags>()));
         services.AddSingleton(sp => new NoteWorkspaceViewModel(sp.GetRequiredService<NoteWorkspaceDependencies>()));
 
         services.AddSingleton<IThemeApplier>(_ => new MobileThemeApplier(application));

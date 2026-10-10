@@ -876,16 +876,12 @@ public static class AppStrings
     /// <summary>What to type for tonight instead: Korean counts to 24, English says pm.</summary>
     public static string AgendaReadbackEveningHint => LocalizationService.Instance[nameof(AgendaReadbackEveningHint)];
 
-    public static string AgendaCaptureTitleLabel => LocalizationService.Instance[nameof(AgendaCaptureTitleLabel)];
     public static string AgendaCaptureTask => LocalizationService.Instance[nameof(AgendaCaptureTask)];
     public static string AgendaCaptureEvent => LocalizationService.Instance[nameof(AgendaCaptureEvent)];
     /// <summary>The footer under the two readback lines. Names real keys.</summary>
     public static string AgendaCaptureKeyHints => LocalizationService.Instance[nameof(AgendaCaptureKeyHints)];
 
     /// <summary>What the built-in list is called on screen; it stores no name of its own.</summary>
-    /// <summary>The phone bar's button. The desktop popup says the same thing with a ↵ glyph.</summary>
-    public static string AgendaCaptureCreate => LocalizationService.Instance[nameof(AgendaCaptureCreate)];
-
     public static string AgendaListDefaultName => LocalizationService.Instance[nameof(AgendaListDefaultName)];
 
     public static string AgendaListNew => LocalizationService.Instance[nameof(AgendaListNew)];

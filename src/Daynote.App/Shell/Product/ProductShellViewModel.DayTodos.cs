@@ -14,8 +14,7 @@ namespace Daynote.App.Shell.Product;
 /// </summary>
 /// <remarks>
 /// Its own file because the panel stopped being a filter over the 할 일 tab's rows and became a
-/// projection out of the to-do store, which is a concern of its own — the same reason the @
-/// command's editor half lives in <c>EditorCardView.Capture.cs</c>.
+/// projection out of the to-do store, which is a concern of its own.
 /// </remarks>
 public sealed partial class ProductShellViewModel
 {

@@ -41,9 +41,7 @@ public sealed class NoteWorkspaceDependencies
         IAutosaveScheduler? scheduler = null,
         TimeSpan? debounce = null,
         ToggleNoteFavorite? toggleFavorite = null,
-        SetNoteTags? setTags = null,
-        Daynote.Core.Agenda.IAgendaRepository? agenda = null,
-        ReadbackWidth captureWidth = ReadbackWidth.Full)
+        SetNoteTags? setTags = null)
     {
         Repository = repository ?? throw new ArgumentNullException(nameof(repository));
         GetDayWorkspace = getDayWorkspace ?? throw new ArgumentNullException(nameof(getDayWorkspace));
@@ -55,8 +53,6 @@ public sealed class NoteWorkspaceDependencies
         Debounce = debounce;
         ToggleFavorite = toggleFavorite;
         SetTags = setTags;
-        Agenda = agenda;
-        CaptureWidth = captureWidth;
     }
 
     public INoteRepository Repository { get; }
@@ -80,19 +76,6 @@ public sealed class NoteWorkspaceDependencies
 
     /// <summary>Tag replace-set use case (redesign); null in fixtures that do not exercise tags.</summary>
     public SetNoteTags? SetTags { get; }
-
-    /// <summary>
-    /// Where the @ command writes what it makes (docs/TODOS.md §7). Null in fixtures that do not
-    /// exercise capture, and in any build that has not wired the store up — the popup then reads
-    /// the phrase back and makes nothing, which is the honest behaviour for a half-wired app.
-    /// </summary>
-    public Daynote.Core.Agenda.IAgendaRepository? Agenda { get; }
-
-    /// <summary>
-    /// How much room the @ readback has. The phone's bar sits in the keyboard accessory slot and
-    /// says the same readings in fewer characters; the desktop popup has a card to itself.
-    /// </summary>
-    public ReadbackWidth CaptureWidth { get; }
 }
 
 /// <summary>
@@ -103,7 +86,6 @@ public sealed class NoteWorkspaceDependencies
 public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly NoteWorkspaceDependencies _dependencies;
-    private readonly Daynote.Core.Agenda.IAgendaRepository? agenda;
     private readonly AutosaveCoordinator _autosave;
     private readonly System.Threading.SynchronizationContext? _sync;
     private bool _suppressEditorSync;
@@ -114,7 +96,6 @@ public sealed partial class NoteWorkspaceViewModel : ObservableObject, IAsyncDis
     public NoteWorkspaceViewModel(NoteWorkspaceDependencies dependencies)
     {
         _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
-        agenda = dependencies.Agenda;
         _autosave = new AutosaveCoordinator(dependencies.Repository, dependencies.Scheduler, dependencies.Debounce);
         _autosave.RecoverableError += OnRecoverableError;
         _autosave.Saved += OnAutosaved;

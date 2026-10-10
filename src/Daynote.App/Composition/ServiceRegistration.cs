@@ -101,8 +101,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<DeleteNote>(),
             sp.GetRequiredService<Func<NoteId>>(),
             toggleFavorite: sp.GetRequiredService<ToggleNoteFavorite>(),
-            setTags: sp.GetRequiredService<SetNoteTags>(),
-            agenda: sp.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>()));
+            setTags: sp.GetRequiredService<SetNoteTags>()));
         services.AddSingleton(sp => new NoteWorkspaceViewModel(sp.GetRequiredService<NoteWorkspaceDependencies>()));
         services.AddSingleton(sp => new MainWindowViewModel(
             sp.GetRequiredService<NoteWorkspaceViewModel>(),

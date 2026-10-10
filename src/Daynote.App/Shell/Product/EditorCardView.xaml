@@ -227,24 +227,8 @@
                          AcceptsTab="True" SpellCheck.IsEnabled="False"
                          VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
                          Text="{Binding Notes.EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         TextChanged="OnBodyTextChanged" SelectionChanged="OnBodySelectionChanged"
-                         PreviewKeyDown="OnBodyPreviewKeyDown"
+                         TextChanged="OnBodyTextChanged"
                          AutomationProperties.Name="{loc:Tr MarkdownEditor}" />
-
-                <!--
-                  The @ command's popup (docs/TODOS.md §7). Placed against the caret rather than
-                  the editor, and StaysOpen so it never steals focus: the user has to keep typing
-                  into the box underneath for the readback to mean anything. The vertical offset
-                  is set in code from the caret rectangle, which is also what flips it above the
-                  line when the window has no room below.
-                -->
-                <Popup x:Name="CapturePopup" PlacementTarget="{Binding ElementName=BodyBox}"
-                       Placement="RelativePoint" StaysOpen="True" AllowsTransparency="True"
-                       PopupAnimation="None" Focusable="False"
-                       DataContext="{Binding Notes.Capture}"
-                       IsOpen="{Binding IsOpen, Mode=OneWay}">
-                    <product:AgendaCapturePopupView Margin="8" />
-                </Popup>
             </Grid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="48,10,48,14">
