@@ -294,6 +294,7 @@ internal static class EnglishStrings
         ["DeskFileDelete"] = "Delete",
         ["DeskDayTodoTitle"] = "To-dos for this day",
         ["DeskDayTodoEmptySuffix"] = " to add one to this day.",
+        ["DeskDayTodoNone"] = "No to-dos",
         ["DeskFilesAdd"] = "+ Add",
         ["DeskFilesEmpty"] = "No files kept for this day.",
         ["DeskPalettePlaceholder"] = "Search notes, files and dates",

@@ -283,6 +283,7 @@ internal static class KoreanStrings
         ["DeskFileDelete"] = "삭제",
         ["DeskDayTodoTitle"] = "이 날의 할 일",
         ["DeskDayTodoEmptySuffix"] = " 로 추가하세요.",
+        ["DeskDayTodoNone"] = "할 일이 없습니다",
         ["DeskFilesAdd"] = "+ 추가",
         ["DeskFilesEmpty"] = "보관된 파일이 없습니다.",
         ["DeskPalettePlaceholder"] = "노트, 파일, 날짜를 검색하세요",

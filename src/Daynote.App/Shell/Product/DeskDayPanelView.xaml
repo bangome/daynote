@@ -117,14 +117,9 @@
                     </ItemsControl>
                 </Expander>
 
-                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" Margin="20,6,20,10"
-                           Visibility="{Binding IsDayTodoEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}">
-                    <Run Text="{loc:Tr TodoEmptyPrefix}" /><InlineUIContainer BaselineAlignment="Center"><Border
-                        Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="4" Padding="5,1" Margin="0,2"><TextBlock
-                        Style="{DynamicResource Daynote.Desk.Text.Mono}" FontSize="11.5"
-                        Foreground="{DynamicResource Daynote.Product.Brush.Text2}" Text="{loc:Tr TodoEmptyCode}" /></Border></InlineUIContainer><Run
-                        Text="{loc:Tr DeskDayTodoEmptySuffix}" />
-                </TextBlock>
+                <!-- This app has no + 할 일 button, so the empty state names none. -->
+                <TextBlock Style="{DynamicResource Daynote.Desk.Text.Empty}" Margin="20,6,20,10" Text="{loc:Tr DeskDayTodoNone}"
+                           Visibility="{Binding IsDayTodoEmpty, Converter={StaticResource Daynote.Convert.BoolToVisibility}}" />
                 </StackPanel>
             </ScrollViewer>
 

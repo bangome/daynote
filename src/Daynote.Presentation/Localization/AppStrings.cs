@@ -268,6 +268,7 @@ public static class AppStrings
     public static string DeskFileDelete => LocalizationService.Instance[nameof(DeskFileDelete)];
     public static string DeskDayTodoTitle => LocalizationService.Instance[nameof(DeskDayTodoTitle)];
     public static string DeskDayTodoEmptySuffix => LocalizationService.Instance[nameof(DeskDayTodoEmptySuffix)];
+    public static string DeskDayTodoNone => LocalizationService.Instance[nameof(DeskDayTodoNone)];
     public static string DeskFilesAdd => LocalizationService.Instance[nameof(DeskFilesAdd)];
     public static string DeskFilesEmpty => LocalizationService.Instance[nameof(DeskFilesEmpty)];
     public static string DeskPalettePlaceholder => LocalizationService.Instance[nameof(DeskPalettePlaceholder)];
