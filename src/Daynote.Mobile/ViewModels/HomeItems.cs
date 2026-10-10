@@ -105,9 +105,28 @@ public enum TodoGroupKind
 /// row now and often has no note behind it at all, so what identifies it is the list it is in —
 /// which is also what the design labels a row with (§04, 4c).
 /// </remarks>
-public sealed class TodoRowViewModel(TodoItemViewModel item, AgendaDayRow row)
+public sealed class TodoRowViewModel(
+    TodoItemViewModel item,
+    AgendaDayRow row,
+    Func<AgendaDayRow, Task>? onEdit = null,
+    Func<AgendaDayRow, Task>? onDelete = null,
+    Func<AgendaDayRow, Task>? onOpen = null)
 {
     public TodoItemViewModel Item { get; } = item;
+
+    /// <summary>The row's 편집, from its swipe (Views.SwipeRow).</summary>
+    public IAsyncRelayCommand EditCommand { get; } = new AsyncRelayCommand(() => onEdit?.Invoke(row) ?? Task.CompletedTask);
+
+    /// <summary>The row's 삭제. A repeating one asks first which of its days to take.</summary>
+    public IAsyncRelayCommand DeleteCommand { get; } = new AsyncRelayCommand(() => onDelete?.Invoke(row) ?? Task.CompletedTask);
+
+    /// <summary>
+    /// A tap on the row in a day's list: the note it was captured from, or - with no note, which
+    /// is every to-do made since they were separated from notes - the to-do itself, in the sheet.
+    /// Jumping to the day it is already on would do nothing at all.
+    /// </summary>
+    public IAsyncRelayCommand OpenCommand { get; } = new AsyncRelayCommand(() =>
+        (row.Item.SourceNoteId is null ? onEdit : onOpen)?.Invoke(row) ?? Task.CompletedTask);
 
     public string NoteCaption { get; } = Caption(item, row);
 

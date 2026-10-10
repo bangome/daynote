@@ -55,7 +55,10 @@ public sealed partial class MobileShellViewModel
     [RelayCommand]
     private void CloseTodoSheet() => IsTodoSheetOpen = false;
 
-    /// <summary>추가: writes the item and closes the sheet. The lists it lands in show it arriving.</summary>
+    /// <summary>
+    /// 추가: writes the item and closes the sheet. The lists it lands in show it arriving. In its
+    /// editing face the button is 저장 and writes over the item it was opened on.
+    /// </summary>
     [RelayCommand]
     private async Task CommitTodoSheet()
     {
@@ -67,6 +70,12 @@ public sealed partial class MobileShellViewModel
         ClockSnapshot snapshot = _clock.Read();
         AgendaItem made = Entry.Compose(Guid.NewGuid(), snapshot.UtcInstant);
         IsTodoSheetOpen = false;
+
+        if (Entry.IsEditing)
+        {
+            await SaveEditedTodoAsync(made).ConfigureAwait(true);
+            return;
+        }
 
         await _agenda.SaveAsync(made).ConfigureAwait(true);
 

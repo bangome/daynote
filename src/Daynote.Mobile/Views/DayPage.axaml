@@ -200,21 +200,24 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TodoRowViewModel">
-              <Panel Classes="todorow">
-                <Border Classes="rowflash" />
-                <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44">
-                  <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
-                  <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
-                          Command="{Binding Item.JumpCommand}">
-                    <Panel HorizontalAlignment="Left">
-                      <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
-                      <Border Classes="strike" />
-                    </Panel>
-                  </Button>
-                  <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
-                             VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
-                </Grid>
-              </Panel>
+              <views:SwipeRow EditCommand="{Binding EditCommand}" DeleteCommand="{Binding DeleteCommand}"
+                AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
+                <Panel Classes="todorow">
+                  <Border Classes="rowflash" />
+                  <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44">
+                    <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
+                    <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
+                            Command="{Binding OpenCommand}">
+                      <Panel HorizontalAlignment="Left">
+                        <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
+                        <Border Classes="strike" />
+                      </Panel>
+                    </Button>
+                    <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
+                               VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
+                  </Grid>
+                </Panel>
+              </views:SwipeRow>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

@@ -150,7 +150,7 @@ public sealed partial class MobileShellViewModel
         IReadOnlyList<AgendaItem> items = Todo.All;
 
         TodoRowViewModel Row(AgendaDayRow row) =>
-            new(Todo.Row(row, now.DateTime), row);
+            new(Todo.Row(row, now.DateTime), row, EditTodoAsync, DeleteTodoAsync, JumpToTodoAsync);
 
         // The panel has already decided what is owed and which list the chips are filtering to;
         // projecting it again here is how the chip's number and the rows under it drift apart.

@@ -432,6 +432,10 @@
         <DockPanel Margin="16,10,16,0">
           <Border DockPanel.Dock="Top" Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,12" />
 
+          <!-- Opened from a row's 편집: the same sheet, filled in, saving over the item. -->
+          <TextBlock x:Name="TodoEditTitle" DockPanel.Dock="Top" Classes="line" FontSize="15.5" FontWeight="ExtraBold" Margin="4,0,4,10"
+                     IsVisible="{Binding Entry.IsEditing}" Text="{Binding Strings[MobileTodoEditTitle]}" />
+
           <!-- 할 일 or 일정: the same two words, in the same order, as the desktop's @ card. -->
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="2,0,0,0">
@@ -457,7 +461,12 @@
             </Button>
             <Button Grid.Column="2" x:Name="TodoAdd" Classes="solid" HorizontalAlignment="Stretch"
                     IsEnabled="{Binding Entry.CanAdd}" Command="{Binding CommitTodoSheetCommand}">
-              <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[TodoEntryAdd]}" />
+              <Panel>
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[TodoEntryAdd]}"
+                           IsVisible="{Binding !Entry.IsEditing}" />
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Mobile.OnPri}" Text="{Binding Strings[MobileTodoSave]}"
+                           IsVisible="{Binding Entry.IsEditing}" />
+              </Panel>
             </Button>
           </Grid>
 
@@ -669,9 +678,81 @@
         </DockPanel>
       </Border>
     </views:SheetLayer>
+
+    <!--
+      A repeating to-do's question, before a delete or an edit from its row: this day only, or
+      every repeat. The file menu's shape - a title, the choices, 취소.
+    -->
+    <views:SheetLayer IsOpen="{Binding IsRepeatChoiceOpen}">
+      <Button Classes="scrim" Command="{Binding CloseRepeatChoiceCommand}"
+              AutomationProperties.Name="{Binding Strings[MobileCancel]}" />
+      <Border x:Name="RepeatChoiceSheet" Classes="sheet" VerticalAlignment="Bottom">
+        <StackPanel Margin="16,10,16,0" Spacing="8">
+          <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,6" />
+          <TextBlock Classes="line" FontSize="15.5" FontWeight="ExtraBold" Margin="4,0,4,0" Text="{Binding RepeatChoiceTitle}" />
+          <TextBlock Classes="muted" FontSize="13" Margin="4,0,4,6" Text="{Binding Strings[MobileRepeatDeleteQuestion]}" />
+
+          <StackPanel Spacing="8" IsVisible="{Binding IsRepeatChoiceDelete}">
+            <Button x:Name="DeleteThisOccurrence" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ChooseThisOccurrenceCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Mobile.Danger}"
+                         Text="{Binding Strings[MobileRepeatDeleteThis]}" />
+            </Button>
+            <Button x:Name="DeleteEveryRepeat" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ChooseEveryRepeatCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Mobile.Danger}"
+                         Text="{Binding Strings[MobileRepeatDeleteAll]}" />
+            </Button>
+          </StackPanel>
+
+          <StackPanel Spacing="8" IsVisible="{Binding !IsRepeatChoiceDelete}">
+            <Button x:Name="EditThisOccurrence" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ChooseThisOccurrenceCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileRepeatEditThis]}" />
+            </Button>
+            <Button x:Name="EditEveryRepeat" Classes="quiet" HorizontalAlignment="Stretch" Command="{Binding ChooseEveryRepeatCommand}">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileRepeatEditAll]}" />
+            </Button>
+          </StackPanel>
+
+          <Button Classes="quiet" HorizontalAlignment="Stretch" Margin="0,4,0,0" Command="{Binding CloseRepeatChoiceCommand}">
+            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding Strings[MobileCancel]}" />
+          </Button>
+        </StackPanel>
+      </Border>
+    </views:SheetLayer>
+
+    <!--
+      삭제됨 · 실행 취소: four seconds after a delete, over the tab bar or, with no bar, near the
+      bottom edge. Its own layer, so it is above the page and below nothing that is up.
+    -->
+    <Border x:Name="UndoToast" Classes="undo" Classes.nodock="{Binding !ShowDock}" IsVisible="False">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="line" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                   Foreground="{DynamicResource Mobile.Bg}" Text="{Binding Strings[MobileTodoDeleted]}" />
+        <Button Grid.Column="1" x:Name="UndoButton" Classes="undoaction" Command="{Binding UndoDeleteCommand}">
+          <TextBlock FontSize="14.5" FontWeight="ExtraBold" Foreground="{DynamicResource Mobile.Sun}" Text="{Binding Strings[MobileTodoUndo]}" />
+        </Button>
+      </Grid>
+    </Border>
   </Panel>
 
   <UserControl.Styles>
+    <Style Selector="Border.undo">
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="Height" Value="50" />
+      <Setter Property="Margin" Value="16,0,16,92" />
+      <Setter Property="Padding" Value="18,0,6,0" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Text}" />
+      <Setter Property="BoxShadow" Value="0 10 30 0 #33161a36" />
+    </Style>
+    <Style Selector="Border.undo.nodock">
+      <Setter Property="Margin" Value="16,0,16,24" />
+    </Style>
+    <Style Selector="Button.undoaction">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
     <!-- A tab in the floating bar: the mark over a ten-point label, dim until it is the page. -->
     <Style Selector="Button.tab">
       <Setter Property="HorizontalAlignment" Value="Stretch" />

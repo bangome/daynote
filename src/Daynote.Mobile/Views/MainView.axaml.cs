@@ -191,6 +191,7 @@ public partial class MainView : UserControl
         Bleed(this.FindControl<Border>("AttachSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("FileSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("ListSheet"), bottom, extra: 6, fallback: 24);
+        Bleed(this.FindControl<Border>("RepeatChoiceSheet"), bottom, extra: 6, fallback: 24);
         Bleed(this.FindControl<Border>("ReminderTimeSheet"), bottom, extra: 6, fallback: 24);
         if (this.FindControl<Border>("ReminderTimeSheet") is { } timeSheet)
         {
@@ -233,6 +234,26 @@ public partial class MainView : UserControl
         () => this.FindControl<TextBox>("TodoTextBox")?.Focus(),
         Avalonia.Threading.DispatcherPriority.Loaded);
 
+    /// <summary>The undo line rises in, and fades out when its four seconds are up or it is used.</summary>
+    private async Task ShowUndoAsync(bool shown)
+    {
+        if (this.FindControl<Border>("UndoToast") is not { } toast)
+        {
+            return;
+        }
+
+        if (shown)
+        {
+            toast.IsVisible = true;
+            await Daynote.Motion.MotionPlayer.Play(toast, "undo", Daynote.Motion.Choreography.ToastOpen(toast)).ConfigureAwait(true);
+        }
+        else if (toast.IsVisible &&
+            await Daynote.Motion.MotionPlayer.Play(toast, "undo", Daynote.Motion.Choreography.ToastClose(toast)).ConfigureAwait(true))
+        {
+            toast.IsVisible = false;
+        }
+    }
+
     // ── The image viewer's zoom ──────────────────────────────────────────────────────────────────
 
     private const double MaxZoom = 4;
@@ -252,9 +273,15 @@ public partial class MainView : UserControl
                 {
                     SetZoom(1);
                 }
-                else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsTodoSheetOpen) && shell.IsTodoSheetOpen)
+                else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsTodoSheetOpen) && shell.IsTodoSheetOpen
+                    && !shell.Entry.IsEditing)
                 {
+                    // An edit opens on what is there to read; the keyboard would cover most of it.
                     FocusTodoText();
+                }
+                else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsUndoShown))
+                {
+                    _ = ShowUndoAsync(shell.IsUndoShown);
                 }
             };
         }
