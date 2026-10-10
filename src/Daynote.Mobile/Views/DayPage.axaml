@@ -192,7 +192,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TodoRowViewModel">
-              <views:SwipeRow EditCommand="{Binding EditCommand}" DeleteCommand="{Binding DeleteCommand}"
+              <views:SwipeRow DeleteCommand="{Binding DeleteCommand}"
                 AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
                 <Panel Classes="todorow">
                   <Border Classes="rowflash" />

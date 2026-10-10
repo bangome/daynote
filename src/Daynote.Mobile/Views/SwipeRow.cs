@@ -12,7 +12,8 @@ using Daynote.Motion;
 namespace Daynote.Mobile.Views;
 
 /// <summary>
-/// A to-do row that swipes: left uncovers 편집 and 삭제, right ticks it (or unticks a done one).
+/// A to-do row that swipes: left uncovers 삭제 (and 편집, when given an EditCommand - the to-do rows
+/// give none, since a tap edits), right ticks it (or unticks a done one).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -152,7 +153,7 @@ public sealed class SwipeRow : Panel
             {
                 _swiping = false;
                 _start = null;
-                Settle(_offset <= -ButtonWidth ? -OpenWidth : 0);
+                Settle(_offset <= -OpenWidth / 2 ? -OpenWidth : 0);
             }
         });
     }
@@ -192,7 +193,8 @@ public sealed class SwipeRow : Panel
 
     private Panel Behind => (Panel)Children[0];
 
-    private double OpenWidth => ButtonWidth * 2;
+    /// <summary>One button (삭제) when the row has no 편집: a tap edits it instead.</summary>
+    private double OpenWidth => EditCommand is null ? ButtonWidth : ButtonWidth * 2;
 
     private double Width0 => Math.Max(Bounds.Width, 1);
 
@@ -482,7 +484,9 @@ public sealed class SwipeRow : Panel
 
         // Past the line the delete takes the whole width: letting go now deletes.
         bool deleting = offset <= -Width0 * Choreography.SwipeDeleteFraction;
-        _actions.ColumnDefinitions[0].Width = deleting ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        bool editable = EditCommand is not null;
+        _edit.IsVisible = editable;
+        _actions.ColumnDefinitions[0].Width = deleting || !editable ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
     }
 
     private static TextBlock Label() => new()

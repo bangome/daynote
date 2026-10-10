@@ -53,7 +53,7 @@ public sealed class TodoSwipeTests
     }
 
     [TestMethod]
-    public void A_partial_swipe_left_opens_the_two_buttons()
+    public void A_partial_swipe_left_opens_only_delete()
     {
         WithDay((view, shell) =>
         {
@@ -61,12 +61,12 @@ public sealed class TodoSwipeTests
             Swipe(view, row, -0.3);
 
             Assert.IsTrue(row.IsOpen, "A partial swipe did not stay open.");
-            Assert.AreEqual(-2 * SwipeRow.ButtonWidth, row.Offset);
+            Assert.AreEqual(-SwipeRow.ButtonWidth, row.Offset, "A tap edits, so the swipe uncovers 삭제 alone.");
             Assert.IsNotNull(Find(Report), "A partial swipe deleted.");
 
-            // A short swipe springs back closed.
+            // A short swipe - under half the one button - springs back closed.
             SwipeRow other = Row(view, Call);
-            Swipe(view, other, -0.12);
+            Swipe(view, other, -0.06);
             Assert.IsFalse(other.IsOpen);
             Assert.AreEqual(0, other.Offset);
         });
@@ -175,14 +175,13 @@ public sealed class TodoSwipeTests
     }
 
     [TestMethod]
-    public void Edit_opens_the_sheet_filled_in_and_saves_over_the_item()
+    public void A_tap_opens_the_sheet_filled_in_and_saves_over_the_item()
     {
         WithDay((view, shell) =>
         {
             AgendaItem before = Stored(Report);
             SwipeRow row = Row(view, Report);
-            Swipe(view, row, -0.3);
-            Tap(view, Action(row, "MobileTodoEdit"));
+            Click(view, Body(row));
 
             PumpUntil(() => shell.IsTodoSheetOpen, "편집 did not open the sheet.");
             Assert.IsTrue(shell.Entry.IsEditing);
@@ -307,8 +306,7 @@ public sealed class TodoSwipeTests
         WithDay((view, shell) =>
         {
             AgendaItem series = Stored(Stretch);
-            Swipe(view, Row(view, Stretch), -0.3);
-            Tap(view, Action(Row(view, Stretch), "MobileTodoEdit"));
+            Click(view, Body(Row(view, Stretch)));
             Assert.IsTrue(shell.IsRepeatChoiceOpen, "Editing a repeat did not ask which days.");
             Click(view, view.FindControl<Button>("EditThisOccurrence")!);
 
@@ -397,8 +395,7 @@ public sealed class TodoSwipeTests
             Capture(view, output, $"swipe-undo-{suffix}");
             Pump(() => shell.UndoDeleteCommand.ExecuteAsync(null));
 
-            Swipe(view, Row(view, Report), -0.3);
-            Tap(view, Action(Row(view, Report), "MobileTodoEdit"));
+            Click(view, Body(Row(view, Report)));
             PumpUntil(() => shell.IsTodoSheetOpen, "편집 did not open the sheet.");
             Capture(view, output, $"swipe-edit-sheet-{suffix}");
             shell.IsDark = false;
@@ -465,6 +462,10 @@ public sealed class TodoSwipeTests
     }
 
     /// <summary>One of the two buttons an open row uncovers, by its label.</summary>
+    /// <summary>The row's own button: a tap on it edits the to-do.</summary>
+    private static Button Body(SwipeRow row) =>
+        row.GetVisualDescendants().OfType<Button>().Single(button => button is not TodoCheck);
+
     private static Border Action(SwipeRow row, string key) =>
         row.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == MobileStrings.Get(key)).Parent as Border
             ?? throw new AssertFailedException($"No {key} button.");

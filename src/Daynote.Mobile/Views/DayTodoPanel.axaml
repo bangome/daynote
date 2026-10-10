@@ -37,7 +37,7 @@
             <ItemsControl x:Name="OpenList" motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TodoRowViewModel">
-                  <views:SwipeRow EditCommand="{Binding EditCommand}" DeleteCommand="{Binding DeleteCommand}"
+                  <views:SwipeRow DeleteCommand="{Binding DeleteCommand}"
                     AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
                     <Panel Classes="todorow">
                       <Border Classes="rowflash" Margin="-2,0" />
@@ -76,7 +76,7 @@
         <ItemsControl x:Name="DoneList" IsVisible="False" Margin="0,4,0,0">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TodoRowViewModel">
-              <views:SwipeRow EditCommand="{Binding EditCommand}" DeleteCommand="{Binding DeleteCommand}"
+              <views:SwipeRow DeleteCommand="{Binding DeleteCommand}"
                 AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
                 <Grid Classes="todorow" ColumnDefinitions="22,*" MinHeight="44" Margin="14,0,8,0">
                   <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />

@@ -100,7 +100,7 @@
                 <ItemsControl ItemsSource="{Binding Items}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TodoRowViewModel">
-                      <views:SwipeRow EditCommand="{Binding EditCommand}" DeleteCommand="{Binding DeleteCommand}"
+                      <views:SwipeRow DeleteCommand="{Binding DeleteCommand}"
                         AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
                         <Border Classes="rule todorow" Padding="0,11">
                           <Grid ColumnDefinitions="22,*,Auto">
