@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Android 12 and later draw their own launch screen: the app icon in the middle, on
+    windowSplashScreenBackground. The wordmark (데이노트 / Daynote, text only - the icon is already
+    above it) goes in the branding slot at the bottom, 200 x 80 dp. Navy on the cream background in
+    both themes, because the first Avalonia frame is cream too until the app's theme loads.
+    Otherwise the same as values/styles.xml.
+  -->
+  <style name="MyTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <item name="windowActionBar">false</item>
+    <item name="windowNoTitle">true</item>
+    <item name="android:windowBackground">@color/window_background</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    <item name="android:windowSplashScreenBackground">@color/window_background</item>
+    <item name="android:windowSplashScreenBrandingImage">@drawable/splash_wordmark</item>
+  </style>
+</resources>
