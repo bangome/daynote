@@ -8,28 +8,13 @@ using Daynote.Core.Domain;
 namespace Daynote.Mobile.Reminders;
 
 /// <summary>
-/// The same planning, driven by to-do entities instead of <c>-[ ]</c> lines (docs/TODOS.md §12
-/// step 4).
+/// Reminder planning, driven by to-do entities (docs/TODOS.md §12 step 4).
 /// </summary>
 /// <remarks>
-/// <b>Nothing calls this yet.</b> <see cref="ReminderCoordinator"/> still reads note bodies,
-/// because §12 requires desktop and phone to switch their readers in the same release and the
-/// desktop half is not built. Step 3 swaps the call; the shape below is already what it needs.
-/// <para>
-/// <see cref="FireTime(TodoLine, TimeSpan)"/> keeps its shape and its two rules — a to-do that
-/// carries a clock reminds at it, one that carries only a day reminds at the settings page's
-/// default reminder time. What the entity adds is the lead the old comment promised:
-/// <c>VALARM</c> triggers arrive as <see cref="AgendaItem.AlarmLeadMinutes"/> and are subtracted
-/// here, so one item can hold several reminders.
-/// </para>
-/// <para>
-/// <b>Reminder ids change at the cutover</b>, from a hash of the note and the line's text to a
-/// hash of the item's own id. That is the point of the entity: a line of prose has no identity, so
-/// the old id had to be reconstructed from its text and had to move whenever the text did.
-/// <see cref="Diff"/> handles the changeover without special-casing — every old id is absent from
-/// the new set and is cancelled, every new one is scheduled — so the first run after the upgrade
-/// re-registers the lot and nothing fires twice.
-/// </para>
+/// A to-do that carries a clock reminds at it, one that carries only a day reminds at the
+/// settings page's default reminder time. <c>VALARM</c> triggers arrive as
+/// <see cref="AgendaItem.AlarmLeadMinutes"/> and are subtracted here, so one item can hold several
+/// reminders. Reminder ids are a hash of the item's own id, so editing the title never reschedules.
 /// </remarks>
 public static partial class ReminderPlanner
 {
@@ -204,9 +189,8 @@ public static partial class ReminderPlanner
                 item.Title,
                 BodyFor(item, anchor, dateOnlyTime, listNames),
                 DayOf(item, anchor, dateOnlyTime),
-                // What a tap opens. Empty when the to-do was never captured from a note, which is
-                // ordinary: the shell then selects the day and opens no editor.
-                item.SourceNoteId ?? Guid.Empty,
+                // No note: a to-do is not linked to one, so a tap opens the day, never a note.
+                Guid.Empty,
                 // A to-do can be finished from its notification; an event has nothing to finish.
                 item.Kind == AgendaKind.Task ? identity : null,
                 item.Kind == AgendaKind.Task ? occurrence?.ToString() : null));

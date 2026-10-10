@@ -84,6 +84,27 @@ public sealed class GlanceTests
     }
 
     [TestMethod]
+    public void A_to_do_captured_from_a_note_carries_no_note_link()
+    {
+        DateOnly today = DateOnly.FromDateTime(Now);
+        Guid note = Guid.NewGuid();
+        AgendaItem todo = Task("자료 공유", today, null) with { SourceNoteId = note };
+        AgendaItem meeting = Event("회의", today, new TimeOnly(14, 0), new TimeOnly(15, 0)) with { SourceNoteId = note };
+        NoteSummary written = new(note, LocalDates.FromDateOnly(today), "회의록", "-[ ] 자료 공유", 0, false);
+
+        GlanceSnapshot snapshot = GlanceSnapshotBuilder.Build(
+            [todo, meeting], Lists, [written], Now, Now, "Asia/Seoul", AppLanguage.Korean, locked: false);
+
+        // A tap on a widget or watch row opens the day, never the note its line was once in.
+        GlanceTodo row = snapshot.Days[0].Todos.Single();
+        Assert.IsNull(row.NoteId);
+        Assert.IsNull(row.NoteDate);
+        GlanceEvent slot = snapshot.Days[0].Events.Single();
+        Assert.IsNull(slot.NoteId);
+        Assert.IsNull(slot.NoteDate);
+    }
+
+    [TestMethod]
     public void The_file_is_camel_case_with_hangul_left_as_hangul()
     {
         string json = GlanceSnapshotBuilder.Serialize(Build([Task("회의실 예약 확인", DateOnly.FromDateTime(Now), null)]));

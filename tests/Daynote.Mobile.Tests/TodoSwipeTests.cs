@@ -218,6 +218,48 @@ public sealed class TodoSwipeTests
     }
 
     [TestMethod]
+    public void A_tap_on_a_row_captured_from_a_note_opens_the_to_do_not_the_note()
+    {
+        WithDay((view, shell) =>
+        {
+            Button body = Row(view, Report).GetVisualDescendants().OfType<Button>().Single(button => button is not TodoCheck);
+            Click(view, body);
+
+            PumpUntil(() => shell.IsTodoSheetOpen, "A tap on a migrated to-do did not open the sheet.");
+            Assert.IsTrue(shell.Entry.IsEditing);
+            Assert.AreEqual(Report, shell.Entry.Title);
+            Assert.IsFalse(shell.IsEditorOpen, "A tap on a to-do opened a note.");
+        });
+    }
+
+    [TestMethod]
+    public void A_tap_on_a_repeating_row_asks_which_days_before_editing()
+    {
+        WithDay((view, shell) =>
+        {
+            Button body = Row(view, Stretch).GetVisualDescendants().OfType<Button>().Single(button => button is not TodoCheck);
+            Click(view, body);
+
+            Assert.IsTrue(shell.IsRepeatChoiceOpen, "A tap on a repeat did not ask which days.");
+            Assert.IsFalse(shell.IsEditorOpen);
+        });
+    }
+
+    [TestMethod]
+    public void A_tap_in_the_lists_tab_opens_the_to_do_for_editing()
+    {
+        WithDay((_, shell) =>
+        {
+            TodoRowViewModel row = shell.TodoGroups.SelectMany(group => group.Items).Single(r => r.Item.Text == Report);
+            Pump(() => row.Item.JumpCommand.ExecuteAsync(null));
+
+            PumpUntil(() => shell.IsTodoSheetOpen, "A tap in the lists tab did not open the sheet.");
+            Assert.AreEqual(Report, shell.Entry.Title);
+            Assert.IsFalse(shell.IsEditorOpen, "A tap in the lists tab opened a note.");
+        });
+    }
+
+    [TestMethod]
     public void Deleting_one_repeat_asks_then_adds_an_exdate_and_undo_restores_it()
     {
         WithDay((view, shell) =>

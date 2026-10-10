@@ -97,14 +97,14 @@ public sealed class HomeScreenTests
             // The body is still exactly what was typed, and a `-[]` in it is now text that looks
             // like a checkbox — the panels read to-do entities. The one-time migration carries an
             // existing user's lines across; a line typed afterwards is prose.
-            Assert.AreEqual(0, card.TodoTotal);
+            Assert.IsFalse(card.HasFooter, "A note card shows to-do progress.");
             Assert.IsTrue(shell.Week.Single(d => d.IsSelected).HasNotes, "The day's dot did not appear.");
             Assert.IsFalse(shell.IsDayEmpty);
         });
     }
 
     [TestMethod]
-    public void A_cards_progress_counts_the_to_dos_captured_from_that_note()
+    public void A_card_shows_no_progress_for_to_dos_captured_from_its_note()
     {
         TestServices.WithInitialisedShell((_, shell) =>
         {
@@ -113,12 +113,12 @@ public sealed class HomeScreenTests
 
             AddTodo(shell, note, "자료 공유", done: false);
             AddTodo(shell, note, "예약", done: true);
-            AddTodo(shell, note, "메모", done: false);
 
+            // A migrated to-do still remembers the note it came from, but nothing shows it: the
+            // body is just text, and the to-dos are the day's, not the note's.
             DayNoteCardViewModel card = shell.DayCards.Single();
-            Assert.AreEqual(1, card.TodoDone);
-            Assert.AreEqual(3, card.TodoTotal);
-            Assert.AreEqual("1 / 3", card.TodoText);
+            Assert.IsFalse(card.HasFooter);
+            Assert.HasCount(2, shell.DayTodos);
         });
     }
 
@@ -140,7 +140,6 @@ public sealed class HomeScreenTests
             Pump(() => open.Item.ToggleCommand.ExecuteAsync(null));
 
             Assert.AreEqual("2/2", shell.DayTodoCountText, "Ticking a to-do on the home screen did not stick.");
-            Assert.AreEqual(2, shell.DayCards.Single().TodoDone, "The card's progress did not follow.");
             Assert.IsFalse(shell.IsEditorOpen, "Ticking a to-do opened the note.");
         });
     }

@@ -63,8 +63,6 @@ public static class GlanceSnapshotBuilder
             return new GlanceSnapshot(GlanceSnapshot.CurrentSchema, stamp, zone, code, Day(today), true, [], [], [], []);
         }
 
-        Dictionary<Guid, LocalDate> noteDates = notes.ToDictionary(static note => note.Id, static note => note.LocalDate);
-
         GlanceList[] glanceLists = [.. lists.Select((list, position) =>
         {
             (string light, string dark) = AgendaListPalette.ForPosition(position);
@@ -81,11 +79,11 @@ public static class GlanceSnapshotBuilder
             days.Add(new GlanceDay(
                 Day(date),
                 [.. rows.Where(static row => row.Item.Kind == AgendaKind.Task).Take(MaxTodosPerDay)
-                    .Select(row => Todo(row, noteDates))],
+                    .Select(Todo)],
                 [.. rows.Where(static row => row.Item.Kind == AgendaKind.Event)
                     .OrderBy(static row => row.At?.Value ?? DateTime.MinValue)
                     .Take(MaxEventsPerDay)
-                    .Select(row => Event(row, noteDates))]));
+                    .Select(Event)]));
         }
 
         // Sunday to Saturday, the phone's strip, so the widget's week is the week the app shows.
@@ -124,7 +122,11 @@ public static class GlanceSnapshotBuilder
         TypeInfoResolver = GlanceJson.Default,
     };
 
-    private static GlanceTodo Todo(AgendaDayRow row, Dictionary<Guid, LocalDate> noteDates)
+    /// <remarks>
+    /// <c>NoteId</c>/<c>NoteDate</c> stay in the schema for readers already installed, but are
+    /// always null: a to-do is no longer linked to a note, so a tap opens the day, never a note.
+    /// </remarks>
+    private static GlanceTodo Todo(AgendaDayRow row)
     {
         AgendaItem item = row.Item;
         bool repeats = item.IsSeries || item.IsOverride;
@@ -137,11 +139,11 @@ public static class GlanceSnapshotBuilder
             row.At is { } at ? Clock(at.Value) : null,
             repeats,
             row.IsDone,
-            item.SourceNoteId is { } note ? Id(note) : null,
-            NoteDate(item.SourceNoteId, noteDates));
+            NoteId: null,
+            NoteDate: null);
     }
 
-    private static GlanceEvent Event(AgendaDayRow row, Dictionary<Guid, LocalDate> noteDates)
+    private static GlanceEvent Event(AgendaDayRow row)
     {
         AgendaItem item = row.Item;
 
@@ -160,12 +162,9 @@ public static class GlanceSnapshotBuilder
             allDay || start is null ? null : Clock(start.Value),
             allDay || end is null ? null : Clock(end.Value),
             item.IsSeries || item.IsOverride,
-            item.SourceNoteId is { } note ? Id(note) : null,
-            NoteDate(item.SourceNoteId, noteDates));
+            NoteId: null,
+            NoteDate: null);
     }
-
-    private static string? NoteDate(Guid? noteId, Dictionary<Guid, LocalDate> noteDates) =>
-        noteId is { } id && noteDates.TryGetValue(id, out LocalDate date) ? Day(LocalDates.ToDateOnly(date)) : null;
 
     /// <summary>"1. 2분기 지표 리뷰 · 2. 신규 기능 우선순위": the first two lines, as the favourites card reads.</summary>
     private static string Preview(string body)

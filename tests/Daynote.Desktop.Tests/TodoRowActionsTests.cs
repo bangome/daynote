@@ -126,6 +126,39 @@ public sealed class TodoRowActionsTests
     }
 
     [TestMethod]
+    public void Clicking_a_row_opens_the_to_do_for_editing_never_its_note()
+    {
+        WithDay((window, shell) =>
+        {
+            object? selectedBefore = shell.Notes.SelectedTab;
+            Button row = Row(window, Report);
+            row.Command!.Execute(row.CommandParameter);
+            Pump(window);
+
+            // The row was captured from a note (it has a SourceNoteId), yet a click edits the to-do.
+            Assert.IsTrue(shell.IsAddTodoOpen, "A click on a to-do did not open the card.");
+            Assert.IsTrue(shell.TodoEntry.IsEditing);
+            Assert.AreEqual(Report, shell.TodoEntry.Title);
+            Assert.AreSame(selectedBefore, shell.Notes.SelectedTab, "A click on a to-do selected a note.");
+        });
+    }
+
+    [TestMethod]
+    public void Clicking_a_repeating_row_asks_which_days_first()
+    {
+        WithDay((window, shell) =>
+        {
+            Button row = Row(window, Stretch);
+            row.Command!.Execute(row.CommandParameter);
+            Pump(window);
+
+            Assert.IsTrue(shell.IsRepeatChoiceOpen, "A click on a repeat did not ask which days.");
+            Click(window, "EditThisOccurrence");
+            PumpUntil(() => shell.IsAddTodoOpen, "이 항목만 did not open the card.");
+        });
+    }
+
+    [TestMethod]
     public void Editing_this_repeat_only_writes_an_override()
     {
         WithDay((window, shell) =>

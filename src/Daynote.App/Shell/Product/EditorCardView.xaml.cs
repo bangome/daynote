@@ -15,17 +15,12 @@ namespace Daynote.App.Shell.Product;
 
 /// <summary>
 /// Editor card: a transparent-foreground <see cref="TextBox"/> over a synchronized highlight
-/// <see cref="TextBlock"/> that renders <c>-[]</c>/<c>-[x]</c> markers and <c>(M/D H:mm)</c> due stamps in
-/// accent semibold (calendar-notes.dc.html highlightBody). Both layers share font, size, padding, and wrap
+/// <see cref="TextBlock"/> that marks file markers and URLs (<see cref="BodyHighlightSyntax"/>). A
+/// <c>-[ ]</c> line is plain text: to-dos are not in the body. Both layers share font, size, padding, and wrap
 /// so the caret sits over its glyph; scrolling is mirrored. Title and tag edits commit through the shell.
 /// </summary>
 public partial class EditorCardView : System.Windows.Controls.UserControl
 {
-    private static readonly Regex HighlightPattern = new(
-        @"(-\s?\[(?: |x|X)?\])|(\(\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))|(\[\[file:[^\]\r\n]+\]\])|("
-            + UrlLinkSyntax.PatternText + @")",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     public EditorCardView()
     {
         InitializeComponent();
@@ -124,7 +119,7 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
     {
         Highlight.Inlines.Clear();
         int last = 0;
-        foreach (Match match in HighlightPattern.Matches(text))
+        foreach (Match match in BodyHighlightSyntax.Pattern().Matches(text))
         {
             if (match.Index > last)
             {
@@ -142,13 +137,7 @@ public partial class EditorCardView : System.Windows.Controls.UserControl
             // the old colour: marks written in light stayed navy over the dark page, which is
             // very nearly the page itself. This follows the swap instead.
             run.SetResourceReference(TextElement.ForegroundProperty, "Daynote.Product.Brush.Accent");
-            // Inline #tag used to be marked here too. Tags are the chips under the note title now,
-            // so a '#' in the prose is prose.
-            if (match.Value.StartsWith("[[file:", StringComparison.Ordinal)
-                || match.Value.StartsWith("http", StringComparison.Ordinal))
-            {
-                run.TextDecorations = TextDecorations.Underline;
-            }
+            run.TextDecorations = TextDecorations.Underline;
 
             Highlight.Inlines.Add(run);
             last = match.Index + match.Length;

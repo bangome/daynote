@@ -11,8 +11,8 @@ namespace Daynote.Desktop.Views;
 /// on picked out.
 /// </summary>
 /// <remarks>
-/// A checkbox becomes a row in the todo panel, a date beside it becomes that row's due date, a
-/// marker or URL is clickable. Marking them is how the note says "I understood that" as it is typed — the same set the WPF editor has always marked, now split by the
+/// A marker or URL is clickable. Marking them is how the note says "I understood that" as it is
+/// typed. A <c>-[ ]</c> line is plain text: to-dos are not in the body. Split by the
 /// shared <see cref="BodyHighlightSyntax"/> so neither shell can quietly disagree about what counts.
 /// <para>
 /// The editor draws its own text in <c>Transparent</c> and this sits directly behind it, so the two
@@ -90,18 +90,7 @@ public partial class MainWindow
         // so every caret position after the first mark on a line was off by the difference. Only
         // non-metric properties may be set on these runs — EditorHighlightTests pins that.
         run.Foreground = Brush("Daynote.Product.Brush.Accent", Brushes.RoyalBlue);
-
-        switch (span.Kind)
-        {
-            case BodyHighlightKind.Link:
-                run.TextDecorations = TextDecorations.Underline;
-                break;
-            case BodyHighlightKind.Due:
-                // A due date is information, not a target: colour is enough, and it sits inside a
-                // line of prose where an underline would read as a link.
-                break;
-        }
-
+        run.TextDecorations = TextDecorations.Underline;
         return run;
     }
 

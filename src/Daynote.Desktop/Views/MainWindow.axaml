@@ -392,7 +392,7 @@
             <!--
               The body: a highlight layer with the editor over it, the editor's own text drawn in
               nothing so the caret sits over the coloured glyphs. Avalonia's TextBox has no inline
-              formatting, so marking up what the app understood - checkboxes, due dates, #tags, links -
+              formatting, so marking up what the app understood - file markers and links -
               means a second layer that draws the same string with the same metrics (the `editor` and
               `editorhighlight` classes, and EditorHighlightTests, which measures them).
             -->

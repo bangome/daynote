@@ -73,8 +73,9 @@ public sealed class EditorHighlightTests
                 "Ordinary text should be left to inherit rather than marked.");
 
             string[] marked = [.. MarkedRuns(highlight, marked: true).Select(r => r.Text ?? string.Empty)];
+            // A checkbox and a due stamp are prose: to-dos live in the to-do editor, not the body.
             CollectionAssert.AreEqual(
-                new[] { "-[]", "(9/7 15:00)", "https://example.com" },
+                new[] { "https://example.com" },
                 marked,
                 $"Marked: {string.Join(" | ", marked)}");
         });

@@ -63,7 +63,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         ArgumentNullException.ThrowIfNull(searchService);
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
-        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, JumpToTodoAsync, EditTodoAsync, DeleteTodoAsync);
+        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, EditTodoAsync, EditTodoAsync, DeleteTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);

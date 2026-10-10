@@ -183,8 +183,8 @@ internal static class EnglishStrings
         ["TutorialNotesTitle"] = "Notes and the calendar",
         ["TutorialNotesBody"] = "Pick a date in the calendar on the left and write in the middle. The + button adds a note, and everything saves as you type.",
 
-        ["TutorialTodoTitle"] = "To-do checkboxes",
-        ["TutorialTodoBody"] = "Type -[] in the body to make a checkbox, and add a due time like (7/25 14:00). They gather by date in the To-do tab on the right.",
+        ["TutorialTodoTitle"] = "To-dos",
+        ["TutorialTodoBody"] = "Make a to-do with '+ To-do' and give it a date, a time or a repeat. They gather by date in the To-do tab on the right; click one to edit it.",
 
         ["TutorialFavoritesTitle"] = "Favourites",
         ["TutorialFavoritesBody"] = "The star next to the title marks a note as a favourite. They gather in the Favourites tab on the right, whatever their date, so the notes you keep coming back to are one click away.",
@@ -212,13 +212,10 @@ internal static class EnglishStrings
             "We left a sample note on today's date. Feel free to change it or delete it as you find your way around. " +
             "You can reopen this tour any time from Settings → Help. Enjoy Daynote!",
 
-        // Sample note seeded on first run (dated to-dos use today's month/day via {0}/{1}).
+        // Sample note seeded on first run. Plain text: to-dos are not written in note bodies ({0}/{1}, today's month/day, is unused).
         ["SampleNoteTitle"] = "Today's work notes (sample)",
         ["SampleNoteBodyFormat"] =
             "Here is one way to use Daynote. This note is only an example — delete it whenever you like.\n\n" +
-            "-[] Write up the morning team standup ({0}/{1} 10:00)\n" +
-            "-[x] Review last week's status report\n" +
-            "-[] Send the reply to the client ({0}/{1} 15:00)\n\n" +
             "[Meeting notes]\n" +
             "- Shared the release schedule for the new feature\n" +
             "- Re-prioritized three QA issues\n\n" +
@@ -347,7 +344,7 @@ internal static class EnglishStrings
         ["NoNoteSelected"] = "Pick a note from the list on the left, or create a new one",
         ["NoteMetaFormat"] = "{0} chars · {1} lines",
         ["NoteUpdatedFormat"] = "Edited {0}",
-        ["EditorBodyPlaceholder"] = "Write your note.  Lines like '-[] task (07/25 14:00)' are added to the To-do panel automatically.",
+        ["EditorBodyPlaceholder"] = "Write your note.",
 
         // Right panel tabs
         ["TabTodo"] = "To-do",

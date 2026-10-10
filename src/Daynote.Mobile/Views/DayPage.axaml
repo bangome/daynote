@@ -145,14 +145,6 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" IsVisible="{Binding HasTodos}">
-                      <Border Width="44" Height="4" CornerRadius="2" VerticalAlignment="Center" ClipToBounds="True"
-                              Background="{DynamicResource Mobile.Seg}">
-                        <Border Width="{Binding TodoFillWidth}" HorizontalAlignment="Left" Background="{DynamicResource Mobile.Sun}" />
-                      </Border>
-                      <TextBlock Classes="muted line" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
-                                 Text="{Binding TodoText}" />
-                    </StackPanel>
                   </Grid>
                 </StackPanel>
               </Border>

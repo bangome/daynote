@@ -1,5 +1,9 @@
 using System.Globalization;
 using Daynote.Core.Agenda;
+using Daynote.Core.Domain;
+using Daynote.Core.Domain.Notes;
+using Daynote.Core.Notes;
+using Daynote.Infrastructure.Notes;
 using Daynote.Infrastructure.Agenda;
 using Daynote.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
@@ -38,6 +42,25 @@ public sealed class DeleteAgendaItemTests
         Assert.IsNull(fixture.Tombstone(item.Id), "The tombstone outlived the undo and would be pushed.");
         Assert.IsGreaterThan(deleted, back.UpdatedUtc, "The restore is older than its tombstone and loses the merge.");
         Assert.AreEqual(back.UpdatedUtc, fixture.Queued(item.Id), "The restore is not queued.");
+    }
+
+    [TestMethod]
+    public async Task Deleting_a_note_leaves_the_to_do_captured_from_it_untouched()
+    {
+        await using Fixture fixture = await Fixture.CreateAsync();
+        LocalDate date = LocalDate.Parse("2026-10-07").Value;
+        NoteId note = NoteId.Create(Guid.NewGuid()).Value;
+        await fixture.Notes.SaveNoteAsync(new NoteSaveRequest(note, date, "회의", "-[ ] 자료 공유", 0, IsNew: true, HasCustomTitle: true));
+        AgendaItem item = OneOff() with { SourceNoteId = note.Value };
+        await fixture.Agenda.SaveAsync(item);
+
+        await fixture.Notes.DeleteNoteAsync(date, note);
+
+        // The body is just text and the to-do is its own thing: deleting one never takes the other.
+        AgendaItem kept = await fixture.Agenda.GetAsync(item.Id) ?? throw new AssertFailedException("Deleting the note deleted its to-do.");
+        Assert.AreEqual(item.Title, kept.Title);
+        Assert.AreEqual(item.Status, kept.Status);
+        Assert.IsNull(fixture.Tombstone(item.Id), "Deleting the note tombstoned its to-do.");
     }
 
     [TestMethod]
@@ -132,7 +155,10 @@ public sealed class DeleteAgendaItemTests
             this.database = database;
             Agenda = new SqliteAgendaRepository(database, static () => DateTimeOffset.UtcNow);
             Delete = new DeleteAgendaItem(Agenda);
+            Notes = new SqliteNoteRepository(database, static () => DateTimeOffset.UtcNow);
         }
+
+        internal SqliteNoteRepository Notes { get; }
 
         internal SqliteAgendaRepository Agenda { get; }
 

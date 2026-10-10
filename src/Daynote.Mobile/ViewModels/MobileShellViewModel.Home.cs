@@ -37,9 +37,6 @@ public sealed partial class MobileShellViewModel
     /// <summary>The tags the search page offers before anything is typed: the six most used.</summary>
     public IEnumerable<TagChipViewModel> SearchTags => TagChips.Take(6);
 
-    /// <summary>To-do totals per note, from the last parse, so a card can be rebuilt without one.</summary>
-    private Dictionary<Guid, (int Done, int Total)> _todoCounts = [];
-
     private string? _selectedTagName;
 
     [ObservableProperty]
@@ -150,7 +147,7 @@ public sealed partial class MobileShellViewModel
         IReadOnlyList<AgendaItem> items = Todo.All;
 
         TodoRowViewModel Row(AgendaDayRow row) =>
-            new(Todo.Row(row, now.DateTime), row, EditTodoAsync, DeleteTodoAsync, JumpToTodoAsync);
+            new(Todo.Row(row, now.DateTime), row, EditTodoAsync, DeleteTodoAsync);
 
         // The panel has already decided what is owed and which list the chips are filtering to;
         // projecting it again here is how the chip's number and the rows under it drift apart.
@@ -177,15 +174,6 @@ public sealed partial class MobileShellViewModel
         DayTodoCountText = string.Create(
             CultureInfo.CurrentCulture, $"{today.Done.Count}/{DayTodos.Count}");
 
-        // The per-note progress a card shows. Only to-dos captured from a note count towards it;
-        // one made in the list view belongs to no card.
-        _todoCounts = items
-            .Where(static item => item.SourceNoteId is not null && !item.IsSeries)
-            .GroupBy(static item => item.SourceNoteId!.Value)
-            .ToDictionary(
-                static group => group.Key,
-                static group => (group.Count(static i => i.Status == AgendaStatus.Completed), group.Count()));
-
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));
         OnPropertyChanged(nameof(IsAllAgendaListsSelected));
@@ -208,7 +196,7 @@ public sealed partial class MobileShellViewModel
         _ => MobileStrings.Get("MobileTodoDone"),
     };
 
-    /// <summary>The day's cards, from the workspace's tabs and the last to-do parse.</summary>
+    /// <summary>The day's cards, from the workspace's tabs.</summary>
     private void RebuildCards()
     {
         DayCards.Clear();
@@ -220,8 +208,7 @@ public sealed partial class MobileShellViewModel
         string empty = MobileStrings.Get("MobileNotePreviewEmpty");
         foreach (NoteTabViewModel tab in Notes.Tabs.Where(tab => !tab.IsProjection))
         {
-            (int done, int total) = _todoCounts.TryGetValue(tab.Id.Value, out (int, int) counts) ? counts : (0, 0);
-            DayCards.Add(new DayNoteCardViewModel(tab, done, total, empty));
+            DayCards.Add(new DayNoteCardViewModel(tab, empty));
         }
     }
 

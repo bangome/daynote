@@ -60,7 +60,7 @@ public sealed record GlanceDay(string Date, IReadOnlyList<GlanceTodo> Todos, IRe
 /// <param name="Occurrence">Which occurrence (<c>RECURRENCE-ID</c>, <c>yyyy-MM-ddTHH:mm</c>), or null.</param>
 /// <param name="Time"><c>HH:mm</c>, or null for a to-do with a day and no clock.</param>
 /// <param name="Repeats">Draws the ↻.</param>
-/// <param name="NoteId">The note it was captured in, for a tap that opens it.</param>
+/// <param name="NoteId">Always null: to-dos are not linked to notes. Kept so older readers still decode.</param>
 public sealed record GlanceTodo(
     string Id,
     string? SeriesId,

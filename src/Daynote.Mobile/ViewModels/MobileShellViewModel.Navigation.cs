@@ -14,22 +14,6 @@ namespace Daynote.Mobile.ViewModels;
 /// </summary>
 public sealed partial class MobileShellViewModel
 {
-    /// <summary>
-    /// Goes to the day a to-do falls on, and opens the note it was captured from if there is one.
-    /// A to-do made in the list view has none, and §3 lets a captured one's note be deleted out
-    /// from under it, so the day is the half of the jump that always works.
-    /// </summary>
-    private async Task JumpToTodoAsync(AgendaDayRow row)
-    {
-        DateOnly day = DateOnly.FromDateTime(row.Falls?.Value ?? DateTime.Today);
-        Guid? note = row.Item.SourceNoteId;
-        if (await SelectDateAsync(Daynote.App.Composition.LocalDates.FromDateOnly(day)).ConfigureAwait(true)
-            && note is { } id)
-        {
-            await OpenByIdAsync(id).ConfigureAwait(true);
-        }
-    }
-
     private async Task JumpToTagAsync(TagOccurrence occ)
     {
         if (await SelectDateAsync(occ.Date).ConfigureAwait(true))
@@ -79,7 +63,6 @@ public sealed partial class MobileShellViewModel
         }
     }
 
-    /// <summary>Toggles a checkbox line in the note that owns it and reloads the editor if it is open on it.</summary>
     /// <summary>
     /// Ticks a to-do. It used to rewrite the <c>-[]</c> line in the note body; on an occurrence of
     /// a rule this now writes an override rather than touching the rule (docs/TODOS.md §5).

@@ -183,8 +183,8 @@ internal static class KoreanStrings
         ["TutorialWelcomeBody"] = "날짜별로 노트를 쓰고 정리하는 데스크 앱입니다. 잠깐만 둘러볼게요.",
         ["TutorialNotesTitle"] = "노트와 캘린더",
         ["TutorialNotesBody"] = "왼쪽 캘린더에서 날짜를 고르고 가운데에서 노트를 씁니다. + 버튼으로 새 노트를 추가하며, 입력하는 동안 자동으로 저장됩니다.",
-        ["TutorialTodoTitle"] = "할 일 체크박스",
-        ["TutorialTodoBody"] = "본문에 -[] 를 적으면 체크박스가 되고, (7/25 14:00) 처럼 마감을 붙일 수 있습니다. 오른쪽 '할 일' 탭에 날짜별로 모여요.",
+        ["TutorialTodoTitle"] = "할 일",
+        ["TutorialTodoBody"] = "'+ 할 일'로 할 일을 만들고 날짜·시간·반복을 정할 수 있습니다. 오른쪽 '할 일' 탭에 날짜별로 모이고, 누르면 편집할 수 있어요.",
         ["TutorialFavoritesTitle"] = "즐겨찾기",
         ["TutorialFavoritesBody"] = "제목 옆 별을 누르면 노트가 즐겨찾기에 들어갑니다. 오른쪽 '즐겨찾기' 탭에 날짜와 상관없이 모여 있어, 자주 여는 노트를 바로 찾을 수 있어요.",
         ["TutorialTagsTitle"] = "태그",
@@ -204,13 +204,10 @@ internal static class KoreanStrings
             "오늘 날짜에 예시 노트를 하나 넣어두었어요. 자유롭게 고치거나 지우면서 익혀 보세요. " +
             "이 안내는 설정 → 도움말에서 언제든 다시 볼 수 있습니다. Daynote를 잘 부탁드립니다!",
 
-        // Sample note seeded on first run (dated to-dos use today's month/day via {0}/{1}).
+        // Sample note seeded on first run. Plain text: to-dos are not written in note bodies ({0}/{1}, today's month/day, is unused).
         ["SampleNoteTitle"] = "오늘 업무 메모 (예시)",
         ["SampleNoteBodyFormat"] =
             "Daynote를 이렇게 활용해 보세요. 이 노트는 예시이며 지워도 됩니다.\n\n" +
-            "-[] 오전 팀 스탠드업 정리 ({0}/{1} 10:00)\n" +
-            "-[x] 지난주 주간보고 검토\n" +
-            "-[] 거래처 회신 메일 보내기 ({0}/{1} 15:00)\n\n" +
             "[회의 메모]\n" +
             "- 신규 기능 릴리즈 일정 공유\n" +
             "- QA 이슈 3건 우선순위 재조정\n\n" +
@@ -336,7 +333,7 @@ internal static class KoreanStrings
         ["NoNoteSelected"] = "왼쪽 목록에서 노트를 선택하거나 새 노트를 만드세요",
         ["NoteMetaFormat"] = "{0}자 · {1}줄",
         ["NoteUpdatedFormat"] = "수정: {0}",
-        ["EditorBodyPlaceholder"] = "메모를 입력하세요.  '-[] 할 일 (07/25 14:00)' 형식으로 쓰면 Todo 패널에 자동 등록됩니다.",
+        ["EditorBodyPlaceholder"] = "메모를 입력하세요.",
 
         // Right panel tabs
         ["TabTodo"] = "할 일",

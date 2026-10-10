@@ -48,11 +48,9 @@ public sealed partial class WeekDayViewModel(
 /// </remarks>
 public sealed class DayNoteCardViewModel
 {
-    public DayNoteCardViewModel(NoteTabViewModel tab, int todoDone, int todoTotal, string emptyPreview)
+    public DayNoteCardViewModel(NoteTabViewModel tab, string emptyPreview)
     {
         Tab = tab;
-        TodoDone = todoDone;
-        TodoTotal = todoTotal;
         Preview = BuildPreview(tab.Body, emptyPreview);
     }
 
@@ -60,22 +58,11 @@ public sealed class DayNoteCardViewModel
 
     public string Preview { get; }
 
-    public int TodoDone { get; }
-
-    public int TodoTotal { get; }
-
-    public bool HasTodos => TodoTotal > 0;
-
-    /// <summary>Whether the card has a bottom line at all: tags on its left, progress on its right.</summary>
-    public bool HasFooter => Tab.HasTags || HasTodos;
-
-    /// <summary>The filled share of the progress track, 0 to 1.</summary>
-    public double TodoFraction => TodoTotal == 0 ? 0 : (double)TodoDone / TodoTotal;
-
-    /// <summary>The track is 44 points long; the fill is that share of it.</summary>
-    public double TodoFillWidth => Math.Round(44 * TodoFraction, 1);
-
-    public string TodoText => string.Create(CultureInfo.CurrentCulture, $"{TodoDone} / {TodoTotal}");
+    /// <summary>
+    /// Whether the card has a bottom line at all: its tags. A note carries no to-do progress - its
+    /// body is plain text and no to-do is linked to it.
+    /// </summary>
+    public bool HasFooter => Tab.HasTags;
 
     /// <summary>The first three lines with anything on them, run together with a middle dot.</summary>
     public static string BuildPreview(string? body, string empty)
@@ -109,8 +96,7 @@ public sealed class TodoRowViewModel(
     TodoItemViewModel item,
     AgendaDayRow row,
     Func<AgendaDayRow, Task>? onEdit = null,
-    Func<AgendaDayRow, Task>? onDelete = null,
-    Func<AgendaDayRow, Task>? onOpen = null)
+    Func<AgendaDayRow, Task>? onDelete = null)
 {
     public TodoItemViewModel Item { get; } = item;
 
@@ -121,12 +107,10 @@ public sealed class TodoRowViewModel(
     public IAsyncRelayCommand DeleteCommand { get; } = new AsyncRelayCommand(() => onDelete?.Invoke(row) ?? Task.CompletedTask);
 
     /// <summary>
-    /// A tap on the row in a day's list: the note it was captured from, or - with no note, which
-    /// is every to-do made since they were separated from notes - the to-do itself, in the sheet.
-    /// Jumping to the day it is already on would do nothing at all.
+    /// A tap on the row: the to-do itself, in the edit sheet - the same as its swipe's 편집. A
+    /// to-do is never linked to a note, so a tap never opens one.
     /// </summary>
-    public IAsyncRelayCommand OpenCommand { get; } = new AsyncRelayCommand(() =>
-        (row.Item.SourceNoteId is null ? onEdit : onOpen)?.Invoke(row) ?? Task.CompletedTask);
+    public IAsyncRelayCommand OpenCommand => EditCommand;
 
     public string NoteCaption { get; } = Caption(item, row);
 

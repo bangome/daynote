@@ -23,10 +23,9 @@ public readonly record struct ScannedTodo(
 /// (docs/TODOS.md §8).
 /// </summary>
 /// <remarks>
-/// This is the single definition of the grammar. <c>TodoParsing</c> in the presentation layer reads
-/// it from here rather than keeping its own copy, because the migration has to find exactly the
-/// lines the panel has been showing the user — a pattern that drifted by one character would
-/// silently leave some of them behind as plain text.
+/// This is the single definition of the grammar, and only the one-time migration reads it: the
+/// migration has to find exactly the lines the panel used to show the user. Nothing else parses
+/// note bodies for to-dos any more — the body is just text.
 /// <para>
 /// <b>Ids are derived, not generated.</b> Two devices both run this migration, offline, against the
 /// same note bodies; random ids would give the user every task twice after the next sync. The id is

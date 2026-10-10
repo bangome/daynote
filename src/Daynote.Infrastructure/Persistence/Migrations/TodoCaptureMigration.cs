@@ -19,7 +19,7 @@ namespace Daynote.Infrastructure.Persistence.Migrations;
 /// <para>
 /// <b>The body is left exactly as written.</b> Deleting the lines would be the app rewriting the
 /// user's own prose, and §8 refuses that. Afterwards a <c>-[ ]</c> in a body is text that looks
-/// like a checkbox, and <c>TodoParsing</c> stops feeding any panel from it.
+/// like a checkbox, and nothing reads it as a to-do.
 /// </para>
 /// <para>
 /// <b>Ids are derived from the note and the line</b>, never random — see

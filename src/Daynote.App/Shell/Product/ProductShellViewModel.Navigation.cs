@@ -28,27 +28,14 @@ public sealed partial class ProductShellViewModel
     }
 
     /// <summary>
-    /// Goes to the day a to-do falls on, and opens the note it was captured from if there is one.
+    /// Goes to the day a to-do falls on. A to-do is not linked to a note, so this never opens one;
+    /// this legacy shell has no to-do editor, so the day is as far as a tap goes.
     /// </summary>
-    /// <remarks>
-    /// There often is not: a to-do made in the list view has no note behind it, and one whose
-    /// note was deleted keeps a <c>source_note_id</c> that no longer resolves — §3 allows it to
-    /// dangle precisely so deleting a note cannot take tasks with it. Either way the day is the
-    /// useful half of the jump.
-    /// </remarks>
     private async Task JumpToTodoAsync(Daynote.Core.Agenda.AgendaDayRow row)
     {
         DateOnly day = DateOnly.FromDateTime(
             row.Falls?.Value ?? DateTime.Today);
-        if (!await SelectDateAsync(LocalDates.FromDateOnly(day)).ConfigureAwait(true))
-        {
-            return;
-        }
-
-        if (row.Item.SourceNoteId is { } note && NoteId.Create(note) is { IsSuccess: true } id)
-        {
-            await Notes.SelectNoteByIdAsync(id.Value).ConfigureAwait(true);
-        }
+        await SelectDateAsync(LocalDates.FromDateOnly(day)).ConfigureAwait(true);
     }
 
     /// <summary>Navigates to the tag occurrence's note and selects the '#tag' span in the editor.</summary>

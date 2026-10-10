@@ -27,21 +27,6 @@ public sealed partial class DesktopShellViewModel
         }
     }
 
-    /// <summary>
-    /// Goes to the day a to-do falls on, and opens the note it came from when there is one.
-    /// </summary>
-    private async Task JumpToTodoAsync(Daynote.Core.Agenda.AgendaDayRow row)
-    {
-        DateOnly day = DateOnly.FromDateTime(row.Falls?.Value ?? DateTime.Today);
-        Guid? note = row.Item.SourceNoteId;
-        if (await SelectDateAsync(Daynote.App.Composition.LocalDates.FromDateOnly(day)).ConfigureAwait(true)
-            && note is { } id
-            && Daynote.Core.Domain.Notes.NoteId.Create(id) is { IsSuccess: true } parsed)
-        {
-            await Notes.SelectNoteByIdAsync(parsed.Value).ConfigureAwait(true);
-        }
-    }
-
     private async Task JumpToTagAsync(TagOccurrence occ)
     {
         IsListMode = false;

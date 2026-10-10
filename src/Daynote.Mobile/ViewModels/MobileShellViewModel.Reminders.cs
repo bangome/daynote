@@ -188,7 +188,8 @@ public sealed partial class MobileShellViewModel
     }
 
     /// <summary>
-    /// A reminder was tapped: show its day and open its note, over whatever was on screen.
+    /// A reminder or a note link was tapped: show its day, and open the note when one is named (a
+    /// to-do's reminder names none, so it lands on the day), over whatever was on screen.
     /// </summary>
     public async Task OpenReminderAsync(LocalDate date, Guid noteId)
     {

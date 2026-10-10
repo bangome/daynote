@@ -32,93 +32,8 @@ public sealed class ReminderTests
     private static readonly DateTimeOffset Now = new(2026, 10, 2, 10, 0, 0, Seoul);
     private static readonly LocalDate Today = LocalDates.FromDateOnly(new DateOnly(2026, 10, 2));
 
-    // ── The planner ──────────────────────────────────────────────────────────────────────────────
-
-    [TestMethod]
-    public void A_date_and_time_reminds_at_that_time_and_a_date_alone_at_nine()
-    {
-        IReadOnlyList<Reminder> plan = Plan(Note("주간회의 준비", "-[] 회의자료 공유 (10/3 14:00)\n-[] 회의실 예약 (10/4)"));
-
-        Assert.HasCount(2, plan);
-        Assert.AreEqual(new DateTime(2026, 10, 3, 14, 0, 0), plan[0].At);
-        Assert.AreEqual("회의자료 공유", plan[0].Title);
-        Assert.AreEqual(new DateTime(2026, 10, 4, 9, 0, 0), plan[1].At);
-    }
-
-    [TestMethod]
-    public void A_date_alone_reminds_at_the_configured_time()
-    {
-        IReadOnlyList<Reminder> plan = ReminderPlanner.Plan(
-            [Note("n", "-[] 장보기 (10/4)\n-[] 통화 (10/4 8:15)")], Now, 64, new TimeSpan(7, 30, 0));
-
-        Assert.AreEqual(new DateTime(2026, 10, 4, 7, 30, 0), plan.Single(r => r.Title == "장보기").At);
-        Assert.AreEqual(new DateTime(2026, 10, 4, 8, 15, 0), plan.Single(r => r.Title == "통화").At, "A to-do with its own time ignores the default.");
-    }
-
-    [TestMethod]
-    public void Past_checked_and_undated_to_dos_do_not_remind()
-    {
-        IReadOnlyList<Reminder> plan = Plan(Note("n",
-            "-[] 이미 지남 (10/2 9:59)\n" +
-            "-[] 오늘 아침 (10/2)\n" +      // 09:00 today is already past at 10:00
-            "-[x] 끝냄 (10/5 10:00)\n" +
-            "-[] 날짜 없음\n" +
-            "- 그냥 목록 (10/5 10:00)\n" +
-            "-[] 남은 것 (10/2 10:01)"));
-
-        Assert.AreEqual("남은 것", plan.Single().Title);
-    }
-
-    [TestMethod]
-    public void The_body_is_the_note_title_and_the_due_label()
-    {
-        WithLanguage(AppLanguage.Korean, () =>
-            Assert.AreEqual("주간회의 준비 · 10/3 14:00", Plan(Note("주간회의 준비", "-[] 자료 (10/3 14:00)")).Single().Body));
-        WithLanguage(AppLanguage.English, () =>
-            Assert.AreEqual("Weekly sync · 10/3", Plan(Note("Weekly sync", "-[] deck (10/3)")).Single().Body));
-    }
-
-    [TestMethod]
-    public void An_id_survives_moving_the_line_and_changing_its_time_but_not_its_text()
-    {
-        Guid id = Guid.NewGuid();
-        string first = Plan(Note("n", "-[] 전화하기 (10/3 14:00)", id)).Single().Id;
-
-        Assert.AreEqual(first, Plan(Note("n", "메모\n\n위에 줄 추가\n-[] 전화하기 (10/5 9:00)", id)).Single().Id,
-            "Moving the line or its time gave the to-do a new id, so it would be cancelled and added again.");
-        Assert.AreNotEqual(first, Plan(Note("n", "-[] 문자하기 (10/3 14:00)", id)).Single().Id);
-        Assert.AreNotEqual(first, Plan(Note("n", "-[] 전화하기 (10/3 14:00)")).Single().Id, "Another note's to-do shares the id.");
-    }
-
-    [TestMethod]
-    public void Duplicate_to_dos_in_one_note_keep_their_own_ids_when_one_is_ticked()
-    {
-        Guid id = Guid.NewGuid();
-        IReadOnlyList<Reminder> both = Plan(Note("n", "-[] 물 마시기 (10/3 10:00)\n-[] 물 마시기 (10/3 15:00)", id));
-        IReadOnlyList<Reminder> second = Plan(Note("n", "-[x] 물 마시기 (10/3 10:00)\n-[] 물 마시기 (10/3 15:00)", id));
-
-        Assert.HasCount(2, both);
-        Assert.AreNotEqual(both[0].Id, both[1].Id);
-        Assert.AreEqual(both[1].Id, second.Single().Id);
-    }
-
-    [TestMethod]
-    public void Only_the_nearest_fit_under_the_cap_in_time_order()
-    {
-        // 70 to-dos, one per hour from 11:00 today, written in reverse so note order is not time order.
-        string body = string.Join('\n', Enumerable.Range(0, 70).Reverse().Select(i =>
-        {
-            DateTime at = new DateTime(2026, 10, 2, 11, 0, 0).AddHours(i);
-            return string.Create(CultureInfo.InvariantCulture, $"-[] 할 일 {i} ({at.Month}/{at.Day} {at.Hour}:00)");
-        }));
-
-        IReadOnlyList<Reminder> plan = Plan(Note("n", body));
-
-        Assert.HasCount(64, plan);
-        Assert.AreEqual("할 일 0", plan[0].Title);
-        Assert.AreEqual("할 일 63", plan[^1].Title);
-        CollectionAssert.AreEqual(plan.OrderBy(r => r.At).ToList(), plan.ToList());
-    }
+    // The planner itself is AgendaReminderTests': it plans to-do entities only. Note bodies never
+    // remind - a `-[ ]` line in one is just text.
 
     // ── The coordinator ──────────────────────────────────────────────────────────────────────────
 
@@ -384,6 +299,7 @@ public sealed class ReminderTests
             // own, so the reminder borrowed its note's; a to-do has one, and being taken to the
             // day something is owed is what a reminder is for.
             Assert.AreEqual(due, reminder.Date, "A tap would not open the day the to-do is due.");
+            Assert.AreEqual(Guid.Empty, reminder.NoteId, "A to-do's reminder still points at a note.");
 
             ScreenshotTests.Pump(() => shell.SelectDateAsync(Today));
             shell.GoToPageCommand.Execute(MobilePage.Settings);
@@ -458,9 +374,6 @@ public sealed class ReminderTests
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────────
-
-    private static IReadOnlyList<Reminder> Plan(params NoteSummary[] notes) =>
-        ReminderPlanner.Plan(notes, Now, 64, ReminderPlanner.DefaultDateOnlyTime);
 
     private static NoteSummary Note(string title, string body, Guid? id = null) =>
         new(id ?? Guid.NewGuid(), Today, title, body, 0, false);

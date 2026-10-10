@@ -264,7 +264,8 @@ public sealed class AgendaReminderTests
         // Ids change from a hash of the note and the line's text to a hash of the item's id. Diff
         // needs no special case for that: the old ids are simply absent from the new set.
         var old = new Reminder(
-            ReminderPlanner.IdFor(Guid.NewGuid(), "회의자료 공유", 0),
+            // What the retired note-line planner named one: "todo-" and a hash of note and text.
+            "todo-0123456789abcdef",
             new DateTime(2026, 10, 3, 14, 0, 0),
             "회의자료 공유",
             "주간회의 · 10/3 14:00",
@@ -309,13 +310,12 @@ public sealed class AgendaReminderTests
     }
 
     [TestMethod]
-    public void A_to_do_that_was_never_captured_from_a_note_still_reminds()
+    public void A_to_dos_reminder_names_no_note_even_when_it_was_captured_from_one()
     {
-        // One made in the list view has no source note. The tap then selects the day and opens no
-        // editor, which is the honest outcome — there is nothing behind it to open.
+        // A migrated to-do still stores the note its line was in, but a to-do is not linked to a
+        // note any more: the tap selects the day and opens no note editor.
         AgendaItem item = Task(1) with
         {
-            SourceNoteId = null,
             DueAt = new WallClock(new DateTime(2026, 10, 3, 14, 0, 0)),
             HasDueTime = true,
         };

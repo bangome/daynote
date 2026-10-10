@@ -8,12 +8,6 @@ public enum BodyHighlightKind
     /// <summary>Ordinary text, highlighted in no way.</summary>
     Plain,
 
-    /// <summary>A checkbox, <c>-[ ]</c> or <c>-[x]</c>, which the todo panel picks up.</summary>
-    Todo,
-
-    /// <summary>A due date, <c>(9/7)</c> or <c>(9/7 15:00)</c>, which the todo panel reads.</summary>
-    Due,
-
     /// <summary>A <c>[[file:…]]</c> marker or a URL — something clickable.</summary>
     Link,
 }
@@ -26,9 +20,8 @@ public readonly record struct BodyHighlightSpan(string Text, BodyHighlightKind K
 /// </summary>
 /// <remarks>
 /// The point of the marking is feedback, not decoration: these are exactly the shapes the app acts
-/// on elsewhere. A checkbox becomes a row in the todo panel, a date next to it becomes that row's
-/// due date, a marker or URL is clickable. Highlighting them is how the note says "I understood
-/// that" while it is being typed.
+/// on elsewhere — a marker or URL is clickable. A <c>-[ ]</c> line or a <c>(9/7)</c> stamp is not
+/// one of them: to-dos live in the to-do editor, and the body is just text.
 /// <para>
 /// The pattern was written in the WPF editor's code-behind and lived only there. It is here now
 /// because both shells draw the same body and there is no version of this that should differ between
@@ -39,16 +32,15 @@ public readonly record struct BodyHighlightSpan(string Text, BodyHighlightKind K
 public static partial class BodyHighlightSyntax
 {
     /// <summary>
-    /// Checkbox, then due date, then file marker or URL.
+    /// A file marker or a URL.
     /// </summary>
     /// <remarks>
-    /// There was a fifth arm for inline <c>#tag</c> tokens. Tags are the chips under the note title
-    /// now — one system, the one the user can see and edit — so a <c>#</c> in the prose is prose.
+    /// There were arms for <c>-[ ]</c> checkboxes, <c>(9/7)</c> due stamps and inline <c>#tag</c>
+    /// tokens. To-dos are their own items and tags are the chips under the note title, so all of
+    /// those are prose now.
     /// </remarks>
     public const string PatternText =
-        @"(?<todo>-\s?\[(?: |x|X)?\])"
-        + @"|(?<due>\(\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?\))"
-        + @"|(?<link>\[\[file:[^\]\r\n]+\]\]|" + UrlLinkSyntax.PatternText + ")";
+        @"(?<link>\[\[file:[^\]\r\n]+\]\]|" + UrlLinkSyntax.PatternText + ")";
 
     [GeneratedRegex(PatternText, RegexOptions.CultureInvariant)]
     public static partial Regex Pattern();
@@ -76,7 +68,7 @@ public static partial class BodyHighlightSyntax
                 spans.Add(new BodyHighlightSpan(text[last..match.Index], BodyHighlightKind.Plain));
             }
 
-            spans.Add(new BodyHighlightSpan(match.Value, KindOf(match)));
+            spans.Add(new BodyHighlightSpan(match.Value, BodyHighlightKind.Link));
             last = match.Index + match.Length;
         }
 
@@ -86,20 +78,5 @@ public static partial class BodyHighlightSyntax
         }
 
         return spans;
-    }
-
-    private static BodyHighlightKind KindOf(Match match)
-    {
-        if (match.Groups["todo"].Success)
-        {
-            return BodyHighlightKind.Todo;
-        }
-
-        if (match.Groups["due"].Success)
-        {
-            return BodyHighlightKind.Due;
-        }
-
-        return BodyHighlightKind.Link;
     }
 }

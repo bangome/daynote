@@ -74,7 +74,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
 
         Calendar = new CalendarMonthViewModel(clock, repository, SelectDateFromCalendarAsync);
         Entry = new TodoEntryViewModel(clock, repository);
-        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, JumpToTodoAsync);
+        Todo = new TodoPanelViewModel(agenda, clock, ToggleTodoAsync, EditTodoAsync);
         Favorites = new FavoritesPanelViewModel(repository, OpenFavoriteAsync);
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
