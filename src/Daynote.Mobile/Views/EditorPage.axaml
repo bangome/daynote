@@ -167,7 +167,7 @@
                     Command="{Binding OpenTodoSheetCommand}">
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <Border Classes="atmark">
-                  <TextBlock Text="@" />
+                  <views:Glyph Kind="Plus" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Mobile.SunInk}" />
                 </Border>
                 <TextBlock Classes="todotool" Text="{Binding Strings[MobileCaptureKinds]}" />
               </StackPanel>
@@ -396,13 +396,6 @@
       <Setter Property="Height" Value="28" />
       <Setter Property="CornerRadius" Value="9" />
       <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
-    </Style>
-    <Style Selector="Border.atmark TextBlock">
-      <Setter Property="FontSize" Value="14" />
-      <Setter Property="FontWeight" Value="ExtraBold" />
-      <Setter Property="HorizontalAlignment" Value="Center" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
     </Style>
     <Style Selector="Button.noteitems">
       <Setter Property="Height" Value="28" />
