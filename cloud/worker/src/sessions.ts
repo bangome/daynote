@@ -14,9 +14,21 @@ import type { Env } from './env';
  *
  * Tokens are high-entropy random values, so a plain SHA-256 is the right hash here — a slow KDF
  * would buy nothing against a 256-bit random preimage.
+ *
+ * One exception to the theft rule: a client that never received the rotated token. A phone loses
+ * the response when the OS suspends the app mid-request or the request times out after the server
+ * has already rotated, and then presents the old token again. Within {@link REUSE_GRACE_SECONDS} of
+ * the rotation, and only while its successor has never been used, that is answered with a fresh pair
+ * in the same family (the unused successor is revoked) rather than by revoking the family.
  */
 
 const TOKEN_BYTES = 32;
+
+/**
+ * How long after a rotation the old token may be presented again (see above). Short on purpose:
+ * it only has to cover a lost response and the client's immediate retry.
+ */
+export const REUSE_GRACE_SECONDS = 60;
 
 export interface IssuedSession {
   readonly token: string;
@@ -82,11 +94,18 @@ export async function rotateSession(
     throw new ApiError('unauthorized', 'The refresh token is not valid.');
   }
 
+  // The token being retired: the presented one, or — for a retry inside the grace window — its
+  // unused successor, which the client never received.
+  let retiring = presentedHash;
   if (row.revoked_utc !== null) {
-    // Reuse of a rotated token: assume theft and burn the whole chain, including the copy the
-    // legitimate client is holding. Forcing a fresh sign-in is the correct outcome here.
-    await revokeFamily(env, row.family_id, now);
-    throw new ApiError('unauthorized', 'The refresh token is not valid.');
+    const successor = await unusedSuccessor(env, row, now);
+    if (successor === null) {
+      // Reuse of a rotated token: assume theft and burn the whole chain, including the copy the
+      // legitimate client is holding. Forcing a fresh sign-in is the correct outcome here.
+      await revokeFamily(env, row.family_id, now);
+      throw new ApiError('unauthorized', 'The refresh token is not valid.');
+    }
+    retiring = successor;
   }
 
   if (row.expires_utc <= canonicalUtc(now)) {
@@ -101,7 +120,7 @@ export async function rotateSession(
   // the user out silently.
   await env.DB.batch([
     env.DB.prepare('UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1')
-      .bind(presentedHash, nowUtc),
+      .bind(retiring, nowUtc),
     env.DB.prepare(
       `INSERT INTO refresh_tokens
          (token_hash, user_id, family_id, device_name, issued_utc, expires_utc, revoked_utc)
@@ -113,6 +132,28 @@ export async function rotateSession(
     userId: row.user_id,
     session: { token, familyId: row.family_id, expiresUtc },
   };
+}
+
+/**
+ * The token a rotation of `row` issued, if the rotation was less than {@link REUSE_GRACE_SECONDS}
+ * ago and that token has not been used (rotated) or revoked since. A rotation writes the old token's
+ * `revoked_utc` and the new token's `issued_utc` from the same instant, which is how the two are
+ * paired. A logout or a family revocation leaves no live token issued at that instant, so it never
+ * qualifies.
+ */
+async function unusedSuccessor(env: Env, row: TokenRow, now: Date): Promise<string | null> {
+  const revoked = row.revoked_utc!;
+  if (revoked < canonicalUtc(addSeconds(now, -REUSE_GRACE_SECONDS))) {
+    return null;
+  }
+
+  const successor = await env.DB.prepare(
+    `SELECT token_hash FROM refresh_tokens
+      WHERE family_id = ?1 AND issued_utc = ?2 AND revoked_utc IS NULL AND token_hash <> ?3`,
+  )
+    .bind(row.family_id, revoked, row.token_hash)
+    .first<{ token_hash: string }>();
+  return successor?.token_hash ?? null;
 }
 
 export async function revokeToken(env: Env, presentedToken: string, now: Date): Promise<void> {

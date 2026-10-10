@@ -749,7 +749,14 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
     private readonly IAuthApiClient auth;
     private readonly ISyncSessionStore sessions;
     private readonly Func<DateTimeOffset> utcNow;
-    private readonly SemaphoreSlim gate = new(1, 1);
+
+    /// <summary>
+    /// One refresh at a time in the whole process, not per instance. A phone rebuilds its composition
+    /// on a profile switch, so an old provider's refresh can still be on the wire when the new one
+    /// starts; both would present the same token, and the server reads the second as theft and
+    /// revokes the family. Refreshes are rare enough that serializing every one costs nothing.
+    /// </summary>
+    private static readonly SemaphoreSlim Gate = new(1, 1);
 
     public SyncTokenProvider(
         IAuthApiClient auth,
@@ -798,7 +805,7 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
     {
         // One refresh at a time: concurrent attempts would rotate the token twice, and the second
         // rotation of an already-rotated token is treated as theft and revokes the whole family.
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             SyncCredentials? credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false);
@@ -818,11 +825,13 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
                 SessionResponse renewed = await auth
                     .RefreshAsync(refreshToken, cancellationToken)
                     .ConfigureAwait(false);
+                // Saved before anything uses it, and not cancellable: the server has already retired
+                // the old token, so a new one dropped here is a session lost.
                 await sessions.UpdateTokensAsync(
                     renewed.AccessToken,
                     renewed.AccessExpiresUtc,
                     renewed.RefreshToken,
-                    cancellationToken).ConfigureAwait(false);
+                    CancellationToken.None).ConfigureAwait(false);
                 return true;
             }
             catch (AccountException failure) when (failure.Failure == AccountFailure.InvalidCredentials)
@@ -841,7 +850,7 @@ public sealed class SyncTokenProvider : ISyncTokenProvider
         }
         finally
         {
-            gate.Release();
+            Gate.Release();
         }
     }
 }

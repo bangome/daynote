@@ -78,6 +78,38 @@ public sealed class SyncTokenProviderTests
         Assert.AreEqual("rotated", sessions.Stored!.RefreshToken);
     }
 
+    [TestMethod]
+    public async Task Two_providers_over_one_session_never_present_the_same_refresh_token()
+    {
+        // A phone's profile switch: the old composition's provider is still refreshing when the new
+        // one starts. Presenting one token twice is what the server reads as theft.
+        var presented = new System.Collections.Concurrent.ConcurrentBag<string>();
+        int serial = 0;
+        var handler = new Handler(request =>
+        {
+            string body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            presented.Add(System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("refresh_token").GetString()!);
+            Thread.Sleep(20);
+            int next = Interlocked.Increment(ref serial);
+            return Json(Session.Replace("\"rotated\"", $"\"rotated-{next}\"", StringComparison.Ordinal));
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://daynote.test/") };
+        var sessions = new MemorySessions
+        {
+            Stored = new SyncCredentials("u-1", "a@example.test", "stale", DateTimeOffset.UtcNow.AddHours(1), "refresh", 1, null),
+        };
+        var old = new SyncTokenProvider(new HttpAuthApiClient(http), sessions);
+        var fresh = new SyncTokenProvider(new HttpAuthApiClient(http), sessions);
+
+        bool[] results = await Task.WhenAll(
+            Task.Run(async () => await old.TryRefreshAsync()),
+            Task.Run(async () => await fresh.TryRefreshAsync()));
+
+        Assert.IsTrue(results.All(ok => ok));
+        Assert.HasCount(2, presented);
+        Assert.HasCount(2, presented.Distinct(), "The same refresh token was presented twice.");
+    }
+
     /// <summary>Sync endpoints answer 401 to the stale token; the refresh endpoint answers as told.</summary>
     private static (HttpSyncApiClient, MemorySessions, SyncTokenProvider) Compose(
         Func<HttpRequestMessage, HttpResponseMessage> refresh,

@@ -11,9 +11,26 @@ import {
   MOBILE_REDIRECT_URI,
   recordGoogleClient,
   unstubGoogle,
+  sha256HexOf,
 } from './helpers';
+import { REUSE_GRACE_SECONDS } from '../src/sessions';
+import { canonicalUtc } from '../src/time';
 
 beforeEach(resetDatabase);
+
+/**
+ * Moves a rotation `secondsAgo` into the past: the old token's revocation and its successor's issue
+ * share one instant, which is how the server pairs them.
+ */
+async function ageRotation(oldToken: string, newToken: string, secondsAgo: number): Promise<void> {
+  const then = canonicalUtc(new Date(Date.now() - secondsAgo * 1000));
+  await env.DB.batch([
+    env.DB.prepare('UPDATE refresh_tokens SET revoked_utc = ?2 WHERE token_hash = ?1')
+      .bind(await sha256HexOf(oldToken), then),
+    env.DB.prepare('UPDATE refresh_tokens SET issued_utc = ?2 WHERE token_hash = ?1')
+      .bind(await sha256HexOf(newToken), then),
+  ]);
+}
 
 function signInBody(code: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -148,17 +165,56 @@ describe('sessions', () => {
     expect(response.body.data_key).toBeUndefined();
   });
 
-  it('revokes the whole family when a rotated token is presented again', async () => {
+  it('revokes the whole family when a rotated token is presented after its successor was used', async () => {
     const account = await signIn();
     const rotated = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    const next = await post('/v1/auth/refresh', { refresh_token: rotated.body.refresh_token });
+    expect(next.status).toBe(200);
 
     const replay = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
     expect(replay.status).toBe(401);
 
-    const afterReplay = await post('/v1/auth/refresh', {
-      refresh_token: rotated.body.refresh_token,
-    });
+    const afterReplay = await post('/v1/auth/refresh', { refresh_token: next.body.refresh_token });
     expect(afterReplay.status).toBe(401);
+  });
+
+  it('revokes the whole family when a rotated token is presented after the grace window', async () => {
+    const account = await signIn();
+    const rotated = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    await ageRotation(account.refreshToken, rotated.body.refresh_token, REUSE_GRACE_SECONDS + 5);
+
+    const replay = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect(replay.status).toBe(401);
+
+    const afterReplay = await post('/v1/auth/refresh', { refresh_token: rotated.body.refresh_token });
+    expect(afterReplay.status).toBe(401);
+  });
+
+  it('answers a retry whose response was lost with a fresh pair in the same family', async () => {
+    // The phone was suspended mid-refresh: the server rotated, the app never saw the new token,
+    // and on resume it presents the old one again.
+    const account = await signIn();
+    const lost = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    await ageRotation(account.refreshToken, lost.body.refresh_token, REUSE_GRACE_SECONDS - 10);
+
+    const retry = await post('/v1/auth/refresh', { refresh_token: account.refreshToken });
+    expect(retry.status).toBe(200);
+    expect(retry.body.refresh_token).not.toBe(lost.body.refresh_token);
+    expect(retry.body.user_id).toBe(account.userId);
+
+    // The pair the app now holds keeps working; the one it never received is retired.
+    const onward = await post('/v1/auth/refresh', { refresh_token: retry.body.refresh_token });
+    expect(onward.status).toBe(200);
+    const families = await env.DB.prepare(
+      'SELECT COUNT(DISTINCT family_id) AS n FROM refresh_tokens WHERE user_id = ?1',
+    ).bind(account.userId).first<{ n: number }>();
+    expect(families?.n).toBe(1);
+  });
+
+  it('does not let a logged-out token back in through the grace window', async () => {
+    const account = await signIn();
+    expect((await post('/v1/auth/logout', { refresh_token: account.refreshToken })).status).toBe(204);
+    expect((await post('/v1/auth/refresh', { refresh_token: account.refreshToken })).status).toBe(401);
   });
 
   it('logs out without saying whether the token existed', async () => {

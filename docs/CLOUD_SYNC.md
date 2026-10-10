@@ -423,7 +423,9 @@ lose access to their notes, and after the fact is the worst possible moment to f
 - **Access token**: JWT, HS256, Worker secret, `exp` 15 minutes, claims `{sub, jti, iat, exp}`,
   sent as `Authorization: Bearer …`.
 - **Refresh token**: 32 random bytes, base64url. Only its SHA-256 is stored. TTL 60 days,
-  **rotated on every refresh**; presenting an already-rotated token revokes the whole family.
+  **rotated on every refresh**; presenting an already-rotated token revokes the whole family —
+  except within 60 s of the rotation while its successor is still unused, which is a client that
+  lost the response (an app suspended mid-request, a timeout) and gets a fresh pair in the same family.
 
 ### 4.11 Client-side secret storage
 

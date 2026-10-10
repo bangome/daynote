@@ -134,6 +134,36 @@ public sealed partial class AccountService
         SyncCredentials credentials = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in.");
 
+        if (tokens is not null)
+        {
+            // Through the shared provider, so this refresh cannot race one from sync or billing.
+            credentials.Dispose();
+            bool renewedHere;
+            try
+            {
+                renewedHere = await tokens.TryRefreshAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (SyncTransportException transport)
+            {
+                throw new AccountException(AccountFailure.Offline, transport.Message);
+            }
+
+            if (!renewedHere)
+            {
+                await ForgetLocallyAsync(cancellationToken).ConfigureAwait(false);
+                return AccountDeletion.SessionAlreadyGone;
+            }
+
+            using (SyncCredentials current = await sessions.LoadAsync(cancellationToken).ConfigureAwait(false)
+                ?? throw new AccountException(AccountFailure.InvalidCredentials, "Not signed in."))
+            {
+                await auth.DeleteAccountAsync(current.AccessToken, cancellationToken).ConfigureAwait(false);
+            }
+
+            await ForgetLocallyAsync(cancellationToken).ConfigureAwait(false);
+            return AccountDeletion.Deleted;
+        }
+
         using (credentials)
         {
             SessionResponse renewed;
