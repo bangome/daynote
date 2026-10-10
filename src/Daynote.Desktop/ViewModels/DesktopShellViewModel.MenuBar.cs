@@ -54,6 +54,17 @@ public sealed partial class DesktopShellViewModel
         await SelectDateAsync(date).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// The popover's 자세히…: the add card on today, with what was typed as its title, so kind,
+    /// date, time, repeat, description and list are all there.
+    /// </summary>
+    public async Task OpenAddTodoFromMenuBarAsync(string title)
+    {
+        IsSettingsOpen = false;
+        await OpenAddTodoAsync(LocalDates.Today(_clock), listId: null).ConfigureAwait(true);
+        TodoEntry.Title = title;
+    }
+
     /// <summary>The popover's 설정.</summary>
     public void OpenSettingsFromMenuBar()
     {

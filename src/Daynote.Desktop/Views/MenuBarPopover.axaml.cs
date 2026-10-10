@@ -29,9 +29,9 @@ public enum PopoverEntrance
 /// opened it.
 /// </summary>
 /// <remarks>
-/// The keys are taken before the box sees them, as the note editor does for its <c>@</c> popup:
-/// Enter makes, Tab switches what Enter makes, Esc dismisses. Tab is always swallowed while the
-/// popover has focus — moving focus off the box to a footer link is never what it means here.
+/// The keys are taken before the box sees them: Enter makes, Tab switches between 할 일 and 노트,
+/// Esc closes. Tab is always swallowed while the popover has focus — moving focus off the box to a
+/// footer link is never what it means here.
 /// </remarks>
 public partial class MenuBarPopover : Window
 {
@@ -50,13 +50,6 @@ public partial class MenuBarPopover : Window
             Card.CornerRadius = new CornerRadius(8);
         }
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
-        Box.PropertyChanged += (_, e) =>
-        {
-            if (e.Property == TextBox.CaretIndexProperty && DataContext is MenuBarViewModel model)
-            {
-                model.UpdateCaret(Box.CaretIndex);
-            }
-        };
     }
 
     /// <summary>Where the card sits inside the window: the rest is room for its shadow.</summary>
@@ -137,7 +130,7 @@ public partial class MenuBarPopover : Window
                 break;
             case Key.Tab:
                 e.Handled = true;
-                model.ToggleKind();
+                Lifecycle.MenuBarController.Forget(model.ToggleModeAsync());
                 break;
             case Key.Escape:
                 e.Handled = true;

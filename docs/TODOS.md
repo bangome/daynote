@@ -179,14 +179,15 @@ the split, not after.
 >   the 할 일 view's header (on today, in the list being looked at). Both open one card with the
 >   phone sheet's fields — 할 일 / 일정, 제목, 날짜, 시간 or start and end, 반복, 내용, 목록 — built on
 >   the same `TodoEntryViewModel`, now in `Daynote.Presentation`.
-> - **The menu bar's quick-capture box** (Mac menu bar, Windows tray) is not a note body and keeps
->   its `@` reading through `AgendaCaptureViewModel`; a plain line there is still appended to
->   today's note.
+> - **The menu bar's quick-capture box** (Mac menu bar, Windows tray) has a [할 일] [노트] switch
+>   above it, 할 일 by default and the last choice remembered. In 할 일 the text is the to-do's
+>   title, for today with no time, and 자세히… opens the desktop's add card with it; in 노트 Enter
+>   appends to today's last note and ⌘Enter makes a new one. Neither reads `@`.
 >
 > Whatever these make has `source_note_id` null. Existing items keep the link they have (no
 > migration), and a row that has one may still show its note's name; nothing creates a new one.
-> `AgendaCapture` / `AgendaPhraseParser` stay for the menu bar, the watch and the form's own
-> composition. The rest of this section is the history of the `@` command.
+> `AgendaCapture` / `AgendaPhraseParser` stay for the watch and for the form's and the menu bar's
+> composition; `AgendaCaptureViewModel` has no caller left in the apps. The rest of this section is the history of the `@` command.
 
 Typing is the only entry point worth optimising; a day-note app loses if capturing a task means
 leaving the note.
@@ -569,7 +570,8 @@ The order that makes that safe:
          paperclip. The sheet opens from the day screen, the 할 일 tab, the tablet panel and the
          widgets (§7), with no note behind it. The desktop gained the same form as a card from
          "+ 할 일" in its day panel and 할 일 view. The Windows (WPF) editor's `@` popup and the note
-         workspace's capture half are removed. The menu bar's quick capture is unchanged.
+         workspace's capture half are removed. The menu bar's quick capture is split into 할 일 and 노트
+         modes, with no `@` reading.
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 

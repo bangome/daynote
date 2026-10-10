@@ -38,6 +38,9 @@ public static class ShortcutSettings
     /// <summary>Whether the menu bar status item is shown (Mac). On by default.</summary>
     public const string MenuBarVisibleKey = "ui.menubar.visible";
 
+    /// <summary>What the menu bar popover's box makes, <c>Todo</c> or <c>Note</c>. 할 일 by default.</summary>
+    public const string MenuBarCaptureModeKey = "ui.menubar.capture";
+
     /// <summary>Per-action in-app shortcut override key (value = the chord's display string).</summary>
     public static string ActionKey(string actionId) => $"shortcuts.action.{actionId}";
 }

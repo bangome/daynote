@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,11 +8,19 @@ using Daynote.App.Localization;
 using Daynote.App.Notes;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
+using Daynote.Core.Settings;
 using Daynote.Core.Time;
 
 namespace Daynote.Desktop.ViewModels;
 
-/// <summary>What became of a line typed into the popover without an <c>@</c>.</summary>
+/// <summary>What the popover's box makes: a to-do, or a line in today's note. Never both.</summary>
+public enum MenuBarCaptureMode
+{
+    Todo,
+    Note,
+}
+
+/// <summary>What became of a line typed into the popover in 노트 mode.</summary>
 public enum MenuBarAppendResult
 {
     Appended,
@@ -27,10 +34,10 @@ public enum MenuBarAppendResult
 /// <remarks>
 /// One view model for both shells: the date, a capture box, the next event and today's to-dos.
 /// <para>
-/// <b>The box is a quick-capture box, not a note body.</b> Typing an <c>@</c> reads back through
-/// <see cref="AgendaCaptureViewModel"/>, the one <c>@</c> reader left: a note's body never makes a
-/// to-do (docs/TODOS.md, 2026-10-10). Without one, Enter adds the line to today's note — the
-/// watch's "노트에 한 줄", by the same rule.
+/// <b>Notes and to-dos are never mixed in one input</b> (docs/TODOS.md, 2026-10-10). A switch
+/// above the box says what Enter makes: in 할 일 the text is the to-do's title, for today with no
+/// time; in 노트 it is a line for today's note — the watch's "노트에 한 줄". Neither reads an
+/// <c>@</c>: it is just a character. 자세히… opens the app's full add card for anything more.
 /// </para>
 /// <para>
 /// <b>It stays open after Enter.</b> M9: what was made has to be seen arriving, so a to-do for
@@ -45,27 +52,32 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     private readonly Func<string, bool, Task<MenuBarAppendResult>> appendLine;
     private readonly Action<LocalDate?> openApp;
     private readonly Action openSettings;
+    private readonly Func<string, Task> openTodoForm;
+    private readonly ISettingsStore settings;
     private readonly List<Guid> justAdded = [];
     private IReadOnlyList<AgendaItem> items = [];
     private IReadOnlyDictionary<Guid, int> tones = new Dictionary<Guid, int>();
     private string chordText = string.Empty;
-    private int caret;
     private bool submitting;
+    private bool modeLoaded;
 
     public MenuBarViewModel(
         IAgendaRepository agenda,
         IClock clock,
+        ISettingsStore settings,
         Func<string, bool, Task<MenuBarAppendResult>> appendLine,
+        Func<string, Task> openTodoForm,
         Action<LocalDate?> openApp,
         Action openSettings)
     {
         this.agenda = agenda ?? throw new ArgumentNullException(nameof(agenda));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
         this.appendLine = appendLine ?? throw new ArgumentNullException(nameof(appendLine));
+        this.openTodoForm = openTodoForm ?? throw new ArgumentNullException(nameof(openTodoForm));
         this.openApp = openApp ?? throw new ArgumentNullException(nameof(openApp));
         this.openSettings = openSettings ?? throw new ArgumentNullException(nameof(openSettings));
         toggle = new ToggleAgendaItem(agenda);
-        Capture.PropertyChanged += OnCaptureChanged;
         LocalizationService.Instance.Observe(this);
     }
 
@@ -75,9 +87,6 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     /// <summary>A to-do or event was made or ticked here, so the window's panels should re-read.</summary>
     public event EventHandler? AgendaChanged;
 
-    /// <summary>The <c>@</c> readback, at the desktop's width.</summary>
-    public AgendaCaptureViewModel Capture { get; } = new(ReadbackWidth.Full);
-
     public ObservableCollection<MenuBarTodoRowViewModel> Todos { get; } = [];
 
     /// <summary>True while the popover is on screen. A refresh then keeps ticked rows in place.</summary>
@@ -85,6 +94,14 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
 
     [ObservableProperty]
     public partial string Draft { get; set; } = string.Empty;
+
+    /// <summary>What Enter makes. 할 일 until the user picks 노트; the last choice is kept.</summary>
+    [ObservableProperty]
+    public partial MenuBarCaptureMode Mode { get; private set; } = MenuBarCaptureMode.Todo;
+
+    public bool IsTodoMode => Mode == MenuBarCaptureMode.Todo;
+
+    public bool IsNoteMode => Mode == MenuBarCaptureMode.Note;
 
     /// <summary>Today's to-dos still owed; the number beside the status item.</summary>
     [ObservableProperty]
@@ -121,7 +138,13 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         set => SetProperty(ref chordText, value);
     }
 
-    public string Placeholder => AppStrings.MenuBarCapturePlaceholder;
+    public string Placeholder => IsTodoMode ? AppStrings.MenuBarTodoPlaceholder : AppStrings.MenuBarNotePlaceholder;
+
+    public string TodoModeLabel => AppStrings.MenuBarModeTodo;
+
+    public string NoteModeLabel => AppStrings.MenuBarModeNote;
+
+    public string MoreLabel => AppStrings.MenuBarMore;
 
     public string UpNextLabel => AppStrings.MenuBarUpNext;
 
@@ -140,23 +163,15 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
 
     public string SettingsLabel => AppStrings.MenuBarSettings;
 
-    public string TaskLabel => AppStrings.AgendaCaptureTask;
+    /// <summary>Text in the box: the line under it says where Enter will put it.</summary>
+    public bool IsHintVisible => Draft.Trim().Length > 0;
 
-    public string EventLabel => AppStrings.AgendaCaptureEvent;
-
-    /// <summary>The readback's two lines, once something after the <c>@</c> reads as a date.</summary>
-    public bool IsReadbackVisible => Capture.IsOpen && !Capture.IsPrompting;
-
-    /// <summary>An <c>@</c> with nothing after it yet: the invitation rather than two lines.</summary>
-    public bool IsPromptVisible => Capture.IsOpen && Capture.IsPrompting;
-
-    /// <summary>Plain text in the box: Enter adds it to today's note, as the hint under it says.</summary>
-    public bool IsAppendHintVisible => !Capture.IsOpen && Draft.Trim().Length > 0;
-
-    public string AppendHint => string.Format(
-        CultureInfo.CurrentCulture,
-        AppStrings.MenuBarAppendHintFormat,
-        OperatingSystem.IsMacOS() ? "⌘Enter" : "Ctrl+Enter");
+    public string Hint => IsTodoMode
+        ? AppStrings.MenuBarTodoHint
+        : string.Format(
+            CultureInfo.CurrentCulture,
+            AppStrings.MenuBarAppendHintFormat,
+            OperatingSystem.IsMacOS() ? "⌘Enter" : "Ctrl+Enter");
 
     private DateTime Now
     {
@@ -173,6 +188,13 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         IsOpen = true;
         justAdded.Clear();
         ClearNotice();
+        if (!modeLoaded)
+        {
+            modeLoaded = true;
+            string? stored = await settings.GetAsync(ShortcutSettings.MenuBarCaptureModeKey, cancellationToken).ConfigureAwait(true);
+            Mode = Enum.TryParse(stored, ignoreCase: true, out MenuBarCaptureMode mode) ? mode : MenuBarCaptureMode.Todo;
+        }
+
         await RefreshAsync(cancellationToken).ConfigureAwait(true);
     }
 
@@ -183,7 +205,6 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     public void Close()
     {
         IsOpen = false;
-        Capture.Dismiss();
         justAdded.Clear();
         ClearNotice();
         Rebuild();
@@ -252,16 +273,6 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         OnPropertyChanged(nameof(HasNoTodos));
     }
 
-    /// <summary>
-    /// The caret or the text moved. Either can open or close the readback, exactly as in a note.
-    /// </summary>
-    public void UpdateCaret(int position)
-    {
-        caret = Math.Clamp(position, 0, Draft.Length);
-        Capture.Update(Draft, caret, Now);
-        RaiseBoxState();
-    }
-
     partial void OnDraftChanged(string value)
     {
         if (value.Length > 0)
@@ -269,19 +280,50 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
             ClearNotice();
         }
 
-        caret = Math.Min(caret, value.Length);
-        Capture.Update(value, caret, Now);
-        RaiseBoxState();
+        OnPropertyChanged(nameof(IsHintVisible));
     }
 
+    partial void OnModeChanged(MenuBarCaptureMode value)
+    {
+        OnPropertyChanged(nameof(IsTodoMode));
+        OnPropertyChanged(nameof(IsNoteMode));
+        OnPropertyChanged(nameof(Placeholder));
+        OnPropertyChanged(nameof(Hint));
+    }
+
+    /// <summary>The switch above the box, or Tab. Kept for next time; what was typed stays.</summary>
+    public async Task SetModeAsync(MenuBarCaptureMode mode)
+    {
+        if (Mode == mode)
+        {
+            return;
+        }
+
+        Mode = mode;
+        try
+        {
+            await settings.SetAsync(ShortcutSettings.MenuBarCaptureModeKey, mode.ToString()).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The switch still works for this session; only remembering it failed.
+            System.Diagnostics.Trace.TraceError(exception.ToString());
+        }
+    }
+
+    /// <summary>Tab: the other mode.</summary>
+    public Task ToggleModeAsync() =>
+        SetModeAsync(IsTodoMode ? MenuBarCaptureMode.Note : MenuBarCaptureMode.Todo);
+
     /// <summary>
-    /// Enter (or ⌘Enter for a new note). A reading makes the item; plain text goes into today's
-    /// note. Returns whether anything was written. The popover stays open either way.
+    /// Enter (or ⌘Enter for a new note in 노트). 할 일 makes a to-do for today titled with the text
+    /// as typed; 노트 puts the line into today's note. Returns whether anything was written. The
+    /// popover stays open either way.
     /// </summary>
     /// <remarks>
     /// One at a time. Enter is posted on every key-down, auto-repeat included, and a second press
-    /// arriving while the first is still writing would find the readback already closed and add
-    /// the literal "@내일 회의" to today's note — or the same line twice.
+    /// arriving while the first is still writing would make the same to-do, or add the same line,
+    /// twice.
     /// </remarks>
     public async Task<bool> SubmitAsync(bool newNote = false, CancellationToken cancellationToken = default)
     {
@@ -294,8 +336,8 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         submitting = true;
         try
         {
-            return Capture.IsOpen
-                ? await MakeAsync(cancellationToken).ConfigureAwait(true)
+            return IsTodoMode
+                ? await MakeAsync(text, cancellationToken).ConfigureAwait(true)
                 : await AppendAsync(text, newNote).ConfigureAwait(true);
         }
         finally
@@ -304,27 +346,24 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         }
     }
 
-    /// <summary>The readback's item, written and announced. False when nothing was read yet.</summary>
-    private async Task<bool> MakeAsync(CancellationToken cancellationToken)
+    /// <summary>A to-do for today with no time, titled with the text: written and announced.</summary>
+    private async Task<bool> MakeAsync(string text, CancellationToken cancellationToken)
     {
-        // An @ with nothing read yet: Enter has nothing to make, and the text is not a line for a
-        // note either — it is half of a command.
-        if (Capture.Create(Guid.Empty, DateTimeOffset.UtcNow) is not { } made)
-        {
-            return false;
-        }
+        DateOnly today = DateOnly.FromDateTime(Now);
+        var reading = new AgendaPhrase(
+            new WallClock(today.ToDateTime(TimeOnly.MinValue)), HasTime: false, Rrule: null, RolledToTomorrow: false, Length: 0);
+        var state = new AgendaCaptureState(0, 0, text.Trim(), string.Empty, reading);
 
         // Typed here rather than in a note, so there is no note to jump back to.
-        made = made with { SourceNoteId = null };
+        AgendaItem made = AgendaCapture.Compose(state, AgendaKind.Task, Guid.Empty, Guid.NewGuid(), clock.Read().UtcInstant)
+            with { SourceNoteId = null };
         try
         {
             await agenda.SaveAsync(made, cancellationToken).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // The text stays, so Enter again is the retry. Re-read it so the readback is back too.
-            Capture.Update(Draft, caret, Now);
-            RaiseBoxState();
+            // The text stays, so Enter again is the retry.
             ShowNotice(AppStrings.MenuBarSaveFailed, null);
             System.Diagnostics.Trace.TraceError(exception.ToString());
             return false;
@@ -363,33 +402,8 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
         return true;
     }
 
-    /// <summary>Tab: switches what Enter makes. Handled only while there is a readback to switch.</summary>
-    public bool ToggleKind()
-    {
-        if (!IsReadbackVisible)
-        {
-            return false;
-        }
-
-        Capture.ToggleKind();
-        return true;
-    }
-
-    /// <summary>
-    /// Esc. Dismisses the readback and leaves the text as typed (§7); with no readback up, it asks
-    /// for the popover to close.
-    /// </summary>
-    public void Cancel()
-    {
-        if (Capture.IsOpen)
-        {
-            Capture.Dismiss();
-            RaiseBoxState();
-            return;
-        }
-
-        CloseRequested?.Invoke(this, EventArgs.Empty);
-    }
+    /// <summary>Esc: asks for the popover to close. What was typed stays for next time.</summary>
+    public void Cancel() => CloseRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void ViewNotice()
@@ -408,15 +422,21 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     private void OpenSettings() => openSettings();
 
     [RelayCommand]
-    private Task SelectTask() => SelectKind(AgendaKind.Task);
+    private Task SelectTodoMode() => SetModeAsync(MenuBarCaptureMode.Todo);
 
     [RelayCommand]
-    private Task SelectEvent() => SelectKind(AgendaKind.Event);
+    private Task SelectNoteMode() => SetModeAsync(MenuBarCaptureMode.Note);
 
-    private Task SelectKind(AgendaKind kind)
+    /// <summary>
+    /// 자세히…: the app's add card — kind, date, time, repeat, description, list — on today, with
+    /// what was typed as its title. The text moves there, so it is not made twice.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenTodoForm()
     {
-        Capture.SelectKind(kind);
-        return Task.CompletedTask;
+        string title = Draft.Trim();
+        Draft = string.Empty;
+        await openTodoForm(title).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -612,15 +632,6 @@ public sealed partial class MenuBarViewModel : ObservableObject, ILanguageAware
     partial void OnNoticeTextChanged(string value) => OnPropertyChanged(nameof(HasNotice));
 
     partial void OnNoticeDateChanged(LocalDate? value) => OnPropertyChanged(nameof(HasNoticeAction));
-
-    private void OnCaptureChanged(object? sender, PropertyChangedEventArgs e) => RaiseBoxState();
-
-    private void RaiseBoxState()
-    {
-        OnPropertyChanged(nameof(IsReadbackVisible));
-        OnPropertyChanged(nameof(IsPromptVisible));
-        OnPropertyChanged(nameof(IsAppendHintVisible));
-    }
 
     void ILanguageAware.OnLanguageChanged()
     {

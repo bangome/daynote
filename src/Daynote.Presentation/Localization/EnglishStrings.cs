@@ -811,7 +811,12 @@ internal static class EnglishStrings
 
         // The menu bar popover and the tray flyout (menu bar design §01).
         ["MenuBarHeaderFormat"] = "'Today · 'ddd, MMM d",
-        ["MenuBarCapturePlaceholder"] = "Quick capture… @ for to-do or event",
+        ["MenuBarModeTodo"] = "To-do",
+        ["MenuBarModeNote"] = "Note",
+        ["MenuBarTodoPlaceholder"] = "A to-do for today…",
+        ["MenuBarNotePlaceholder"] = "A line for today’s note…",
+        ["MenuBarTodoHint"] = "Enter: add to today’s to-dos",
+        ["MenuBarMore"] = "More…",
         ["MenuBarAppendHintFormat"] = "Enter: append to today’s note · {0}: new note",
         ["MenuBarUpNext"] = "Up next",
         ["MenuBarTodosFormat"] = "To-dos · {0} left",

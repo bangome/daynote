@@ -801,7 +801,12 @@ internal static class KoreanStrings
 
         // The menu bar popover and the tray flyout (menu bar design §01).
         ["MenuBarHeaderFormat"] = "'오늘 · 'M월 d일 dddd",
-        ["MenuBarCapturePlaceholder"] = "빠른 기록… @로 할 일·일정",
+        ["MenuBarModeTodo"] = "할 일",
+        ["MenuBarModeNote"] = "노트",
+        ["MenuBarTodoPlaceholder"] = "오늘 할 일…",
+        ["MenuBarNotePlaceholder"] = "오늘 노트에 한 줄…",
+        ["MenuBarTodoHint"] = "Enter: 오늘 할 일로 추가",
+        ["MenuBarMore"] = "자세히…",
         ["MenuBarAppendHintFormat"] = "Enter: 오늘 노트에 추가 · {0}: 새 노트",
         ["MenuBarUpNext"] = "다음 일정",
         ["MenuBarTodosFormat"] = "할 일 · 남은 {0}",

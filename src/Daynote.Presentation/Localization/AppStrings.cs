@@ -892,7 +892,12 @@ public static class AppStrings
     // The menu bar popover and the tray flyout (menu bar design §01).
     /// <summary>The popover's heading. A .NET date format with the word for today quoted.</summary>
     public static string MenuBarHeaderFormat => LocalizationService.Instance[nameof(MenuBarHeaderFormat)];
-    public static string MenuBarCapturePlaceholder => LocalizationService.Instance[nameof(MenuBarCapturePlaceholder)];
+    public static string MenuBarModeTodo => LocalizationService.Instance[nameof(MenuBarModeTodo)];
+    public static string MenuBarModeNote => LocalizationService.Instance[nameof(MenuBarModeNote)];
+    public static string MenuBarTodoPlaceholder => LocalizationService.Instance[nameof(MenuBarTodoPlaceholder)];
+    public static string MenuBarNotePlaceholder => LocalizationService.Instance[nameof(MenuBarNotePlaceholder)];
+    public static string MenuBarTodoHint => LocalizationService.Instance[nameof(MenuBarTodoHint)];
+    public static string MenuBarMore => LocalizationService.Instance[nameof(MenuBarMore)];
     /// <summary>{0} = the new-note chord (⌘Enter on the Mac, Ctrl+Enter elsewhere).</summary>
     public static string MenuBarAppendHintFormat => LocalizationService.Instance[nameof(MenuBarAppendHintFormat)];
     public static string MenuBarUpNext => LocalizationService.Instance[nameof(MenuBarUpNext)];

@@ -6,6 +6,7 @@ using Daynote.App.Localization;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
+using Daynote.Core.Settings;
 using Daynote.Core.Time;
 using Daynote.Desktop.Composition;
 using Daynote.Desktop.ViewModels;
@@ -16,7 +17,7 @@ namespace Daynote.Desktop.Tests;
 
 /// <summary>
 /// The menu bar popover's rules (menu bar design §01, Motion M9): the count beside the item, the
-/// order of the list, red past due, the box with and without <c>@</c>, and that it stays open.
+/// order of the list, red past due, the box's 할 일 and 노트 modes, and that it stays open.
 /// </summary>
 /// <remarks>
 /// Over the app's real agenda store in a throwaway database, at the design's moment: Wednesday
@@ -91,77 +92,191 @@ public sealed class MenuBarTests
     }
 
     [TestMethod]
-    public void With_an_at_Enter_makes_the_to_do_and_it_arrives_on_top_as_just_now()
-    {
-        WithMenuBar((model, agenda) =>
-        {
-            int closes = 0;
-            model.CloseRequested += (_, _) => closes++;
-
-            Type(model, "회의자료 초안 공유 @오늘 5시");
-            Assert.IsTrue(model.IsReadbackVisible, "The @ phrase was not read back.");
-            Assert.IsFalse(model.IsAppendHintVisible, "The note hint shows while an @ is being read.");
-            Assert.AreEqual("10월 7일 (수) 오후 5:00 마감", model.Capture.TaskLine);
-
-            Assert.IsTrue(Wait(model.SubmitAsync()));
-
-            AgendaItem made = Wait(agenda.GetAllAsync()).Single(item => item.Title == "회의자료 초안 공유");
-            Assert.AreEqual(AgendaKind.Task, made.Kind);
-            Assert.AreEqual(new DateTime(2026, 10, 7, 17, 0, 0), made.DueAt?.Value);
-            Assert.IsNull(made.SourceNoteId, "Typed in the menu bar, yet it claims a note it came from.");
-
-            Assert.AreEqual("회의자료 초안 공유", model.Todos[0].Title);
-            Assert.IsTrue(model.Todos[0].IsJustAdded, "The new row is not marked 방금.");
-            Assert.AreEqual(5, model.RemainingCount);
-            Assert.AreEqual(string.Empty, model.Draft, "The box was not cleared for the next one.");
-
-            // M9: making does not close.
-            Assert.IsTrue(model.IsOpen);
-            Assert.AreEqual(0, closes);
-        });
-    }
-
-    [TestMethod]
-    public void Tab_switches_to_an_event_and_Enter_makes_that()
-    {
-        WithMenuBar((model, agenda) =>
-        {
-            Type(model, "팀 점심 @오늘 3시");
-            Assert.IsTrue(model.ToggleKind(), "Tab was not taken while a reading was up.");
-            Assert.IsTrue(model.Capture.IsEventSelected);
-
-            Assert.IsTrue(Wait(model.SubmitAsync()));
-            AgendaItem made = Wait(agenda.GetAllAsync()).Single(item => item.Title == "팀 점심");
-            Assert.AreEqual(AgendaKind.Event, made.Kind);
-            Assert.AreEqual("팀 점심", model.NextEventTitle, "An event at 15:00 is not the next one before 16:00's.");
-        });
-    }
-
-    [TestMethod]
-    public void Something_for_another_day_says_where_it_went_and_offers_to_go_there()
+    public void The_box_starts_in_todo_mode()
     {
         WithMenuBar((model, _) =>
         {
-            Type(model, "보고서 제출 @내일");
-            Assert.IsTrue(Wait(model.SubmitAsync()));
-
-            Assert.AreEqual("10/8에 추가됨", model.NoticeText);
-            Assert.AreEqual(LocalDates.FromDateOnly(Today.AddDays(1)), model.NoticeDate);
-            Assert.IsTrue(model.HasNoticeAction);
-            Assert.IsFalse(model.Todos.Any(static row => row.Title == "보고서 제출"), "Tomorrow's to-do is in today's list.");
+            Assert.IsTrue(model.IsTodoMode);
+            Assert.IsFalse(model.IsNoteMode);
+            Assert.AreEqual("오늘 할 일…", model.Placeholder);
         });
     }
 
     [TestMethod]
-    public void Without_an_at_Enter_hands_the_line_to_todays_note()
+    public void In_todo_mode_Enter_makes_a_to_do_for_today_titled_as_typed_and_it_arrives_on_top()
+    {
+        int appended = 0;
+        WithMenuBar(
+            (model, agenda) =>
+            {
+                int closes = 0;
+                model.CloseRequested += (_, _) => closes++;
+
+                // No @ reading: the @ and what follows it are part of the title.
+                Type(model, "  회의자료 초안 공유 @오늘 5시 ");
+                Assert.IsTrue(model.IsHintVisible);
+                Assert.AreEqual("Enter: 오늘 할 일로 추가", model.Hint);
+
+                Assert.IsTrue(Wait(model.SubmitAsync()));
+
+                AgendaItem made = Wait(agenda.GetAllAsync()).Single(item => item.Title.StartsWith("회의자료", StringComparison.Ordinal));
+                Assert.AreEqual("회의자료 초안 공유 @오늘 5시", made.Title);
+                Assert.AreEqual(AgendaKind.Task, made.Kind);
+                Assert.AreEqual(Today.ToDateTime(TimeOnly.MinValue), made.DueAt?.Value);
+                Assert.IsFalse(made.HasDueTime, "A to-do typed in the menu bar was given a time.");
+                Assert.IsNull(made.Rrule);
+                Assert.IsNull(made.SourceNoteId, "Typed in the menu bar, yet it claims a note it came from.");
+
+                Assert.AreEqual("회의자료 초안 공유 @오늘 5시", model.Todos[0].Title);
+                Assert.IsTrue(model.Todos[0].IsJustAdded, "The new row is not marked 방금.");
+                Assert.AreEqual(5, model.RemainingCount);
+                Assert.AreEqual(string.Empty, model.Draft, "The box was not cleared for the next one.");
+                Assert.AreEqual(string.Empty, model.NoticeText);
+
+                // M9: making does not close.
+                Assert.IsTrue(model.IsOpen);
+                Assert.AreEqual(0, closes);
+            },
+            append: (_, _) =>
+            {
+                appended++;
+                return Task.FromResult(MenuBarAppendResult.Appended);
+            });
+
+        Assert.AreEqual(0, appended, "A to-do also went into today's note.");
+    }
+
+    [TestMethod]
+    public void Cmd_Enter_in_todo_mode_still_makes_a_to_do_and_no_note()
+    {
+        int appended = 0;
+        WithMenuBar(
+            (model, agenda) =>
+            {
+                Type(model, "새 노트 아님");
+                Assert.IsTrue(Wait(model.SubmitAsync(newNote: true)));
+                Assert.AreEqual(1, Wait(agenda.GetAllAsync()).Count(static item => item.Title == "새 노트 아님"));
+            },
+            append: (_, _) =>
+            {
+                appended++;
+                return Task.FromResult(MenuBarAppendResult.NewNote);
+            });
+
+        Assert.AreEqual(0, appended);
+    }
+
+    [TestMethod]
+    public void The_switch_and_Tab_change_what_Enter_makes_and_keep_the_text()
+    {
+        var lines = new List<string>();
+        WithMenuBar(
+            (model, agenda) =>
+            {
+                int before = Wait(agenda.GetAllAsync()).Count;
+                Type(model, "@내일 회의");
+
+                Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
+                Assert.IsTrue(model.IsNoteMode);
+                Assert.AreEqual("@내일 회의", model.Draft, "Switching cost what was typed.");
+                Assert.AreEqual("오늘 노트에 한 줄…", model.Placeholder);
+                StringAssert.StartsWith(model.Hint, "Enter: 오늘 노트에 추가");
+
+                Assert.IsTrue(Wait(model.SubmitAsync()));
+                Assert.AreEqual(before, Wait(agenda.GetAllAsync()).Count, "An @ line in 노트 made a to-do.");
+
+                Wait(model.ToggleModeAsync());
+                Assert.IsTrue(model.IsTodoMode, "Tab did not switch back to 할 일.");
+                Wait(model.ToggleModeAsync());
+                Assert.IsTrue(model.IsNoteMode);
+            },
+            append: (line, _) =>
+            {
+                lines.Add(line);
+                return Task.FromResult(MenuBarAppendResult.Appended);
+            });
+
+        CollectionAssert.AreEqual(new[] { "@내일 회의" }, lines.ToArray(), "The @ was not kept as text in the note.");
+    }
+
+    [TestMethod]
+    public void The_last_mode_is_remembered()
+    {
+        WithServices(provider =>
+        {
+            var agenda = provider.GetRequiredService<IAgendaRepository>();
+            var settings = provider.GetRequiredService<ISettingsStore>();
+            MenuBarViewModel first = Create(agenda, settings);
+            Wait(first.OpenAsync());
+            Assert.IsTrue(first.IsTodoMode);
+            Wait(first.SelectNoteModeCommand.ExecuteAsync(null));
+
+            MenuBarViewModel next = Create(agenda, settings);
+            Wait(next.OpenAsync());
+            Assert.IsTrue(next.IsNoteMode, "노트 was not remembered.");
+
+            Wait(next.SelectTodoModeCommand.ExecuteAsync(null));
+            MenuBarViewModel third = Create(agenda, settings);
+            Wait(third.OpenAsync());
+            Assert.IsTrue(third.IsTodoMode, "할 일 was not remembered.");
+        });
+    }
+
+    [TestMethod]
+    public void More_opens_the_full_form_with_what_was_typed_and_makes_nothing_itself()
+    {
+        var opened = new List<string>();
+        WithMenuBar(
+            (model, agenda) =>
+            {
+                int before = Wait(agenda.GetAllAsync()).Count;
+                Type(model, " 보고서 @금요일 ");
+                Wait(model.OpenTodoFormCommand.ExecuteAsync(null));
+
+                Assert.AreEqual(string.Empty, model.Draft, "The text stayed behind as well as moving to the form.");
+                Assert.AreEqual(before, Wait(agenda.GetAllAsync()).Count);
+            },
+            openForm: title =>
+            {
+                opened.Add(title);
+                return Task.CompletedTask;
+            });
+
+        CollectionAssert.AreEqual(new[] { "보고서 @금요일" }, opened.ToArray());
+    }
+
+    [TestMethod]
+    public void More_opens_the_add_card_on_today_with_the_title()
+    {
+        WithServices(provider =>
+        {
+            var shell = provider.GetRequiredService<DesktopShellViewModel>();
+            Wait(shell.InitializeAsync());
+
+            Wait(shell.OpenAddTodoFromMenuBarAsync("보고서 @금요일"));
+
+            Assert.IsTrue(shell.IsAddTodoOpen);
+            Assert.AreEqual("보고서 @금요일", shell.TodoEntry.Title);
+            Assert.IsTrue(shell.TodoEntry.IsTask);
+            Assert.AreEqual(LocalDates.ToDateOnly(LocalDates.Today(provider.GetRequiredService<IClock>())), shell.TodoEntry.Date);
+
+            Wait(shell.CommitAddTodoCommand.ExecuteAsync(null));
+            AgendaItem made = Wait(provider.GetRequiredService<IAgendaRepository>().GetAllAsync())
+                .Single(static item => item.Title == "보고서 @금요일");
+            Assert.IsNull(made.SourceNoteId);
+        });
+    }
+
+    [TestMethod]
+    public void In_note_mode_Enter_hands_the_line_to_todays_note()
     {
         var lines = new List<(string Line, bool NewNote)>();
         WithMenuBar(
             (model, _) =>
             {
+                Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
                 Type(model, "  아이디어: 온보딩 3단계로  ");
-                Assert.IsTrue(model.IsAppendHintVisible);
-                Assert.IsFalse(model.IsReadbackVisible);
+                Assert.IsTrue(model.IsHintVisible);
 
                 Assert.IsTrue(Wait(model.SubmitAsync()));
                 Assert.AreEqual("오늘 노트에 추가됨", model.NoticeText);
@@ -188,6 +303,7 @@ public sealed class MenuBarTests
         WithMenuBar(
             (model, _) =>
             {
+                Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
                 Type(model, "남겨 둘 문장");
                 Assert.IsFalse(Wait(model.SubmitAsync()));
                 Assert.AreEqual("남겨 둘 문장", model.Draft);
@@ -197,20 +313,7 @@ public sealed class MenuBarTests
     }
 
     [TestMethod]
-    public void An_at_with_nothing_read_yet_makes_nothing()
-    {
-        WithMenuBar((model, agenda) =>
-        {
-            int before = Wait(agenda.GetAllAsync()).Count;
-            Type(model, "제목만 @");
-            Assert.IsTrue(model.IsPromptVisible);
-            Assert.IsFalse(Wait(model.SubmitAsync()));
-            Assert.AreEqual(before, Wait(agenda.GetAllAsync()).Count);
-        });
-    }
-
-    [TestMethod]
-    public void Esc_dismisses_the_readback_first_and_only_then_asks_to_close()
+    public void Esc_asks_to_close_and_leaves_the_text()
     {
         WithMenuBar((model, _) =>
         {
@@ -219,12 +322,8 @@ public sealed class MenuBarTests
 
             Type(model, "회의 @내일 3시");
             model.Cancel();
-            Assert.IsFalse(model.IsReadbackVisible);
-            Assert.AreEqual("회의 @내일 3시", model.Draft, "Esc changed what was typed.");
-            Assert.AreEqual(0, closes);
-
-            model.Cancel();
             Assert.AreEqual(1, closes);
+            Assert.AreEqual("회의 @내일 3시", model.Draft, "Esc changed what was typed.");
         });
     }
 
@@ -363,7 +462,7 @@ public sealed class MenuBarTests
         WithMenuBar(
             (model, agenda) =>
             {
-                Type(model, "회의 @내일 3시");
+                Type(model, "회의");
                 gate.Hold();
                 Task<bool> first = model.SubmitAsync();
                 Task<bool> second = model.SubmitAsync();
@@ -383,7 +482,7 @@ public sealed class MenuBarTests
             },
             wrap: inner => gate.Over(inner));
 
-        Assert.AreEqual(0, appended, "The @ phrase went into today's note as text.");
+        Assert.AreEqual(0, appended, "The to-do also went into today's note.");
     }
 
     [TestMethod]
@@ -394,6 +493,7 @@ public sealed class MenuBarTests
         WithMenuBar(
             (model, _) =>
             {
+                Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
                 Type(model, "한 번만");
                 Task<bool> first = model.SubmitAsync();
                 Assert.IsFalse(Wait(model.SubmitAsync()));
@@ -420,7 +520,6 @@ public sealed class MenuBarTests
                 Assert.IsFalse(Wait(model.SubmitAsync()));
                 Assert.AreEqual("회의 @내일 3시", model.Draft);
                 Assert.AreEqual("저장하지 못했어요. 다시 시도해 주세요.", model.NoticeText);
-                Assert.IsTrue(model.IsReadbackVisible, "The readback did not come back for a retry.");
             },
             wrap: inner => gate.Over(inner));
     }
@@ -431,6 +530,7 @@ public sealed class MenuBarTests
         WithMenuBar(
             (model, _) =>
             {
+                Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
                 Type(model, "던져질 문장");
                 Assert.IsFalse(Wait(model.SubmitAsync()));
                 Assert.AreEqual("던져질 문장", model.Draft);
@@ -555,7 +655,8 @@ public sealed class MenuBarTests
         Action<MenuBarViewModel, IAgendaRepository> body,
         Func<string, bool, Task<MenuBarAppendResult>>? append = null,
         AppLanguage language = AppLanguage.Korean,
-        Func<IAgendaRepository, IAgendaRepository>? wrap = null)
+        Func<IAgendaRepository, IAgendaRepository>? wrap = null,
+        Func<string, Task>? openForm = null)
     {
         var localization = LocalizationService.Instance;
         AppLanguage original = localization.Language;
@@ -570,12 +671,11 @@ public sealed class MenuBarTests
                 System.Globalization.CultureInfo.CurrentCulture = localization.Culture;
                 var agenda = provider.GetRequiredService<IAgendaRepository>();
                 SeedDesignDay(agenda, language == AppLanguage.English);
-                var model = new MenuBarViewModel(
+                MenuBarViewModel model = Create(
                     wrap?.Invoke(agenda) ?? agenda,
-                    new FixedClock(DesignNow),
-                    append ?? ((_, _) => Task.FromResult(MenuBarAppendResult.Appended)),
-                    _ => { },
-                    () => { });
+                    provider.GetRequiredService<ISettingsStore>(),
+                    append,
+                    openForm);
                 Wait(model.OpenAsync());
                 body(model, agenda);
             });
@@ -586,6 +686,19 @@ public sealed class MenuBarTests
             localization.SetLanguage(original);
         }
     }
+
+    private static MenuBarViewModel Create(
+        IAgendaRepository agenda,
+        ISettingsStore settings,
+        Func<string, bool, Task<MenuBarAppendResult>>? append = null,
+        Func<string, Task>? openForm = null) => new(
+            agenda,
+            new FixedClock(DesignNow),
+            settings,
+            append ?? ((_, _) => Task.FromResult(MenuBarAppendResult.Appended)),
+            openForm ?? (_ => Task.CompletedTask),
+            _ => { },
+            () => { });
 
     internal static void WithServices(Action<ServiceProvider> body)
     {
@@ -604,12 +717,8 @@ public sealed class MenuBarTests
         });
     }
 
-    /// <summary>Types into the box the way the view does: the text, then the caret at its end.</summary>
-    internal static void Type(MenuBarViewModel model, string text)
-    {
-        model.Draft = text;
-        model.UpdateCaret(text.Length);
-    }
+    /// <summary>Types into the box the way the view does.</summary>
+    internal static void Type(MenuBarViewModel model, string text) => model.Draft = text;
 
     private static void Save(IAgendaRepository agenda, AgendaItem item) => Wait(agenda.SaveAsync(item).AsTask());
 

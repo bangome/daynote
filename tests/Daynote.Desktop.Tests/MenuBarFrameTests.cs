@@ -30,38 +30,51 @@ public sealed class MenuBarFrameTests
         Render("menubar-b1-light-ko", ThemeVariant.Light, AppLanguage.Korean, _ => { });
 
     [TestMethod]
-    public void B2_at_readback_light_korean() =>
+    public void B2_todo_typed_light_korean() =>
         Render("menubar-b2-light-ko", ThemeVariant.Light, AppLanguage.Korean, model =>
-            MenuBarTests.Type(model, "회의자료 초안 공유 @오늘 5시"));
+            MenuBarTests.Type(model, "회의자료 초안 공유"));
 
     [TestMethod]
     public void B3_just_made_dark_korean() =>
         Render("menubar-b3-dark-ko", ThemeVariant.Dark, AppLanguage.Korean, model =>
         {
-            MenuBarTests.Type(model, "회의자료 초안 공유 @오늘 5시");
+            MenuBarTests.Type(model, "회의자료 초안 공유");
             MenuBarTests.Wait(model.SubmitAsync());
         });
 
     [TestMethod]
-    public void B4_another_day_dark_english() =>
+    public void B4_todo_typed_dark_english() =>
         Render("menubar-b4-dark-en", ThemeVariant.Dark, AppLanguage.English, model =>
+            MenuBarTests.Type(model, "Send the report"));
+
+    [TestMethod]
+    public void B5_note_line_light_english() =>
+        Render("menubar-b5-light-en", ThemeVariant.Light, AppLanguage.English, model =>
         {
-            MenuBarTests.Type(model, "Send the report @tomorrow");
-            MenuBarTests.Wait(model.SubmitAsync());
+            MenuBarTests.Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
+            MenuBarTests.Type(model, "Idea: shorten onboarding to 3 steps");
         });
 
     [TestMethod]
-    public void B5_plain_line_light_english() =>
-        Render("menubar-b5-light-en", ThemeVariant.Light, AppLanguage.English, model =>
-            MenuBarTests.Type(model, "Idea: shorten onboarding to 3 steps"));
-
-    [TestMethod]
-    public void B6_event_selected_dark_korean() =>
+    public void B6_note_line_dark_korean() =>
         Render("menubar-b6-dark-ko", ThemeVariant.Dark, AppLanguage.Korean, model =>
         {
-            MenuBarTests.Type(model, "회의자료 초안 공유 @오늘 5시");
-            model.ToggleKind();
+            MenuBarTests.Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
+            MenuBarTests.Type(model, "아이디어: 온보딩 3단계로");
         });
+
+    [TestMethod]
+    public void B8_note_appended_light_korean() =>
+        Render("menubar-b8-light-ko", ThemeVariant.Light, AppLanguage.Korean, model =>
+        {
+            MenuBarTests.Wait(model.SelectNoteModeCommand.ExecuteAsync(null));
+            MenuBarTests.Type(model, "아이디어: 온보딩 3단계로");
+            MenuBarTests.Wait(model.SubmitAsync());
+        });
+
+    [TestMethod]
+    public void B9_default_dark_english() =>
+        Render("menubar-b9-dark-en", ThemeVariant.Dark, AppLanguage.English, _ => { });
 
     [TestMethod]
     public void B7_just_ticked_light_english() =>

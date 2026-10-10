@@ -125,42 +125,23 @@
       <Setter Property="Background" Value="{DynamicResource MenuBar.Hover}" />
     </Style>
 
-    <!-- The readback's two lines (B2, B6): the chosen one lifted onto the card's white. -->
-    <Style Selector="Border.reading">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="Padding" Value="10,0" />
-      <Setter Property="CornerRadius" Value="8" />
+    <!-- The switch above the box: what Enter makes, 할 일 or 노트. The chosen half lifted onto white. -->
+    <Style Selector="Border.seg">
+      <Setter Property="Padding" Value="11,3" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Border.reading.selected">
+    <Style Selector="Border.seg.on">
       <Setter Property="Background" Value="{DynamicResource MenuBar.ReadbackSelected}" />
     </Style>
-    <Style Selector="Border.reading TextBlock.kind">
-      <Setter Property="Width" Value="36" />
-      <Setter Property="FontSize" Value="11.5" />
-      <Setter Property="FontWeight" Value="ExtraBold" />
-      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
-    </Style>
-    <Style Selector="Border.reading.selected TextBlock.kind">
-      <Setter Property="Foreground" Value="{DynamicResource MenuBar.SunInk}" />
-    </Style>
-    <Style Selector="Border.reading TextBlock.line">
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
-    </Style>
-    <Style Selector="Border.reading.selected TextBlock.line">
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text}" />
-    </Style>
-    <Style Selector="Border.reading TextBlock.enter">
-      <Setter Property="IsVisible" Value="False" />
+    <Style Selector="Border.seg TextBlock">
       <Setter Property="FontSize" Value="12" />
-      <Setter Property="FontWeight" Value="ExtraBold" />
-      <Setter Property="Foreground" Value="{DynamicResource MenuBar.SunInk}" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text2}" />
     </Style>
-    <Style Selector="Border.reading.selected TextBlock.enter">
-      <Setter Property="IsVisible" Value="True" />
+    <Style Selector="Border.seg.on TextBlock">
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="Foreground" Value="{DynamicResource MenuBar.Text}" />
     </Style>
 
     <!--
@@ -252,52 +233,35 @@
                          Foreground="{DynamicResource MenuBar.Text3}" Text="{Binding ChordText}" />
             </Grid>
 
-            <TextBox x:Name="Box" Classes="capture" Margin="0,10,0,0"
+            <!-- 할 일 | 노트, and in 할 일 the way to the full form. Tab switches too. -->
+            <Grid Margin="0,10,0,0" ColumnDefinitions="Auto,*,Auto">
+              <Border Grid.Column="0" CornerRadius="8" Padding="2" Background="{DynamicResource MenuBar.Readback}">
+                <StackPanel Orientation="Horizontal">
+                  <Button Classes="mb" Command="{Binding SelectTodoModeCommand}">
+                    <Border Classes="seg" Classes.on="{Binding IsTodoMode}">
+                      <TextBlock Text="{Binding TodoModeLabel}" />
+                    </Border>
+                  </Button>
+                  <Button Classes="mb" Command="{Binding SelectNoteModeCommand}">
+                    <Border Classes="seg" Classes.on="{Binding IsNoteMode}">
+                      <TextBlock Text="{Binding NoteModeLabel}" />
+                    </Border>
+                  </Button>
+                </StackPanel>
+              </Border>
+              <Button Grid.Column="2" Classes="mb" VerticalAlignment="Center" IsVisible="{Binding IsTodoMode}"
+                      Command="{Binding OpenTodoFormCommand}">
+                <TextBlock FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MenuBar.SunInk}"
+                           Text="{Binding MoreLabel}" />
+              </Button>
+            </Grid>
+
+            <TextBox x:Name="Box" Classes="capture" Margin="0,8,0,0"
                      PlaceholderText="{Binding Placeholder}" Text="{Binding Draft}" />
 
-            <!-- @ read as a date: the editor's two lines, Enter / Tab / Esc as in a note. -->
-            <Border Margin="0,6,0,0" CornerRadius="10" Padding="4" Background="{DynamicResource MenuBar.Readback}"
-                    IsVisible="{Binding IsReadbackVisible}">
-              <StackPanel>
-                <Button Classes="mb" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                        Command="{Binding SelectTaskCommand}">
-                  <Border Classes="reading" Classes.selected="{Binding Capture.IsTaskSelected}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                      <TextBlock Grid.Column="0" Classes="kind" VerticalAlignment="Center" Text="{Binding TaskLabel}" />
-                      <TextBlock Grid.Column="1" Classes="line" Margin="10,0" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" Text="{Binding Capture.TaskLine}" />
-                      <TextBlock Grid.Column="2" Classes="enter" VerticalAlignment="Center" Text="↵" />
-                    </Grid>
-                  </Border>
-                </Button>
-                <Button Classes="mb" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                        Command="{Binding SelectEventCommand}">
-                  <Border Classes="reading" Classes.selected="{Binding Capture.IsEventSelected}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                      <TextBlock Grid.Column="0" Classes="kind" VerticalAlignment="Center" Text="{Binding EventLabel}" />
-                      <TextBlock Grid.Column="1" Classes="line" Margin="10,0" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" Text="{Binding Capture.EventLine}" />
-                      <TextBlock Grid.Column="2" Classes="enter" VerticalAlignment="Center" Text="↵" />
-                    </Grid>
-                  </Border>
-                </Button>
-                <TextBlock Margin="10,4,10,2" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MenuBar.SunInk}"
-                           IsVisible="{Binding Capture.HasNote}" Text="{Binding Capture.Note}" />
-                <TextBlock Margin="10,4,10,2" FontSize="11" Foreground="{DynamicResource MenuBar.Text3}"
-                           Text="{Binding Capture.KeyHints}" />
-              </StackPanel>
-            </Border>
-
-            <!-- An @ with nothing after it yet: what to type, not an error. -->
-            <Border Margin="0,6,0,0" CornerRadius="10" Padding="10,8" Background="{DynamicResource MenuBar.Readback}"
-                    IsVisible="{Binding IsPromptVisible}">
-              <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource MenuBar.Text2}"
-                         Text="{Binding Capture.Prompt}" />
-            </Border>
-
-            <!-- Plain text: where Enter will put it (B5). -->
+            <!-- Where Enter will put what was typed (B5). -->
             <TextBlock Margin="2,6,2,0" FontSize="11.5" Foreground="{DynamicResource MenuBar.Text3}"
-                       IsVisible="{Binding IsAppendHintVisible}" Text="{Binding AppendHint}" />
+                       IsVisible="{Binding IsHintVisible}" Text="{Binding Hint}" />
           </StackPanel>
         </Border>
 

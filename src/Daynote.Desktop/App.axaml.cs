@@ -250,7 +250,14 @@ public partial class App : Application
         var model = new MenuBarViewModel(
             _provider.GetRequiredService<Core.Agenda.IAgendaRepository>(),
             _provider.GetRequiredService<Core.Time.IClock>(),
+            _provider.GetRequiredService<Core.Settings.ISettingsStore>(),
             (line, newNote) => shell.AppendLineToTodayAsync(append, line, newNote),
+            title =>
+            {
+                controller?.HideNow();
+                lifecycle.ShowWindow();
+                return shell.OpenAddTodoFromMenuBarAsync(title);
+            },
             date =>
             {
                 controller?.HideNow();
