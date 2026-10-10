@@ -96,6 +96,8 @@ interface AppleState {
   latest?: Record<string, unknown>;
   status?: number;
   autoRenewStatus?: number;
+  /** The product the next period renews into, when a change is booked for it. */
+  autoRenewProductId?: string;
   signingChain?: TestChain;
   /** Production refusing every request, as it does before the app's first App Store release. */
   productionUnauthorized?: boolean;
@@ -131,7 +133,7 @@ function appleApi(state: AppleState): OutboundCall[] {
             signedTransactionInfo: await signJws(signingChain, state.latest ?? state.transaction),
             signedRenewalInfo: await signJws(signingChain, {
               originalTransactionId: state.transaction.originalTransactionId,
-              autoRenewProductId: state.transaction.productId,
+              autoRenewProductId: state.autoRenewProductId ?? (state.latest ?? state.transaction).productId,
               autoRenewStatus: state.autoRenewStatus ?? 1,
               signedDate: Date.now(),
             }),
@@ -158,7 +160,14 @@ async function notify(payload: Record<string, unknown>, signingChain: TestChain 
 async function notification(
   type: string,
   txn: Record<string, unknown>,
-  options: { subtype?: string; status?: number; autoRenewStatus?: number; uuid?: string; signedDate?: number } = {},
+  options: {
+    subtype?: string;
+    status?: number;
+    autoRenewStatus?: number;
+    autoRenewProductId?: string;
+    uuid?: string;
+    signedDate?: number;
+  } = {},
 ) {
   return {
     notificationType: type,
@@ -174,7 +183,7 @@ async function notification(
       signedTransactionInfo: await signJws(chain, txn),
       signedRenewalInfo: await signJws(chain, {
         originalTransactionId: txn['originalTransactionId'],
-        autoRenewProductId: txn['productId'],
+        autoRenewProductId: options.autoRenewProductId ?? txn['productId'],
         autoRenewStatus: options.autoRenewStatus ?? 1,
         signedDate: txn['signedDate'],
       }),
@@ -185,7 +194,7 @@ async function notification(
 function row(userId: string) {
   return env.DB.prepare(
     `SELECT provider, subscription_id, status, current_period_end_utc, grace_ends_utc, tier, plan, price_id,
-            environment, duplicate_subscription_id
+            environment, duplicate_subscription_id, pending_price_id
        FROM subscriptions WHERE user_id = ?1`,
   ).bind(userId).first<Record<string, string | null>>();
 }
@@ -803,5 +812,123 @@ describe('POST /v1/billing/apple/notifications', () => {
 
     expect((await notify(payload)).status).toBe(200);
     expect(await row(account.userId)).toBeNull();
+  });
+});
+
+describe('a plan change Apple books for the next renewal', () => {
+  const PRO_ANNUAL = 'cc.arachat.daynote.pro.annual';
+  const PREMIUM_ANNUAL = 'cc.arachat.daynote.premium.annual';
+
+  it('reports a downgrade read from the subscription’s renewal info, and keeps Premium until then', async () => {
+    const account = await signIn();
+    const txn = transaction(account.userId, { productId: PREMIUM_ANNUAL, expiresDate: Date.now() + 300 * DAY });
+    appleApi({ transaction: txn, autoRenewProductId: PRO_ANNUAL });
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+
+    expect(response.status).toBe(200);
+    const periodEnd = (await row(account.userId))?.current_period_end_utc;
+    expect(response.body).toMatchObject({
+      tier: 'premium',
+      plan: 'annual',
+      apple_product_id: PREMIUM_ANNUAL,
+      apple_pending_product_id: PRO_ANNUAL,
+      apple_pending_effective_utc: periodEnd,
+    });
+    expect((await row(account.userId))?.pending_price_id).toBe(PRO_ANNUAL);
+  });
+
+  it('reports nothing pending when the renewal is the current product', async () => {
+    const account = await signIn();
+    const txn = transaction(account.userId);
+    appleApi({ transaction: txn });
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+
+    expect(response.body).toMatchObject({ apple_pending_product_id: null, apple_pending_effective_utc: null });
+  });
+
+  describe('from DID_CHANGE_RENEWAL_PREF', () => {
+    beforeEach(() => {
+      delete (env as { APPLE_IAP_PRIVATE_KEY?: string }).APPLE_IAP_PRIVATE_KEY;
+    });
+
+    it('records a downgrade, clears it when taken back, and when the renewal applies it', async () => {
+      const account = await signIn();
+      const premium = transaction(account.userId, {
+        productId: PREMIUM_ANNUAL, expiresDate: Date.now() + 300 * DAY, signedDate: Date.now() - 4000,
+      });
+      await notify(await notification('SUBSCRIBED', premium, { status: 1 }));
+
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', { ...premium, signedDate: Date.now() - 3000 }, {
+        subtype: 'DOWNGRADE', status: 1, autoRenewProductId: PRO_ANNUAL,
+      }));
+      expect(await row(account.userId)).toMatchObject({ tier: 'premium', price_id: PREMIUM_ANNUAL, pending_price_id: PRO_ANNUAL });
+      let status = await get('/v1/billing/status', { token: account.accessToken });
+      expect(status.body).toMatchObject({
+        tier: 'premium',
+        apple_product_id: PREMIUM_ANNUAL,
+        apple_pending_product_id: PRO_ANNUAL,
+        apple_pending_effective_utc: (await row(account.userId))?.current_period_end_utc,
+      });
+
+      // Taken back: Apple sends the same type with no subtype, renewing into the current product.
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', { ...premium, signedDate: Date.now() - 2000 }, { status: 1 }));
+      expect((await row(account.userId))?.pending_price_id).toBeNull();
+      status = await get('/v1/billing/status', { token: account.accessToken });
+      expect(status.body).toMatchObject({ apple_pending_product_id: null, apple_pending_effective_utc: null });
+
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', { ...premium, signedDate: Date.now() - 1000 }, {
+        subtype: 'DOWNGRADE', status: 1, autoRenewProductId: PRO_ANNUAL,
+      }));
+      expect((await row(account.userId))?.pending_price_id).toBe(PRO_ANNUAL);
+
+      const renewed = {
+        ...premium, transactionId: '3000000000000101', productId: PRO_ANNUAL,
+        expiresDate: Date.now() + 665 * DAY, signedDate: Date.now(),
+      };
+      await notify(await notification('DID_RENEW', renewed, { status: 1 }));
+      expect(await row(account.userId)).toMatchObject({ tier: 'pro', price_id: PRO_ANNUAL, pending_price_id: null });
+    });
+
+    it('applies an upgrade at once, with nothing left pending', async () => {
+      const account = await signIn();
+      const pro = transaction(account.userId, { productId: PRO_ANNUAL, signedDate: Date.now() - 2000 });
+      await notify(await notification('SUBSCRIBED', pro, { status: 1 }));
+      // An interval change booked for the renewal, then overtaken by an upgrade.
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', { ...pro, signedDate: Date.now() - 1000 }, {
+        subtype: 'DOWNGRADE', status: 1, autoRenewProductId: PRO_MONTHLY,
+      }));
+      expect((await row(account.userId))?.pending_price_id).toBe(PRO_MONTHLY);
+
+      const premium = { ...pro, transactionId: '3000000000000102', productId: PREMIUM_ANNUAL, signedDate: Date.now() };
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', premium, { subtype: 'UPGRADE', status: 1 }));
+      expect(await row(account.userId)).toMatchObject({ tier: 'premium', price_id: PREMIUM_ANNUAL, pending_price_id: null });
+    });
+
+    it('ignores a late change signed before the newest snapshot', async () => {
+      const account = await signIn();
+      const premium = transaction(account.userId, { productId: PREMIUM_ANNUAL, signedDate: Date.now() });
+      await notify(await notification('SUBSCRIBED', premium, { status: 1 }));
+
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', { ...premium, signedDate: Date.now() - 5000 }, {
+        subtype: 'DOWNGRADE', status: 1, autoRenewProductId: PRO_ANNUAL,
+      }));
+      expect((await row(account.userId))?.pending_price_id).toBeNull();
+    });
+
+    it('has nothing pending once auto-renew is off', async () => {
+      const account = await signIn();
+      const premium = transaction(account.userId, { productId: PREMIUM_ANNUAL, signedDate: Date.now() - 1000 });
+      await notify(await notification('DID_CHANGE_RENEWAL_PREF', premium, {
+        subtype: 'DOWNGRADE', status: 1, autoRenewProductId: PRO_ANNUAL,
+      }));
+      expect((await row(account.userId))?.pending_price_id).toBe(PRO_ANNUAL);
+
+      await notify(await notification('DID_CHANGE_RENEWAL_STATUS', { ...premium, signedDate: Date.now() }, {
+        subtype: 'AUTO_RENEW_DISABLED', status: 1, autoRenewStatus: 0, autoRenewProductId: PRO_ANNUAL,
+      }));
+      expect(await row(account.userId)).toMatchObject({ status: 'canceled', pending_price_id: null });
+    });
   });
 });

@@ -312,6 +312,17 @@ npx wrangler d1 execute daynote --remote --command \
 Sandbox (TestFlight, App Review) purchases entitle on the production server by design — see
 docs/CLOUD_SYNC.md §14.8 for the trade and the queries that list or end them.
 
+### 0015: an App Store change booked for the renewal
+
+```sh
+npx wrangler d1 migrations apply daynote --remote              # 0015 (one ADD COLUMN)
+npm run deploy
+```
+
+Apply it before the Worker that reads `subscriptions.pending_price_id`: that Worker selects it for
+every `/v1/billing/status`, checkout and plan change, which would fail on the missing column. The
+column is nullable and nothing older writes it, so applying it first breaks nothing.
+
 ### Account deletion and an App Store subscription
 
 The server cannot cancel an App Store subscription — only the subscriber can, in Settings — so

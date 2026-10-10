@@ -67,6 +67,11 @@ interface Snapshot {
   /** When Apple signed it: the order snapshots are applied in. */
   readonly signedUtc: string;
   readonly environment: string | null;
+  /**
+   * The product the next period renews into, when Apple has a change booked for the renewal — a
+   * downgrade, or an interval change it applies then. Null when nothing is pending.
+   */
+  readonly pendingProductId: string | null;
   /** Still billing — what decides a clash with another subscription (billing.ts, `ownership`). */
   readonly live: boolean;
 }
@@ -142,6 +147,16 @@ function snapshotOf(
 
   // Paid up counts as live whether or not it renews: a subscriber who turned auto-renew off still
   // holds the account until the period ends (billing.ts, isLive).
+  // Apple books a downgrade for the renewal as the renewal info's autoRenewProductId; the current
+  // transaction, and so the entitlement, stays as it is until then. Going back to the current
+  // product takes the change back, and a renewal that has applied it makes the two equal again.
+  // Only a subscription that will renew has a next period to change.
+  const next = renewal?.autoRenewProductId;
+  const pendingProductId = status === 'active' && next !== undefined && next !== transaction.productId
+    && APPLE_PRODUCTS[next] !== undefined
+    ? next
+    : null;
+
   const live = ((status === 'active' || status === 'canceled') && !expired)
     || (status === 'past_due' && grace !== null && Date.parse(grace) > now.getTime());
 
@@ -155,6 +170,7 @@ function snapshotOf(
     graceEnd: grace,
     signedUtc: utc(transaction.signedDate) ?? canonicalUtc(now),
     environment: environment ?? transaction.environment ?? null,
+    pendingProductId,
     live,
   };
 }
@@ -195,14 +211,14 @@ async function snapshotStatement(
   return env.DB.prepare(
     `INSERT INTO subscriptions
        (user_id, provider, subscription_id, status, current_period_end_utc, grace_ends_utc,
-        updated_utc, tier, plan, price_id, price_occurred_utc, environment)
-     VALUES (?1, 'apple', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+        updated_utc, tier, plan, price_id, price_occurred_utc, environment, pending_price_id)
+     VALUES (?1, 'apple', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?13)
      ON CONFLICT(user_id) DO UPDATE SET
        -- A different subscription taking the row clears a duplicate flag that was about the old one.
        duplicate_subscription_id = CASE WHEN subscription_id IS NOT excluded.subscription_id
            THEN NULL ELSE duplicate_subscription_id END,
        ${['provider', 'subscription_id', 'status', 'current_period_end_utc', 'grace_ends_utc', 'tier', 'plan',
-         'price_id', 'environment', 'price_occurred_utc'].map(follow).join(',\n       ')},
+         'price_id', 'pending_price_id', 'environment', 'price_occurred_utc'].map(follow).join(',\n       ')},
        updated_utc = excluded.updated_utc
      ${ownershipGuard('?12')}`,
   ).bind(
@@ -218,6 +234,7 @@ async function snapshotStatement(
     snapshot.signedUtc,
     snapshot.environment,
     canonicalUtc(now),
+    snapshot.pendingProductId,
   );
 }
 

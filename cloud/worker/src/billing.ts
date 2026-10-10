@@ -605,12 +605,13 @@ interface OwnSubscription extends StoredSubscription {
   customer_id: string | null;
   duplicate_subscription_id: string | null;
   price_id: string | null;
+  pending_price_id: string | null;
 }
 
 async function findSubscription(env: Env, userId: string): Promise<OwnSubscription | null> {
   return env.DB.prepare(
     `SELECT provider, customer_id, subscription_id, status, current_period_end_utc, grace_ends_utc,
-            duplicate_subscription_id, price_id
+            duplicate_subscription_id, price_id, pending_price_id
        FROM subscriptions WHERE user_id = ?1`,
   )
     .bind(userId)
@@ -636,6 +637,7 @@ export async function statusBody(env: Env, userId: string, now: Date): Promise<R
   // Held by a live subscription the App Store did not sell: the iPhone shows it as managed on
   // another device and offers nothing, rather than selling a second subscription beside it.
   const heldElsewhere = subscription !== null && subscription.provider !== 'apple' && isLive(subscription, now);
+  const applePending = subscription?.provider === 'apple' ? subscription.pending_price_id ?? null : null;
 
   return {
     ...toWire(entitlement, await storage(env, userId, entitlement)),
@@ -678,6 +680,11 @@ export async function statusBody(env: Env, userId: string, now: Date): Promise<R
     apple_can_purchase: appleProducts.length > 0 && !heldElsewhere,
     // The App Store product the account is subscribed to, so the app can mark it in the table.
     apple_product_id: subscription?.provider === 'apple' ? subscription.price_id : null,
+    // A change Apple has booked for the next renewal — a downgrade, or an interval change it applies
+    // then — and when it takes effect. Until then the account keeps `apple_product_id`. Both null
+    // when nothing is pending; earlier apps ignore them.
+    apple_pending_product_id: applePending,
+    apple_pending_effective_utc: applePending === null ? null : subscription?.current_period_end_utc ?? null,
     server_utc: canonicalUtc(now),
   };
 }

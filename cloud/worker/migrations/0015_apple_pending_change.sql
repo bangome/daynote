@@ -1,0 +1,14 @@
+-- An App Store plan change that waits for the next renewal (docs/CLOUD_SYNC.md §14.8).
+--
+-- Within one subscription group Apple applies an upgrade at once but a downgrade (Premium to Pro),
+-- and most interval changes at the same level, only when the subscription next renews. Until then
+-- there is no new transaction: the renewal info's autoRenewProductId names the product the next
+-- period will be, and DID_CHANGE_RENEWAL_PREF (subtype DOWNGRADE) says it changed. The entitlement
+-- rightly stays on the current product, so the row could not tell the app a change was booked and
+-- the iPhone showed a purchase that seemed to do nothing.
+--
+-- pending_price_id: the App Store product the subscription renews into, when it is not the one it
+--                   is on now. NULL when nothing is pending — never set, the change was taken back,
+--                   or the renewal applied it. Follows the newest Apple snapshot like price_id.
+--                   Paddle rows leave it NULL; Paddle changes take effect at once.
+ALTER TABLE subscriptions ADD COLUMN pending_price_id TEXT;
