@@ -97,6 +97,8 @@ interface AppleState {
   status?: number;
   autoRenewStatus?: number;
   signingChain?: TestChain;
+  /** Production refusing every request, as it does before the app's first App Store release. */
+  productionUnauthorized?: boolean;
 }
 
 /** The App Store Server API, knowing one purchase in one environment. */
@@ -109,6 +111,9 @@ function appleApi(state: AppleState): OutboundCall[] {
       ? url.host === 'api.storekit.itunes.apple.com'
       : url.host === 'api.storekit-sandbox.itunes.apple.com';
     if (!inEnvironment) {
+      if (state.productionUnauthorized && url.host === 'api.storekit.itunes.apple.com') {
+        return jsonResponse({}, 401);
+      }
       return jsonResponse({ errorCode: 4040010, errorMessage: 'Transaction id not found.' }, 404);
     }
     if (url.pathname === `/inApps/v1/transactions/${state.transaction.transactionId}`) {
@@ -288,6 +293,19 @@ describe('POST /v1/billing/apple/transaction', () => {
       'api.storekit-sandbox.itunes.apple.com',
       'api.storekit-sandbox.itunes.apple.com',
     ]);
+    expect((await row(account.userId))?.environment).toBe('Sandbox');
+  });
+
+  it('asks the sandbox when Production refuses, as it does before the first App Store release', async () => {
+    const account = await signIn();
+    const txn = transaction(account.userId, { productId: PRO_MONTHLY, environment: 'Sandbox' });
+    const calls = appleApi({ environment: 'Sandbox', transaction: txn, productionUnauthorized: true });
+
+    const response = await post('/v1/billing/apple/transaction', { transaction_id: txn.transactionId }, { token: account.accessToken });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ tier: 'pro' });
+    expect(calls.map((call) => new URL(call.url).host)[0]).toBe('api.storekit.itunes.apple.com');
     expect((await row(account.userId))?.environment).toBe('Sandbox');
   });
 

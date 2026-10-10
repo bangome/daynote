@@ -181,6 +181,13 @@ export async function appStoreGet(
     if (response.ok) {
       return { environment: candidate, body };
     }
+    // Before the app's first App Store release, Production answers 401 for every request — the
+    // same token Sandbox accepts — so a TestFlight purchase never reached the sandbox. A 401 from
+    // Production is therefore "ask the sandbox", like an unknown transaction; one from the last
+    // environment asked is still a real failure, logged below.
+    if (response.status === 401 && candidate === 'Production' && candidate !== order.at(-1)) {
+      continue;
+    }
     if (response.status === 404 && body['errorCode'] === TRANSACTION_NOT_FOUND) {
       if (candidate !== order.at(-1)) {
         continue;
