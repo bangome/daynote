@@ -1290,6 +1290,20 @@ Purchase key is set), `apple_can_purchase`, `apple_product_id` and `duplicate_pr
 `can_manage` is now Paddle's portal only. The App Store's localized price is what the iPhone shows,
 read from StoreKit, never from `offers`.
 
+**A change booked for the renewal (2026-10-10, migration 0015).** Within the group Apple applies an
+upgrade at once, but a downgrade (Premium to Pro) and most interval changes at the same level only
+at the next renewal. Until then there is no new transaction: the renewal info's
+`autoRenewProductId` names the next period's product, and `DID_CHANGE_RENEWAL_PREF` (subtype
+`DOWNGRADE`; `UPGRADE` for the immediate kind; no subtype when the change is taken back) says it
+moved. The entitlement stays on the current product, correctly. Each snapshot records
+`subscriptions.pending_price_id` — that product when it differs from the current one and the
+subscription renews, else NULL — following the newest snapshot like `price_id`, so taking the
+change back or the renewal applying it clears it. `/v1/billing/status` adds
+`apple_pending_product_id` and `apple_pending_effective_utc` (the current period's end). The iPhone
+shows the change on the current plan, marks the booked card 예약됨, labels a lower tier's button
+다음 갱신부터 변경, and after such a purchase says when it applies rather than reporting a change
+that did not show.
+
 **In the iPhone app.** 설정 › 계정 › 요금제 · 구독 opens the plans page (`StorePage.axaml`,
 `MobileStoreViewModel`): the plan in force and its storage, a monthly/annual toggle, Pro and Premium
 cards priced by StoreKit (never by the server's Paddle list), each with its title, length and

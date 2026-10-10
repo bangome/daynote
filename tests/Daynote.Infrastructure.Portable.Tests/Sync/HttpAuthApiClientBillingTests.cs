@@ -108,6 +108,8 @@ public sealed class HttpAuthApiClientBillingTests
             { "tier": "gold", "plan": "annual", "product_id": "cc.arachat.daynote.gold" }
           ],
           "apple_can_purchase": true, "apple_product_id": "cc.arachat.daynote.pro.monthly",
+          "apple_pending_product_id": "cc.arachat.daynote.pro.annual",
+          "apple_pending_effective_utc": "2026-11-01T00:00:00.0000000Z",
           "server_utc": "2026-10-02T00:00:00.0000000Z"
         }
         """;
@@ -128,12 +130,16 @@ public sealed class HttpAuthApiClientBillingTests
         Assert.AreEqual("cc.arachat.daynote.pro.monthly", links.AppleProductId);
         Assert.AreEqual(2, links.AppleProducts!.Count, "The product of an unknown tier was kept.");
         Assert.AreEqual("cc.arachat.daynote.premium.annual", links.FindAppleProduct(BillingTier.Premium, BillingPlan.Annual)?.ProductId);
+        Assert.AreEqual("cc.arachat.daynote.pro.annual", links.ApplePendingProductId);
+        Assert.AreEqual(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), links.ApplePendingEffective);
 
         handler.Response = OldStatus;
         (_, BillingLinks old) = await client.GetBillingAsync("token");
         Assert.IsNull(old.Provider);
         Assert.IsFalse(old.AppleCanPurchase);
         Assert.AreEqual(0, old.AppleProducts!.Count);
+        Assert.IsNull(old.ApplePendingProductId);
+        Assert.IsNull(old.ApplePendingEffective);
     }
 
     [TestMethod]

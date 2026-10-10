@@ -74,6 +74,9 @@
               </Border>
             </Grid>
             <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding CurrentPlanDetail}" />
+            <!-- A change Apple applies at the next renewal: said here, calmly, so the plan below is not mistaken for broken. -->
+            <TextBlock FontSize="13" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{DynamicResource Mobile.Text}"
+                       IsVisible="{Binding HasPendingChange}" Text="{Binding PendingChangeText}" />
             <StackPanel Spacing="6" Margin="0,4,0,0" IsVisible="{Binding HasStorage}">
               <TextBlock Classes="line" FontSize="13" Text="{Binding StorageText}" />
               <ProgressBar Minimum="0" Maximum="1" Value="{Binding StorageFraction}" Height="6" MinHeight="6"

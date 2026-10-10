@@ -110,6 +110,12 @@ public sealed record Entitlement(
 /// <see cref="AppleProductId"/> is the App Store product the account is on. All are absent from an
 /// older server, which sold nothing through the App Store.
 /// </remarks>
+/// <remarks>
+/// <see cref="ApplePendingProductId"/> is the App Store product a change booked for the next renewal
+/// moves to — Apple applies a downgrade, and most interval changes, only then — and
+/// <see cref="ApplePendingEffective"/> is when. The account keeps <see cref="AppleProductId"/> until
+/// then. Both are null when nothing is pending, and absent from a server older than migration 0015.
+/// </remarks>
 public sealed record BillingLinks(
     bool CanCheckout,
     bool CanManage,
@@ -122,7 +128,9 @@ public sealed record BillingLinks(
     IReadOnlyList<AppStoreProduct>? AppleProducts = null,
     bool AppleCanPurchase = false,
     string? AppleProductId = null,
-    BillingProvider? DuplicateProvider = null)
+    BillingProvider? DuplicateProvider = null,
+    string? ApplePendingProductId = null,
+    DateTimeOffset? ApplePendingEffective = null)
 {
     public static BillingLinks None { get; } = new(false, false, false, false);
 

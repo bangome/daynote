@@ -41,9 +41,22 @@ public sealed class StoreTests
         new(BillingTier.Premium, BillingPlan.Annual, "cc.arachat.daynote.premium.annual"),
     ];
 
-    internal static BillingLinks Selling(BillingProvider? provider = null, string? current = null, bool canPurchase = true) =>
+    internal static BillingLinks Selling(
+        BillingProvider? provider = null,
+        string? current = null,
+        bool canPurchase = true,
+        string? pending = null,
+        DateTimeOffset? pendingEffective = null) =>
         new(true, provider == BillingProvider.Paddle, Provider: provider, AppleProducts: OnSale,
-            AppleCanPurchase: canPurchase, AppleProductId: current);
+            AppleCanPurchase: canPurchase, AppleProductId: current,
+            ApplePendingProductId: pending, ApplePendingEffective: pendingEffective);
+
+    /// <summary>The next renewal of the Premium annual subscriber below: midday in Seoul and in UTC alike.</summary>
+    private static readonly DateTimeOffset RenewalDay = new(2026, 10, 11, 3, 0, 0, TimeSpan.Zero);
+
+    private const string PremiumAnnual = "cc.arachat.daynote.premium.annual";
+
+    private const string ProAnnual = "cc.arachat.daynote.pro.annual";
 
     internal static readonly Entitlement Trial = new(
         EntitlementState.Trial, DateTimeOffset.UtcNow.AddDays(10), true, false, BillingTier.Pro, null, 2L << 30, 300L << 20);
@@ -506,6 +519,118 @@ public sealed class StoreTests
         },
         Paid(BillingTier.Pro, BillingPlan.Monthly),
         Selling(BillingProvider.Apple, "cc.arachat.daynote.pro.monthly"));
+
+    [TestMethod]
+    public void A_Premium_App_Store_subscriber_is_told_a_move_to_Pro_waits_for_the_renewal() => WithStore(
+        (store, _, _, _) =>
+        {
+            Assert.AreEqual("다음 갱신부터 변경", store.ProCard.ButtonText);
+            Assert.IsTrue(store.ProCard.CanBuy);
+            Assert.IsFalse(store.HasPendingChange);
+
+            // The other Premium interval is the same tier: a plain switch.
+            store.SelectMonthlyCommand.Execute(null);
+            Assert.AreEqual(MobileStrings.Get("StoreSwitch"), store.PremiumCard.ButtonText);
+            Assert.AreEqual("다음 갱신부터 변경", store.ProCard.ButtonText);
+
+            LocalizationService.Instance.SetLanguage(AppLanguage.English);
+            try
+            {
+                Assert.AreEqual("Switch at renewal", store.ProCard.ButtonText);
+            }
+            finally
+            {
+                LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+            }
+        },
+        Paid(BillingTier.Premium, BillingPlan.Annual),
+        Selling(BillingProvider.Apple, PremiumAnnual));
+
+    [TestMethod]
+    public void A_downgrade_booked_for_the_renewal_is_said_on_the_plan_in_force() => WithStorePage(
+        Paid(BillingTier.Premium, BillingPlan.Annual),
+        Selling(BillingProvider.Apple, PremiumAnnual, pending: ProAnnual, pendingEffective: RenewalDay),
+        (page, store, _) =>
+        {
+            const string notice = "다음 갱신일(10월 11일)부터 Pro(연간)로 바뀝니다. 그때까지 Premium을 그대로 쓸 수 있어요.";
+            Assert.IsTrue(store.HasPendingChange);
+            Assert.AreEqual(notice, store.PendingChangeText);
+            Assert.IsTrue(TextShown(page, notice), "The pending change is not on the page.");
+            Assert.IsTrue(store.PremiumCard.IsCurrent, "The entitlement stays Premium until the renewal.");
+
+            LocalizationService.Instance.SetLanguage(AppLanguage.English);
+            try
+            {
+                Assert.AreEqual("Changes to Pro (annual) on Oct 11. Premium stays on until then.", store.PendingChangeText);
+            }
+            finally
+            {
+                LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+            }
+        });
+
+    [TestMethod]
+    public void The_plan_booked_for_the_renewal_is_marked_scheduled_not_offered_again() => WithStore(
+        (store, server, fake, _) =>
+        {
+            Assert.IsTrue(store.ProCard.IsScheduled);
+            Assert.AreEqual("예약됨", store.ProCard.ButtonText);
+            Assert.IsFalse(store.ProCard.CanBuy);
+            Assert.IsFalse(store.PremiumCard.IsScheduled);
+
+            // Pro monthly is not the booked product: it can still be chosen instead.
+            store.SelectMonthlyCommand.Execute(null);
+            Assert.IsFalse(store.ProCard.IsScheduled);
+            Assert.AreEqual("다음 갱신부터 변경", store.ProCard.ButtonText);
+
+            LocalizationService.Instance.SetLanguage(AppLanguage.English);
+            try
+            {
+                store.SelectAnnualCommand.Execute(null);
+                Assert.AreEqual("Scheduled", store.ProCard.ButtonText);
+            }
+            finally
+            {
+                LocalizationService.Instance.SetLanguage(AppLanguage.Korean);
+            }
+        },
+        Paid(BillingTier.Premium, BillingPlan.Annual),
+        Selling(BillingProvider.Apple, PremiumAnnual, pending: ProAnnual, pendingEffective: RenewalDay));
+
+    [TestMethod]
+    public void A_downgrade_purchase_says_when_it_applies_instead_of_a_change_that_never_shows() => WithStore(
+        (store, server, fake, account) =>
+        {
+            // StoreKit returns; the server still reports Premium, with Pro booked for the renewal.
+            server.Answer = (Paid(BillingTier.Premium, BillingPlan.Annual),
+                Selling(BillingProvider.Apple, PremiumAnnual, pending: ProAnnual, pendingEffective: RenewalDay));
+
+            Run(store.ProCard.BuyCommand);
+
+            Assert.AreEqual(ProAnnual, fake.LastPurchase);
+            CollectionAssert.AreEqual(new[] { "1000000000000001" }, fake.Finished);
+            Assert.AreEqual("다음 갱신일(10월 11일)부터 Pro(연간)로 바뀝니다. 그때까지 Premium을 그대로 쓸 수 있어요.", store.StatusMessage);
+            Assert.IsNull(store.ErrorMessage);
+            Assert.AreEqual(BillingTier.Premium, account.Entitlement.Tier);
+            Assert.IsTrue(store.ProCard.IsScheduled);
+        },
+        Paid(BillingTier.Premium, BillingPlan.Annual),
+        Selling(BillingProvider.Apple, PremiumAnnual));
+
+    [TestMethod]
+    public void A_downgrade_purchase_before_the_server_reports_it_says_Apple_scheduled_it() => WithStore(
+        (store, server, _, _) =>
+        {
+            // A server older than the pending fields, or not yet told: the old product, nothing pending.
+            server.Answer = (Paid(BillingTier.Premium, BillingPlan.Annual), Selling(BillingProvider.Apple, PremiumAnnual));
+
+            Run(store.ProCard.BuyCommand);
+
+            Assert.AreEqual("Apple에서 변경을 예약했습니다. 다음 갱신일부터 적용됩니다.", store.StatusMessage);
+            Assert.IsNull(store.ErrorMessage);
+        },
+        Paid(BillingTier.Premium, BillingPlan.Annual),
+        Selling(BillingProvider.Apple, PremiumAnnual));
 
     [TestMethod]
     public void A_desktop_subscriber_is_shown_as_subscribed_with_nothing_to_buy() => WithStore(

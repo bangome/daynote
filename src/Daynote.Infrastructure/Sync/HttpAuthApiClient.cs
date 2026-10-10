@@ -453,7 +453,10 @@ public sealed class HttpAuthApiClient : IAuthApiClient
                 AppleProducts: ToAppleProducts(body.AppleProducts ?? []),
                 AppleCanPurchase: body.AppleCanPurchase,
                 AppleProductId: body.AppleProductId,
-                DuplicateProvider: BillingPlanExtensions.ParseProvider(body.DuplicateProvider)));
+                DuplicateProvider: BillingPlanExtensions.ParseProvider(body.DuplicateProvider),
+                // A change Apple applies at the next renewal; absent from an older server.
+                ApplePendingProductId: body.ApplePendingProductId is { Length: > 0 } pending ? pending : null,
+                ApplePendingEffective: ParseWireOrNull(body.ApplePendingEffectiveUtc)));
     }
 
     /// <summary>The App Store products this version understands; an unknown tier or interval is skipped.</summary>
@@ -602,6 +605,18 @@ public sealed class HttpAuthApiClient : IAuthApiClient
     /// this build does not know is the only safe direction, and `can_sync` from the server still
     /// decides whether syncing is attempted.
     /// </summary>
+    /// <summary>A wire timestamp, or null when it is absent or unreadable.</summary>
+    private static DateTimeOffset? ParseWireOrNull(string? value)
+    {
+        if (value is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        var parsed = SyncTimestamps.ParseWire(value);
+        return parsed.IsSuccess ? parsed.Value : null;
+    }
+
     private static Entitlement ToEntitlement(IEntitlementBody body)
     {
         EntitlementState state = body.State switch
@@ -613,12 +628,7 @@ public sealed class HttpAuthApiClient : IAuthApiClient
             _ => EntitlementState.Expired,
         };
 
-        DateTimeOffset? until = null;
-        if (body.Until is { Length: > 0 } value)
-        {
-            var parsed = SyncTimestamps.ParseWire(value);
-            until = parsed.IsSuccess ? parsed.Value : null;
-        }
+        DateTimeOffset? until = ParseWireOrNull(body.Until);
 
         // The four fields Premium added. Absent from an older server, and then null: the app keeps
         // calling any paid state Pro and shows no storage line.
@@ -710,7 +720,9 @@ public sealed class HttpAuthApiClient : IAuthApiClient
         AppleProductBody[]? AppleProducts = null,
         bool AppleCanPurchase = false,
         string? AppleProductId = null,
-        string? DuplicateProvider = null) : IEntitlementBody;
+        string? DuplicateProvider = null,
+        string? ApplePendingProductId = null,
+        string? ApplePendingEffectiveUtc = null) : IEntitlementBody;
 
     private sealed record AppleProductBody(string? Tier, string? Plan, string? ProductId);
 

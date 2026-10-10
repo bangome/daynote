@@ -36,6 +36,9 @@ public sealed class StorePlanCard
     /// <summary>The App Store product this account is subscribed to.</summary>
     public bool IsCurrent { get; init; }
 
+    /// <summary>The product Apple has booked for the next renewal: "예약됨" in place of a button that would book it again.</summary>
+    public bool IsScheduled { get; init; }
+
     public bool CanBuy { get; init; }
 
     public required string ButtonText { get; init; }
@@ -296,6 +299,36 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The App Store product Apple has booked for the next renewal — a downgrade, or an interval
+    /// change it applies then — while this account is paying on the App Store. Null otherwise.
+    /// </summary>
+    private AppStoreProduct? PendingProduct =>
+        HasAppleSubscription && Account.IsPaying && Billing.ApplePendingProductId is { } pending
+            ? (Billing.AppleProducts ?? []).FirstOrDefault(product => string.Equals(product.ProductId, pending, StringComparison.Ordinal))
+            : null;
+
+    public bool HasPendingChange => PendingProduct is not null;
+
+    /// <summary>
+    /// "다음 갱신일(10월 11일)부터 Pro(연간)로 바뀝니다. 그때까지 Premium을 그대로 쓸 수 있어요." on the
+    /// plan in force, while Apple holds a change for the renewal. Empty when nothing is pending.
+    /// </summary>
+    public string PendingChangeText => PendingProduct is { } product ? PendingNotice(product) : string.Empty;
+
+    private string PendingNotice(AppStoreProduct product)
+    {
+        CultureInfo culture = LocalizationService.Instance.Culture;
+        string date = (Billing.ApplePendingEffective ?? Entitlement.Until) is { } effective
+            ? effective.ToLocalTime().ToString(MobileStrings.Get("StorePendingDateFormat"), culture)
+            : string.Empty;
+        string target = MobileStrings.Format(
+            product.Tier == BillingTier.Premium ? "StorePendingToPremium" : "StorePendingToPro",
+            MobileStrings.Get(product.Plan == BillingPlan.Annual ? "StorePendingAnnual" : "StorePendingMonthly"));
+        string kept = MobileStrings.Get(Entitlement.PaidTier == BillingTier.Premium ? "StorePendingKeepPremium" : "StorePendingKeepPro");
+        return MobileStrings.Format("StorePendingFormat", date, target, kept);
+    }
+
     public bool HasStorage => IsSignedIn && Account.HasStorage;
 
     public string StorageText => MobileStrings.Format("StoreStorageFormat", Account.StorageText);
@@ -325,6 +358,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         bool current = product is not null && HasAppleSubscription && Account.IsPaying
             && string.Equals(Billing.AppleProductId, product.ProductId, StringComparison.Ordinal);
         bool onApple = HasAppleSubscription && Account.IsPaying;
+        bool scheduled = product is not null && !current && PendingProduct?.ProductId == product.ProductId;
 
         string name = AccountViewModel.TierName(tier);
         string interval = IsAnnual ? AppStrings.BillingPlanAnnual : AppStrings.BillingPlanMonthly;
@@ -347,11 +381,16 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 MobileStrings.Get(IsAnnual ? "StoreLengthYear" : "StoreLengthMonth"),
                 priced?.PriceText ?? "—"),
             IsCurrent = current,
-            CanBuy = !current && priced is not null && Billing.AppleCanPurchase && !IsBusy && !IsConfirming,
+            IsScheduled = scheduled,
+            CanBuy = !current && !scheduled && priced is not null && Billing.AppleCanPurchase && !IsBusy && !IsConfirming,
+            // Apple applies a move down from Premium only at the next renewal; the button says so
+            // before it is tapped. Labelled by tier alone: the pending notice explains the rest.
             ButtonText = current
                 ? AppStrings.PlanInUse
+                : scheduled ? MobileStrings.Get("StoreScheduled")
                 : !onApple ? MobileStrings.Get("StoreSubscribe")
                 : tier == BillingTier.Premium && Entitlement.PaidTier == BillingTier.Pro ? MobileStrings.Get("StoreUpgrade")
+                : tier == BillingTier.Pro && Entitlement.PaidTier == BillingTier.Premium ? MobileStrings.Get("StoreSwitchAtRenewal")
                 : MobileStrings.Get("StoreSwitch"),
             IsHighlighted = onApple ? Entitlement.PaidTier == tier : tier == BillingTier.Premium,
         };
@@ -472,7 +511,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             switch (result.Status)
             {
                 case StorePurchaseStatus.Purchased when result.TransactionId is { } id && _confirmed.Contains(id):
-                    StatusMessage = Done(tier, wasOnApple);
+                    StatusMessage = Done(product.ProductId, tier, wasOnApple);
                     break;
                 case StorePurchaseStatus.Purchased when result.TransactionId is { } pendingId:
                     // StoreKit took the money; the server has not confirmed it yet. Never an error:
@@ -531,7 +570,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
                 if (await IsConfirmedAsync(productId, transactionId).ConfigureAwait(true))
                 {
                     _unconfirmed = null;
-                    StatusMessage = Done(tier, wasOnApple);
+                    StatusMessage = Done(productId, tier, wasOnApple);
                     return;
                 }
 
@@ -562,12 +601,29 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         await _refreshBilling().ConfigureAwait(true);
         return _confirmed.Contains(transactionId)
             || (Billing.Provider == BillingProvider.Apple
-                && string.Equals(Billing.AppleProductId, productId, StringComparison.Ordinal)
+                && (string.Equals(Billing.AppleProductId, productId, StringComparison.Ordinal)
+                    || string.Equals(Billing.ApplePendingProductId, productId, StringComparison.Ordinal))
                 && Account.IsPaying);
     }
 
-    private static string Done(BillingTier tier, bool wasOnApple) =>
-        MobileStrings.Format(wasOnApple ? "StoreChangedFormat" : "StoreDoneFormat", AccountViewModel.TierName(tier));
+    /// <summary>
+    /// What a confirmed purchase says. A change Apple booked for the next renewal is not a change yet:
+    /// the server still reports the old product, so the page says when it applies rather than that
+    /// it happened — from the server's pending product, or, from a server that does not report one
+    /// yet, in general terms.
+    /// </summary>
+    private string Done(string productId, BillingTier tier, bool wasOnApple)
+    {
+        if (wasOnApple && Billing.Provider == BillingProvider.Apple && Billing.AppleProductId is { } current
+            && !string.Equals(current, productId, StringComparison.Ordinal))
+        {
+            return PendingProduct is { } pending && string.Equals(pending.ProductId, productId, StringComparison.Ordinal)
+                ? PendingNotice(pending)
+                : MobileStrings.Get("StoreChangeScheduled");
+        }
+
+        return MobileStrings.Format(wasOnApple ? "StoreChangedFormat" : "StoreDoneFormat", AccountViewModel.TierName(tier));
+    }
 
     /// <summary>
     /// The app is back in front: a purchase still unconfirmed is tried once more, and anything
@@ -585,7 +641,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             && await IsConfirmedAsync(pending.ProductId, pending.TransactionId).ConfigureAwait(true))
         {
             _unconfirmed = null;
-            StatusMessage = Done(pending.Tier, pending.WasOnApple);
+            StatusMessage = Done(pending.ProductId, pending.Tier, pending.WasOnApple);
         }
     }
 
@@ -844,7 +900,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             nameof(HasAppleSubscription), nameof(IsMonthly), nameof(HasDuplicate), nameof(CurrentPlanName),
             nameof(CurrentPlanTitle), nameof(CurrentPlanDetail), nameof(HasStorage), nameof(StorageText),
             nameof(StorageFraction), nameof(ShowsStorageBar), nameof(ProCard), nameof(PremiumCard),
-            nameof(HasNoPrices),
+            nameof(HasNoPrices), nameof(HasPendingChange), nameof(PendingChangeText),
         })
         {
             OnPropertyChanged(name);
