@@ -8,7 +8,7 @@ import WidgetKit
 /// delivered, which is exactly right for a "this is the day now" message. It is kept in the
 /// watch's own App Group container, where the complications read it too.
 ///
-/// Out: each completion or capture as a `transferUserInfo`, which the system queues and delivers
+/// Out: each completion, delete or capture as a `transferUserInfo`, which the system queues and delivers
 /// in order even when the phone is out of reach, and which the phone writes into its action
 /// queue for the app to carry out.
 @MainActor
@@ -26,6 +26,10 @@ final class WatchSession: NSObject, WCSessionDelegate {
         store.send = { action in
             guard let data = try? JSONEncoder().encode(action), let json = String(data: data, encoding: .utf8) else { return }
             WCSession.default.transferUserInfo([WatchSession.actionKey: json])
+        }
+        store.persist = { snapshot in
+            try? GlanceStore.shared?.save(snapshot)
+            WidgetCenter.shared.reloadAllTimelines()
         }
 
         guard WCSession.isSupported() else { return }

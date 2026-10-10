@@ -106,6 +106,9 @@ dot-prefixed file is never read.
   "itemId": "<todo.id>", "seriesId": "<todo.seriesId>", "occurrence": "<todo.occurrence>",
   "date": "2026-10-07" }                                  // the day the row was shown on
 
+{ "schema": 1, "id": "<uuid>", "type": "uncomplete" | "delete", "createdUtc": "…",
+  "itemId": "…", "seriesId": "…", "occurrence": "…", "date": "2026-10-07" }   // the same row fields as complete
+
 { "schema": 1, "id": "<uuid>", "type": "capture", "createdUtc": "…",
   "text": "회의자료 초안 공유 오늘 5시",                       // what was said, whole
   "kind": "task" | "event" | "note",
@@ -115,7 +118,9 @@ dot-prefixed file is never read.
 - **Applying twice changes nothing.** `complete` completes (never toggles), finding the row again
   the way the day panel does — by `itemId` for a one-off, and for an occurrence by its
   `RECURRENCE-ID` (never by id alone: every occurrence carries the series id) — and does nothing
-  if it has gone or is already done. `capture` makes its item under the action's own `id`.
+  if it has gone or is already done. `uncomplete` is the same in reverse: it reopens a done row
+  and leaves an open one alone. `delete` deletes the row it finds and, the second time, finds
+  nothing. `capture` makes its item under the action's own `id`.
 - **One drain at a time.** Requests that arrive during a drain are folded into one more pass, never
   run beside it and never dropped. Nothing is drained or published until the app has loaded the
   day and read the account (`StartGlanceAsync`, after `account.InitializeAsync`).
@@ -125,7 +130,16 @@ dot-prefixed file is never read.
   written, then is dropped. The Mac's `GlanceRelay` uses the same day.
 - **The snapshot is compared with the file**, not with what the app last wrote, stamp aside, so a
   widget's read-modify-write that lands late is noticed and replaced.
-- `complete` on an occurrence writes the override `ToggleAgendaItem` writes in the app.
+- `complete` on an occurrence writes the override `ToggleAgendaItem` writes in the app; so does
+  `uncomplete`, clearing it.
+- `delete` goes through `DeleteAgendaItem`, the app's own swipe-to-delete: a one-off is deleted
+  (a tombstone that syncs), and an occurrence of a rule is deleted **on its own day only** — an
+  `EXDATE` on the series, and its override if it had one. The watch never deletes a whole rule;
+  that is asked, and answered, in the app. No undo is offered for it outside the app.
+- Who sends what: the iPhone and Mac widgets send `complete` only. The watch sends `complete`
+  and `delete` (and `capture`). `uncomplete` is in the contract and in `GlanceStore.uncomplete`
+  for an extension that shows done rows; the watch shows open rows only, so it has no use for it
+  yet (its 완료 취소 takes a tick back inside the 1.5 s window, before anything is sent).
 - `capture` with `task`/`event` is parsed again on the phone with `AgendaPhraseParser.ParseTrailing`
   and built with the `@` command's own `AgendaCapture.Compose` (default list, default alert on a
   to-do, no source note). `note`, or a sentence with no date, appends the text as a new line at
@@ -141,11 +155,19 @@ dot-prefixed file is never read.
 - **In:** the phone sends the snapshot as `updateApplicationContext(["snapshot": json])` whenever
   it writes one (and again once a watch is paired or the app installed). The watch saves the bytes
   into its own App Group container, where its complications read them, and reloads them.
-- **Out:** each action as `transferUserInfo(["glanceAction": json])`, which the system queues and
+- **Out:** each action (`complete`, `delete`, `capture`) as `transferUserInfo(["glanceAction": json])`, which the system queues and
   delivers in order even across disconnections; the phone writes it into the queue (§4).
 - **Tap to complete:** the ring fills with `.spring(response: 0.35, dampingFraction: 0.7)` and the
   success haptic (M8), the title is struck through, and only after **1.5 s** is the action sent and
   the row removed; a second tap inside the window takes it back and nothing is sent.
+- **Swipe actions** (the rows are a `List` for this; a render draws them as a stack, since
+  `ImageRenderer` cannot draw a `List`, and so does not show the actions):
+  - **Leading — 완료 / 완료 취소:** the tap's own path. 완료 starts the 1.5 s window below;
+    inside the window the same swipe reads 완료 취소 and takes the tick back.
+  - **Trailing — 삭제** (destructive): sends `delete` at once and the row leaves with the
+    spring. A repeating to-do loses that day only; the watch does not ask. The watch's own copy
+    of the snapshot drops the row as well, so the complications follow, and a snapshot the phone
+    sends before it has applied the delete does not bring the row back (`WatchStore.deleted`).
 - **Dictation:** `TextFieldLink` (dictation first, Scribble and keyboard behind it), then the
   readback: title, 할 일 / 일정 / 노트에 한 줄, crown to move, tap to make. **The readback is computed
   on the watch** with a Swift port of the app's parser (`native/apple/Shared/Model/AgendaPhraseParser.swift`),

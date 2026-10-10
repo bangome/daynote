@@ -81,6 +81,8 @@ public struct GlanceText: Sendable {
     public var noteLine: String { t("노트에 한 줄", "Add to note") }
     public var noteLineDetail: String { t("오늘 노트 끝에 그대로", "End of today’s note, as is") }
     public var done: String { t("완료", "Done") }
+    public var undoDone: String { t("완료 취소", "Not done") }
+    public var delete: String { t("삭제", "Delete") }
     public var justNow: String { t("방금", "Just now") }
     public var view: String { t("보기", "View") }
     public func addedTo(_ day: LocalDay) -> String {

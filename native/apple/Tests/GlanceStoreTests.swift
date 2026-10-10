@@ -57,4 +57,59 @@ final class GlanceStoreTests: XCTestCase {
         XCTAssertTrue(json.contains("\"itemId\":\"s\""))
         XCTAssertFalse(json.contains("null"))
     }
+
+    func testADeleteIsQueuedForTheAppAndTheRowLeavesAtOnce() throws {
+        let store = GlanceStore(folder: folder)
+        try store.save(snapshotData: Data(appJSON.utf8))
+        let day = try XCTUnwrap(LocalDay(iso: "2026-10-07"))
+        let vitamins = try XCTUnwrap(store.load()?.day(day).todos[1])
+
+        try store.delete(vitamins, on: day)
+
+        XCTAssertEqual(store.load()?.day(day).todos.map(\.title), ["회의실 예약 확인"])
+        let queued = store.pendingActions()
+        XCTAssertEqual(queued.count, 1)
+        XCTAssertEqual(queued[0].action.type, GlanceAction.delete)
+        // An occurrence: the phone deletes this one only, found by series and occurrence.
+        XCTAssertEqual(queued[0].action.itemId, "s")
+        XCTAssertEqual(queued[0].action.seriesId, "s")
+        XCTAssertEqual(queued[0].action.occurrence, "2026-10-07T08:00")
+        XCTAssertEqual(queued[0].action.date, "2026-10-07")
+
+        let json = try XCTUnwrap(String(data: Data(contentsOf: queued[0].url), encoding: .utf8))
+        XCTAssertTrue(json.contains("\"type\":\"delete\""))
+        XCTAssertFalse(json.contains("null"))
+
+        // A row already gone is left alone, and the action still goes to the app.
+        XCTAssertNil(try store.delete(vitamins, on: day))
+        XCTAssertEqual(store.pendingActions().count, 2)
+    }
+
+    func testAnUncompleteIsQueuedForTheAppAndShownOpenAtOnce() throws {
+        let store = GlanceStore(folder: folder)
+        try store.save(snapshotData: Data(appJSON.utf8))
+        let day = try XCTUnwrap(LocalDay(iso: "2026-10-07"))
+        let meeting = try XCTUnwrap(store.load()?.day(day).todos[0])
+        try store.complete(meeting, on: day)
+
+        try store.uncomplete(meeting, on: day)
+
+        XCTAssertEqual(store.load()?.day(day).todos.map(\.done), [false, false])
+        let queued = store.pendingActions()
+        XCTAssertEqual(queued.map(\.action.type), [GlanceAction.complete, GlanceAction.uncomplete])
+        XCTAssertEqual(queued[1].action.itemId, "a")
+        XCTAssertNil(queued[1].action.seriesId)
+        let json = try XCTUnwrap(String(data: Data(contentsOf: queued[1].url), encoding: .utf8))
+        XCTAssertTrue(json.contains("\"type\":\"uncomplete\""))
+        XCTAssertFalse(json.contains("seriesId"))
+    }
+
+    func testTheNewActionsDecodeAsTheAppWritesThem() throws {
+        let json = """
+        {"schema":1,"id":"x","type":"delete","createdUtc":"2026-10-07T05:30:00Z","itemId":"s","seriesId":"s","occurrence":"2026-10-07T08:00","date":"2026-10-07"}
+        """
+        let action = try JSONDecoder().decode(GlanceAction.self, from: Data(json.utf8))
+        XCTAssertEqual(action.type, GlanceAction.delete)
+        XCTAssertEqual(action.occurrence, "2026-10-07T08:00")
+    }
 }

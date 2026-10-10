@@ -22,6 +22,8 @@ final class WatchStore: ObservableObject {
     @Published private(set) var snapshot: GlanceSnapshot?
     @Published private(set) var checking: [String: Checking] = [:]
     @Published private(set) var completed: Set<String> = []
+    /// Rows deleted here that the phone has not applied yet, kept out of a snapshot sent before it did.
+    @Published private(set) var deleted: Set<String> = []
     @Published var justMade: JustMade?
     /// "10/8에 추가됨 · 보기", for a capture that went to another day.
     @Published var addedElsewhere: LocalDay?
@@ -31,6 +33,8 @@ final class WatchStore: ObservableObject {
 
     /// Hands an action to the phone. Set by the session; a render leaves it as a no-op.
     var send: (GlanceAction) -> Void = { _ in }
+    /// Keeps the watch's guess where the complications read it. Set by the session.
+    var persist: (GlanceSnapshot) -> Void = { _ in }
     /// Plays the success haptic. Set by the app on watchOS.
     var haptic: () -> Void = {}
     /// The clock, so a render can be pinned to the design's 14:30.
@@ -45,7 +49,9 @@ final class WatchStore: ObservableObject {
     var day: GlanceDay { snapshot?.day(today) ?? GlanceDay(date: today.iso, todos: [], events: []) }
 
     /// The rows to draw: open ones, including any in their undo window.
-    var todos: [GlanceTodo] { day.todos.filter { !$0.done && !completed.contains($0.rowKey) } }
+    var todos: [GlanceTodo] {
+        day.todos.filter { !$0.done && !completed.contains($0.rowKey) && !deleted.contains($0.rowKey) }
+    }
 
     /// "남은 4": the window does not count as done until it closes.
     var remaining: Int { todos.count }
@@ -71,6 +77,8 @@ final class WatchStore: ObservableObject {
         self.snapshot = snapshot
         let doneThere = Set(snapshot.days.flatMap(\.todos).filter(\.done).map(\.rowKey))
         completed.subtract(doneThere)
+        // A delete the phone has applied is simply absent; one still waiting stays hidden.
+        deleted.formIntersection(snapshot.days.flatMap(\.todos).map(\.rowKey))
         if let made = justMade, snapshot.day(today).todos.contains(where: { $0.title == made.title }) {
             justMade = nil
         }
@@ -99,6 +107,22 @@ final class WatchStore: ObservableObject {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
             checking[todo.rowKey] = nil
             completed.insert(todo.rowKey)
+        }
+    }
+
+    /// A row's 삭제 swipe: sent to the phone, and gone from here at once — from the list and from
+    /// the snapshot the complications read. The phone deletes a one-off, and only this occurrence
+    /// of a repeating one; its next snapshot replaces this guess either way.
+    func delete(_ todo: GlanceTodo) {
+        checking[todo.rowKey] = nil
+        send(.deleting(todo, on: today, now: now()))
+        guard var changed = snapshot else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+            deleted.insert(todo.rowKey)
+            if changed.remove(todo, on: today) {
+                snapshot = changed
+                persist(changed)
+            }
         }
     }
 

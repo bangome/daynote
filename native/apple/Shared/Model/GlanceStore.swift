@@ -81,10 +81,26 @@ public struct GlanceStore: Sendable {
     @discardableResult
     public func complete(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) throws -> GlanceSnapshot? {
         try enqueue(.completing(todo, on: day, now: now), now: now)
-        guard var snapshot = load(),
-              let dayIndex = snapshot.days.firstIndex(where: { $0.date == day.iso }),
-              let row = snapshot.days[dayIndex].todos.firstIndex(where: { $0.rowKey == todo.rowKey }) else { return nil }
-        snapshot.days[dayIndex].todos[row].done = true
+        return try guess { $0.setDone(todo, on: day, true) }
+    }
+
+    /// A check taken off outside the app: queued, and shown open straight away.
+    @discardableResult
+    public func uncomplete(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) throws -> GlanceSnapshot? {
+        try enqueue(.uncompleting(todo, on: day, now: now), now: now)
+        return try guess { $0.setDone(todo, on: day, false) }
+    }
+
+    /// A delete outside the app: queued, and the row gone from the snapshot straight away.
+    @discardableResult
+    public func delete(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) throws -> GlanceSnapshot? {
+        try enqueue(.deleting(todo, on: day, now: now), now: now)
+        return try guess { $0.remove(todo, on: day) }
+    }
+
+    /// The extension's guess written over the snapshot, when the row is still in it.
+    private func guess(_ change: (inout GlanceSnapshot) -> Bool) throws -> GlanceSnapshot? {
+        guard var snapshot = load(), change(&snapshot) else { return nil }
         try save(snapshot)
         return snapshot
     }

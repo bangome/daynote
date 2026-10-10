@@ -303,6 +303,104 @@ public sealed class GlanceTests
     }
 
     [TestMethod]
+    public void A_watch_uncomplete_reopens_a_done_row_and_twice_changes_nothing()
+    {
+        var host = new FakeGlanceHost();
+        TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
+        {
+            Pump(shell.StartGlanceAsync);
+            IAgendaRepository agenda = Agenda();
+            DateOnly today = LocalDates.ToDateOnly(shell.SelectedDate);
+            AgendaItem done = Task("보고서 보내기", today, new TimeOnly(14, 0)) with
+            {
+                Status = AgendaStatus.Completed,
+                CompletedUtc = DateTimeOffset.UnixEpoch,
+            };
+            Pump(() => agenda.SaveAsync(done).AsTask());
+            var folder = new GlanceFolder(host.Folder);
+
+            GlanceAction reopen = RowAction(GlanceActionTypes.Uncomplete, done, today);
+            folder.Enqueue(reopen);
+            Pump(shell.DrainGlanceAsync);
+            Assert.AreEqual(AgendaStatus.NeedsAction, Read(agenda, done.Id)!.Status);
+
+            // The same file applied again (a crash before it was deleted): still open, not ticked back.
+            folder.Enqueue(reopen);
+            Pump(shell.DrainGlanceAsync);
+            Assert.AreEqual(AgendaStatus.NeedsAction, Read(agenda, done.Id)!.Status, "uncomplete toggled.");
+            Assert.IsEmpty(Directory.GetFiles(Path.Combine(host.Folder, "actions"), "*.json"));
+        });
+    }
+
+    [TestMethod]
+    public void A_watch_delete_removes_a_one_off_once()
+    {
+        var host = new FakeGlanceHost();
+        TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
+        {
+            Pump(shell.StartGlanceAsync);
+            IAgendaRepository agenda = Agenda();
+            DateOnly today = LocalDates.ToDateOnly(shell.SelectedDate);
+            AgendaItem call = Task("거래처 전화", today, null);
+            Pump(() => agenda.SaveAsync(call).AsTask());
+            var folder = new GlanceFolder(host.Folder);
+
+            GlanceAction delete = RowAction(GlanceActionTypes.Delete, call, today);
+            folder.Enqueue(delete);
+            Pump(shell.DrainGlanceAsync);
+            Assert.IsNull(Read(agenda, call.Id), "삭제 from the watch did not delete.");
+
+            folder.Enqueue(delete);
+            Pump(shell.DrainGlanceAsync);
+            Assert.IsNull(Read(agenda, call.Id));
+            Assert.IsFalse(shell.DayTodos.Any(row => row.Item.Text == "거래처 전화"));
+        });
+    }
+
+    [TestMethod]
+    public void A_watch_delete_of_a_repeat_takes_that_day_only_and_twice_changes_nothing()
+    {
+        var host = new FakeGlanceHost();
+        TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
+        {
+            Pump(shell.StartGlanceAsync);
+            IAgendaRepository agenda = Agenda();
+            DateOnly today = LocalDates.ToDateOnly(shell.SelectedDate);
+            AgendaItem pills = Task("약 먹기", today.AddDays(-3), new TimeOnly(8, 0)) with
+            {
+                StartsAt = new WallClock(today.AddDays(-3).ToDateTime(new TimeOnly(8, 0))),
+                Rrule = "FREQ=DAILY",
+            };
+            Pump(() => agenda.SaveAsync(pills).AsTask());
+            var folder = new GlanceFolder(host.Folder);
+            string todays = new WallClock(today.ToDateTime(new TimeOnly(8, 0))).ToString();
+
+            GlanceAction delete = RowAction(GlanceActionTypes.Delete, pills, today) with
+            {
+                SeriesId = pills.Id.ToString("D"),
+                Occurrence = todays,
+            };
+            folder.Enqueue(delete);
+            Pump(shell.DrainGlanceAsync);
+
+            AgendaItem rule = Read(agenda, pills.Id) ?? throw new AssertFailedException("The whole rule was deleted.");
+            Assert.AreSequenceEqual(new[] { todays }, rule.ExceptionDates.Select(static d => d.ToString()).ToArray());
+            IReadOnlyList<AgendaItem> all = Get(() => agenda.GetAllAsync().AsTask());
+            Assert.IsEmpty(AgendaDay.For(today, all).Open);
+            Assert.HasCount(1, AgendaDay.For(today.AddDays(1), all).Open, "Tomorrow went too.");
+
+            folder.Enqueue(delete);
+            Pump(shell.DrainGlanceAsync);
+            Assert.HasCount(1, Read(agenda, pills.Id)!.ExceptionDates, "A second pass added another EXDATE.");
+        });
+    }
+
+    private static GlanceAction RowAction(string type, AgendaItem item, DateOnly day) => new(
+        1, Guid.NewGuid().ToString("D"), type, "2026-10-07T05:30:00Z",
+        ItemId: item.Id.ToString("D"),
+        Date: day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+
+    [TestMethod]
     public void An_action_that_fails_is_kept_for_a_day_and_an_unknown_one_is_dropped()
     {
         var host = new FakeGlanceHost();

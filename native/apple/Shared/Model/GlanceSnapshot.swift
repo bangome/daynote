@@ -48,6 +48,26 @@ public struct GlanceSnapshot: Codable, Equatable, Sendable {
     public func list(_ id: String) -> GlanceList? {
         lists.first { $0.id == id }
     }
+
+    /// Marks `todo` on `day` done or open. False when the row is no longer there.
+    public mutating func setDone(_ todo: GlanceTodo, on day: LocalDay, _ done: Bool) -> Bool {
+        guard let (d, r) = index(of: todo, on: day) else { return false }
+        days[d].todos[r].done = done
+        return true
+    }
+
+    /// Takes `todo` off `day`. False when the row is no longer there.
+    public mutating func remove(_ todo: GlanceTodo, on day: LocalDay) -> Bool {
+        guard let (d, r) = index(of: todo, on: day) else { return false }
+        days[d].todos.remove(at: r)
+        return true
+    }
+
+    private func index(of todo: GlanceTodo, on day: LocalDay) -> (Int, Int)? {
+        guard let d = days.firstIndex(where: { $0.date == day.iso }),
+              let r = days[d].todos.firstIndex(where: { $0.rowKey == todo.rowKey }) else { return nil }
+        return (d, r)
+    }
 }
 
 public struct GlanceList: Codable, Equatable, Sendable {
@@ -183,12 +203,31 @@ public struct GlanceAction: Codable, Equatable, Sendable {
     public var capturedLocal: String?
 
     public static let complete = "complete"
+    /// A done row made open again. Sets, never toggles, as `complete` does.
+    public static let uncomplete = "uncomplete"
+    /// The row deleted; for an occurrence of a rule, that occurrence only (an EXDATE on the phone).
+    public static let delete = "delete"
     public static let capture = "capture"
 
     /// A check on `todo`, shown on `day`.
     public static func completing(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) -> GlanceAction {
+        onRow(complete, todo, on: day, now: now)
+    }
+
+    /// A check taken off `todo`, shown on `day`.
+    public static func uncompleting(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) -> GlanceAction {
+        onRow(uncomplete, todo, on: day, now: now)
+    }
+
+    /// `todo` deleted, as shown on `day`.
+    public static func deleting(_ todo: GlanceTodo, on day: LocalDay, now: Date = Date()) -> GlanceAction {
+        onRow(delete, todo, on: day, now: now)
+    }
+
+    /// An action on one row, which the phone finds again by id, or by series and occurrence.
+    private static func onRow(_ type: String, _ todo: GlanceTodo, on day: LocalDay, now: Date) -> GlanceAction {
         GlanceAction(
-            id: UUID().uuidString.lowercased(), type: complete, createdUtc: GlanceClock.utcStamp(now),
+            id: UUID().uuidString.lowercased(), type: type, createdUtc: GlanceClock.utcStamp(now),
             itemId: todo.id, seriesId: todo.seriesId, occurrence: todo.occurrence, date: day.iso)
     }
 

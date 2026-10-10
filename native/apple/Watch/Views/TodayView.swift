@@ -12,47 +12,53 @@ struct TodayView<Capture: View>: View {
     private let theme = GlanceTheme.watch
 
     var body: some View {
-        // A render draws the first screenful; ImageRenderer leaves a ScrollView blank.
+        // A render draws the first screenful; ImageRenderer leaves a ScrollView or a List blank.
         #if DAYNOTE_RENDER_TESTS
-        content.fixedSize(horizontal: false, vertical: true).frame(maxHeight: .infinity, alignment: .top).clipped().background(Color.black)
+        VStack(alignment: .leading, spacing: 5) { rows }
+            .padding(.horizontal, 2)
+            .fixedSize(horizontal: false, vertical: true).frame(maxHeight: .infinity, alignment: .top).clipped().background(Color.black)
         #else
-        ScrollView { content }.background(Color.black)
+        // A List rather than a ScrollView: only a List's rows take .swipeActions on watchOS.
+        List {
+            Group { rows }
+                .listRowInsets(EdgeInsets(top: 2.5, leading: 2, bottom: 2.5, trailing: 2))
+                .listRowBackground(Color.clear)
+        }
+        .listStyle(.plain)
+        .background(Color.black)
         #endif
     }
 
-    private var content: some View {
-            VStack(alignment: .leading, spacing: 5) {
-                Header(title: store.text.today, clock: clock, theme: theme)
-                if let snapshot = store.snapshot, !snapshot.locked {
-                    Text("\(store.text.mediumDate(store.today)) · \(store.text.left(store.remaining))")
-                        .font(.system(size: 12)).foregroundStyle(theme.secondary)
-                        .padding(.horizontal, 8).padding(.bottom, 4)
+    @ViewBuilder private var rows: some View {
+        Header(title: store.text.today, clock: clock, theme: theme)
+        if let snapshot = store.snapshot, !snapshot.locked {
+            Text("\(store.text.mediumDate(store.today)) · \(store.text.left(store.remaining))")
+                .font(.system(size: 12)).foregroundStyle(theme.secondary)
+                .padding(.horizontal, 8).padding(.bottom, 4)
 
-                    if let day = store.addedElsewhere {
-                        AddedElsewhereBanner(day: day, store: store)
-                    }
-                    if let made = store.justMade {
-                        JustMadeRow(made: made, text: store.text)
-                    }
-                    if let event = store.nextEvent {
-                        EventCard(event: event, store: store)
-                    }
-                    ForEach(store.todos, id: \.rowKey) { todo in
-                        WatchTodoRow(todo: todo, store: store)
-                            .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading).combined(with: .opacity)))
-                    }
-                    if store.todos.isEmpty {
-                        Text(store.text.nothingToday).font(.system(size: 14, weight: .semibold)).foregroundStyle(theme.secondary)
-                            .padding(.horizontal, 8).padding(.vertical, 10)
-                    }
-                    capture().padding(.top, 4)
-                } else {
-                    Text(store.snapshot?.locked == true ? store.text.locked : store.text.openOnPhone)
-                        .font(.system(size: 14, weight: .semibold)).foregroundStyle(theme.secondary)
-                        .padding(8)
-                }
+            if let day = store.addedElsewhere {
+                AddedElsewhereBanner(day: day, store: store)
             }
-            .padding(.horizontal, 2)
+            if let made = store.justMade {
+                JustMadeRow(made: made, text: store.text)
+            }
+            if let event = store.nextEvent {
+                EventCard(event: event, store: store)
+            }
+            ForEach(store.todos, id: \.rowKey) { todo in
+                WatchTodoRow(todo: todo, store: store)
+                    .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading).combined(with: .opacity)))
+            }
+            if store.todos.isEmpty {
+                Text(store.text.nothingToday).font(.system(size: 14, weight: .semibold)).foregroundStyle(theme.secondary)
+                    .padding(.horizontal, 8).padding(.vertical, 10)
+            }
+            capture().padding(.top, 4)
+        } else {
+            Text(store.snapshot?.locked == true ? store.text.locked : store.text.openOnPhone)
+                .font(.system(size: 14, weight: .semibold)).foregroundStyle(theme.secondary)
+                .padding(8)
+        }
     }
 }
 
@@ -94,7 +100,8 @@ struct EventCard: View {
 }
 
 /// One to-do: ring, title, time. A tap fills the ring with a haptic and strikes the title; 1.5
-/// seconds later it is sent and leaves, and a second tap inside that window takes it back.
+/// seconds later it is sent and leaves, and a second tap inside that window takes it back. A
+/// swipe from the leading edge does the same; one from the trailing edge deletes it.
 struct WatchTodoRow: View {
     var todo: GlanceTodo
     @ObservedObject var store: WatchStore
@@ -131,6 +138,24 @@ struct WatchTodoRow: View {
                     .fill(checking ? theme.accent.opacity(0.22) : theme.chip))
         }
         .buttonStyle(.plain)
+        // Leading: done, or inside the 1.5 s window taken back — the tap's own path either way.
+        .swipeActions(edge: .leading) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { store.tap(todo) }
+            } label: {
+                Label(checking ? store.text.undoDone : store.text.done,
+                      systemImage: checking ? "arrow.uturn.backward" : "checkmark")
+            }
+            .tint(checking ? .gray : .green)
+        }
+        // Trailing: delete. A repeat loses this day only; the watch does not ask.
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                store.delete(todo)
+            } label: {
+                Label(store.text.delete, systemImage: "trash")
+            }
+        }
     }
 }
 

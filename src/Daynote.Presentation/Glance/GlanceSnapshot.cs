@@ -99,8 +99,8 @@ public sealed record GlanceFavorite(string Id, string Date, string Title, string
 /// app to carry it out through its own store, so it syncs like anything else (§4).
 /// </summary>
 /// <param name="Id">A fresh uuid. Also the id of the item a capture makes, so applying it twice makes one.</param>
-/// <param name="Type"><see cref="GlanceActionTypes.Complete"/> or <see cref="GlanceActionTypes.Capture"/>.</param>
-/// <param name="Date">For a completion: the date the row was shown on.</param>
+/// <param name="Type">One of <see cref="GlanceActionTypes"/>.</param>
+/// <param name="Date">For an action on a row (complete, uncomplete, delete): the date the row was shown on.</param>
 /// <param name="Text">For a capture: what was said, whole.</param>
 /// <param name="Kind">For a capture: <c>task</c>, <c>event</c> or <c>note</c>.</param>
 /// <param name="CapturedLocal">For a capture: the local wall clock it was said at, which the date in it is read against.</param>
@@ -121,6 +121,13 @@ public sealed record GlanceAction(
 public static class GlanceActionTypes
 {
     public const string Complete = "complete";
+
+    /// <summary>The watch's 완료 취소: a done row made open again. Never ticks.</summary>
+    public const string Uncomplete = "uncomplete";
+
+    /// <summary>The watch's 삭제. On an occurrence, that occurrence only (an EXDATE).</summary>
+    public const string Delete = "delete";
+
     public const string Capture = "capture";
 }
 

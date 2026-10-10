@@ -21,10 +21,11 @@ public readonly record struct GlanceApplied(bool Changed, AgendaItem? Made = nul
 /// <b>Every action is safe to apply twice.</b> The queue is drained by deleting files after they
 /// are applied, and a crash between the two applies the same file again on the next launch. A
 /// completion therefore completes rather than toggles — something already done stays done — and a
-/// capture makes its item under the action's own id, so a second pass finds it there.
+/// capture makes its item under the action's own id, so a second pass finds it there. Uncomplete
+/// is the same in reverse, and a delete finds nothing to delete the second time.
 /// </remarks>
 /// <param name="beforeComplete">
-/// Told the row a completion is about to tick, so a shell holding its own tick on that row (motion
+/// Told the row a completion, an uncompletion or a delete is about to change, so a shell holding its own tick on that row (motion
 /// M3's wait before the write) can drop it rather than write a second tick after this one.
 /// </param>
 public sealed class GlanceActionApplier(
@@ -45,7 +46,9 @@ public sealed class GlanceActionApplier(
         ArgumentNullException.ThrowIfNull(action);
         return action.Type switch
         {
-            GlanceActionTypes.Complete => await CompleteAsync(action, cancellationToken).ConfigureAwait(true),
+            GlanceActionTypes.Complete => await SetDoneAsync(action, done: true, cancellationToken).ConfigureAwait(true),
+            GlanceActionTypes.Uncomplete => await SetDoneAsync(action, done: false, cancellationToken).ConfigureAwait(true),
+            GlanceActionTypes.Delete => await DeleteAsync(action, cancellationToken).ConfigureAwait(true),
             GlanceActionTypes.Capture => await CaptureAsync(action, cancellationToken).ConfigureAwait(true),
             // A newer widget's action this build does not know: dropped rather than guessed at.
             _ => new GlanceApplied(false),
@@ -53,20 +56,56 @@ public sealed class GlanceActionApplier(
     }
 
     /// <summary>
-    /// Ticks the row the widget showed, found again the way the day panel finds it.
+    /// Ticks the row the widget showed, or unticks it, found again the way the day panel finds it.
+    /// </summary>
+    /// <remarks>
+    /// Sets rather than toggles: a row already in the state asked for is left alone, which is what
+    /// makes applying the same file twice harmless.
+    /// </remarks>
+    private async Task<GlanceApplied> SetDoneAsync(GlanceAction action, bool done, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(action, cancellationToken).ConfigureAwait(true) is not { } row || row.IsDone == done)
+        {
+            return new GlanceApplied(false);
+        }
+
+        beforeComplete?.Invoke(row);
+        await new ToggleAgendaItem(agenda, utcNow).ToggleAsync(row, cancellationToken).ConfigureAwait(true);
+        return new GlanceApplied(true);
+    }
+
+    /// <summary>
+    /// Deletes the row the watch showed: a one-off outright, an occurrence of a rule on its own day
+    /// only (<see cref="DeleteAgendaItem"/>, an EXDATE). A second pass finds no row and does nothing.
+    /// </summary>
+    private async Task<GlanceApplied> DeleteAsync(GlanceAction action, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(action, cancellationToken).ConfigureAwait(true) is not { } row)
+        {
+            return new GlanceApplied(false);
+        }
+
+        beforeComplete?.Invoke(row);
+        await new DeleteAgendaItem(agenda, utcNow).DeleteAsync(row, AgendaRepeatScope.Occurrence, cancellationToken)
+            .ConfigureAwait(true);
+        return new GlanceApplied(true);
+    }
+
+    /// <summary>
+    /// The row an action on a row means, or null when it has gone.
     /// </summary>
     /// <remarks>
     /// Looked up rather than trusted: between the tap and the drain the row may have been deleted,
     /// moved, or ticked on another device. A one-off is matched by its id; an occurrence by its
-    /// series and <c>RECURRENCE-ID</c>, because the override that will carry the tick does not
+    /// series and <c>RECURRENCE-ID</c>, because the override that will carry the tick may not
     /// exist yet and the widget could not have known its id.
     /// </remarks>
-    private async Task<GlanceApplied> CompleteAsync(GlanceAction action, CancellationToken cancellationToken)
+    private async Task<AgendaDayRow?> FindAsync(GlanceAction action, CancellationToken cancellationToken)
     {
         if (!DateOnly.TryParseExact(action.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date)
             || !Guid.TryParse(action.ItemId, out Guid itemId))
         {
-            return new GlanceApplied(false);
+            return null;
         }
 
         Guid? seriesId = Guid.TryParse(action.SeriesId, out Guid series) ? series : null;
@@ -77,21 +116,12 @@ public sealed class GlanceActionApplier(
         // An occurrence is matched by which occurrence it is, never by id alone: every occurrence
         // of a rule carries the series' id until it has an override, so a rule that fires twice a
         // day has two rows with that id and only the RECURRENCE-ID tells them apart.
-        AgendaDayRow? row = day.Open.Concat(day.Done).Cast<AgendaDayRow?>().FirstOrDefault(candidate =>
+        return day.Open.Concat(day.Done).Cast<AgendaDayRow?>().FirstOrDefault(candidate =>
             candidate is { } r
             && (occurrence is { } o
                 ? r.RecurrenceId == o && (r.Item.Id == itemId || r.Item.SeriesId == itemId
                     || (seriesId is { } s && (r.Item.Id == s || r.Item.SeriesId == s)))
                 : r.Item.Id == itemId && r.RecurrenceId is null));
-
-        if (row is not { IsDone: false } open)
-        {
-            return new GlanceApplied(false);
-        }
-
-        beforeComplete?.Invoke(open);
-        await new ToggleAgendaItem(agenda, utcNow).ToggleAsync(open, cancellationToken).ConfigureAwait(true);
-        return new GlanceApplied(true);
     }
 
     /// <summary>
