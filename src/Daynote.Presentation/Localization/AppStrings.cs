@@ -973,6 +973,34 @@ public static class AppStrings
     /// <summary>{0} = how many were finished. The collapsed row under them.</summary>
     public static string DeskDayTodoDoneFormat => LocalizationService.Instance[nameof(DeskDayTodoDoneFormat)];
 
+    // The to-do sheet and the desktop's add-to-do card (TodoEntryViewModel).
+    public static string TodoEntryTaskPlaceholder => LocalizationService.Instance[nameof(TodoEntryTaskPlaceholder)];
+    public static string TodoEntryEventPlaceholder => LocalizationService.Instance[nameof(TodoEntryEventPlaceholder)];
+    public static string TodoEntryTitle => LocalizationService.Instance[nameof(TodoEntryTitle)];
+    public static string TodoEntryNotes => LocalizationService.Instance[nameof(TodoEntryNotes)];
+    public static string TodoEntryNotesPlaceholder => LocalizationService.Instance[nameof(TodoEntryNotesPlaceholder)];
+    public static string TodoEntryRepeat => LocalizationService.Instance[nameof(TodoEntryRepeat)];
+    public static string TodoEntryRepeatNone => LocalizationService.Instance[nameof(TodoEntryRepeatNone)];
+    public static string TodoEntryRepeatDaily => LocalizationService.Instance[nameof(TodoEntryRepeatDaily)];
+    public static string TodoEntryRepeatWeekdays => LocalizationService.Instance[nameof(TodoEntryRepeatWeekdays)];
+    public static string TodoEntryRepeatWeekly => LocalizationService.Instance[nameof(TodoEntryRepeatWeekly)];
+    public static string TodoEntryRepeatMonthly => LocalizationService.Instance[nameof(TodoEntryRepeatMonthly)];
+    public static string TodoEntryRepeatYearly => LocalizationService.Instance[nameof(TodoEntryRepeatYearly)];
+    public static string TodoEntryRepeatWeeklyOn => LocalizationService.Instance[nameof(TodoEntryRepeatWeeklyOn)];
+    public static string TodoEntryRepeatMonthlyOn => LocalizationService.Instance[nameof(TodoEntryRepeatMonthlyOn)];
+    public static string TodoEntryRepeatYearlyOn => LocalizationService.Instance[nameof(TodoEntryRepeatYearlyOn)];
+    public static string TodoEntryRepeatYearlyFormat => LocalizationService.Instance[nameof(TodoEntryRepeatYearlyFormat)];
+    public static string TodoEntryRepeatNeedsDate => LocalizationService.Instance[nameof(TodoEntryRepeatNeedsDate)];
+    public static string TodoEntryDate => LocalizationService.Instance[nameof(TodoEntryDate)];
+    public static string TodoEntryNoDate => LocalizationService.Instance[nameof(TodoEntryNoDate)];
+    public static string TodoEntryDateFormat => LocalizationService.Instance[nameof(TodoEntryDateFormat)];
+    public static string TodoEntryTime => LocalizationService.Instance[nameof(TodoEntryTime)];
+    public static string TodoEntryNoTime => LocalizationService.Instance[nameof(TodoEntryNoTime)];
+    public static string TodoEntryStart => LocalizationService.Instance[nameof(TodoEntryStart)];
+    public static string TodoEntryEnd => LocalizationService.Instance[nameof(TodoEntryEnd)];
+    public static string TodoEntryList => LocalizationService.Instance[nameof(TodoEntryList)];
+    public static string TodoEntryAdd => LocalizationService.Instance[nameof(TodoEntryAdd)];
+
     /// <summary>{0} = the date and time. The 할 일 line.</summary>
     /// <summary>{0} = the date. The 일정 line when only a day was given.</summary>
     /// <summary>{0} = date, {1} = time.</summary>

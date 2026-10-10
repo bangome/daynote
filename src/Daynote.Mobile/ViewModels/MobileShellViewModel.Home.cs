@@ -204,7 +204,7 @@ public sealed partial class MobileShellViewModel
         TodoGroupKind.Overdue => MobileStrings.Get("MobileTodoOverdue"),
         TodoGroupKind.Today => MobileStrings.Get("MobileTodoToday"),
         TodoGroupKind.Upcoming => MobileStrings.Get("MobileTodoUpcoming"),
-        TodoGroupKind.NoDate => MobileStrings.Get("MobileTodoNoDate"),
+        TodoGroupKind.NoDate => MobileStrings.Get("TodoEntryNoDate"),
         _ => MobileStrings.Get("MobileTodoDone"),
     };
 

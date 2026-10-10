@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
+using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;

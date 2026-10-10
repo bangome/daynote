@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
+using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Mobile.ViewModels;
@@ -165,7 +166,7 @@ public sealed class TodoSheetTests
             OpenSheet(view, shell);
             shell.Entry.Title = "우유 사기";
             shell.Entry.ClearDateCommand.Execute(null);
-            Assert.AreEqual(MobileStrings.Get("MobileTodoNoDate"), shell.Entry.DateText);
+            Assert.AreEqual(MobileStrings.Get("TodoEntryNoDate"), shell.Entry.DateText);
             Assert.IsFalse(shell.Entry.CanPickTime, "A time with no day to put it on.");
 
             AgendaItem made = Add(view, shell);
@@ -298,6 +299,10 @@ public sealed class TodoSheetTests
             Assert.IsTrue(shell.Entry.ShowLists);
 
             TodoListOption groceries = shell.Entry.ListOptions.Single(option => option.Name == "장보기");
+            Assert.IsTrue(
+                view.FindControl<Border>("TodoSheet")!.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+                    .Where(dot => dot.IsEffectivelyVisible).All(dot => dot.Fill is not null),
+                "A list's colour dot is not drawn.");
             shell.Entry.PickListCommand.Execute(groceries.Id);
             shell.Entry.Title = "두부";
 
@@ -490,7 +495,7 @@ public sealed class TodoSheetTests
             OpenSheet(view, shell);
             shell.Entry.Date = new DateOnly(2026, 10, 9);
             Assert.IsFalse(shell.Entry.Repeats);
-            Assert.AreEqual(MobileStrings.Get("MobileTodoRepeatNone"), shell.Entry.RepeatText);
+            Assert.AreEqual(MobileStrings.Get("TodoEntryRepeatNone"), shell.Entry.RepeatText);
 
             shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Weekly);
             Assert.Contains(
@@ -516,7 +521,7 @@ public sealed class TodoSheetTests
             Assert.IsFalse(shell.Entry.CanRepeat);
             Settle(view);
             Assert.IsFalse(view.FindControl<Button>("TodoRepeatRow")!.IsEffectivelyEnabled, "The 반복 row is live with no date.");
-            Assert.AreEqual(MobileStrings.Get("MobileTodoRepeatNeedsDate"), shell.Entry.RepeatText);
+            Assert.AreEqual(MobileStrings.Get("TodoEntryRepeatNeedsDate"), shell.Entry.RepeatText);
 
             shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Weekly);
             Pump(() => shell.Entry.TogglePickerCommand.ExecuteAsync(TodoEntryPicker.Repeat));

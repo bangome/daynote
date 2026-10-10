@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Localization;
+using Daynote.App.Shell.Product;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Mobile.Reminders;
@@ -205,16 +206,4 @@ public sealed partial class MobileShellViewModel
             await OpenByIdAsync(noteId).ConfigureAwait(true);
         }
     }
-}
-
-/// <summary>One hour or minute in the default reminder time sheet.</summary>
-public sealed partial class TimeOption(int value, string label) : ObservableObject
-{
-    public int Value { get; } = value;
-
-    public string Label { get; } = label;
-
-    /// <summary>Whether this is the draft's hour (or minute).</summary>
-    [ObservableProperty]
-    private bool _isCurrent;
 }

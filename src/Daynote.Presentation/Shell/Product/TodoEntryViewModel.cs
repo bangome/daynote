@@ -1,18 +1,16 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.App.Notes;
-using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Core.Time;
 
-namespace Daynote.Mobile.ViewModels;
+namespace Daynote.App.Shell.Product;
 
 /// <summary>Which of the sheet's pickers is open under its row. One at a time, or the sheet would outgrow the screen.</summary>
 public enum TodoEntryPicker
@@ -116,7 +114,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     [ObservableProperty]
     private string _description = string.Empty;
 
-    public string TitlePlaceholder => MobileStrings.Get(IsEvent ? "MobileTodoEventPlaceholder" : "MobileTodoTaskPlaceholder");
+    public string TitlePlaceholder => IsEvent ? AppStrings.TodoEntryEventPlaceholder : AppStrings.TodoEntryTaskPlaceholder;
 
     /// <summary>The day, or null for a to-do with none.</summary>
     [ObservableProperty]
@@ -126,8 +124,8 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     public bool HasDate => Date is not null;
 
     public string DateText => Date is { } day
-        ? day.ToString(MobileStrings.Get("MobileTodoDateFormat"), LocalizationService.Instance.Culture)
-        : MobileStrings.Get("MobileTodoNoDate");
+        ? day.ToString(AppStrings.TodoEntryDateFormat, LocalizationService.Instance.Culture)
+        : AppStrings.TodoEntryNoDate;
 
     /// <summary>A to-do's time, or an event's start. Null is 시간 없음, which only a to-do can be.</summary>
     [ObservableProperty]
@@ -136,7 +134,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     public bool HasTime => Time is not null;
 
-    public string TimeText => Time is { } time ? Clock(time) : MobileStrings.Get("MobileTodoNoTime");
+    public string TimeText => Time is { } time ? Clock(time) : AppStrings.TodoEntryNoTime;
 
     /// <summary>An event's end: its start and its length, with +1 when that runs past midnight.</summary>
     public string EndText
@@ -176,18 +174,18 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         {
             if (Date is not { } day)
             {
-                return MobileStrings.Get("MobileTodoRepeatNeedsDate");
+                return AppStrings.TodoEntryRepeatNeedsDate;
             }
 
             CultureInfo culture = LocalizationService.Instance.Culture;
             return Repeat switch
             {
-                TodoRepeat.Weekly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatWeeklyOn"),
+                TodoRepeat.Weekly => string.Format(culture, AppStrings.TodoEntryRepeatWeeklyOn,
                     culture.DateTimeFormat.GetDayName(day.DayOfWeek)),
-                TodoRepeat.Monthly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatMonthlyOn"), day.Day),
-                TodoRepeat.Yearly => string.Format(culture, MobileStrings.Get("MobileTodoRepeatYearlyOn"),
-                    day.ToString(MobileStrings.Get("MobileTodoRepeatYearlyFormat"), culture)),
-                _ => MobileStrings.Get("MobileTodoRepeat" + Repeat),
+                TodoRepeat.Monthly => string.Format(culture, AppStrings.TodoEntryRepeatMonthlyOn, day.Day),
+                TodoRepeat.Yearly => string.Format(culture, AppStrings.TodoEntryRepeatYearlyOn,
+                    day.ToString(AppStrings.TodoEntryRepeatYearlyFormat, culture)),
+                _ => LocalizationService.Instance["TodoEntryRepeat" + Repeat],
             };
         }
     }
@@ -495,23 +493,24 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         return new TimeOnly((local.Hour + 1) % 24, 0);
     }
 
-    private IBrush Dot(int position)
+    private string Dot(int position)
     {
         (string light, string dark) = AgendaListPalette.ForPosition(position);
-        return Brush.Parse(_dark ? dark : light);
+        return _dark ? dark : light;
     }
 
     private static string Clock(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
 }
 
 /// <summary>One list in the sheet's row: its name, its colour, and whether the draft is filed there.</summary>
-public sealed partial class TodoListOption(Guid id, string name, IBrush dot) : ObservableObject
+public sealed partial class TodoListOption(Guid id, string name, string dot) : ObservableObject
 {
     public Guid Id { get; } = id;
 
     public string Name { get; } = name;
 
-    public IBrush Dot { get; } = dot;
+    /// <summary>The list's colour as <c>#rrggbb</c>, for the theme the sheet opened in.</summary>
+    public string Dot { get; } = dot;
 
     [ObservableProperty]
     private bool _isCurrent;
@@ -522,8 +521,20 @@ public sealed partial class TodoRepeatOption(TodoRepeat repeat) : ObservableObje
 {
     public TodoRepeat Repeat { get; } = repeat;
 
-    public string Label => MobileStrings.Get("MobileTodoRepeat" + Repeat);
+    public string Label => LocalizationService.Instance["TodoEntryRepeat" + Repeat];
 
+    [ObservableProperty]
+    private bool _isCurrent;
+}
+
+/// <summary>One hour or minute pill: the to-do sheet's time grid and the phone's reminder time sheet.</summary>
+public sealed partial class TimeOption(int value, string label) : ObservableObject
+{
+    public int Value { get; } = value;
+
+    public string Label { get; } = label;
+
+    /// <summary>Whether this is the draft's hour (or minute).</summary>
     [ObservableProperty]
     private bool _isCurrent;
 }

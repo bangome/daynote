@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
+using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Time;
