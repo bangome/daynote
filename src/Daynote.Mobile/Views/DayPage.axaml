@@ -65,11 +65,9 @@
         <!--
           The days, over the selected day's pill. The pill is its own shape rather than the selected
           button's background so it can travel between days (motion spec M5); a week change slides
-          the whole strip, pill and all, over a still of the week it leaves (DayPage.axaml.cs).
+          the whole strip in, pill and all (DayPage.axaml.cs).
         -->
         <Panel Grid.Column="1" x:Name="WeekTrack" ClipToBounds="True">
-          <Image x:Name="WeekGhost" IsVisible="False" IsHitTestVisible="False" Stretch="Fill"
-                 HorizontalAlignment="Left" VerticalAlignment="Top" />
           <Panel x:Name="WeekLive">
             <Border x:Name="Pill" Classes="weekpill" HorizontalAlignment="Left" />
             <ItemsControl x:Name="WeekDays" ItemsSource="{Binding Week}">
@@ -99,11 +97,9 @@
 
       <!--
         Everything that belongs to the day, as one block: on a date change it is pushed a little in
-        the direction of travel and cross-faded with a still of the day it replaces (M5).
+        the direction of travel and faded in (M5).
       -->
       <Panel x:Name="DayBody">
-      <Image x:Name="DayGhost" IsVisible="False" IsHitTestVisible="False" Stretch="Fill"
-             HorizontalAlignment="Left" VerticalAlignment="Top" />
       <StackPanel x:Name="DayContent">
 
       <!-- 노트 n -->

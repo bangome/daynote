@@ -91,35 +91,18 @@ public partial class DayPage : UserControl
                 _ = MotionPlayer.Play(pill, "m5", Choreography.PillSlide(pill, fromX, PillX(to)));
             }
         }
-        else if (this.FindControl<Panel>("WeekLive") is { } live && this.FindControl<Image>("WeekGhost") is { } weekGhost)
+        // No still of what leaves (MotionSnapshot): on a phone's 3x screen it was painted at the
+        // wrong scale, so the old day's titles showed oversized under the new ones. The new week
+        // and day arrive on their own; the old ones are already gone when the date changes.
+        else if (this.FindControl<Panel>("WeekLive") is { } live)
         {
-            bool still = MotionSnapshot.Into(live, weekGhost);
             PlacePill();
-            _ = SlideWeekAsync(live, still ? weekGhost : null, direction);
+            _ = MotionPlayer.Play(live, "m5", Choreography.WeekSlide(live, null, live.Bounds.Width, direction));
         }
 
-        if (this.FindControl<StackPanel>("DayContent") is { } content && this.FindControl<Image>("DayGhost") is { } dayGhost)
+        if (this.FindControl<StackPanel>("DayContent") is { } content)
         {
-            bool still = MotionSnapshot.Into(content, dayGhost);
-            _ = PushContentAsync(content, still ? dayGhost : null, direction);
-        }
-    }
-
-    private async Task SlideWeekAsync(Panel live, Image? ghost, int direction)
-    {
-        // Stopped by a newer change, the ghost is that change's now; only a finished push clears it.
-        if (await MotionPlayer.Play(live, "m5", Choreography.WeekSlide(live, ghost, live.Bounds.Width, direction)).ConfigureAwait(true) && ghost is not null)
-        {
-            MotionSnapshot.Clear(ghost);
-        }
-    }
-
-    private static async Task PushContentAsync(Control content, Image? ghost, int direction)
-    {
-        // Stopped by a newer change, the ghost is that change's now; only a finished push clears it.
-        if (await MotionPlayer.Play(content, "m5", Choreography.ContentPush(content, ghost, direction)).ConfigureAwait(true) && ghost is not null)
-        {
-            MotionSnapshot.Clear(ghost);
+            _ = MotionPlayer.Play(content, "m5", Choreography.ContentPush(content, null, direction));
         }
     }
 
