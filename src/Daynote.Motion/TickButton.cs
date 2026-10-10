@@ -127,6 +127,12 @@ public abstract class TickButton : Button
         ticks.Begin(TickKey, Toggle);
     }
 
+    /// <summary>
+    /// A tick that did not come from a tap on the box - a row swiped right. The same path as the
+    /// tap: the same motion, the same held wait, the same toggle.
+    /// </summary>
+    public void Tick() => OnClick();
+
     /// <summary>The resting state, with nothing in motion: filled and drawn, or empty.</summary>
     private void ShowResting(bool on)
     {

@@ -462,4 +462,63 @@ public static class Choreography
             .Add(v => panel.Opacity = v, 0, 1, snappy)
             .Add(v => t.X = v, -14, 0, snappy);
     }
+
+    // ── A to-do row's swipe ────────────────────────────────────────────────────────────────────
+
+    /// <summary>How much of a row's width a left swipe has to pass to delete without stopping at the buttons.</summary>
+    public const double SwipeDeleteFraction = 0.6;
+
+    /// <summary>
+    /// A swiped row let go: it springs to rest, open on its buttons or closed. Under reduced motion
+    /// it is simply there - the finger already moved it, and a spring back would be motion added.
+    /// </summary>
+    /// <param name="offset">Moves the row and sizes what it uncovers.</param>
+    public static Storyboard SwipeSettle(Action<double> offset, double from, double to)
+    {
+        ArgumentNullException.ThrowIfNull(offset);
+        return Reduced
+            ? new Storyboard().Add(offset, to, to, Fade)
+            : new Storyboard().Add(offset, from, to, MotionEnvironment.Token(MotionToken.Snappy));
+    }
+
+    /// <summary>
+    /// A row deleted by a swipe: it carries on off the left edge, then its room closes (exit) and
+    /// the rows below slide up into it. Under reduced motion it only fades.
+    /// </summary>
+    /// <param name="row">What gives up its height.</param>
+    /// <param name="offset">Moves the row, from where the finger left it.</param>
+    public static Storyboard RowDelete(Layoutable row, Action<double> offset, double from, double width, double height)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(offset);
+        if (Reduced)
+        {
+            return new Storyboard().Add(v => row.Opacity = v, 1, 0, Fade);
+        }
+
+        MotionSpec exit = MotionEnvironment.Token(MotionToken.Exit);
+        return new Storyboard()
+            .Add(offset, from, -width, MotionEnvironment.Token(MotionToken.Exit, 180))
+            .Add(v => row.Height = v, height, 0, exit, 180);
+    }
+
+    /// <summary>"삭제됨 · 실행 취소": the line rises a little into place as it fades in.</summary>
+    public static Storyboard ToastOpen(Visual toast)
+    {
+        MotionTransform t = MotionTransform.For(toast);
+        if (Reduced)
+        {
+            t.Reset();
+            return new Storyboard().Add(v => toast.Opacity = v, 0, 1, Fade);
+        }
+
+        MotionSpec snappy = MotionEnvironment.Token(MotionToken.Snappy);
+        return new Storyboard()
+            .Add(v => t.Y = v, 16, 0, snappy)
+            .Add(v => toast.Opacity = v, 0, 1, snappy);
+    }
+
+    /// <summary>And goes: a fade, easing in.</summary>
+    public static Storyboard ToastClose(Visual toast) =>
+        new Storyboard().Add(v => toast.Opacity = v, toast.Opacity, 0, Reduced ? Fade : MotionEnvironment.Token(MotionToken.Exit));
 }

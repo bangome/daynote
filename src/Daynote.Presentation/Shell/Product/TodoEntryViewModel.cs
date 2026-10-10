@@ -162,8 +162,23 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     public bool Repeats => Repeat != TodoRepeat.None;
 
-    /// <summary>An undated to-do cannot repeat; its 반복 row is greyed until it has a day.</summary>
-    public bool CanRepeat => HasDate;
+    /// <summary>
+    /// An undated to-do cannot repeat; its 반복 row is greyed until it has a day. Nor can one
+    /// occurrence of a rule being edited on its own: it is a single day, not a second rule.
+    /// </summary>
+    public bool CanRepeat => HasDate && !IsOccurrenceEdit;
+
+    /// <summary>True while the sheet is editing an item that exists rather than making one.</summary>
+    [ObservableProperty]
+    private bool _isEditing;
+
+    /// <summary>
+    /// True while it is editing one occurrence of a rule on its own ("이 항목만"). The day is that
+    /// occurrence's, so it cannot be cleared, and there is no 반복 to set.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRepeat))]
+    private bool _isOccurrenceEdit;
 
     public IReadOnlyList<TodoRepeatOption> RepeatOptions { get; }
 
@@ -247,6 +262,52 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Repeat = TodoRepeat.None;
         MarkRepeat();
         Picker = TodoEntryPicker.None;
+        IsEditing = false;
+        IsOccurrenceEdit = false;
+        FillLists(lists, listId);
+        await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(date)).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// The draft for an item that exists: every field as it stands, for 저장 to write back over it
+    /// (<see cref="EditAgendaItem"/>).
+    /// </summary>
+    /// <param name="row">The row being edited: an item, or one occurrence of a rule.</param>
+    /// <param name="occurrenceOnly">
+    /// For an occurrence, whether only it is being edited ("이 항목만") or the rule ("모든 반복").
+    /// </param>
+    public async Task LoadAsync(
+        AgendaDayRow row,
+        IEnumerable<AgendaListRowViewModel> lists,
+        bool dark,
+        bool occurrenceOnly = false)
+    {
+        ArgumentNullException.ThrowIfNull(lists);
+        AgendaItem item = row.Item;
+        DateOnly? day = row.Falls is { } falls ? DateOnly.FromDateTime(falls.Value) : null;
+        _startDate = day ?? LocalDates.ToDateOnly(LocalDates.Today(_clock));
+        _dark = dark;
+        _timeFilledIn = false;
+        _eventLength = item.StartsAt is { } start && item.EndsAt is { } end && end.Value > start.Value
+            ? end.Value - start.Value
+            : AgendaPhraseParser.DefaultEventLength;
+        IsEditing = true;
+        IsOccurrenceEdit = occurrenceOnly && row.IsOccurrence;
+        Kind = item.Kind;
+        Title = item.Title;
+        Description = item.Description;
+        Date = day;
+        Time = item.HasClockTime && (row.At ?? item.Anchor) is { } at ? TimeOnly.FromDateTime(at.Value) : null;
+        Repeat = IsOccurrenceEdit ? TodoRepeat.None : RepeatOf(item.Rrule);
+        MarkRepeat();
+        Picker = TodoEntryPicker.None;
+        FillLists(lists, item.ListId);
+        await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(_startDate)).ConfigureAwait(true);
+    }
+
+    /// <summary>The sheet's list row, with <paramref name="listId"/> lit, or the built-in list when it is gone.</summary>
+    private void FillLists(IEnumerable<AgendaListRowViewModel> lists, Guid? listId)
+    {
         List<AgendaListRowViewModel> rows = [.. lists];
         ListId = listId is { } chosen && rows.Any(list => list.Id == chosen) ? chosen : AgendaList.DefaultId;
 
@@ -258,8 +319,22 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(ShowLists));
-        await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(date)).ConfigureAwait(true);
     }
+
+    /// <summary>The pill a stored rule reads as: the inverse of <see cref="Rrule"/>.</summary>
+    private static TodoRepeat RepeatOf(string? rrule) => rrule switch
+    {
+        null => TodoRepeat.None,
+        "FREQ=DAILY" => TodoRepeat.Daily,
+        "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR" => TodoRepeat.Weekdays,
+        "FREQ=MONTHLY" => TodoRepeat.Monthly,
+        "FREQ=YEARLY" => TodoRepeat.Yearly,
+        _ when rrule.StartsWith("FREQ=WEEKLY", StringComparison.Ordinal) => TodoRepeat.Weekly,
+        _ when rrule.StartsWith("FREQ=DAILY", StringComparison.Ordinal) => TodoRepeat.Daily,
+        _ when rrule.StartsWith("FREQ=MONTHLY", StringComparison.Ordinal) => TodoRepeat.Monthly,
+        _ when rrule.StartsWith("FREQ=YEARLY", StringComparison.Ordinal) => TodoRepeat.Yearly,
+        _ => TodoRepeat.None,
+    };
 
     /// <summary>
     /// 할 일 or 일정. An event needs a day and a start, so switching to one fills them in — the
@@ -323,7 +398,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     [RelayCommand]
     private void ClearDate()
     {
-        if (IsEvent)
+        if (IsEvent || IsOccurrenceEdit)
         {
             return;
         }
