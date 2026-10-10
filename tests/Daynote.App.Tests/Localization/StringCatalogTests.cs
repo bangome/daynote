@@ -125,10 +125,6 @@ public sealed partial class StringCatalogTests
             // patterns that do differ — where the meridiem and the date parts go — are their
             // own entries.
             nameof(AppStrings.TodoRowTimeFormat),
-
-            // The @ the empty state tells the user to type. It is the character itself, so
-            // translating it would mean telling one of the two languages to type something else.
-            nameof(AppStrings.TodoEmptyCode),
         };
 
         string[] untranslated = [.. korean

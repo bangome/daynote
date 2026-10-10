@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
-using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
@@ -14,12 +13,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Daynote.Mobile.Tests;
 
 /// <summary>
-/// The to-do sheet: a to-do or an event made in fields of its own, never typed into the note.
+/// The to-do sheet: a to-do or an event made in fields of its own. To-dos and notes are separate,
+/// so a note never opens it and what it makes points at no note.
 /// </summary>
 /// <remarks>
-/// Opened the way a thumb opens it — the editor's + button, or an @ typed at the start of a line —
-/// and checked against what reached the agenda store, since that row is what reminders, widgets,
-/// sync and the day panel all read.
+/// Opened the way a thumb opens it — the day screen's + 할 일, the 할 일 tab's + — and checked
+/// against what reached the agenda store, since that row is what reminders, widgets, sync and the
+/// day panel all read.
 /// </remarks>
 [TestClass]
 public sealed class TodoSheetTests
@@ -27,55 +27,109 @@ public sealed class TodoSheetTests
     private const string Body = "주간 회의 메모";
 
     [TestMethod]
-    public void The_toolbar_has_no_date_or_time_buttons()
+    public void The_editor_toolbar_has_only_the_paperclip()
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
             OpenEditor(view, shell);
             EditorPage editor = view.GetVisualDescendants().OfType<EditorPage>().Single();
-            string[] labels = [MobileStrings.Get("InsertDate"), MobileStrings.Get("MobileTodoTime")];
+            Border toolbar = editor.FindControl<Border>("Toolbar")!;
 
-            Button[] buttons = [.. editor.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible)];
+            Button[] buttons = [.. toolbar.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible)];
+            Assert.AreSequenceEqual(new[] { "AttachTool" }, buttons.Select(button => button.Name).ToArray(),
+                "The editor's toolbar has more than the paperclip: a note never makes a to-do.");
+            string[] todoWords = [MobileStrings.Get("MobileTodoAddShort"), MobileStrings.Get("AgendaCaptureTask")];
             Assert.IsFalse(
-                buttons.Any(button => button.GetVisualDescendants().OfType<TextBlock>().Any(text => labels.Contains(text.Text))),
-                "A date or time stamp is still on the editor's toolbar.");
-            Assert.IsTrue(buttons.Any(button => button.Name == "AttachTool"), "The paperclip went with them.");
-            Assert.IsTrue(buttons.Any(button => button.Name == "TodoTool"), "There is no way to the sheet.");
+                editor.GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && todoWords.Contains(text.Text)),
+                "The editor still offers a to-do.");
         });
     }
 
     [TestMethod]
-    public void The_at_button_opens_the_sheet_and_writes_nothing_into_the_note()
-    {
-        TestServices.WithInitialisedShell((view, shell) =>
-        {
-            TextBox body = OpenEditor(view, shell);
-            OpenSheet(view, shell);
-
-            Assert.IsTrue(shell.IsTodoSheetOpen);
-            Assert.AreEqual(Body, body.Text, "The @ button typed into the note.");
-            Assert.IsFalse(shell.ShowDock);
-            Assert.IsTrue(view.FindControl<TextBox>("TodoTextBox")!.IsFocused, "The title does not take the keyboard.");
-
-            Assert.IsTrue(Run(shell.GoBackAsync()), "Back did not close the sheet.");
-            Assert.IsFalse(shell.IsTodoSheetOpen);
-            Assert.IsTrue(shell.IsEditorOpen, "Back closed the note under the sheet too.");
-        });
-    }
-
-    [TestMethod]
-    public void The_date_defaults_to_the_notes_own_day()
+    public void The_day_page_add_opens_the_sheet_on_that_day_and_makes_an_item_with_no_note()
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
             LocalDate other = LocalDates.AddDays(shell.SelectedDate, -4);
             Pump(() => shell.SelectDateAsync(other));
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
 
-            Assert.AreEqual(LocalDates.ToDateOnly(other), shell.Entry.Date);
+            Assert.IsTrue(shell.IsTodoSheetOpen);
+            Assert.IsFalse(shell.IsEditorOpen, "Adding a to-do opened a note.");
+            Assert.IsFalse(shell.ShowDock);
+            Assert.IsTrue(view.FindControl<TextBox>("TodoTextBox")!.IsFocused, "The title does not take the keyboard.");
+            Assert.AreEqual(LocalDates.ToDateOnly(other), shell.Entry.Date, "The sheet is not on the day being viewed.");
             Assert.IsTrue(shell.Entry.IsTask, "A to-do is what the sheet starts on.");
             Assert.IsNull(shell.Entry.Time, "A to-do starts with no time.");
+            Assert.AreEqual(AgendaList.DefaultId, shell.Entry.ListId);
+
+            shell.Entry.Title = "보고서 보내기";
+            AgendaItem made = Add(view, shell);
+
+            Assert.IsNull(made.SourceNoteId, "The item points at a note.");
+            Assert.AreEqual(new WallClock(LocalDates.ToDateOnly(other).ToDateTime(TimeOnly.MinValue)), made.DueAt);
+            Assert.IsTrue(shell.DayTodos.Any(row => row.Item.Text == "보고서 보내기"), "The day's list does not show it.");
+            Assert.IsNull(shell.MadeElsewhereText, "It went to the day on screen.");
+        });
+    }
+
+    [TestMethod]
+    public void Back_closes_the_sheet_and_nothing_under_it()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            OpenSheet(view, shell);
+
+            Assert.IsTrue(Run(shell.GoBackAsync()), "Back did not close the sheet.");
+            Assert.IsFalse(shell.IsTodoSheetOpen);
+            Assert.IsTrue(shell.IsDayPage);
+        });
+    }
+
+    [TestMethod]
+    public void The_lists_add_defaults_to_today_and_the_list_being_viewed()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            Pump(() => shell.Todo.CreateListAsync("장보기"));
+            Pump(() => shell.Todo.RefreshAsync());
+            Guid groceries = shell.Todo.Lists.Single(list => list.Name == "장보기").Id;
+            Pump(() => shell.SelectDateAsync(LocalDates.AddDays(shell.SelectedDate, 3)));
+            shell.GoToPageCommand.Execute(MobilePage.Lists);
+
+            // Making a list lights its chip; start from 전체 and tap it, as a user would.
+            Pump(() => shell.SelectAgendaListCommand.ExecuteAsync(null));
+            Pump(() => shell.SelectAgendaListCommand.ExecuteAsync(groceries));
+            Assert.AreEqual(groceries, shell.Todo.SelectedListId);
+            Settle(view);
+
+            Button add = view.GetVisualDescendants().OfType<ListsPage>().Single()
+                .GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddListTodoButton");
+            Assert.IsTrue(add.IsEffectivelyVisible && add.IsEffectivelyEnabled, "The 할 일 tab's + cannot be tapped.");
+            add.Command!.Execute(add.CommandParameter);
+            PumpUntil(() => shell.IsTodoSheetOpen, "The 할 일 tab's + did not open the sheet.");
+            Settle(view);
+
+            Assert.AreEqual(groceries, shell.Entry.ListId, "The sheet is not filed in the list being viewed.");
+            Assert.IsTrue(shell.Entry.ListOptions.Single(option => option.Id == groceries).IsCurrent);
+            Assert.AreEqual(DateOnly.FromDateTime(DateTime.Now), shell.Entry.Date, "The 할 일 tab's + is not on today.");
+
+            shell.Entry.Title = "두부";
+            AgendaItem made = Add(view, shell);
+            Assert.AreEqual(groceries, made.ListId);
+            Assert.IsNull(made.SourceNoteId);
+        });
+    }
+
+    [TestMethod]
+    public void The_lists_add_files_in_the_built_in_list_with_no_filter()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            shell.GoToPageCommand.Execute(MobilePage.Lists);
+            Pump(() => shell.AddListTodoCommand.ExecuteAsync(null));
+
+            Assert.IsTrue(shell.IsTodoSheetOpen);
             Assert.AreEqual(AgendaList.DefaultId, shell.Entry.ListId);
         });
     }
@@ -85,7 +139,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             Button add = view.FindControl<Button>("TodoAdd")!;
 
@@ -109,7 +162,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "우유 사기";
             shell.Entry.ClearDateCommand.Execute(null);
@@ -124,8 +176,8 @@ public sealed class TodoSheetTests
             Assert.IsNull(made.StartsAt);
             Assert.IsFalse(made.HasDueTime);
             Assert.IsEmpty(made.AlarmLeadMinutes, "An undated to-do has nothing to ring at.");
-            AssertFromNote(shell, body, made);
-            Assert.IsFalse(shell.IsJustMadeElsewhere, "An undated to-do went to no other day.");
+            AssertNoNote(made);
+            Assert.IsNull(shell.MadeElsewhereText, "An undated to-do went to no other day.");
         });
     }
 
@@ -134,7 +186,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "보고서 보내기";
 
@@ -146,8 +197,7 @@ public sealed class TodoSheetTests
             Assert.IsNull(made.StartsAt);
             Assert.AreSequenceEqual(AgendaAlert.Default.ToArray(), made.AlarmLeadMinutes.ToArray(),
                 "A dated to-do starts with its one alert, as an @ one does.");
-            AssertFromNote(shell, body, made);
-            Assert.AreEqual(MobileStrings.Get("MobileJustNow"), shell.JustMadeWhenText);
+            AssertNoNote(made);
         });
     }
 
@@ -156,7 +206,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "업체에 전화";
 
@@ -181,10 +230,10 @@ public sealed class TodoSheetTests
 
             Assert.AreEqual(new WallClock(target.ToDateTime(new TimeOnly(15, 30))), made.DueAt);
             Assert.IsTrue(made.HasDueTime);
-            AssertFromNote(shell, body, made);
-            Assert.IsTrue(shell.IsJustMadeElsewhere, "It went to another day; the row should say so.");
-            Assert.Contains(target.ToString(MobileStrings.Get("MobileNoteItemsAddedDateFormat"),
-                Daynote.App.Localization.LocalizationService.Instance.Culture), shell.JustMadeWhenText);
+            AssertNoNote(made);
+            Assert.IsNotNull(shell.MadeElsewhereText, "It went to another day; the tablet's line should say so.");
+            Assert.Contains(target.ToString(MobileStrings.Get("MobileTodoAddedDateFormat"),
+                Daynote.App.Localization.LocalizationService.Instance.Culture), shell.MadeElsewhereText);
         });
     }
 
@@ -193,7 +242,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "디자인 리뷰";
 
@@ -219,7 +267,7 @@ public sealed class TodoSheetTests
             Assert.AreEqual(new WallClock(day.ToDateTime(new TimeOnly(11, 30))), made.EndsAt);
             Assert.IsNull(made.DueAt);
             Assert.IsEmpty(made.AlarmLeadMinutes, "An event is not nagged about unless asked, as with @.");
-            AssertFromNote(shell, body, made);
+            AssertNoNote(made);
         });
     }
 
@@ -228,7 +276,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.ClearDateCommand.Execute(null);
 
@@ -247,7 +294,6 @@ public sealed class TodoSheetTests
         {
             Pump(() => shell.Todo.CreateListAsync("장보기"));
             Pump(() => shell.Todo.RefreshAsync());
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             Assert.IsTrue(shell.Entry.ShowLists);
 
@@ -260,23 +306,46 @@ public sealed class TodoSheetTests
     }
 
     [TestMethod]
-    public void The_widget_capture_link_opens_the_sheet_on_today_s_note()
+    public void The_widget_capture_link_opens_the_sheet_over_today_s_day_page()
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
+            LocalDate today = shell.SelectedDate;
+            Pump(() => shell.SelectDateAsync(LocalDates.AddDays(today, -2)));
+            shell.GoToPageCommand.Execute(MobilePage.Lists);
             Pump(() => shell.OpenLinkAsync(new Uri("daynote://capture?at=1")));
             Settle(view);
 
-            Assert.IsTrue(shell.IsEditorOpen);
             Assert.IsTrue(shell.IsTodoSheetOpen, "The link did not open the sheet.");
-            Assert.DoesNotContain("@", shell.Notes.EditorText, "The link typed into the note.");
+            Assert.IsFalse(shell.IsEditorOpen, "The link opened a note.");
+            Assert.IsTrue(shell.IsDayPage, "The sheet is not over the day page.");
+            Assert.AreEqual(today, shell.SelectedDate, "The day page is not on today.");
+            Assert.AreEqual(LocalDates.ToDateOnly(today), shell.Entry.Date);
 
-            Pump(() => shell.CloseEditorAsync());
+            shell.CloseTodoSheetCommand.Execute(null);
+            Pump(() => shell.NewNoteCommand.ExecuteAsync(null));
             Pump(() => shell.OpenFromWidgetAsync(WidgetLaunch.Capture));
             Settle(view);
 
-            Assert.IsTrue(shell.IsEditorOpen);
+            Assert.IsFalse(shell.IsEditorOpen, "The widget's @ 할 일 left a note open under the sheet.");
             Assert.IsTrue(shell.IsTodoSheetOpen, "The Android widget's @ 할 일 did not open the sheet.");
+            Assert.IsTrue(shell.IsDayPage);
+
+            shell.Entry.Title = "위젯에서";
+            Assert.IsNull(Add(view, shell).SourceNoteId);
+        });
+    }
+
+    [TestMethod]
+    public void The_widget_new_note_still_opens_a_new_note()
+    {
+        TestServices.WithInitialisedShell((view, shell) =>
+        {
+            Pump(() => shell.OpenFromWidgetAsync(WidgetLaunch.NewNote));
+            Settle(view);
+
+            Assert.IsTrue(shell.IsEditorOpen);
+            Assert.IsFalse(shell.IsTodoSheetOpen);
         });
     }
 
@@ -289,7 +358,6 @@ public sealed class TodoSheetTests
         TestServices.WithInitialisedShell((view, shell) =>
         {
             view.PreviewSafeArea = new Avalonia.Thickness(0, 56, 0, 34);
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             const double keyboard = 300;
             view.PreviewKeyboard = keyboard;
@@ -307,45 +375,27 @@ public sealed class TodoSheetTests
         });
     }
 
-    // ── @ at the start of a line ─────────────────────────────────────────────────
+    // ── @ in a note is just a character ──────────────────────────────────────────
 
     [TestMethod]
-    public void An_at_typed_at_the_start_of_the_note_opens_the_sheet_and_leaves_the_body_unchanged()
-    {
-        TestServices.WithInitialisedShell((view, shell) =>
-        {
-            TextBox body = OpenEditor(view, shell);
-            body.Text = string.Empty;
-            Settle(view);
-
-            TypeAt(view, body, 0);
-
-            Assert.IsTrue(shell.IsTodoSheetOpen, "An @ at the start did not open the sheet.");
-            Assert.AreEqual(string.Empty, body.Text, "The @ stayed in the note.");
-            Assert.AreEqual(string.Empty, shell.Notes.EditorText);
-            Assert.AreEqual(string.Empty, shell.Entry.Title, "The sheet should open empty, not read what was typed.");
-            Assert.IsTrue(shell.Entry.IsTask);
-            Assert.AreEqual(LocalDates.ToDateOnly(shell.SelectedDate), shell.Entry.Date, "The defaults are the + button's.");
-            Assert.IsTrue(view.FindControl<TextBox>("TodoTextBox")!.IsFocused, "The keyboard did not go to 제목.");
-        });
-    }
-
-    [TestMethod]
+    [DataRow("", DisplayName = "at the start of the note")]
     [DataRow("\n", DisplayName = "after a newline")]
     [DataRow("\n  ", DisplayName = "after a newline and spaces")]
-    public void An_at_typed_at_the_start_of_a_later_line_opens_the_sheet(string lead)
+    public void An_at_typed_at_the_start_of_a_line_opens_nothing_and_stays_in_the_body(string lead)
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
             TextBox body = OpenEditor(view, shell);
-            string before = Body + lead;
+            string before = lead.Length == 0 ? string.Empty : Body + lead;
             body.Text = before;
             Settle(view);
 
             TypeAt(view, body, before.Length);
 
-            Assert.IsTrue(shell.IsTodoSheetOpen, "An @ at the start of a line did not open the sheet.");
-            Assert.AreEqual(before, body.Text, "The @ stayed in the note.");
+            Assert.IsFalse(shell.IsTodoSheetOpen, "An @ in the note opened the to-do sheet.");
+            Assert.AreEqual(before + "@", body.Text, "The @ did not stay in the note.");
+            Assert.AreEqual(before + "@", shell.Notes.EditorText);
+            Assert.IsEmpty(Items(), "Typing in a note made a to-do.");
         });
     }
 
@@ -365,56 +415,6 @@ public sealed class TodoSheetTests
         });
     }
 
-    [TestMethod]
-    [DataRow("@", DisplayName = "a lone @")]
-    [DataRow("회의 @내일 3시", DisplayName = "a line with an @")]
-    public void Pasting_an_at_at_the_start_of_a_line_opens_nothing(string pasted)
-    {
-        TestServices.WithInitialisedShell((view, shell) =>
-        {
-            TextBox body = OpenEditor(view, shell);
-            body.Text = Body + "\n";
-            Settle(view);
-            body.Focus();
-            body.CaretIndex = body.Text.Length;
-            Pump(() => TopLevel.GetTopLevel(view)!.Clipboard!.SetTextAsync(pasted));
-
-            body.Paste();
-            PumpUntil(() => body.Text!.EndsWith(pasted, StringComparison.Ordinal), "The paste did not arrive.");
-            Settle(view);
-
-            Assert.IsFalse(shell.IsTodoSheetOpen, "A paste opened the sheet.");
-            Assert.AreEqual(Body + "\n" + pasted, body.Text);
-
-            // The paste is spent: the next @ typed at a line start still works.
-            body.Text += "\n";
-            Settle(view);
-            TypeAt(view, body, body.Text.Length);
-            Assert.IsTrue(shell.IsTodoSheetOpen, "A typed @ after the paste did not open the sheet.");
-        });
-    }
-
-    [TestMethod]
-    public void A_keyboard_commit_that_carries_more_than_the_at_opens_nothing()
-    {
-        // A composing keyboard hands over a finished syllable and what follows in one commit; that
-        // is text being written, not an @ typed on its own.
-        TestServices.WithInitialisedShell((view, shell) =>
-        {
-            TextBox body = OpenEditor(view, shell);
-            body.Text = Body + "\n";
-            Settle(view);
-            body.Focus();
-            body.CaretIndex = body.Text.Length;
-
-            TopLevel.GetTopLevel(view)!.KeyTextInput("@회의");
-            Settle(view);
-
-            Assert.IsFalse(shell.IsTodoSheetOpen);
-            Assert.AreEqual(Body + "\n@회의", body.Text);
-        });
-    }
-
     // ── 제목, 내용, 반복 ─────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -422,7 +422,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            TextBox body = OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "  회의자료 초안 공유 ";
             shell.Entry.Description = "슬라이드 12장\n예산표 첨부\n";
@@ -431,7 +430,7 @@ public sealed class TodoSheetTests
 
             Assert.AreEqual("회의자료 초안 공유", made.Title);
             Assert.AreEqual("슬라이드 12장\n예산표 첨부", made.Description);
-            AssertFromNote(shell, body, made);
+            AssertNoNote(made);
         });
     }
 
@@ -449,7 +448,6 @@ public sealed class TodoSheetTests
         var anchor = new DateOnly(2026, 10, 7);
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "스트레칭";
             shell.Entry.Date = anchor;
@@ -489,7 +487,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Date = new DateOnly(2026, 10, 9);
             Assert.IsFalse(shell.Entry.Repeats);
@@ -509,7 +506,6 @@ public sealed class TodoSheetTests
     {
         TestServices.WithInitialisedShell((view, shell) =>
         {
-            OpenEditor(view, shell);
             OpenSheet(view, shell);
             shell.Entry.Title = "물 마시기";
             shell.Entry.PickRepeatCommand.Execute(TodoRepeat.Daily);
@@ -556,8 +552,6 @@ public sealed class TodoSheetTests
 
     private static TextBox OpenEditor(MainView view, MobileShellViewModel shell)
     {
-        // These tests are about what was made, not the flash; waiting it out would cost 2.5 s each.
-        shell.FlashDelay = _ => Task.CompletedTask;
         Pump(() => shell.NewNoteCommand.ExecuteAsync(null));
         TextBox body = view.GetVisualDescendants().OfType<EditorPage>().Single()
             .GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "Body");
@@ -567,14 +561,15 @@ public sealed class TodoSheetTests
         return body;
     }
 
-    /// <summary>Taps the editor's @ button: its command, once it is on screen and live.</summary>
+    /// <summary>Taps the day screen's + 할 일: its command, once it is on screen and live.</summary>
     internal static void OpenSheet(MainView view, MobileShellViewModel shell)
     {
-        Button tool = view.GetVisualDescendants().OfType<EditorPage>().Single()
-            .GetVisualDescendants().OfType<Button>().Single(button => button.Name == "TodoTool");
-        Assert.IsTrue(tool.IsEffectivelyVisible && tool.IsEffectivelyEnabled, "The @ button cannot be tapped.");
-        tool.Command!.Execute(tool.CommandParameter);
-        PumpUntil(() => shell.IsTodoSheetOpen, "The @ button did not open the sheet.");
+        Settle(view);
+        Button add = view.GetVisualDescendants().OfType<DayPage>().Single()
+            .GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddTodoButton");
+        Assert.IsTrue(add.IsEffectivelyVisible && add.IsEffectivelyEnabled, "The day's + 할 일 cannot be tapped.");
+        add.Command!.Execute(add.CommandParameter);
+        PumpUntil(() => shell.IsTodoSheetOpen, "The day's + 할 일 did not open the sheet.");
         Settle(view);
     }
 
@@ -585,18 +580,13 @@ public sealed class TodoSheetTests
         Settle(view);
         Assert.IsTrue(add.IsEffectivelyEnabled, "추가 is not live.");
         add.Command!.Execute(add.CommandParameter);
-        PumpUntil(() => !shell.IsTodoSheetOpen && Items().Count == 1 && shell.NoteItems.Count == 1,
+        PumpUntil(() => !shell.IsTodoSheetOpen && Items().Count == 1,
             "추가 did not write the item and close the sheet.");
         return Items().Single();
     }
 
-    private static void AssertFromNote(MobileShellViewModel shell, TextBox body, AgendaItem made)
-    {
-        Assert.AreEqual(shell.Notes.SelectedTab!.Id.Value, made.SourceNoteId, "The item does not point back at its note.");
-        Assert.AreEqual(Body, body.Text, "The note's text changed.");
-        Assert.AreEqual(Body, shell.Notes.EditorText);
-        Assert.AreEqual(made.Title, shell.NoteItems.Single().Text, "The note's own collection does not show it.");
-    }
+    private static void AssertNoNote(AgendaItem made) =>
+        Assert.IsNull(made.SourceNoteId, "The item points at a note: to-dos and notes are separate.");
 
     private static IReadOnlyList<AgendaItem> Items()
     {

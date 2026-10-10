@@ -174,17 +174,26 @@
       </Button>
 
       <!--
-        이 날의 할 일: the to-dos written on this day, ticked off here without opening the note. A
-        tablet shows them in its day panel instead (DayTodoPanel).
+        이 날의 할 일: this day's to-dos, ticked off here, and + 할 일 for another on this day - the
+        way in to a to-do, since a note's text never makes one. Built like 파일 below it. A tablet
+        shows them in its day panel instead (DayTodoPanel).
       -->
-      <Panel IsVisible="{Binding !IsTabletLayout}">
-      <StackPanel IsVisible="{Binding HasDayTodos}">
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,26,0,10">
-          <TextBlock Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
-          <TextBlock Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
-        </StackPanel>
+      <StackPanel IsVisible="{Binding !IsTabletLayout}">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,26,0,10">
+          <TextBlock Grid.Column="0" Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
+          <TextBlock Grid.Column="1" Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="8,0,0,1"
+                     IsVisible="{Binding HasDayTodos}" />
+          <Button Grid.Column="3" x:Name="AddTodoButton" Classes="pill sun" Height="30" Padding="12,0" FontSize="13"
+                  Command="{Binding AddDayTodoCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <views:Glyph Kind="Plus" Width="12" Height="12" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Mobile.SunInk}" />
+              <TextBlock Text="{Binding Strings[MobileTodoAddShort]}" FontWeight="Bold" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </Grid>
         <!-- A row made since the list was last seen arrives (motion spec M2); a tick draws itself (M3). -->
-        <ItemsControl ItemsSource="{Binding DayTodos}" motion:RowArrivals.IsEnabled="True"
+        <ItemsControl ItemsSource="{Binding DayTodos}" IsVisible="{Binding HasDayTodos}" motion:RowArrivals.IsEnabled="True"
                       motion:RowArrivals.Context="{Binding SelectedDate}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
@@ -210,7 +219,6 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
-      </Panel>
 
       <!--
         파일 n: what was attached to this day. Compact rows as in the desktop's day panel - a tile with

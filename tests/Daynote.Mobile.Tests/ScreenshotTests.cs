@@ -78,9 +78,10 @@ public sealed class ScreenshotTests
             shell.IsEditorOpen = true;
             Capture(view, $"editor-{suffix}");
 
-            // The to-do sheet: as it opens, over a keyboard, with its date grid, and as an event
-            // with its time grid.
-            Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+            // The to-do sheet, from the day's + 할 일: as it opens, over a keyboard, with its date
+            // grid, and as an event with its time grid.
+            shell.IsEditorOpen = false;
+            Pump(() => shell.AddDayTodoCommand.ExecuteAsync(null));
             Capture(view, $"todo-sheet-{suffix}");
             view.PreviewKeyboard = 336;
             shell.Entry.Title = "회의자료 초안 공유";

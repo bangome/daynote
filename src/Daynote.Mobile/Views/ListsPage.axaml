@@ -12,7 +12,22 @@
   -->
   <ScrollViewer>
     <StackPanel Margin="20,4,20,120">
-      <TextBlock Classes="pagetitle" Text="{Binding Strings[TabLists]}" Margin="0,10,0,14" />
+      <!--
+        The title, and on the 할 일 tab the way to a new one: in the header rather than floating, so
+        it never meets the dock or the home indicator. It opens the to-do sheet on today, in the
+        list whose chip is lit.
+      -->
+      <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,14">
+        <TextBlock Grid.Column="0" Classes="pagetitle" Text="{Binding Strings[TabLists]}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" x:Name="AddListTodoButton" Classes="pill sun" Height="34" Padding="14,0" FontSize="14"
+                VerticalAlignment="Center" IsVisible="{Binding IsTodoList}" Command="{Binding AddListTodoCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <views:Glyph Kind="Plus" Width="13" Height="13" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.SunInk}" />
+            <TextBlock Text="{Binding Strings[MobileTodoAddShort]}" FontWeight="Bold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
 
       <Border BorderBrush="{DynamicResource Mobile.Stroke}" BorderThickness="0,0,0,1" Margin="0,0,0,18">
         <StackPanel Orientation="Horizontal" Spacing="20">

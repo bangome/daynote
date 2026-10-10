@@ -293,7 +293,7 @@ internal static class EnglishStrings
         ["DeskFilesDropFormat"] = "Drop files here, or click, to keep them on {0}",
         ["DeskFileDelete"] = "Delete",
         ["DeskDayTodoTitle"] = "To-dos for this day",
-        ["DeskDayTodoEmptySuffix"] = " in a note and it lands here.",
+        ["DeskDayTodoEmptySuffix"] = " to add one to this day.",
         ["DeskFilesAdd"] = "+ Add",
         ["DeskFilesEmpty"] = "No files kept for this day.",
         ["DeskPalettePlaceholder"] = "Search notes, files and dates",
@@ -366,9 +366,9 @@ internal static class EnglishStrings
 
         // Todo tab
         ["TodoEmptyText"] = "(empty)",
-        ["TodoEmptyPrefix"] = "Type ",
-        ["TodoEmptyCode"] = "@",
-        ["TodoEmptySuffix"] = " in a note and it shows up here",
+        ["TodoEmptyPrefix"] = "Use ",
+        ["TodoEmptyCode"] = "+ To-do",
+        ["TodoEmptySuffix"] = " to add one and it shows up here",
 
         // Clipboard tab
 

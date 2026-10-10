@@ -85,6 +85,7 @@ public sealed class DeviceSafeAreaTests
                 Settle(view);
                 Save(view, Path.Combine(directory, $"{screen}.png"));
                 failures.AddRange(Offenders(view, safe).Select(offender => $"{device}/{screen}: {offender}"));
+                failures.AddRange(AddButtonsClear(view).Select(offender => $"{device}/{screen}: {offender}"));
             }
 
             ScreenshotTests.SeedFiles(shell);
@@ -100,9 +101,11 @@ public sealed class DeviceSafeAreaTests
             shell.IsEditorOpen = true;
             Check("editor");
 
-            // The to-do sheet, with the keyboard down and then up under it: everything in it that
-            // is on screen stays above the keyboard's top edge.
-            ScreenshotTests.Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+            // The to-do sheet, opened from the day's + 할 일 (a note never opens it), with the
+            // keyboard down and then up under it: everything in it that is on screen stays above
+            // the keyboard's top edge.
+            shell.IsEditorOpen = false;
+            ScreenshotTests.Pump(() => shell.AddDayTodoCommand.ExecuteAsync(null));
             Assert.IsTrue(shell.IsTodoSheetOpen, $"{device}: the to-do sheet did not open.");
             Check("todo-sheet");
             double keyboard = Math.Round(height * 0.38);
@@ -279,6 +282,30 @@ public sealed class DeviceSafeAreaTests
             {
                 string label = button.Name ?? (button.Content as string) ?? AutomationName(button) ?? button.GetType().Name;
                 yield return $"'{label}' at {rect} outside the safe area {safe} of {size}";
+            }
+        }
+    }
+
+    /// <summary>
+    /// The ways to a new to-do — the day's + 할 일, the 할 일 tab's +, the tablet panel's row — clear
+    /// of the floating tab bar wherever they are on screen: one under the bar cannot be tapped.
+    /// </summary>
+    private static IEnumerable<string> AddButtonsClear(Control view)
+    {
+        if (TopLevel.GetTopLevel(view) is not { } root ||
+            view.FindControl<Grid>("Dock") is not { IsEffectivelyVisible: true } dock ||
+            dock.TranslatePoint(default, root) is not { } dockAt)
+        {
+            yield break;
+        }
+
+        var bar = new Rect(dockAt, dock.Bounds.Size);
+        foreach (Button button in view.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Name is "AddTodoButton" or "AddListTodoButton" or "AddTodoRow" && button.IsEffectivelyVisible))
+        {
+            if (OnScreen(button, root) is { } rect && rect.Intersects(bar))
+            {
+                yield return $"'{button.Name}' at {rect} is under the tab bar at {bar}";
             }
         }
     }

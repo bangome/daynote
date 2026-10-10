@@ -7,9 +7,9 @@
              x:DataType="vm:MobileShellViewModel">
   <!--
     The tablet's day panel (Daynote Tablet T1-T4): this date's to-dos down the right, beside the day
-    or the note being written, which is why a to-do made with @ is confirmed here the way the
-    desktop confirms it - it slides in (motion spec M2) - and one made for another date says so in a
-    line at the top that opens its own room (M4).
+    or the note being written. "+ 할 일 추가" under them opens the to-do sheet on this date; what it
+    makes slides in (motion spec M2), and one made for another date says so in a line at the top
+    that opens its own room (M4).
   -->
   <Border Width="300" Background="{DynamicResource Mobile.Panel}" BorderBrush="{DynamicResource Mobile.Stroke2}"
           BorderThickness="1,0,0,0">
@@ -27,36 +27,44 @@
                        Foreground="{DynamicResource Mobile.SunInk}" TextTrimming="CharacterEllipsis" />
             <Button Grid.Column="1" Height="32" Padding="8,0" Click="OnNoticeView">
               <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}"
-                         Text="{Binding Strings[MobileNoteItemsView]}" />
+                         Text="{Binding Strings[MobileTodoView]}" />
             </Button>
           </Grid>
         </Border>
 
-        <Border Classes="card" Padding="6,4" x:Name="OpenCard">
-          <ItemsControl x:Name="OpenList" motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:TodoRowViewModel">
-                <Panel Classes="todorow">
-                  <Border Classes="rowflash" Margin="-2,0" />
-                  <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44" Margin="8,0">
-                    <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
-                    <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
-                            Command="{Binding Item.JumpCommand}">
-                      <Panel HorizontalAlignment="Left">
-                        <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="14.5" Text="{Binding Item.Text}" />
-                        <Border Classes="strike" />
-                      </Panel>
-                    </Button>
-                    <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="10,0,0,0"
-                               VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
-                  </Grid>
-                </Panel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+        <Border Classes="card" Padding="6,4">
+          <StackPanel>
+            <ItemsControl x:Name="OpenList" motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TodoRowViewModel">
+                  <Panel Classes="todorow">
+                    <Border Classes="rowflash" Margin="-2,0" />
+                    <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44" Margin="8,0">
+                      <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
+                      <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
+                              Command="{Binding Item.JumpCommand}">
+                        <Panel HorizontalAlignment="Left">
+                          <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="14.5" Text="{Binding Item.Text}" />
+                          <Border Classes="strike" />
+                        </Panel>
+                      </Button>
+                      <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="10,0,0,0"
+                                 VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
+                    </Grid>
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="Empty" Classes="faint" FontSize="13" Margin="8,10,8,10" TextWrapping="Wrap"
+                       Text="{Binding Strings[MobileWideNoTodos]}" />
+            <!-- The design's last row: a to-do on this date, in the sheet. -->
+            <Border Classes="addrule" />
+            <Button x:Name="AddTodoRow" Classes="row" MinHeight="44" Margin="8,0" HorizontalContentAlignment="Left"
+                    Command="{Binding AddDayTodoCommand}">
+              <TextBlock Classes="faint" FontSize="14" VerticalAlignment="Center" Text="{Binding Strings[MobileTodoAddRow]}" />
+            </Button>
+          </StackPanel>
         </Border>
-        <TextBlock x:Name="Empty" Classes="faint" FontSize="13" Margin="4,8,4,0" TextWrapping="Wrap"
-                   Text="{Binding Strings[MobileWideNoTodos]}" />
 
         <!-- What was finished, folded behind its count the way the desktop folds it. -->
         <Button x:Name="DoneToggle" Classes="row" Margin="2,10,0,0" HorizontalContentAlignment="Left" Click="OnDoneToggle">
@@ -78,6 +86,11 @@
   </Border>
 
   <UserControl.Styles>
+    <Style Selector="Border.addrule">
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Margin" Value="8,0" />
+      <Setter Property="Background" Value="{DynamicResource Mobile.Stroke2}" />
+    </Style>
     <Style Selector="Border.notice">
       <Setter Property="Height" Value="36" />
       <Setter Property="CornerRadius" Value="10" />

@@ -63,9 +63,7 @@ public sealed class WideScreenshotTests
                         ScreenshotTests.Pump(() => shell.OpenNoteCommand.ExecuteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
                         break;
                     case "capture":
-                        ScreenshotTests.Pump(() => shell.OpenNoteCommand.ExecuteAsync(shell.Notes.Tabs.First(t => t.Title == "주간회의 준비")));
-                        Settle(view);
-                        ScreenshotTests.Pump(() => shell.OpenTodoSheetCommand.ExecuteAsync(null));
+                        ScreenshotTests.Pump(() => shell.AddDayTodoCommand.ExecuteAsync(null));
                         shell.Entry.Title = "회의자료 초안 공유";
                         break;
                     case "lists":

@@ -197,7 +197,7 @@ public sealed class GlanceTests
     }
 
     [TestMethod]
-    public void The_at_link_opens_today_s_note_with_the_to_do_sheet_up()
+    public void The_at_link_opens_today_s_day_page_with_the_to_do_sheet_up()
     {
         var host = new FakeGlanceHost();
         TestServices.WithInitialisedShell(390, 844, WithGlance(host), (_, shell) =>
@@ -205,9 +205,9 @@ public sealed class GlanceTests
             Pump(() => shell.OpenLinkAsync(new Uri("daynote://capture?at=1")));
             Dispatcher.UIThread.RunJobs();
 
-            Assert.IsTrue(shell.IsEditorOpen);
-            Assert.IsTrue(shell.IsTodoSheetOpen, "The sheet opens over the note.");
-            Assert.IsFalse(shell.Notes.EditorText.Contains('@', StringComparison.Ordinal), "Nothing is typed into the note.");
+            Assert.IsFalse(shell.IsEditorOpen, "A note was opened: to-dos and notes are separate.");
+            Assert.IsTrue(shell.IsDayPage);
+            Assert.IsTrue(shell.IsTodoSheetOpen, "The sheet opens over the day page.");
         });
     }
 

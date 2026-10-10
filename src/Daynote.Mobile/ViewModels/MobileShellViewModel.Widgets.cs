@@ -1,3 +1,4 @@
+using Daynote.App.Composition;
 using Daynote.Core.Agenda;
 
 namespace Daynote.Mobile.ViewModels;
@@ -11,7 +12,7 @@ public enum WidgetLaunch
     /// <summary>+ 노트: a new note on today, in the editor.</summary>
     NewNote,
 
-    /// <summary>@ 할 일 and the + beside 오늘: the same, with the to-do sheet already up.</summary>
+    /// <summary>@ 할 일 and the + beside 오늘: the day screen on today, with the to-do sheet up over it.</summary>
     Capture,
 }
 
@@ -27,7 +28,7 @@ public sealed partial class MobileShellViewModel
     /// </summary>
     public Action? AgendaChanged { get; init; }
 
-    /// <summary>A widget was tapped: today, a new note on today, or that note with the to-do sheet open.</summary>
+    /// <summary>A widget was tapped: today, a new note on today, or today with the to-do sheet open.</summary>
     public async Task OpenFromWidgetAsync(WidgetLaunch launch)
     {
         // The open note is saved before anything moves, as every other way off the editor does.
@@ -43,11 +44,13 @@ public sealed partial class MobileShellViewModel
             return;
         }
 
-        await NewNote().ConfigureAwait(true);
         if (launch == WidgetLaunch.Capture)
         {
-            await OpenTodoSheet().ConfigureAwait(true);
+            await OpenTodoSheetAsync(LocalDates.Today(_clock), listId: null).ConfigureAwait(true);
+            return;
         }
+
+        await NewNote().ConfigureAwait(true);
     }
 
     /// <summary>

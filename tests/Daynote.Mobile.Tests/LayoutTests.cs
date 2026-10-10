@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.VisualTree;
 using Daynote.App.Composition;
+using Daynote.Core.Domain;
 using Daynote.Mobile.Platform;
 using Daynote.Mobile.ViewModels;
 using Daynote.Mobile.Views;
@@ -152,7 +153,7 @@ public sealed class LayoutTests
     }
 
     [TestMethod]
-    public void With_a_hardware_keyboard_an_at_at_a_line_start_opens_the_sheet_and_no_card()
+    public void With_a_hardware_keyboard_an_at_at_a_line_start_is_just_a_character()
     {
         var device = new FakeDevice { HasHardwareKeyboard = true };
         TestServices.WithInitialisedShell(1210, 834, (view, shell) =>
@@ -170,8 +171,28 @@ public sealed class LayoutTests
 
             TodoSheetTests.TypeAt(view, body, before.Length);
 
-            Assert.IsTrue(shell.IsTodoSheetOpen, "The @ did not open the sheet.");
-            Assert.AreEqual(before, body.Text, "The @ stayed in the note.");
+            Assert.IsFalse(shell.IsTodoSheetOpen, "An @ in the note opened the to-do sheet.");
+            Assert.AreEqual(before + "@", body.Text, "The @ did not stay in the note.");
+        });
+    }
+
+    [TestMethod]
+    public void The_tablet_day_panel_adds_a_to_do_on_its_day()
+    {
+        TestServices.WithInitialisedShell(1210, 834, (view, shell) =>
+        {
+            LocalDate other = LocalDates.AddDays(shell.SelectedDate, 2);
+            ScreenshotTests.Pump(() => shell.SelectDateAsync(other));
+            Settle(view);
+
+            Button add = view.GetVisualDescendants().OfType<DayTodoPanel>().Single()
+                .GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddTodoRow");
+            Assert.IsTrue(add.IsEffectivelyVisible, "The panel has no + 할 일 추가.");
+            add.Command!.Execute(add.CommandParameter);
+            Settle(view);
+
+            Assert.IsTrue(shell.IsTodoSheetOpen, "+ 할 일 추가 did not open the sheet.");
+            Assert.AreEqual(LocalDates.ToDateOnly(other), shell.Entry.Date);
         });
     }
 

@@ -47,8 +47,8 @@ public enum TodoRepeat
 
 /// <summary>
 /// The draft behind the to-do sheet: what it is called, which kind, its day, its time, how it
-/// repeats, a few lines about it and its list, entered in fields of their own rather than typed
-/// into the note.
+/// repeats, a few lines about it and its list, entered in fields of their own. A to-do is never
+/// made from a note's body; the two are separate.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -60,16 +60,16 @@ public enum TodoRepeat
 /// one: a to-do carries the anchor in DTSTART as well as DUE (<see cref="AgendaItem.Anchor"/>).
 /// </para>
 /// <para>
-/// The note's own day is the default, as the date helper's was: someone writing up Monday means
-/// Monday. An event always has a start; a to-do may have neither date nor time.
+/// The day it opens on is the one being looked at: the day screen's day, or today from the 할 일
+/// tab. An event always has a start; a to-do may have neither date nor time.
 /// </para>
 /// </remarks>
 public sealed partial class TodoEntryViewModel : ObservableObject
 {
     private readonly IClock _clock;
 
-    /// <summary>The note's day, which the sheet starts on and an event falls back to.</summary>
-    private DateOnly _noteDate;
+    /// <summary>The day the sheet starts on, which an event falls back to.</summary>
+    private DateOnly _startDate;
 
     /// <summary>An event's length, kept when its start moves. One hour until its end is picked.</summary>
     private TimeSpan _eventLength = AgendaPhraseParser.DefaultEventLength;
@@ -231,40 +231,41 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     public bool ShowLists => ListOptions.Count > 1;
 
     /// <summary>
-    /// A fresh draft for the note on <paramref name="noteDate"/>: a to-do, on that day, with no
-    /// time, in the built-in list.
+    /// A fresh draft: a to-do on <paramref name="date"/> with no time, in <paramref name="listId"/>
+    /// or, when that is null or gone, the built-in list.
     /// </summary>
-    public async Task ResetAsync(DateOnly noteDate, IEnumerable<AgendaListRowViewModel> lists, bool dark)
+    public async Task ResetAsync(DateOnly date, IEnumerable<AgendaListRowViewModel> lists, bool dark, Guid? listId = null)
     {
         ArgumentNullException.ThrowIfNull(lists);
-        _noteDate = noteDate;
+        _startDate = date;
         _dark = dark;
         _eventLength = AgendaPhraseParser.DefaultEventLength;
         _timeFilledIn = false;
         Kind = AgendaKind.Task;
         Title = string.Empty;
         Description = string.Empty;
-        Date = noteDate;
+        Date = date;
         Time = null;
         Repeat = TodoRepeat.None;
         MarkRepeat();
         Picker = TodoEntryPicker.None;
-        ListId = AgendaList.DefaultId;
+        List<AgendaListRowViewModel> rows = [.. lists];
+        ListId = listId is { } chosen && rows.Any(list => list.Id == chosen) ? chosen : AgendaList.DefaultId;
 
         ListOptions.Clear();
         int position = 0;
-        foreach (AgendaListRowViewModel list in lists)
+        foreach (AgendaListRowViewModel list in rows)
         {
             ListOptions.Add(new TodoListOption(list.Id, list.Name, Dot(position++)) { IsCurrent = list.Id == ListId });
         }
 
         OnPropertyChanged(nameof(ShowLists));
-        await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(noteDate)).ConfigureAwait(true);
+        await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(date)).ConfigureAwait(true);
     }
 
     /// <summary>
-    /// 할 일 or 일정. An event needs a day and a start, so switching to one fills them in — the note's
-    /// day and the next whole hour — and switching back takes away a time it filled in.
+    /// 할 일 or 일정. An event needs a day and a start, so switching to one fills them in — the
+    /// sheet's day and the next whole hour — and switching back takes away a time it filled in.
     /// </summary>
     [RelayCommand]
     private void SelectKind(AgendaKind kind)
@@ -272,7 +273,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Kind = kind;
         if (kind == AgendaKind.Event)
         {
-            Date ??= _noteDate;
+            Date ??= _startDate;
             if (Time is null)
             {
                 Time = NextWholeHour();
@@ -306,10 +307,10 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Picker = Picker == picker ? TodoEntryPicker.None : picker;
         if (Picker == TodoEntryPicker.Date)
         {
-            await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(Date ?? _noteDate)).ConfigureAwait(true);
+            await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(Date ?? _startDate)).ConfigureAwait(true);
             if (Date is null)
             {
-                // Nothing is picked: the grid opens on the note's month with no day lit.
+                // Nothing is picked: the grid opens on the sheet's month with no day lit.
                 foreach (CalendarDayCellViewModel cell in Calendar.Cells)
                 {
                     cell.IsSelected = false;
@@ -391,11 +392,11 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>
     /// The item 추가 writes, from <see cref="AgendaCapture.Compose"/> with the sheet's day and time
-    /// as the reading. Nothing is read out of or written into the note.
+    /// as the reading. It points at no note.
     /// </summary>
-    public AgendaItem Compose(Guid noteId, Guid itemId, DateTimeOffset now)
+    public AgendaItem Compose(Guid itemId, DateTimeOffset now)
     {
-        DateOnly day = Date ?? _noteDate;
+        DateOnly day = Date ?? _startDate;
         var reading = new AgendaPhrase(
             new WallClock(day.ToDateTime(Time ?? TimeOnly.MinValue)),
             HasTime,
@@ -404,8 +405,9 @@ public sealed partial class TodoEntryViewModel : ObservableObject
             Length: 0);
         var state = new AgendaCaptureState(0, 0, Title.Trim(), string.Empty, reading);
 
-        AgendaItem made = AgendaCapture.Compose(state, Kind, noteId, itemId, now) with
+        AgendaItem made = AgendaCapture.Compose(state, Kind, Guid.Empty, itemId, now) with
         {
+            SourceNoteId = null,
             ListId = ListId,
             Description = Description.Trim(),
         };

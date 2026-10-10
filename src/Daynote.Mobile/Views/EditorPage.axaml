@@ -2,14 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Daynote.Mobile.ViewModels"
              xmlns:views="using:Daynote.Mobile.Views"
-             xmlns:agenda="using:Daynote.Core.Agenda"
              x:Class="Daynote.Mobile.Views.EditorPage"
              x:DataType="vm:MobileShellViewModel"
              Background="{DynamicResource Mobile.Bg}">
   <!--
     The note, full screen: the date it belongs to, its title and tags, its text, and a tool row
-    under it - the to-do sheet, what the note made, and the paperclip. It covers the tabs, because a
-    390-point screen has room for the text and nothing else.
+    under it - the paperclip. It covers the tabs, because a 390-point screen has room for the text
+    and nothing else.
   -->
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
 
@@ -91,8 +90,7 @@
     -->
     <TextBox Grid.Row="2" x:Name="Body" Classes="bare body" Text="{Binding Notes.EditorText}"
              TextInputOptions.Multiline="True" TextInputOptions.ReturnKeyType="Return"
-             PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}"
-             PropertyChanged="OnBodyPropertyChanged" />
+             PlaceholderText="{Binding Strings[MobileBodyPlaceholder]}" />
 
     <!--
       The tool row's buttons are not focusable on purpose: taking focus would close the keyboard and
@@ -139,60 +137,12 @@
     <Border Grid.Row="4" x:Name="Toolbar" Background="{DynamicResource Mobile.Panel}"
             BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0">
       <!--
-        One row: the way to a to-do, what this note has made, and the paperclip. No `-[]` button
-        and no date or time stamps: a to-do is its own row now, entered in a sheet of its own
-        rather than typed into the text, so there is nothing left for a helper to write. An @ typed
-        at the start of a line opens the same sheet (EditorPage.axaml.cs).
+        Only the paperclip. A note's body never makes a to-do: to-dos and notes are separate, and a
+        to-do is added from the day's 할 일, the 할 일 tab or a widget, never from here.
       -->
-      <Grid ColumnDefinitions="*,8,44" Margin="12,8,12,0">
-        <!--
-          What this note made (phone §02). The confirmation appears where the object actually
-          lives — the note's own collection — and a row rising there is the thing arriving rather
-          than a toast claiming it did.
-        -->
-        <Grid Grid.Column="0" x:Name="NoteItemsRow" ColumnDefinitions="*,Auto"
-              IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNull}}">
-          <!-- The to-do sheet: 제목, 날짜, 시간, 반복 and 내용 in fields of their own, not in the note's text. -->
-          <Button Grid.Column="0" x:Name="TodoTool" Classes="todotool" Focusable="False"
-                  Command="{Binding OpenTodoSheetCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <Border Classes="atmark">
-                <views:Glyph Kind="Plus" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Mobile.SunInk}" />
-              </Border>
-              <TextBlock Classes="todotool" Text="{Binding Strings[MobileCaptureKinds]}" />
-            </StackPanel>
-          </Button>
-          <Button Grid.Column="1" x:Name="NoteItemsButton" Classes="noteitems" Focusable="False" IsVisible="{Binding HasNoteItems}"
-                  Margin="8,0,0,0" RenderTransformOrigin="50%,50%"
-                  Command="{Binding OpenNoteItemsCommand}">
-            <TextBlock Text="{Binding NoteItemCountText}" />
-          </Button>
-        </Grid>
-
-        <!-- The row that rises in its place, then settles back into the count. -->
-        <Grid Grid.Column="0" x:Name="JustMadeRow" ColumnDefinitions="*,Auto" Height="44"
-              IsVisible="{Binding JustMade, Converter={x:Static ObjectConverters.IsNotNull}}">
-          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="4,0,0,0">
-            <Border Width="6" Height="6" CornerRadius="3" VerticalAlignment="Center"
-                    Background="{DynamicResource Mobile.Sun}" />
-            <TextBlock Classes="line" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
-                       Text="{Binding JustMade.Text}" />
-            <TextBlock Classes="faint" FontSize="12.5" VerticalAlignment="Center"
-                       IsVisible="{Binding JustMade.HasDue}" Text="{Binding JustMade.DueLabel}" />
-          </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-            <TextBlock Classes="faint" FontSize="12" VerticalAlignment="Center" TextWrapping="NoWrap"
-                       Text="{Binding JustMadeWhenText}" />
-            <!-- Only when it landed on another day: otherwise there is nowhere to go. -->
-            <Button Classes="viewmade" Focusable="False" IsVisible="{Binding IsJustMadeElsewhere}"
-                    Command="{Binding ViewJustMadeCommand}">
-              <TextBlock Text="{Binding Strings[MobileNoteItemsView]}" />
-            </Button>
-          </StackPanel>
-        </Grid>
-
+      <Grid ColumnDefinitions="*,44" Margin="12,8,12,0">
         <!-- Attach: files belong to the day, so this is the day screen's same sheet. -->
-        <Button Grid.Column="2" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
+        <Button Grid.Column="1" x:Name="AttachTool" Classes="tool" Focusable="False" Command="{Binding OpenAttachSheetCommand}"
                 AutomationProperties.Name="{Binding Strings[MobileFilesAdd]}">
           <views:Glyph Kind="Paperclip" Width="18" Height="18" Foreground="{DynamicResource Mobile.Text}" />
         </Button>
@@ -257,51 +207,6 @@
     </Style>
     <Style Selector="Button.tool.primary">
       <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
-    </Style>
-    <!-- The way to a to-do: the tool row's height, the @ on its own tint, then what it makes. -->
-    <Style Selector="Button.todotool">
-      <Setter Property="Height" Value="44" />
-      <Setter Property="Padding" Value="8,0,14,0" />
-      <Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
-    </Style>
-    <Style Selector="TextBlock.todotool">
-      <Setter Property="FontSize" Value="14" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="TextWrapping" Value="NoWrap" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Border.atmark">
-      <Setter Property="Width" Value="28" />
-      <Setter Property="Height" Value="28" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Background" Value="{DynamicResource Mobile.SunSoft}" />
-    </Style>
-    <Style Selector="Button.noteitems">
-      <Setter Property="Height" Value="28" />
-      <Setter Property="Padding" Value="10,0" />
-      <Setter Property="CornerRadius" Value="9" />
-    </Style>
-    <Style Selector="Button.noteitems TextBlock">
-      <Setter Property="FontSize" Value="12.5" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="TextWrapping" Value="NoWrap" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
-    </Style>
-    <Style Selector="Button.viewmade">
-      <Setter Property="Height" Value="28" />
-      <Setter Property="Padding" Value="10,0" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Background" Value="{DynamicResource Mobile.Seg}" />
-    </Style>
-    <Style Selector="Button.viewmade TextBlock">
-      <Setter Property="FontSize" Value="12.5" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="TextWrapping" Value="NoWrap" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Foreground" Value="{DynamicResource Mobile.SunInk}" />
     </Style>
     <Style Selector="Button.tool.primary TextBlock">
       <Setter Property="FontWeight" Value="Bold" />

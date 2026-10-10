@@ -104,7 +104,7 @@ public partial class DayTodoPanel : UserControl
             label.Text = (_doneShown ? "⌄ " : "› ") + MobileStrings.Format("MobileWideDoneFormat", _done.Count);
         }
 
-        SetVisible("OpenCard", _open.Count > 0);
+        SetVisible("OpenList", _open.Count > 0);
         SetVisible("Empty", _open.Count == 0);
         SetVisible("DoneToggle", _done.Count > 0);
         SetVisible("DoneList", _doneShown && _done.Count > 0);
@@ -127,13 +127,13 @@ public partial class DayTodoPanel : UserControl
     // ── M4: "added to another date" ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Something just made with @ went to another date: the line opens at the top of the panel,
-    /// holds four seconds (longer under a pointer) and closes slowly.
+    /// Something just made in the to-do sheet went to another date: the line opens at the top of
+    /// the panel, holds four seconds (longer under a pointer) and closes slowly.
     /// </summary>
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MobileShellViewModel.JustMade) ||
-            _observed is not { JustMade: not null, IsJustMadeElsewhere: true } shell ||
+        if (e.PropertyName != nameof(MobileShellViewModel.MadeElsewhereText) ||
+            _observed is not { MadeElsewhereText: { } made } ||
             !IsEffectivelyVisible ||
             this.FindControl<Border>("Notice") is not { } notice)
         {
@@ -142,7 +142,7 @@ public partial class DayTodoPanel : UserControl
 
         if (this.FindControl<TextBlock>("NoticeText") is { } text)
         {
-            text.Text = shell.JustMadeWhenText;
+            text.Text = made;
         }
 
         notice.IsVisible = true;
@@ -171,6 +171,6 @@ public partial class DayTodoPanel : UserControl
     private void OnNoticeView(object? sender, RoutedEventArgs e)
     {
         _ = CloseNoticeAsync();
-        _observed?.ViewJustMadeCommand.Execute(null);
+        _observed?.ViewMadeElsewhereCommand.Execute(null);
     }
 }
