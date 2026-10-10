@@ -268,6 +268,104 @@ public sealed class StoreTests
         signedIn: false);
 
     [TestMethod]
+    public void Nothing_StoreKit_holds_is_sent_while_signed_out() => WithStorePage(
+        Entitlement.Unknown,
+        BillingLinks.None,
+        (_, store, shell) =>
+        {
+            bool finished = Pump2(Fake!.TransactionHandler!(new StoreTransaction("2000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false)));
+            Fake.RetryHeld();
+            Pump(store.NotifyResumed);
+
+            Assert.IsFalse(finished);
+            Assert.IsEmpty(Server!.Submitted, "A held transaction was sent with no account to record it against.");
+        },
+        signedIn: false);
+
+    [TestMethod]
+    public void After_a_401_held_transactions_wait_for_the_next_sign_in() => WithStore((store, server, fake, account) =>
+    {
+        server.Failure = new AccountException(AccountFailure.InvalidCredentials, "401");
+        var renewal = new StoreTransaction("2000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false);
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(1, server.Submitted);
+
+        // The page reopening, the app coming back, StoreKit handing it over again: none of them
+        // sends it while the session is refused.
+        server.Failure = null;
+        Assert.IsFalse(Pump2(fake.TransactionHandler!(renewal)));
+        Pump(store.NotifyResumed);
+        Run(store.OpenCommand);
+        Assert.HasCount(1, server.Submitted, "A transaction was sent again after the server refused the session.");
+
+        // Signing in again is what sends it.
+        account.SignedInEmail = null;
+        account.SignedInEmail = "someone@example.com";
+        Assert.IsTrue(Pump2(fake.TransactionHandler!(renewal)));
+        Assert.HasCount(2, server.Submitted);
+    });
+
+    [TestMethod]
+    public void A_revoked_session_signs_out_and_the_page_asks_for_a_sign_in() => WithStorePage(
+        Trial,
+        Selling(),
+        (page, store, shell) =>
+        {
+            Server!.Failure = new AccountException(AccountFailure.SessionExpired, "The session expired.");
+
+            Assert.IsFalse(Pump2(Fake!.TransactionHandler!(new StoreTransaction("2000000000000001", "cc.arachat.daynote.pro.monthly", IsRestore: false))));
+            Settle(page);
+
+            Assert.IsFalse(shell.Account!.IsSignedIn, "The app still claims a session the server revoked.");
+            Assert.IsTrue(store.ShowsSignInPrompt);
+            Assert.IsFalse(store.ShowsPlans);
+            Assert.IsTrue(TextShown(page, MobileStrings.Get("StoreSignInTitle")));
+            Assert.IsTrue(TextShown(page, AppStrings.AccountSessionEnded), "The page does not say the session ended.");
+            Assert.AreEqual(AppStrings.AccountSessionEnded, shell.AccountCardSubtitle, "The account card does not say the session ended.");
+        });
+
+    [TestMethod]
+    public void Many_held_renewals_of_one_subscription_are_sent_once() => WithStore((store, server, fake, _) =>
+    {
+        // StoreKit 1 hands back one transaction per renewal, all at once at launch; the server reads
+        // the subscription's state from any one of them.
+        server.Gate = new TaskCompletionSource();
+        Task<bool>[] settling =
+        [
+            .. Enumerable.Range(1, 10).Select(i => fake.TransactionHandler!(
+                new StoreTransaction($"30000000000000{i:00}", "cc.arachat.daynote.pro.monthly", IsRestore: false))),
+        ];
+        server.Gate.SetResult();
+        Pump(() => Task.WhenAll(settling));
+
+        Assert.HasCount(1, server.Submitted, "Each renewal of one subscription was sent on its own.");
+        Assert.IsTrue(settling.All(task => task.Result), "The renewals that waited were not finished with the first.");
+    });
+
+    [TestMethod]
+    public void A_billing_state_that_will_not_load_offers_a_retry() => WithStorePage(
+        Entitlement.Unknown,
+        BillingLinks.None,
+        (page, store, shell) =>
+        {
+            shell.Account!.IsBillingUnavailable = true;
+            Settle(page);
+
+            Assert.IsTrue(store.ShowsBillingError);
+            Assert.IsTrue(TextShown(page, AppStrings.BillingLoadFailed), "The page stands empty instead of saying what failed.");
+            Assert.IsTrue(VisibleButtons(page).Contains(AppStrings.Retry));
+
+            int before = RefreshCount;
+            Run(store.OpenCommand);
+            Assert.IsGreaterThan(before, RefreshCount, "다시 시도 did not read the billing state again.");
+
+            shell.Account.IsBillingUnavailable = false;
+            shell.Account.Billing = Selling();
+            Assert.IsFalse(store.ShowsBillingError);
+            Assert.IsTrue(store.ShowsPlans);
+        });
+
+    [TestMethod]
     public void Restore_with_nothing_to_restore_says_so() => WithStore((store, server, _, _) =>
     {
         Run(store.RestoreCommand);
@@ -571,9 +669,17 @@ public sealed class StoreTests
         /// <summary>Fails the first this many calls, as Apple not yet knowing a new purchase does.</summary>
         public int FailTimes { get; set; }
 
-        public ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAsync(string transactionId, CancellationToken token)
+        /// <summary>Holds every answer until it is set, as a slow server would, so calls overlap.</summary>
+        public TaskCompletionSource? Gate { get; set; }
+
+        public async ValueTask<(Entitlement Entitlement, BillingLinks Links)> SubmitAsync(string transactionId, CancellationToken token)
         {
             Submitted.Add(transactionId);
+            if (Gate is { } gate)
+            {
+                await gate.Task.ConfigureAwait(true);
+            }
+
             if (Failure is { } failure)
             {
                 throw failure;
@@ -590,7 +696,7 @@ public sealed class StoreTests
                 throw new AccountException(AccountFailure.ServerError, "purchase_pending");
             }
 
-            return ValueTask.FromResult(Answer ?? (Paid(BillingTier.Pro, BillingPlan.Annual), Selling(BillingProvider.Apple)));
+            return Answer ?? (Paid(BillingTier.Pro, BillingPlan.Annual), Selling(BillingProvider.Apple));
         }
     }
 

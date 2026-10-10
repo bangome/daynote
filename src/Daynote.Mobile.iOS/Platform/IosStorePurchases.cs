@@ -308,7 +308,8 @@ public sealed class IosStorePurchases : IStorePurchases
         bool finish = false;
         try
         {
-            finish = await settle(new StoreTransaction(id, productId, isRestore)).ConfigureAwait(true);
+            finish = await settle(new StoreTransaction(
+                id, productId, isRestore, transaction.OriginalTransaction?.TransactionIdentifier)).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {

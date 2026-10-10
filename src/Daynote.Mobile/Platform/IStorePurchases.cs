@@ -65,8 +65,11 @@ public interface IStorePurchases
 /// <summary>A product as StoreKit describes it: the localized title and the price for this storefront.</summary>
 public sealed record StoreProduct(string ProductId, string Title, string PriceText);
 
-/// <summary>A purchased or restored transaction, as the server is told about it.</summary>
-public sealed record StoreTransaction(string TransactionId, string ProductId, bool IsRestore);
+/// <summary>
+/// A purchased or restored transaction, as the server is told about it. <paramref name="OriginalTransactionId"/>
+/// names the subscription it belongs to, where StoreKit says; renewals of one subscription share it.
+/// </summary>
+public sealed record StoreTransaction(string TransactionId, string ProductId, bool IsRestore, string? OriginalTransactionId = null);
 
 public enum StorePurchaseStatus
 {

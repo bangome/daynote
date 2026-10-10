@@ -87,9 +87,20 @@
         <Border Classes="panel" IsVisible="{Binding ShowsSignInPrompt}">
           <StackPanel Spacing="10">
             <TextBlock Classes="h2" TextWrapping="Wrap" Text="{Binding Strings[StoreSignInTitle]}" />
+            <TextBlock FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Mobile.Danger}"
+                       IsVisible="{Binding Account.IsSessionEnded}" Text="{Binding Account.NoticeMessage}" />
             <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding Strings[StoreSignInBody]}" />
             <Button Classes="solid" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Content="{Binding Strings[StoreSignIn]}" Command="{Binding SignInCommand}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Signed in, but the billing state would not load: say so, rather than an empty page. -->
+        <Border Classes="panel" IsVisible="{Binding ShowsBillingError}">
+          <StackPanel Spacing="10">
+            <TextBlock FontSize="13.5" TextWrapping="Wrap" Text="{Binding Strings[BillingLoadFailed]}" />
+            <Button Classes="solid" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Content="{Binding Strings[Retry]}" Command="{Binding OpenCommand}" IsEnabled="{Binding !IsBusy}" />
           </StackPanel>
         </Border>
 

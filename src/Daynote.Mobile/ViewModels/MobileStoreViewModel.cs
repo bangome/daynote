@@ -106,6 +106,20 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// <summary>Restored subscriptions the server confirmed during the restore in progress.</summary>
     private int _restoreConfirmed;
 
+    /// <summary>
+    /// The call recording each subscription right now, by its original transaction (or, for a
+    /// renewal StoreKit 1 gives no original for, its product). StoreKit hands back one transaction per
+    /// renewal, and the server reads the subscription's current state from any of them, so the rest
+    /// wait for this call's answer instead of each making their own.
+    /// </summary>
+    private readonly Dictionary<string, Task<bool>> _recording = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The server refused this session (a 401). Nothing is sent again until the next sign-in: every
+    /// call would be refused the same way, and StoreKit would keep handing the same transactions back.
+    /// </summary>
+    private bool _heldUntilSignIn;
+
     public MobileStoreViewModel(
         IStorePurchases store,
         AccountViewModel account,
@@ -128,7 +142,8 @@ public sealed partial class MobileStoreViewModel : ObservableObject
         account.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(AccountViewModel.Billing) or nameof(AccountViewModel.Entitlement)
-                or nameof(AccountViewModel.IsSignedIn) or nameof(AccountViewModel.SignedInEmail))
+                or nameof(AccountViewModel.IsSignedIn) or nameof(AccountViewModel.SignedInEmail)
+                or nameof(AccountViewModel.IsBillingUnavailable))
             {
                 Refresh();
             }
@@ -138,6 +153,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
             if (e.PropertyName is nameof(AccountViewModel.IsSignedIn) or nameof(AccountViewModel.SignedInEmail)
                 && account.IsSignedIn)
             {
+                _heldUntilSignIn = false;
                 _store.RetryHeld();
             }
         };
@@ -184,6 +200,12 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     public bool IsSignedIn => Account.IsSignedIn;
 
     public bool ShowsSignInPrompt => !IsSignedIn;
+
+    /// <summary>
+    /// Signed in, but the billing state could not be read and there is nothing to show instead: the
+    /// page says so and offers to try again, rather than standing empty.
+    /// </summary>
+    public bool ShowsBillingError => IsSignedIn && Account.IsBillingUnavailable && !ShowsPlans && !IsManagedElsewhere;
 
     /// <summary>Subscribed through Paddle on the desktop: shown as such, with nothing to buy.</summary>
     public bool IsManagedElsewhere => IsSignedIn
@@ -584,13 +606,46 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     /// account's — nothing this device does will change either. False leaves it with StoreKit, which
     /// delivers it again on the next launch: signed out, offline, or the server could not reach Apple.
     /// </summary>
+    /// <remarks>
+    /// One call per subscription at a time: a transaction whose subscription is already being sent
+    /// takes that call's answer. Nothing is sent while signed out, or after the server refused the
+    /// session, until the next sign-in (which calls <see cref="IStorePurchases.RetryHeld"/>).
+    /// </remarks>
     internal async Task<bool> HandleTransactionAsync(StoreTransaction transaction)
     {
-        if (!IsSignedIn)
+        if (!IsSignedIn || _heldUntilSignIn)
         {
             return false;
         }
 
+        string subscription = transaction.OriginalTransactionId is { Length: > 0 } original ? original
+            : transaction.ProductId is { Length: > 0 } product ? product
+            : transaction.TransactionId;
+        if (_recording.TryGetValue(subscription, out Task<bool>? sending))
+        {
+            bool recorded = await sending.ConfigureAwait(true);
+            if (recorded)
+            {
+                _confirmed.Add(transaction.TransactionId);
+            }
+
+            return recorded;
+        }
+
+        Task<bool> send = SubmitAsync(transaction);
+        _recording[subscription] = send;
+        try
+        {
+            return await send.ConfigureAwait(true);
+        }
+        finally
+        {
+            _recording.Remove(subscription);
+        }
+    }
+
+    private async Task<bool> SubmitAsync(StoreTransaction transaction)
+    {
         try
         {
             (Entitlement entitlement, BillingLinks links) = await _submit(transaction.TransactionId, CancellationToken.None)
@@ -627,6 +682,18 @@ public sealed partial class MobileStoreViewModel : ObservableObject
 
             return true;
         }
+        catch (AccountException failure) when (failure.Failure is AccountFailure.SessionExpired or AccountFailure.InvalidCredentials)
+        {
+            // A 401: held, all of them, until someone signs in again. A rejected refresh token also
+            // ends the session, which is what brings the sign-in prompt up on this page.
+            _heldUntilSignIn = true;
+            if (failure.Failure == AccountFailure.SessionExpired)
+            {
+                await Account.EndRejectedSessionAsync().ConfigureAwait(true);
+            }
+
+            return false;
+        }
         catch (AccountException)
         {
             return false;
@@ -649,7 +716,7 @@ public sealed partial class MobileStoreViewModel : ObservableObject
     {
         foreach (string name in new[]
         {
-            nameof(IsSignedIn), nameof(ShowsSignInPrompt), nameof(IsManagedElsewhere), nameof(ShowsPlans),
+            nameof(IsSignedIn), nameof(ShowsSignInPrompt), nameof(ShowsBillingError), nameof(IsManagedElsewhere), nameof(ShowsPlans),
             nameof(HasAppleSubscription), nameof(IsMonthly), nameof(HasDuplicate), nameof(CurrentPlanName),
             nameof(CurrentPlanTitle), nameof(CurrentPlanDetail), nameof(HasStorage), nameof(StorageText),
             nameof(StorageFraction), nameof(ShowsStorageBar), nameof(ProCard), nameof(PremiumCard),
