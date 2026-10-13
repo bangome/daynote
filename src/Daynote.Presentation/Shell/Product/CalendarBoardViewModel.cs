@@ -60,6 +60,13 @@ public sealed partial class CalendarBoardViewModel : ObservableObject
     /// <summary>일정 · 할 일 · 파일, each a pill with the month's count that shows or hides its kind.</summary>
     public IReadOnlyList<CalendarBoardFilter> Filters { get; }
 
+    /// <summary>
+    /// The phone's grid (Mobile B v2 <c>fullCells</c>): days outside the month keep their number and
+    /// lines, a day shows two lines in a six-week month and three otherwise with "+N" for the rest,
+    /// and files are not drawn. The desktop's leaves all of this off.
+    /// </summary>
+    public bool IsCompact { get; set; }
+
     /// <summary>The day under the pointer, whose card is up; null when none is.</summary>
     [ObservableProperty]
     private CalendarBoardDay? _hover;
@@ -97,10 +104,11 @@ public sealed partial class CalendarBoardViewModel : ObservableObject
 
         Hover = null;
         Cells.Clear();
+        int cap = IsCompact ? (input.Days.Count > 35 ? 2 : 3) : CalendarBoardDay.DefaultCap;
         foreach (CalendarDayCellViewModel cell in input.Days)
         {
             DateOnly date = LocalDates.ToDateOnly(cell.Date);
-            if (!cell.IsInMonth)
+            if (!cell.IsInMonth && !IsCompact)
             {
                 Cells.Add(new CalendarBoardDay(cell.Date, inMonth: false, isToday: false, isSelected: false, cell.IsSunday, 0, [], [], [], [], _selectDay, _openDay));
                 continue;
@@ -112,13 +120,16 @@ public sealed partial class CalendarBoardViewModel : ObservableObject
                 .OrderBy(static row => row.Item.Kind == AgendaKind.Event && row.Item.EndsAt is null ? DateTime.MinValue : row.At?.Value ?? DateTime.MaxValue)];
             CalendarBoardItem[] events = [.. rows.Where(static row => row.Item.Kind == AgendaKind.Event).Select(row => Item(row, date, today, input))];
             CalendarBoardItem[] todos = [.. rows.Where(static row => row.Item.Kind == AgendaKind.Task).Select(row => Item(row, date, today, input))];
-            CalendarBoardItem[] files = [.. filesByDay[cell.Date].Select(File)];
+            CalendarBoardItem[] files = IsCompact ? [] : [.. filesByDay[cell.Date].Select(File)];
 
             // The grid and its counts follow the timeline's rule for to-dos; the card shows the whole day.
             CalendarBoardItem[] shownTodos = [.. todos.Where(static todo => todo.ShowsInTimeline)];
-            counts[CalendarBoardKind.Event] += events.Length;
-            counts[CalendarBoardKind.Todo] += shownTodos.Length;
-            counts[CalendarBoardKind.File] += files.Length;
+            if (cell.IsInMonth)
+            {
+                counts[CalendarBoardKind.Event] += events.Length;
+                counts[CalendarBoardKind.Todo] += shownTodos.Length;
+                counts[CalendarBoardKind.File] += files.Length;
+            }
 
             var lines = new List<CalendarBoardItem>();
             if (IsOn(CalendarBoardKind.Event))
@@ -137,8 +148,8 @@ public sealed partial class CalendarBoardViewModel : ObservableObject
             }
 
             Cells.Add(new CalendarBoardDay(
-                cell.Date, inMonth: true, cell.IsToday, cell.Date == input.Selected, cell.IsSunday, cell.NoteCount,
-                lines, events, todos, files, _selectDay, _openDay));
+                cell.Date, cell.IsInMonth, cell.IsToday, cell.Date == input.Selected, cell.IsSunday, cell.NoteCount,
+                lines, events, todos, files, _selectDay, _openDay, cap, moreTakesALine: !IsCompact));
         }
 
         foreach (CalendarBoardFilter filter in Filters)
@@ -244,7 +255,9 @@ public sealed partial class CalendarBoardDay : ObservableObject
         IReadOnlyList<CalendarBoardItem> todos,
         IReadOnlyList<CalendarBoardItem> files,
         Func<LocalDate, Task> select,
-        Func<LocalDate, Task> open)
+        Func<LocalDate, Task> open,
+        int cap = DefaultCap,
+        bool moreTakesALine = true)
     {
         Date = date;
         IsInMonth = inMonth;
@@ -255,15 +268,18 @@ public sealed partial class CalendarBoardDay : ObservableObject
         Events = events;
         Todos = todos;
         Files = files;
-        int more = Math.Max(0, lines.Count - Cap);
-        Lines = more > 0 ? [.. lines.Take(Cap - 1)] : lines;
-        MoreText = more > 0 ? string.Format(CultureInfo.CurrentCulture, AppStrings.DeskCalendarMoreFormat, more + 1) : string.Empty;
+        // The desktop gives "+N개 더" a line of its own; the phone writes "+N" under the lines it shows.
+        int over = Math.Max(0, lines.Count - cap);
+        int shown = over > 0 && moreTakesALine ? cap - 1 : Math.Min(cap, lines.Count);
+        Lines = [.. lines.Take(shown)];
+        MoreCount = lines.Count - shown;
+        MoreText = MoreCount > 0 ? string.Format(CultureInfo.CurrentCulture, AppStrings.DeskCalendarMoreFormat, MoreCount) : string.Empty;
         _select = select;
         _open = open;
     }
 
-    /// <summary>How many lines a day shows before "+N개 더".</summary>
-    private const int Cap = 4;
+    /// <summary>How many lines a desktop day shows before "+N개 더".</summary>
+    public const int DefaultCap = 4;
 
     public LocalDate Date { get; }
 
@@ -286,7 +302,13 @@ public sealed partial class CalendarBoardDay : ObservableObject
 
     public IReadOnlyList<CalendarBoardItem> Lines { get; }
 
-    public bool HasMore => MoreText.Length > 0;
+    public bool HasMore => MoreCount > 0;
+
+    /// <summary>How many lines did not fit.</summary>
+    public int MoreCount { get; }
+
+    /// <summary>The phone's "+3".</summary>
+    public string MoreShortText => string.Create(CultureInfo.CurrentCulture, $"+{MoreCount}");
 
     /// <summary>"+3개 더" when the day has more than fit.</summary>
     public string MoreText { get; }
@@ -373,6 +395,9 @@ public sealed partial class CalendarBoardItem
     public string Meta { get; }
 
     public string ListColor { get; }
+
+    /// <summary>The list's colour at a fifth, as the phone's event chips are filled (<c>#33rrggbb</c>).</summary>
+    public string TintColor => IsEvent && ListColor is ['#', .. var hex] && hex.Length == 6 ? "#33" + hex : "#00000000";
 
     public bool IsDone { get; }
 
