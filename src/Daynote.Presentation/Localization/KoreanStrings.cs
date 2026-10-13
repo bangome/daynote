@@ -952,6 +952,10 @@ internal static class KoreanStrings
         ["DeskPanelOtherTodosFormat"] = "남은 할 일 전체 · {0}",
         ["DeskPanelPastFormat"] = "지남 · {0}",
 
+        // Search rows for the agenda (design v2).
+        ["SearchKindTodo"] = "할 일",
+        ["SearchKindEvent"] = "일정",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

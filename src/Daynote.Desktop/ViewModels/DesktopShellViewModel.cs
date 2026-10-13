@@ -72,6 +72,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         AttachViews(clock, repository);
         AttachCalendar();
         Files.OpenDay = OpenFileDayAsync;
+        Search.Agenda = () => Todo.All;
 
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;

@@ -960,6 +960,10 @@ internal static class EnglishStrings
         ["DeskPanelOtherTodosFormat"] = "All remaining · {0}",
         ["DeskPanelPastFormat"] = "Overdue · {0}",
 
+        // Search rows for the agenda (design v2).
+        ["SearchKindTodo"] = "To-do",
+        ["SearchKindEvent"] = "Event",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

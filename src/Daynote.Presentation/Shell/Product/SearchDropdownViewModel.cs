@@ -44,6 +44,12 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
 
     public ObservableCollection<SearchResultRowViewModel> Results { get; } = [];
 
+    /// <summary>
+    /// The to-dos and events to search by title as well, or null for a shell whose search covers
+    /// notes and files only. Read when a query runs, so it is always the agenda as it stands.
+    /// </summary>
+    public Func<IReadOnlyList<Core.Agenda.AgendaItem>>? Agenda { get; set; }
+
     [ObservableProperty]
     private string _query = string.Empty;
 
@@ -142,6 +148,9 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
             }
         }
 
+        // To-dos and events by title (design v2 buildSearch), after the notes and files they sit beside.
+        itemRows.AddRange(AgendaRows(text));
+
         // Derive 날짜 rows from the dates that matched, with the total note count on each (design "노트 N개").
         var dateRows = new List<SearchResultRowViewModel>();
         foreach (LocalDate date in dateCounts.Keys.OrderByDescending(d => d).Take(DateRowCap).ToArray())
@@ -175,6 +184,52 @@ public sealed partial class SearchDropdownViewModel : ObservableObject
         }
 
         NoResults = Results.Count == 0;
+    }
+
+    /// <summary>
+    /// The agenda's matches: a dated item names its day and clock and goes to its day; a repeating
+    /// one names its rule and goes to today, where it is due next.
+    /// </summary>
+    private IEnumerable<SearchResultRowViewModel> AgendaRows(string text)
+    {
+        if (Agenda?.Invoke() is not { } items)
+        {
+            yield break;
+        }
+
+        string query = text.Trim();
+        CultureInfo culture = CultureInfo.CurrentCulture;
+        LocalDate today = Composition.LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
+        foreach (Core.Agenda.AgendaItem item in items
+                     .Where(item => !item.IsOverride && item.Status != Core.Agenda.AgendaStatus.Cancelled
+                         && item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+                     .OrderBy(static item => item.Anchor?.Value ?? DateTime.MaxValue)
+                     .Take(DateRowCap))
+        {
+            string kind = item.Kind == Core.Agenda.AgendaKind.Event ? AppStrings.SearchKindEvent : AppStrings.SearchKindTodo;
+            if (item.IsSeries)
+            {
+                yield return Row(kind, item.Title, Notes.AgendaRuleText.Describe(item.Rrule), today, text,
+                    new SearchNavigation(today, null, null), dateLabelEmpty: true);
+                continue;
+            }
+
+            if (item.Anchor is not { } anchor)
+            {
+                yield return Row(kind, item.Title, AppStrings.TodoEntryNoDate, today, text,
+                    new SearchNavigation(today, null, RightTab.Todo), dateLabelEmpty: true);
+                continue;
+            }
+
+            LocalDate date = Composition.LocalDates.FromDateOnly(DateOnly.FromDateTime(anchor.Value));
+            string sub = Composition.LocalDates.ToDateOnly(date).ToString(AppStrings.TodoEntryDateFormat, LocalizationService.Instance.Culture);
+            if (item.HasClockTime && !(item.Kind == Core.Agenda.AgendaKind.Event && item.EndsAt is null))
+            {
+                sub = string.Create(culture, $"{sub} {anchor.Value.ToString(AppStrings.TodoRowTimeFormat, culture)}");
+            }
+
+            yield return Row(kind, item.Title, sub, date, text, new SearchNavigation(date, null, null));
+        }
     }
 
     private async Task<int> NoteCountAsync(LocalDate date, CancellationToken cancellationToken)

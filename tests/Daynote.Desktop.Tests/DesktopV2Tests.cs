@@ -147,4 +147,28 @@ public sealed class DesktopV2Tests
             StringAssert.Contains(shell.Files.LibraryEmptyText, "없는파일");
         });
     }
+
+    [TestMethod]
+    public void The_palette_finds_to_dos_and_events_by_title()
+    {
+        WithSample((window, shell) =>
+        {
+            shell.OpenPaletteCommand.Execute(null);
+            Wait(shell.Search.SearchNowAsync("회의"));
+            SearchResultRowViewModel todo = shell.Search.Results.Single(row => row.Title == "회의실 예약 확인");
+            Assert.AreEqual("할 일", todo.Kind);
+            StringAssert.Contains(todo.Sub, "17:00");
+            Assert.IsTrue(shell.Search.Results.Any(row => row.Kind == "노트" && row.Title == "주간회의 준비"), "The notes went missing.");
+
+            Wait(shell.Search.SearchNowAsync("스탠드업"));
+            SearchResultRowViewModel standup = shell.Search.Results.Single(row => row.Title == "스탠드업");
+            Assert.AreEqual("일정", standup.Kind);
+            Assert.AreEqual(string.Empty, standup.DateLabel, "A repeat is labelled with one date.");
+
+            Wait(shell.Search.SearchNowAsync("프론트엔드"));
+            Wait(shell.Search.Results.Single(row => row.Title == "프론트엔드 2차 면접").ActivateCommand.ExecuteAsync(null));
+            Assert.AreEqual(LocalDates.AddDays(LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now)), 1), shell.SelectedDate,
+                "Picking an event did not go to its day.");
+        });
+    }
 }
