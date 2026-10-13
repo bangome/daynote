@@ -927,6 +927,25 @@ internal static class KoreanStrings
         ["DeskTimelineViewSub"] = "노트 · 일정 · 할 일을 시간순으로",
         ["DeskTabMenuDateFormat"] = "M월 d일 (ddd)",
 
+        // Desktop B v2: the month view and the sidebar's lists.
+        ["DeskNavCalendar"] = "캘린더",
+        ["DeskCalendarViewTip"] = "캘린더 보기",
+        ["DeskCalendarViewSubFormat"] = "{0} · 일정 · 할 일 · 파일",
+        ["DeskCalendarMoreFormat"] = "+{0}개 더",
+        ["DeskCalendarHoverEmpty"] = "일정·할 일·파일이 없어요",
+        ["DeskCalendarOpenDay"] = "이 날 노트 열기",
+        ["DeskListsExpand"] = "리스트 펼치기",
+        ["DeskListsCollapse"] = "리스트 접기",
+
+        // Desktop B v2: the files library.
+        ["DeskFilesNoMatchFormat"] = "‘{0}’와 일치하는 파일이 없어요",
+        ["DeskFilesNone"] = "보관된 파일이 없어요",
+        ["DeskFilesAddToFormat"] = "{0}에 추가",
+        ["DeskFilesTodayFormat"] = "{0} · 오늘",
+        ["DeskFilesCountFormat"] = "{0}개",
+        ["DeskFilesSearchPlaceholder"] = "파일 이름·확장자로 검색",
+        ["DeskFilesAllFormat"] = "전체 {0}개 · 날짜별",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

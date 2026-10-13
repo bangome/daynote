@@ -238,6 +238,8 @@ public sealed partial class DesktopShellViewModel
         }
 
         OnPropertyChanged(nameof(IsNavTodo));
+        OnPropertyChanged(nameof(AreSidebarListsShown));
+        OnPropertyChanged(nameof(SidebarListsTip));
         OnPropertyChanged(nameof(SelectedAgendaList));
         OnPropertyChanged(nameof(CanDeleteSelectedList));
         OnPropertyChanged(nameof(ListTitle));

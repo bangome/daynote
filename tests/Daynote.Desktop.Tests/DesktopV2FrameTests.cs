@@ -10,6 +10,8 @@ using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Desktop.ViewModels;
+using Avalonia.VisualTree;
+using Daynote.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Daynote.Desktop.Tests;
@@ -48,6 +50,22 @@ public sealed class DesktopV2FrameTests
                 Wait(shell.ShowTimelineCommand.ExecuteAsync(null));
                 PumpUntil(() => shell.TimelineGroups.Count > 0, "The timeline did not fold.");
                 Shoot(window, $"v2-timeline-{variant}");
+
+                Wait(shell.ShowCalendarCommand.ExecuteAsync(null));
+                PumpUntil(() => shell.CalendarBoard.Cells.Count > 0, "The month view did not build.");
+                Shoot(window, $"v2-calendar-{variant}");
+                ShowCard(window, shell, LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now)));
+                Shoot(window, $"v2-calendar-hover-{variant}");
+                shell.CalendarBoard.Hover = null;
+
+                shell.ShowEditorCommand.Execute(null);
+                if (!shell.IsSidebarListsOpen)
+                {
+                    Wait(shell.ToggleSidebarListsCommand.ExecuteAsync(null));
+                }
+
+                Shoot(window, $"v2-nav-lists-{variant}");
+                Wait(shell.ToggleSidebarListsCommand.ExecuteAsync(null));
 
                 foreach ((RightTab tab, string name) in new[]
                 {
@@ -106,6 +124,15 @@ public sealed class DesktopV2FrameTests
 
             shell.IsDark = false;
         });
+    }
+
+    /// <summary>Brings up the month view's card for <paramref name="date"/>, as resting the pointer on it does.</summary>
+    internal static void ShowCard(Window window, DesktopShellViewModel shell, LocalDate date)
+    {
+        Pump(window);
+        Button cell = window.GetVisualDescendants().OfType<Button>()
+            .Single(button => button.Classes.Contains("boardcell") && button.DataContext is CalendarBoardDay day && day.Date == date);
+        ((MainWindow)window).ShowBoardCard(shell.CalendarBoard, (CalendarBoardDay)cell.DataContext!, cell);
     }
 
     /// <summary>The design's <c>sampleData()</c>, on today, with the editor on the first note.</summary>

@@ -38,6 +38,19 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
 
     public ObservableCollection<WeekStripDayViewModel> Days { get; } = [];
 
+    /// <summary>The days a dated to-do or event falls on, for the dots; null where only notes count.</summary>
+    public Func<IReadOnlySet<LocalDate>>? AgendaDays { get; set; }
+
+    /// <summary>Re-reads <see cref="AgendaDays"/> onto the pills on screen, after the agenda changed.</summary>
+    public void RefreshAgendaDays()
+    {
+        IReadOnlySet<LocalDate>? days = AgendaDays?.Invoke();
+        foreach (WeekStripDayViewModel day in Days)
+        {
+            day.HasAgenda = days?.Contains(day.Date) == true;
+        }
+    }
+
     [ObservableProperty]
     private LocalDate _selectedDate;
 
@@ -93,6 +106,8 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
                 hasNotes: withNotes.Contains(date),
                 _onSelectDate));
         }
+
+        RefreshAgendaDays();
     }
 
     /// <summary>Re-reads the dots for the week on screen, after a note was added or removed.</summary>
@@ -165,6 +180,14 @@ public sealed partial class WeekStripDayViewModel : ObservableObject
     public bool IsSunday => LocalDates.ToDateOnly(Date).DayOfWeek == DayOfWeek.Sunday;
 
     public bool HasNotes { get; }
+
+    /// <summary>A dated to-do or event falls on the day (see <see cref="WeekStripViewModel.AgendaDays"/>).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsDot))]
+    private bool _hasAgenda;
+
+    /// <summary>The dot under the day: notes, or something on the agenda.</summary>
+    public bool ShowsDot => HasNotes || HasAgenda;
 
     [RelayCommand]
     private Task Select() => _onSelect(Date);

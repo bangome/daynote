@@ -935,6 +935,25 @@ internal static class EnglishStrings
         ["DeskTimelineViewSub"] = "Notes, events and to-dos in time order",
         ["DeskTabMenuDateFormat"] = "ddd, MMM d",
 
+        // Desktop B v2: the month view and the sidebar's lists.
+        ["DeskNavCalendar"] = "Calendar",
+        ["DeskCalendarViewTip"] = "Calendar",
+        ["DeskCalendarViewSubFormat"] = "{0} · events · to-dos · files",
+        ["DeskCalendarMoreFormat"] = "+{0} more",
+        ["DeskCalendarHoverEmpty"] = "No events, to-dos or files",
+        ["DeskCalendarOpenDay"] = "Open this day's notes",
+        ["DeskListsExpand"] = "Show lists",
+        ["DeskListsCollapse"] = "Hide lists",
+
+        // Desktop B v2: the files library.
+        ["DeskFilesNoMatchFormat"] = "No files match ‘{0}’",
+        ["DeskFilesNone"] = "No files yet",
+        ["DeskFilesAddToFormat"] = "Add to {0}",
+        ["DeskFilesTodayFormat"] = "{0} · Today",
+        ["DeskFilesCountFormat"] = "{0}",
+        ["DeskFilesSearchPlaceholder"] = "Search by name or extension",
+        ["DeskFilesAllFormat"] = "{0} in all · by date",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

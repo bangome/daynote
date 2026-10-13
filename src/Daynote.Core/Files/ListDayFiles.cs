@@ -31,4 +31,22 @@ public sealed class ListDayFiles
 
         return result;
     }
+
+    /// <summary>How many attachments there are on every date, without touching the store.</summary>
+    public async ValueTask<int> CountAllAsync(CancellationToken cancellationToken = default) =>
+        (await repository.GetAllAsync(cancellationToken).ConfigureAwait(false)).Count;
+
+    /// <summary>Every date's attachments, newest date first, each resolved against the store.</summary>
+    public async ValueTask<IReadOnlyList<DayFile>> ExecuteAllAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<DayFile> files = await repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        var result = new DayFile[files.Count];
+        for (int index = 0; index < files.Count; index++)
+        {
+            bool available = await assetStore.ExistsAsync(files[index].RelativePath, cancellationToken).ConfigureAwait(false);
+            result[index] = files[index] with { IsAvailable = available };
+        }
+
+        return result;
+    }
 }

@@ -52,6 +52,20 @@ internal static class SqliteDayFileStatements
         return files;
     }
 
+    public static List<DayFile> ReadAll(SqliteConnection connection)
+    {
+        using SqliteCommand command = Create(connection, null,
+            SelectColumns + " ORDER BY df.local_date DESC,df.created_utc DESC,df.id DESC;");
+        using SqliteDataReader reader = command.ExecuteReader();
+        var files = new List<DayFile>();
+        while (reader.Read())
+        {
+            files.Add(ReadItem(reader));
+        }
+
+        return files;
+    }
+
     /// <summary>
     /// Deletes a day file. <paramref name="deletedUtc"/> records the cloud-sync tombstone from the
     /// app's clock rather than letting the AFTER DELETE trigger stamp it from SQLite's <c>'now'</c>;

@@ -291,6 +291,9 @@ public sealed class DesktopTodosTests
         WithSample((window, shell) =>
         {
             int before = shell.Todo.Lists.Count;
+            Assert.IsFalse(shell.AreSidebarListsShown, "The lists are open before anyone opened them.");
+            Click(window, "SidebarListsToggle");
+            Assert.IsTrue(shell.AreSidebarListsShown, "The chevron did not open the lists.");
             Click(window, "NewAgendaListButton");
             PumpUntil(() => shell.Todo.Lists.Count == before + 1, "+ 새 리스트 made nothing.");
             AgendaListRowViewModel made = shell.Todo.Lists.Single(list => list.Id == shell.Todo.SelectedListId);

@@ -41,9 +41,9 @@ public sealed partial class DesktopShellViewModel
     public bool IsNavTodoView => IsListMode && TabIsTodo;
 
     /// <summary>Outside the editor, the header names the view: 타임라인, or the list being looked at.</summary>
-    public string ViewTitle => IsTimelineMode ? AppStrings.DeskNavTimeline : ListTitle;
+    public string ViewTitle => IsTimelineMode ? AppStrings.DeskNavTimeline : IsCalendarMode ? AppStrings.DeskNavCalendar : ListTitle;
 
-    public string ViewSubtitle => IsTimelineMode ? AppStrings.DeskTimelineViewSub : ListSubtitle;
+    public string ViewSubtitle => IsTimelineMode ? AppStrings.DeskTimelineViewSub : IsCalendarMode ? CalendarSubtitle : ListSubtitle;
 
     [RelayCommand]
     private void ToggleTabMenu() => IsTabMenuOpen = !IsTabMenuOpen;

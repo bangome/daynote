@@ -35,6 +35,21 @@ public sealed partial class CalendarMonthViewModel : ObservableObject, ILanguage
 
     public ObservableCollection<CalendarDayCellViewModel> Cells { get; } = [];
 
+    /// <summary>
+    /// The days a dated to-do or event falls on, for the dots; null where the shell draws only notes.
+    /// </summary>
+    public Func<IReadOnlySet<LocalDate>>? AgendaDays { get; set; }
+
+    /// <summary>Re-reads <see cref="AgendaDays"/> onto the cells on screen, after the agenda changed.</summary>
+    public void RefreshAgendaDays()
+    {
+        IReadOnlySet<LocalDate>? days = AgendaDays?.Invoke();
+        foreach (CalendarDayCellViewModel cell in Cells)
+        {
+            cell.HasAgenda = cell.IsInMonth && days?.Contains(cell.Date) == true;
+        }
+    }
+
     [ObservableProperty]
     private int _cursorYear;
 
@@ -89,6 +104,8 @@ public sealed partial class CalendarMonthViewModel : ObservableObject, ILanguage
             };
             Cells.Add(cell);
         }
+
+        RefreshAgendaDays();
     }
 
     /// <summary>Moves the cursor to the month containing <paramref name="date"/> and marks it selected.</summary>
