@@ -946,6 +946,12 @@ internal static class KoreanStrings
         ["DeskFilesSearchPlaceholder"] = "파일 이름·확장자로 검색",
         ["DeskFilesAllFormat"] = "전체 {0}개 · 날짜별",
 
+        // Desktop B v2: the day panel beyond the day.
+        ["DeskPanelDayFormat"] = "M'/'d (ddd)",
+        ["DeskPanelUpcomingFormat"] = "다가오는 7일 · {0}",
+        ["DeskPanelOtherTodosFormat"] = "남은 할 일 전체 · {0}",
+        ["DeskPanelPastFormat"] = "지남 · {0}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

@@ -954,6 +954,12 @@ internal static class EnglishStrings
         ["DeskFilesSearchPlaceholder"] = "Search by name or extension",
         ["DeskFilesAllFormat"] = "{0} in all · by date",
 
+        // Desktop B v2: the day panel beyond the day.
+        ["DeskPanelDayFormat"] = "ddd M'/'d",
+        ["DeskPanelUpcomingFormat"] = "Next 7 days · {0}",
+        ["DeskPanelOtherTodosFormat"] = "All remaining · {0}",
+        ["DeskPanelPastFormat"] = "Overdue · {0}",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

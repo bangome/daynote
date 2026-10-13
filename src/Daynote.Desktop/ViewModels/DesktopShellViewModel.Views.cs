@@ -438,6 +438,7 @@ public sealed partial class DesktopShellViewModel
             DayTodosDone.Add(Todo.Row(row, now, TodoRowScope.Day));
         }
 
+        RefreshPanelExtras(LocalDates.ToDateOnly(SelectedDate), now);
         DayEventCountText = DayEvents.Count.ToString(CultureInfo.CurrentCulture);
         IsDayEventEmpty = DayEvents.Count == 0;
 

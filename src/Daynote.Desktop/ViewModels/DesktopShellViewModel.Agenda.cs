@@ -24,6 +24,138 @@ public sealed partial class DesktopShellViewModel
 
     private LocalDate? _noticeDate;
 
+    private const string DayEventsClosedKey = "product.panel-events-closed";
+    private const string DayTodosClosedKey = "product.panel-todos-closed";
+    private const string DayFilesClosedKey = "product.panel-files-closed";
+
+    /// <summary>The day panel's 일정, 할 일 and 파일 each fold under their heading (remembered).</summary>
+    [ObservableProperty]
+    private bool _isDayEventsOpen = true;
+
+    [ObservableProperty]
+    private bool _isDayTodosOpen = true;
+
+    [ObservableProperty]
+    private bool _isDayFilesOpen = true;
+
+    /// <summary>The panel's sub-heading for the selected day: "오늘", or "10/14 (수)".</summary>
+    [ObservableProperty]
+    private string _dayGroupLabel = string.Empty;
+
+    /// <summary>The next seven days' one-off events, under 일정 (design v2 "다가오는 7일").</summary>
+    public System.Collections.ObjectModel.ObservableCollection<PanelAgendaRow> UpcomingEvents { get; } = [];
+
+    [ObservableProperty]
+    private string _upcomingHeading = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasUpcoming;
+
+    /// <summary>Every other one-off to-do still owed, under the day's (design v2 "남은 할 일 전체").</summary>
+    public System.Collections.ObjectModel.ObservableCollection<PanelAgendaRow> OtherTodos { get; } = [];
+
+    [ObservableProperty]
+    private string _otherTodosHeading = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasOtherTodos;
+
+    /// <summary>The 할 일 section's line: "오늘 할 일 추가" on today, "할 일 추가" elsewhere.</summary>
+    public string DayQuickPlaceholder => IsTodaySelected ? AppStrings.DeskQuickAddToday : AppStrings.DeskQuickAddDay;
+
+    [RelayCommand]
+    private void ToggleDayEvents() => SetPanelSection(DayEventsClosedKey, IsDayEventsOpen = !IsDayEventsOpen);
+
+    [RelayCommand]
+    private void ToggleDayTodosSection() => SetPanelSection(DayTodosClosedKey, IsDayTodosOpen = !IsDayTodosOpen);
+
+    [RelayCommand]
+    private void ToggleDayFiles() => SetPanelSection(DayFilesClosedKey, IsDayFilesOpen = !IsDayFilesOpen);
+
+    private void SetPanelSection(string key, bool open)
+    {
+        if (!_loading)
+        {
+            _ = _settings.SetBoolAsync(key, !open);
+        }
+    }
+
+    private async Task LoadPanelSectionsAsync(CancellationToken cancellationToken)
+    {
+        IsDayEventsOpen = !await _settings.GetBoolAsync(DayEventsClosedKey, false, cancellationToken).ConfigureAwait(true);
+        IsDayTodosOpen = !await _settings.GetBoolAsync(DayTodosClosedKey, false, cancellationToken).ConfigureAwait(true);
+        IsDayFilesOpen = !await _settings.GetBoolAsync(DayFilesClosedKey, false, cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// What the day panel shows beyond the day itself: the next week's one-off events, and every
+    /// other one-off to-do still owed, soonest first, undated last.
+    /// </summary>
+    private void RefreshPanelExtras(DateOnly day, DateTime now)
+    {
+        CultureInfo culture = CultureInfo.CurrentCulture;
+        DayGroupLabel = IsTodaySelected
+            ? AppStrings.Today
+            : day.ToString(AppStrings.DeskPanelDayFormat, LocalizationService.Instance.Culture);
+        OnPropertyChanged(nameof(DayQuickPlaceholder));
+
+        UpcomingEvents.Clear();
+        for (int offset = 1; offset <= 7; offset++)
+        {
+            DateOnly date = day.AddDays(offset);
+            foreach (AgendaDayRow row in AgendaDay.For(date, Todo.All).Open
+                         .Where(static row => row.Item.Kind == AgendaKind.Event && !row.IsOccurrence))
+            {
+                string weekday = date.ToString("ddd", LocalizationService.Instance.Culture);
+                string when = row.Item.EndsAt is null
+                    ? AppStrings.DeskEventAllDay
+                    : row.At?.Value.ToString(AppStrings.TodoRowTimeFormat, culture) ?? string.Empty;
+                UpcomingEvents.Add(new PanelAgendaRow(
+                    Todo.Row(row, now, TodoRowScope.Day),
+                    date.ToString(AppStrings.DeskNoticeDateFormat, culture),
+                    string.Create(culture, $"{weekday} {when}"),
+                    isLate: false));
+            }
+        }
+
+        UpcomingHeading = Format(AppStrings.DeskPanelUpcomingFormat, UpcomingEvents.Count);
+        HasUpcoming = UpcomingEvents.Count > 0;
+
+        OtherTodos.Clear();
+        foreach (AgendaItem item in Todo.All
+                     .Where(item => item.Kind == AgendaKind.Task && !item.IsSeries && !item.IsOverride
+                         && item.Status == AgendaStatus.NeedsAction
+                         && (item.Anchor is not { } anchor || DateOnly.FromDateTime(anchor.Value) != day))
+                     .OrderBy(static item => item.Anchor?.Value ?? DateTime.MaxValue))
+        {
+            WallClock? at = item.Anchor is { } anchor && item.HasClockTime ? anchor : null;
+            var row = new AgendaDayRow(item, null, at);
+            string sub;
+            bool late = false;
+            if (item.Anchor is { } falls)
+            {
+                DateTime due = at?.Value ?? falls.Value.Date.AddDays(1).AddTicks(-1);
+                late = due < now;
+                string date = string.Create(culture,
+                    $"{falls.Value.ToString(AppStrings.DeskNoticeDateFormat, culture)} {falls.Value.ToString("ddd", LocalizationService.Instance.Culture)}");
+                sub = at is { } clock ? string.Create(culture, $"{date} {clock.Value.ToString(AppStrings.TodoRowTimeFormat, culture)}") : date;
+                if (falls.Value.Date < now.Date)
+                {
+                    sub = Format(AppStrings.DeskPanelPastFormat, sub);
+                }
+            }
+            else
+            {
+                sub = AppStrings.TodoEntryNoDate;
+            }
+
+            OtherTodos.Add(new PanelAgendaRow(Todo.Row(row, now, TodoRowScope.AllDates), string.Empty, sub, late));
+        }
+
+        OtherTodosHeading = Format(AppStrings.DeskPanelOtherTodosFormat, OtherTodos.Count);
+        HasOtherTodos = OtherTodos.Count > 0;
+    }
+
     /// <summary>The selected day's events, all-day ones first, then by start (design v2, 이 날 패널 일정).</summary>
     public ObservableCollection<TodoItemViewModel> DayEvents { get; } = [];
 
@@ -247,4 +379,20 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(ViewTitle));
         OnPropertyChanged(nameof(ViewSubtitle));
     }
+}
+
+/// <summary>
+/// A row in the day panel that is not on the day: an upcoming event with its date and weekday, or
+/// a to-do still owed elsewhere with its when ("지남 · 10/12 월 15:00").
+/// </summary>
+public sealed class PanelAgendaRow(TodoItemViewModel row, string lead, string sub, bool isLate)
+{
+    public TodoItemViewModel Row { get; } = row;
+
+    /// <summary>An upcoming event's date, "10/14", in the panel's left column.</summary>
+    public string Lead { get; } = lead;
+
+    public string Sub { get; } = sub;
+
+    public bool IsLate { get; } = isLate;
 }

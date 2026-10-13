@@ -369,6 +369,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
             RightCollapsed = await _settings.GetBoolAsync(RightCollapsedKey, false, cancellationToken).ConfigureAwait(true);
             LeftCollapsed = await _settings.GetBoolAsync(LeftCollapsedKey, false, cancellationToken).ConfigureAwait(true);
             await LoadSidebarListsAsync(cancellationToken).ConfigureAwait(true);
+            await LoadPanelSectionsAsync(cancellationToken).ConfigureAwait(true);
         }
         finally
         {

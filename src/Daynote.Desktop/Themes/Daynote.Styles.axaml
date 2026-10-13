@@ -1011,6 +1011,40 @@
     <Setter Property="TextDecorations" Value="Strikethrough" />
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
   </Style>
+  <!-- v2's lines under a row: Text3, red once it has passed; the 할 일 view's chip in Text2. -->
+  <Style Selector="TextBlock.daysub">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+  </Style>
+  <Style Selector="TextBlock.daysub.overdue, TextBlock.chipdue.overdue">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Danger}" />
+  </Style>
+  <Style Selector="TextBlock.chipdue">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <!-- The day panel's section headings fold their section; "오늘" and the like under them. -->
+  <Style Selector="Button.sectionhead">
+    <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <Style Selector="Button.sectionhead:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SunInk}" />
+  </Style>
+  <Style Selector="Path.sectionchev">
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+    <Setter Property="StrokeThickness" Value="1.8" />
+    <Setter Property="RenderTransform" Value="scale(0.75)" />
+  </Style>
+  <Style Selector="Path.sectionchev.closed">
+    <Setter Property="RenderTransform" Value="rotate(-90deg) scale(0.75)" />
+  </Style>
+  <Style Selector="TextBlock.grouplabel">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Margin" Value="20,6,20,3" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+  </Style>
   <Style Selector="TextBlock.due">
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SunInk}" />
     <Setter Property="FontWeight" Value="SemiBold" />
