@@ -605,8 +605,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontSize" Value="15.5" />
-    <Setter Property="LineHeight" Value="29.45" />
-    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="Foreground" Value="#01000000" />
     <Setter Property="AcceptsReturn" Value="True" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />

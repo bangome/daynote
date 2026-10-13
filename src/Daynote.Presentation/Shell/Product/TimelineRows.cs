@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
 using Daynote.App.Localization;
 using Daynote.Core.Domain;
+using Daynote.Core.Agenda;
 
 namespace Daynote.App.Shell.Product;
 
@@ -100,4 +101,22 @@ public sealed partial class TimelineNoteRow : TimelineRow
 
     [RelayCommand]
     private Task Open() => _open(Id, Date);
+}
+
+/// <summary>
+/// A to-do row embedded in the timeline.
+/// </summary>
+public sealed class TimelineTodoRow : TimelineRow
+{
+    public TimelineTodoRow(AgendaItem item)
+    {
+        Item = item ?? throw new ArgumentNullException(nameof(item));
+        Title = item.Title;
+        // Basic presentation properties
+        IsDone = item.Status == AgendaStatus.Completed;
+    }
+
+    public AgendaItem Item { get; }
+    public string Title { get; }
+    public bool IsDone { get; }
 }

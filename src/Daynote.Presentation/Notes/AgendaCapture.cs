@@ -120,9 +120,8 @@ public static class AgendaCapture
             CompletedUtc: null,
             Priority: 0,
             TimelineVisibility.Auto,
-            // The one link back, and one-way. Allowed to dangle: deleting the note later must not
-            // take the task with it.
-            SourceNoteId: noteId,
+            // Completely independent entity: isolated from notes.
+            SourceNoteId: null,
             ExceptionDates: [],
             // Mobile §06: a dated item starts with one alert at its own time, which the user can
             // remove. The @ command always supplies a date, so a to-do made this way always has
@@ -137,9 +136,7 @@ public static class AgendaCapture
     /// The nearest <c>@</c> before the caret that could have opened a popup, or -1.
     /// </summary>
     /// <remarks>
-    /// Only at the start of a word, which is what keeps an email address out of it: the <c>@</c>
-    /// of "jiwon@aegisep.com" has a letter in front of it and is never a trigger. A newline counts
-    /// as whitespace, so the first character of a line qualifies.
+    /// Only at the start of a line. The @ symbol must be the first character on a new line (or after a newline).
     /// </remarks>
     private static int LastTriggerBefore(string text, int caret)
     {
@@ -151,7 +148,7 @@ public static class AgendaCapture
                 return -1;
             }
 
-            if (text[index] == '@' && (index == 0 || char.IsWhiteSpace(text[index - 1])))
+            if (text[index] == '@' && (index == 0 || text[index - 1] == '\n'))
             {
                 return index;
             }

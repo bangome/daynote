@@ -440,7 +440,7 @@
                 <TextBlock x:Name="Highlight" Classes="editorhighlight" Padding="0,0,0,40" />
               </ScrollViewer>
               <TextBox x:Name="Editor" Classes="editor" Padding="0,0,0,40" Text="{Binding Notes.EditorText}"
-                       VerticalContentAlignment="Top" Foreground="Transparent" PlaceholderText="{Binding Strings.EditorEmptyHint}" />
+                       VerticalContentAlignment="Top" Foreground="#01000000" PlaceholderText="{Binding Strings.EditorEmptyHint}" />
             </Grid>
 
             <Grid Grid.Row="2" ColumnDefinitions="Auto,12,Auto,*,Auto" Margin="48,10,48,14">
