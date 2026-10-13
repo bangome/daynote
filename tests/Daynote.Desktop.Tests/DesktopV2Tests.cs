@@ -171,4 +171,30 @@ public sealed class DesktopV2Tests
                 "Picking an event did not go to its day.");
         });
     }
+
+    [TestMethod]
+    public void A_week_can_start_on_monday()
+    {
+        WithSample((window, shell) =>
+        {
+            try
+            {
+                Wait(shell.SettingsViewModel!.SelectWeekFromMondayCommand.ExecuteAsync(null));
+                PumpUntil(() => shell.Week.Days.Count == 7 && shell.Week.Days[0].Date.DayOfWeekIs(DayOfWeek.Monday), "The week strip still starts on Sunday.");
+                Assert.AreEqual("월", shell.Calendar.WeekdayHeadings[0].Label);
+                PumpUntil(() => shell.Calendar.Cells.Count > 0 && LocalDates.ToDateOnly(shell.Calendar.Cells[0].Date).DayOfWeek == DayOfWeek.Monday,
+                    "The month grid still starts on Sunday.");
+                Assert.IsTrue(shell.SettingsViewModel.IsWeekFromMonday);
+            }
+            finally
+            {
+                Wait(shell.SettingsViewModel!.SelectWeekFromSundayCommand.ExecuteAsync(null));
+            }
+        });
+    }
+}
+
+internal static class LocalDateTestExtensions
+{
+    internal static bool DayOfWeekIs(this LocalDate date, DayOfWeek day) => LocalDates.ToDateOnly(date).DayOfWeek == day;
 }

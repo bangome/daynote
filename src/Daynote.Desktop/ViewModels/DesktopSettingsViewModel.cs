@@ -134,6 +134,28 @@ public sealed partial class DesktopSettingsViewModel : ObservableObject, ILangua
     [RelayCommand]
     private Task SelectEnglish() => SelectLanguageAsync(AppLanguage.English);
 
+    /// <summary>The settings key for 한 주의 시작; the shell reads it at start-up.</summary>
+    public const string WeekStartKey = "product.week-start";
+
+    public bool IsWeekFromSunday => Daynote.App.Shell.Product.CalendarWeekStart.First == DayOfWeek.Sunday;
+
+    public bool IsWeekFromMonday => !IsWeekFromSunday;
+
+    /// <summary>한 주의 시작: the sidebar month, the week strip and the month view start the week here.</summary>
+    [RelayCommand]
+    private Task SelectWeekFromSunday() => SelectWeekStartAsync(DayOfWeek.Sunday);
+
+    [RelayCommand]
+    private Task SelectWeekFromMonday() => SelectWeekStartAsync(DayOfWeek.Monday);
+
+    private async Task SelectWeekStartAsync(DayOfWeek first)
+    {
+        Daynote.App.Shell.Product.CalendarWeekStart.Set(first);
+        OnPropertyChanged(nameof(IsWeekFromSunday));
+        OnPropertyChanged(nameof(IsWeekFromMonday));
+        await _settings.SetAsync(WeekStartKey, first == DayOfWeek.Monday ? "monday" : "sunday").ConfigureAwait(true);
+    }
+
     [RelayCommand]
     private async Task ToggleStartupAsync()
     {

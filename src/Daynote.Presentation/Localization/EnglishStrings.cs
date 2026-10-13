@@ -964,6 +964,12 @@ internal static class EnglishStrings
         ["SearchKindTodo"] = "To-do",
         ["SearchKindEvent"] = "Event",
 
+        // Desktop B v2 settings: 한 주의 시작.
+        ["DeskSettingsWeekStart"] = "Week starts on",
+        ["DeskSettingsWeekStartDesc"] = "Applies to the mini calendar and the week strip.",
+        ["DeskSettingsSunday"] = "Sunday",
+        ["DeskSettingsMonday"] = "Monday",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

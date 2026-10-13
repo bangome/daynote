@@ -371,6 +371,8 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
             LeftCollapsed = await _settings.GetBoolAsync(LeftCollapsedKey, false, cancellationToken).ConfigureAwait(true);
             await LoadSidebarListsAsync(cancellationToken).ConfigureAwait(true);
             await LoadPanelSectionsAsync(cancellationToken).ConfigureAwait(true);
+            string? weekStart = await _settings.GetAsync(DesktopSettingsViewModel.WeekStartKey, cancellationToken).ConfigureAwait(true);
+            CalendarWeekStart.Set(string.Equals(weekStart, "monday", StringComparison.Ordinal) ? DayOfWeek.Monday : DayOfWeek.Sunday);
         }
         finally
         {

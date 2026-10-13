@@ -10,7 +10,7 @@ using Daynote.Core.Time;
 namespace Daynote.App.Shell.Product;
 
 /// <summary>
-/// The month calendar card. Builds a Sunday-start grid for the cursor month and paints each in-month day
+/// The month calendar card. Builds a grid for the cursor month, starting on <see cref="CalendarWeekStart"/> and paints each in-month day
 /// with its content cues from <see cref="INoteRepository.GetMonthContentSummaryAsync"/> (one aggregate
 /// query — dates absent from the result are treated as empty, mirroring the design's <c>notesBy</c> map).
 /// Clicking a day asks the shell to select that date; month navigation reloads the summary.
@@ -31,7 +31,15 @@ public sealed partial class CalendarMonthViewModel : ObservableObject, ILanguage
         _cursorMonth = today.Month;
         _selectedDate = today;
         LocalizationService.Instance.Observe(this);
+        CalendarWeekStart.Changed += (_, _) =>
+        {
+            OnPropertyChanged(nameof(WeekdayHeadings));
+            _ = LoadAsync();
+        };
     }
+
+    /// <summary>The weekday headings over the grid, starting where <see cref="CalendarWeekStart"/> says.</summary>
+    public IReadOnlyList<WeekdayHeading> WeekdayHeadings => CalendarWeekStart.Headings();
 
     public ObservableCollection<CalendarDayCellViewModel> Cells { get; } = [];
 
@@ -63,8 +71,11 @@ public sealed partial class CalendarMonthViewModel : ObservableObject, ILanguage
     private string _monthLabel = string.Empty;
 
     /// <summary>The month label is stored rather than computed, so re-derive it on a language switch.</summary>
-    void ILanguageAware.OnLanguageChanged() =>
+    void ILanguageAware.OnLanguageChanged()
+    {
         MonthLabel = LocalDates.DisplayMonth(LocalDates.FromDateOnly(new DateOnly(CursorYear, CursorMonth, 1)));
+        OnPropertyChanged(nameof(WeekdayHeadings));
+    }
 
     /// <summary>Rebuilds the grid for the cursor month, querying the aggregate content summary.</summary>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
@@ -76,7 +87,7 @@ public sealed partial class CalendarMonthViewModel : ObservableObject, ILanguage
 
         LocalDate today = LocalDates.Today(_clock);
         var first = new DateOnly(CursorYear, CursorMonth, 1);
-        int startOffset = (int)first.DayOfWeek; // Sunday = 0
+        int startOffset = CalendarWeekStart.Offset(first.DayOfWeek);
         int daysIn = DateTime.DaysInMonth(CursorYear, CursorMonth);
         int total = (int)Math.Ceiling((startOffset + daysIn) / 7.0) * 7;
 

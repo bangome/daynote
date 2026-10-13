@@ -448,6 +448,18 @@
   <Style Selector="Button.boardline.done TextBlock.title">
     <Setter Property="TextDecorations" Value="Strikethrough" />
   </Style>
+  <Style Selector="TextBlock.boardwd">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Margin" Value="8,6" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="TextBlock.boardwd.sunday">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Sunday}" />
+  </Style>
+  <Style Selector="TextBlock.boardwd.saturday">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Accent}" />
+  </Style>
   <Style Selector="TextBlock.hovhead">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="Bold" />

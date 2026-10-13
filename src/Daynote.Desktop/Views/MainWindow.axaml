@@ -195,23 +195,24 @@
                 <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
               </Button>
             </Grid>
-            <UniformGrid Columns="7">
-              <UniformGrid.Styles>
+            <ItemsControl ItemsSource="{Binding Calendar.WeekdayHeadings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
                 <Style Selector="TextBlock">
                   <Setter Property="FontSize" Value="10.5" />
                   <Setter Property="HorizontalAlignment" Value="Center" />
                   <Setter Property="Margin" Value="0,3" />
                   <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
                 </Style>
-              </UniformGrid.Styles>
-              <TextBlock Text="{Binding Strings.WeekdaySun}" />
-              <TextBlock Text="{Binding Strings.WeekdayMon}" />
-              <TextBlock Text="{Binding Strings.WeekdayTue}" />
-              <TextBlock Text="{Binding Strings.WeekdayWed}" />
-              <TextBlock Text="{Binding Strings.WeekdayThu}" />
-              <TextBlock Text="{Binding Strings.WeekdayFri}" />
-              <TextBlock Text="{Binding Strings.WeekdaySat}" />
-            </UniformGrid>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:WeekdayHeading">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <ItemsControl x:Name="MiniCalendar" ItemsSource="{Binding Calendar.Cells}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
@@ -322,7 +323,7 @@
 
         <!-- The second line, on the header's rule: the day's note tabs in the editor, or the view's
              name and a word about it elsewhere; the view toggles at the right behind a rule. -->
-        <Grid x:Name="HeaderBottom" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,14,0,0" Height="41">
+        <Grid x:Name="HeaderBottom" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,16,0,0" Height="44">
           <Grid Grid.Column="0" Margin="0,0,4,0" IsVisible="{Binding IsEditorMode}">
 <Grid ColumnDefinitions="*,Auto">
               <!-- No bar: the wheel (either direction) and the round steps at the ends scroll it. -->
@@ -759,23 +760,16 @@
             </ItemsControl>
           </Grid>
           <Border Grid.Row="1" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-            <UniformGrid Columns="7">
-              <UniformGrid.Styles>
-                <Style Selector="TextBlock">
-                  <Setter Property="FontSize" Value="11.5" />
-                  <Setter Property="FontWeight" Value="Bold" />
-                  <Setter Property="Margin" Value="8,6" />
-                  <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
-                </Style>
-              </UniformGrid.Styles>
-              <TextBlock Foreground="{DynamicResource Daynote.Desk.Brush.Sunday}" Text="{Binding Strings.WeekdaySun}" />
-              <TextBlock Text="{Binding Strings.WeekdayMon}" />
-              <TextBlock Text="{Binding Strings.WeekdayTue}" />
-              <TextBlock Text="{Binding Strings.WeekdayWed}" />
-              <TextBlock Text="{Binding Strings.WeekdayThu}" />
-              <TextBlock Text="{Binding Strings.WeekdayFri}" />
-              <TextBlock Foreground="{DynamicResource Daynote.Product.Brush.Accent}" Text="{Binding Strings.WeekdaySat}" />
-            </UniformGrid>
+            <ItemsControl ItemsSource="{Binding Calendar.WeekdayHeadings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:WeekdayHeading">
+                  <TextBlock Classes="boardwd" Classes.sunday="{Binding IsSunday}" Classes.saturday="{Binding IsSaturday}" Text="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </Border>
           <Border Grid.Row="2" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
             <ItemsControl x:Name="CalendarBoardGrid" ItemsSource="{Binding CalendarBoard.Cells}">
@@ -1538,15 +1532,16 @@
                         <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
                       </Button>
                     </Grid>
-                    <UniformGrid Columns="7">
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySun}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayMon}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayTue}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayWed}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayThu}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayFri}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySat}" />
-                    </UniformGrid>
+                    <ItemsControl ItemsSource="{Binding TodoEntry.Calendar.WeekdayHeadings}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:WeekdayHeading">
+                          <TextBlock Classes="wd" Text="{Binding Label}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <ItemsControl ItemsSource="{Binding TodoEntry.Calendar.Cells}">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>

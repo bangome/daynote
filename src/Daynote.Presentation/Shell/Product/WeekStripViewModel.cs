@@ -34,6 +34,7 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
         _onSelectDate = onSelectDate ?? throw new ArgumentNullException(nameof(onSelectDate));
         _selectedDate = LocalDates.Today(clock);
         LocalizationService.Instance.Observe(this);
+        CalendarWeekStart.Changed += (_, _) => _ = RefreshAsync();
     }
 
     public ObservableCollection<WeekStripDayViewModel> Days { get; } = [];
@@ -54,11 +55,11 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
     [ObservableProperty]
     private LocalDate _selectedDate;
 
-    /// <summary>The Sunday that starts the week holding <paramref name="date"/>.</summary>
+    /// <summary>The day that starts the week holding <paramref name="date"/> (<see cref="CalendarWeekStart"/>).</summary>
     public static LocalDate WeekStart(LocalDate date)
     {
         DateOnly day = LocalDates.ToDateOnly(date);
-        return LocalDates.FromDateOnly(day.AddDays(-(int)day.DayOfWeek));
+        return LocalDates.FromDateOnly(day.AddDays(-CalendarWeekStart.Offset(day.DayOfWeek)));
     }
 
     /// <summary>Rebuilds the strip around <paramref name="selected"/>, reading which days have notes.</summary>
@@ -100,7 +101,7 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
             LocalDate date = LocalDates.AddDays(start, i);
             Days.Add(new WeekStripDayViewModel(
                 date,
-                WeekdayLabel(i),
+                WeekdayLabel((int)LocalDates.ToDateOnly(date).DayOfWeek),
                 isSelected: date == selected,
                 isToday: date == today,
                 hasNotes: withNotes.Contains(date),
@@ -121,9 +122,9 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
 
     void ILanguageAware.OnLanguageChanged()
     {
-        for (int i = 0; i < Days.Count; i++)
+        foreach (WeekStripDayViewModel day in Days)
         {
-            Days[i].WeekdayLabel = WeekdayLabel(i);
+            day.WeekdayLabel = WeekdayLabel((int)LocalDates.ToDateOnly(day.Date).DayOfWeek);
         }
     }
 

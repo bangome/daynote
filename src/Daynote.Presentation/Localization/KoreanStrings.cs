@@ -956,6 +956,12 @@ internal static class KoreanStrings
         ["SearchKindTodo"] = "할 일",
         ["SearchKindEvent"] = "일정",
 
+        // Desktop B v2 settings: 한 주의 시작.
+        ["DeskSettingsWeekStart"] = "한 주의 시작",
+        ["DeskSettingsWeekStartDesc"] = "미니 캘린더와 주간 스트립에 적용됩니다.",
+        ["DeskSettingsSunday"] = "일요일",
+        ["DeskSettingsMonday"] = "월요일",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };
