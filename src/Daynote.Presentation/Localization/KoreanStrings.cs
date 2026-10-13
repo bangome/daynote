@@ -305,6 +305,8 @@ internal static class KoreanStrings
 
         // Note list
         ["NewNote"] = "새 노트",
+        ["NoteTabsPrevious"] = "이전 노트",
+        ["NoteTabsNext"] = "다음 노트",
         ["NoteCountFormat"] = "노트 {0}개",
         ["NoteCountFormatOne"] = "노트 {0}개",
         ["DayNotesEmpty"] = "이 날짜에 노트가 없습니다",
@@ -918,6 +920,47 @@ internal static class KoreanStrings
         ["TodoEntryTimelineAutoHint"] = "자동 — 일정과 일회성 할 일은 보이고, 반복 할 일은 보이지 않아요.",
         ["TodoEntryTimelineAlwaysHint"] = "이 할 일은 반복될 때마다 타임라인에 보여요.",
         ["TodoEntryTimelineNeverHint"] = "이 할 일은 타임라인에 보이지 않아요. 할 일 패널에는 그대로 있어요.",
+
+        // Desktop B v2 header: the note menu and the view line.
+        ["DeskTabMenuTip"] = "이 날의 노트 전체 보기",
+        ["DeskTimelineViewTip"] = "타임라인 보기",
+        ["DeskTimelineViewSub"] = "노트 · 일정 · 할 일을 시간순으로",
+        ["DeskTabMenuDateFormat"] = "M월 d일 (ddd)",
+
+        // Desktop B v2: the month view and the sidebar's lists.
+        ["DeskNavCalendar"] = "캘린더",
+        ["DeskCalendarViewTip"] = "캘린더 보기",
+        ["DeskCalendarViewSubFormat"] = "{0} · 일정 · 할 일 · 파일",
+        ["DeskCalendarMoreFormat"] = "+{0}개 더",
+        ["DeskCalendarHoverEmpty"] = "일정·할 일·파일이 없어요",
+        ["DeskCalendarOpenDay"] = "이 날 노트 열기",
+        ["DeskListsExpand"] = "리스트 펼치기",
+        ["DeskListsCollapse"] = "리스트 접기",
+
+        // Desktop B v2: the files library.
+        ["DeskFilesNoMatchFormat"] = "‘{0}’와 일치하는 파일이 없어요",
+        ["DeskFilesNone"] = "보관된 파일이 없어요",
+        ["DeskFilesAddToFormat"] = "{0}에 추가",
+        ["DeskFilesTodayFormat"] = "{0} · 오늘",
+        ["DeskFilesCountFormat"] = "{0}개",
+        ["DeskFilesSearchPlaceholder"] = "파일 이름·확장자로 검색",
+        ["DeskFilesAllFormat"] = "전체 {0}개 · 날짜별",
+
+        // Desktop B v2: the day panel beyond the day.
+        ["DeskPanelDayFormat"] = "M'/'d (ddd)",
+        ["DeskPanelUpcomingFormat"] = "다가오는 7일 · {0}",
+        ["DeskPanelOtherTodosFormat"] = "남은 할 일 전체 · {0}",
+        ["DeskPanelPastFormat"] = "지남 · {0}",
+
+        // Search rows for the agenda (design v2).
+        ["SearchKindTodo"] = "할 일",
+        ["SearchKindEvent"] = "일정",
+
+        // Desktop B v2 settings: 한 주의 시작.
+        ["DeskSettingsWeekStart"] = "한 주의 시작",
+        ["DeskSettingsWeekStartDesc"] = "미니 캘린더와 주간 스트립에 적용됩니다.",
+        ["DeskSettingsSunday"] = "일요일",
+        ["DeskSettingsMonday"] = "월요일",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",

@@ -16,6 +16,7 @@ public sealed partial class DesktopShellViewModel
     private async Task OpenFromTimelineAsync(Guid id, LocalDate date)
     {
         IsListMode = false;
+        IsCalendarMode = false;
         // SelectDateAsync leaves the timeline for every caller, including this one.
         if (await SelectDateAsync(date).ConfigureAwait(true))
         {
@@ -30,6 +31,7 @@ public sealed partial class DesktopShellViewModel
     private async Task JumpToTagAsync(TagOccurrence occ)
     {
         IsListMode = false;
+        IsCalendarMode = false;
         if (await SelectDateAsync(occ.Date).ConfigureAwait(true))
         {
             DomainResult<NoteId> id = NoteId.Create(occ.NoteId);
@@ -44,6 +46,7 @@ public sealed partial class DesktopShellViewModel
     private async Task OpenFavoriteAsync(NoteSummary note)
     {
         IsListMode = false;
+        IsCalendarMode = false;
         if (await SelectDateAsync(note.LocalDate).ConfigureAwait(true))
         {
             DomainResult<NoteId> id = NoteId.Create(note.Id);
@@ -79,10 +82,12 @@ public sealed partial class DesktopShellViewModel
             ActiveTab = tab;
             IsTimelineMode = false;
             IsListMode = true;
+            IsCalendarMode = false;
         }
         else
         {
             IsListMode = false;
+            IsCalendarMode = false;
         }
     }
 

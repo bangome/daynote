@@ -30,6 +30,9 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     /// </summary>
     private IReadOnlyList<DayFile> _files = [];
 
+    /// <summary>Every date's files, once the library has been asked for (the 파일 view, design v2).</summary>
+    private List<(DayFile File, FileItemViewModel Item)>? _library;
+
     /// <param name="thumbnails">Null shows the image badge instead of a decoded preview (tests, headless).</param>
     public FilesPanelViewModel(
         AddDayFile addFile,
@@ -52,6 +55,97 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     [ObservableProperty]
     private bool _isEmpty = true;
 
+    /// <summary>The 파일 view: every date's files, newest date first, narrowed by <see cref="LibraryQuery"/>.</summary>
+    public ObservableCollection<FileDateGroupViewModel> Groups { get; } = [];
+
+    /// <summary>The 파일 view's search: a name or an extension.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLibraryQuery))]
+    private string _libraryQuery = string.Empty;
+
+    public bool HasLibraryQuery => LibraryQuery.Trim().Length > 0;
+
+    /// <summary>How many files there are on every date, whatever the search shows.</summary>
+    [ObservableProperty]
+    private int _libraryCount;
+
+    [ObservableProperty]
+    private bool _isLibraryEmpty = true;
+
+    public string LibraryEmptyText => HasLibraryQuery
+        ? string.Format(System.Globalization.CultureInfo.CurrentCulture, Localization.AppStrings.DeskFilesNoMatchFormat, LibraryQuery.Trim())
+        : Localization.AppStrings.DeskFilesNone;
+
+    /// <summary>"+ 10/13에 추가": the files added from the 파일 view go to the day being looked at.</summary>
+    public string LibraryAddText => string.Format(
+        System.Globalization.CultureInfo.CurrentCulture,
+        Localization.AppStrings.DeskFilesAddToFormat,
+        Composition.LocalDates.ToDateOnly(_date).ToString(Localization.AppStrings.DeskNoticeDateFormat, System.Globalization.CultureInfo.CurrentCulture));
+
+    [RelayCommand]
+    private void ClearLibraryQuery() => LibraryQuery = string.Empty;
+
+    partial void OnLibraryQueryChanged(string value)
+    {
+        RebuildGroups();
+        OnPropertyChanged(nameof(LibraryEmptyText));
+    }
+
+    /// <summary>Every date's files, newest date first; for the month view, which draws its own lines.</summary>
+    public async Task<IReadOnlyList<DayFile>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        await _listFiles.ExecuteAllAsync(cancellationToken).ConfigureAwait(true);
+
+    /// <summary>Reads every date's files into the 파일 view.</summary>
+    public async Task LoadLibraryAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<DayFile> files = await ListAllAsync(cancellationToken).ConfigureAwait(true);
+        var library = new List<(DayFile File, FileItemViewModel Item)>(files.Count);
+        foreach (DayFile file in files)
+        {
+            object? thumbnail = await TryLoadThumbnailAsync(file, cancellationToken).ConfigureAwait(true);
+            library.Add((file, new FileItemViewModel(file, thumbnail, DeleteLibraryItemAsync, SaveItemAsync)));
+        }
+
+        _library = library;
+        LibraryCount = library.Count;
+        RebuildGroups();
+    }
+
+    private void RebuildGroups()
+    {
+        Groups.Clear();
+        if (_library is null)
+        {
+            IsLibraryEmpty = true;
+            return;
+        }
+
+        string query = LibraryQuery.Trim();
+        LocalDate today = Composition.LocalDates.FromDateOnly(DateOnly.FromDateTime(DateTime.Now));
+        foreach (IGrouping<LocalDate, (DayFile File, FileItemViewModel Item)> day in _library
+                     .Where(entry => query.Length == 0 || entry.File.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                     .GroupBy(static entry => entry.File.LocalDate)
+                     .OrderByDescending(static group => group.Key))
+        {
+            Groups.Add(new FileDateGroupViewModel(day.Key, day.Key == today, [.. day.Select(static entry => entry.Item)], OpenDay));
+        }
+
+        IsLibraryEmpty = Groups.Count == 0;
+        OnPropertyChanged(nameof(LibraryEmptyText));
+    }
+
+    /// <summary>What a date heading in the 파일 view opens: that day, in the editor. Set by the shell.</summary>
+    public Func<LocalDate, Task>? OpenDay { get; set; }
+
+    private async Task DeleteLibraryItemAsync(FileItemViewModel item)
+    {
+        DayFileDeleteReceipt receipt = await _deleteFile.ExecuteAsync(item.Id).ConfigureAwait(true);
+        if (receipt.Deleted)
+        {
+            await RefreshAsync().ConfigureAwait(true);
+        }
+    }
+
     public async Task LoadForDateAsync(LocalDate date, CancellationToken cancellationToken = default)
     {
         _date = date;
@@ -70,6 +164,15 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         }
 
         IsEmpty = Items.Count == 0;
+        OnPropertyChanged(nameof(LibraryAddText));
+        if (_library is not null)
+        {
+            await LoadLibraryAsync(cancellationToken).ConfigureAwait(true);
+        }
+        else
+        {
+            LibraryCount = await _listFiles.CountAllAsync(cancellationToken).ConfigureAwait(true);
+        }
     }
 
     [RelayCommand]
@@ -112,6 +215,15 @@ public sealed partial class FilesPanelViewModel : ObservableObject
             object? thumbnail = await TryLoadThumbnailAsync(available, cancellationToken).ConfigureAwait(true);
             Items.Insert(0, new FileItemViewModel(available, thumbnail, DeleteItemAsync, SaveItemAsync));
             IsEmpty = false;
+            if (_library is not null)
+            {
+                await LoadLibraryAsync(cancellationToken).ConfigureAwait(true);
+            }
+            else
+            {
+                LibraryCount++;
+            }
+
             return available;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DayFileTooLargeException)
@@ -170,7 +282,8 @@ public sealed partial class FilesPanelViewModel : ObservableObject
     {
         item.SaveFailed = false;
 
-        DayFile? file = _files.FirstOrDefault(candidate => candidate.Id == item.Id);
+        DayFile? file = _files.FirstOrDefault(candidate => candidate.Id == item.Id)
+            ?? _library?.FirstOrDefault(entry => entry.File.Id == item.Id).File;
         if (file is null)
         {
             item.SaveFailed = true;
@@ -242,6 +355,14 @@ public sealed partial class FilesPanelViewModel : ObservableObject
         {
             Items.Remove(item);
             IsEmpty = Items.Count == 0;
+            if (_library is not null)
+            {
+                await LoadLibraryAsync().ConfigureAwait(true);
+            }
+            else
+            {
+                LibraryCount = Math.Max(0, LibraryCount - 1);
+            }
         }
     }
 
@@ -264,4 +385,32 @@ public sealed partial class FilesPanelViewModel : ObservableObject
             return null;
         }
     }
+}
+
+/// <summary>One date in the 파일 view: "10월 13일 (화) · 오늘", how many, and the cards.</summary>
+public sealed partial class FileDateGroupViewModel
+{
+    private readonly Func<LocalDate, Task>? _open;
+
+    public FileDateGroupViewModel(LocalDate date, bool isToday, IReadOnlyList<FileItemViewModel> files, Func<LocalDate, Task>? open)
+    {
+        Date = date;
+        Files = files;
+        _open = open;
+        string heading = Composition.LocalDates.ToDateOnly(date)
+            .ToString(Localization.AppStrings.DeskTabMenuDateFormat, Localization.LocalizationService.Instance.Culture);
+        Heading = isToday ? string.Format(System.Globalization.CultureInfo.CurrentCulture, Localization.AppStrings.DeskFilesTodayFormat, heading) : heading;
+        CountText = string.Format(System.Globalization.CultureInfo.CurrentCulture, Localization.AppStrings.DeskFilesCountFormat, files.Count);
+    }
+
+    public LocalDate Date { get; }
+
+    public string Heading { get; }
+
+    public string CountText { get; }
+
+    public IReadOnlyList<FileItemViewModel> Files { get; }
+
+    [RelayCommand]
+    private Task Open() => _open?.Invoke(Date) ?? Task.CompletedTask;
 }

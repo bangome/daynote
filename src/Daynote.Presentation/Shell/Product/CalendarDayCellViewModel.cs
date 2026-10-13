@@ -32,6 +32,7 @@ public sealed partial class CalendarDayCellViewModel : ObservableObject
         HasNotes = inMonth && noteCount > 0;
         HasExtras = inMonth && hasExtras;
         HasCount = inMonth && noteCount > 0;
+        NoteCount = inMonth ? noteCount : 0;
         CountText = noteCount > 0 ? noteCount.ToString(System.Globalization.CultureInfo.CurrentCulture) : string.Empty;
         ActivityLevel = !inMonth ? 0 : noteCount switch
         {
@@ -61,6 +62,20 @@ public sealed partial class CalendarDayCellViewModel : ObservableObject
     public bool HasExtras { get; }
 
     public bool HasCount { get; }
+
+    /// <summary>How many notes the day holds, for the month view's "노트 N".</summary>
+    public int NoteCount { get; }
+
+    /// <summary>
+    /// A dated to-do or event falls on the day. Shells that draw the agenda put the day's dot up for
+    /// it as well as for notes (design v2 <c>hasNotes || taskBy</c>); the phone's cells ignore it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsDot))]
+    private bool _hasAgenda;
+
+    /// <summary>The dot under the day: notes, or something on the agenda.</summary>
+    public bool ShowsDot => HasNotes || HasAgenda;
 
     public string CountText { get; }
 

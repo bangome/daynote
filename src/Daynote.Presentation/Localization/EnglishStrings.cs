@@ -316,6 +316,8 @@ internal static class EnglishStrings
 
         // Note list
         ["NewNote"] = "New note",
+        ["NoteTabsPrevious"] = "Earlier notes",
+        ["NoteTabsNext"] = "More notes",
         ["NoteCountFormat"] = "{0} notes",
         ["NoteCountFormatOne"] = "{0} note",
         ["DayNotesEmpty"] = "No notes on this date",
@@ -926,6 +928,47 @@ internal static class EnglishStrings
         ["TodoEntryTimelineAutoHint"] = "Auto — events and one-off to-dos show; repeating to-dos don't.",
         ["TodoEntryTimelineAlwaysHint"] = "This to-do shows in the timeline every time it repeats.",
         ["TodoEntryTimelineNeverHint"] = "This to-do never shows in the timeline. It stays in the to-do panel.",
+
+        // Desktop B v2 header: the note menu and the view line.
+        ["DeskTabMenuTip"] = "All of this day's notes",
+        ["DeskTimelineViewTip"] = "Timeline",
+        ["DeskTimelineViewSub"] = "Notes, events and to-dos in time order",
+        ["DeskTabMenuDateFormat"] = "ddd, MMM d",
+
+        // Desktop B v2: the month view and the sidebar's lists.
+        ["DeskNavCalendar"] = "Calendar",
+        ["DeskCalendarViewTip"] = "Calendar",
+        ["DeskCalendarViewSubFormat"] = "{0} · events · to-dos · files",
+        ["DeskCalendarMoreFormat"] = "+{0} more",
+        ["DeskCalendarHoverEmpty"] = "No events, to-dos or files",
+        ["DeskCalendarOpenDay"] = "Open this day's notes",
+        ["DeskListsExpand"] = "Show lists",
+        ["DeskListsCollapse"] = "Hide lists",
+
+        // Desktop B v2: the files library.
+        ["DeskFilesNoMatchFormat"] = "No files match ‘{0}’",
+        ["DeskFilesNone"] = "No files yet",
+        ["DeskFilesAddToFormat"] = "Add to {0}",
+        ["DeskFilesTodayFormat"] = "{0} · Today",
+        ["DeskFilesCountFormat"] = "{0}",
+        ["DeskFilesSearchPlaceholder"] = "Search by name or extension",
+        ["DeskFilesAllFormat"] = "{0} in all · by date",
+
+        // Desktop B v2: the day panel beyond the day.
+        ["DeskPanelDayFormat"] = "ddd M'/'d",
+        ["DeskPanelUpcomingFormat"] = "Next 7 days · {0}",
+        ["DeskPanelOtherTodosFormat"] = "All remaining · {0}",
+        ["DeskPanelPastFormat"] = "Overdue · {0}",
+
+        // Search rows for the agenda (design v2).
+        ["SearchKindTodo"] = "To-do",
+        ["SearchKindEvent"] = "Event",
+
+        // Desktop B v2 settings: 한 주의 시작.
+        ["DeskSettingsWeekStart"] = "Week starts on",
+        ["DeskSettingsWeekStartDesc"] = "Applies to the mini calendar and the week strip.",
+        ["DeskSettingsSunday"] = "Sunday",
+        ["DeskSettingsMonday"] = "Monday",
 
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",

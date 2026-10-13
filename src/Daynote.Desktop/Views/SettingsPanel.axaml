@@ -46,6 +46,24 @@
             <StackPanel IsVisible="{Binding IsGeneralSection}">
               <TextBlock Classes="h1" Margin="0,0,0,18" Text="{Binding #Root.Strings[DeskSettingsGeneral]}" />
 
+              <!-- 한 주의 시작: where the sidebar month, the week strip and the month view begin. -->
+              <Border Classes="setrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Classes="label" Text="{Binding #Root.Strings[DeskSettingsWeekStart]}" />
+                    <TextBlock Classes="desc" Text="{Binding #Root.Strings[DeskSettingsWeekStartDesc]}" />
+                  </StackPanel>
+                  <Border Grid.Column="1" Classes="seg" Width="180" VerticalAlignment="Center">
+                    <UniformGrid Columns="2">
+                      <Button x:Name="WeekFromSunday" Classes="tab" Classes.active="{Binding IsWeekFromSunday}" Content="{Binding #Root.Strings[DeskSettingsSunday]}"
+                              Command="{Binding SelectWeekFromSundayCommand}" />
+                      <Button x:Name="WeekFromMonday" Classes="tab" Classes.active="{Binding IsWeekFromMonday}" Content="{Binding #Root.Strings[DeskSettingsMonday]}"
+                              Command="{Binding SelectWeekFromMondayCommand}" />
+                    </UniformGrid>
+                  </Border>
+                </Grid>
+              </Border>
+
               <Border Classes="setrow">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Margin="0,0,12,0">

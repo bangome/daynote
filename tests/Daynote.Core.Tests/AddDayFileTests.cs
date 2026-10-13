@@ -86,6 +86,9 @@ public sealed class AddDayFileTests
             LocalDate localDate, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<IReadOnlyList<DayFile>>([]);
 
+        public ValueTask<IReadOnlyList<DayFile>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<DayFile>>([]);
+
         public ValueTask<DayFileDeleteResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(new DayFileDeleteResult(false, null));
 

@@ -34,18 +34,32 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
         _onSelectDate = onSelectDate ?? throw new ArgumentNullException(nameof(onSelectDate));
         _selectedDate = LocalDates.Today(clock);
         LocalizationService.Instance.Observe(this);
+        CalendarWeekStart.Changed += (_, _) => _ = RefreshAsync();
     }
 
     public ObservableCollection<WeekStripDayViewModel> Days { get; } = [];
 
+    /// <summary>The days a dated to-do or event falls on, for the dots; null where only notes count.</summary>
+    public Func<IReadOnlySet<LocalDate>>? AgendaDays { get; set; }
+
+    /// <summary>Re-reads <see cref="AgendaDays"/> onto the pills on screen, after the agenda changed.</summary>
+    public void RefreshAgendaDays()
+    {
+        IReadOnlySet<LocalDate>? days = AgendaDays?.Invoke();
+        foreach (WeekStripDayViewModel day in Days)
+        {
+            day.HasAgenda = days?.Contains(day.Date) == true;
+        }
+    }
+
     [ObservableProperty]
     private LocalDate _selectedDate;
 
-    /// <summary>The Sunday that starts the week holding <paramref name="date"/>.</summary>
+    /// <summary>The day that starts the week holding <paramref name="date"/> (<see cref="CalendarWeekStart"/>).</summary>
     public static LocalDate WeekStart(LocalDate date)
     {
         DateOnly day = LocalDates.ToDateOnly(date);
-        return LocalDates.FromDateOnly(day.AddDays(-(int)day.DayOfWeek));
+        return LocalDates.FromDateOnly(day.AddDays(-CalendarWeekStart.Offset(day.DayOfWeek)));
     }
 
     /// <summary>Rebuilds the strip around <paramref name="selected"/>, reading which days have notes.</summary>
@@ -87,12 +101,14 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
             LocalDate date = LocalDates.AddDays(start, i);
             Days.Add(new WeekStripDayViewModel(
                 date,
-                WeekdayLabel(i),
+                WeekdayLabel((int)LocalDates.ToDateOnly(date).DayOfWeek),
                 isSelected: date == selected,
                 isToday: date == today,
                 hasNotes: withNotes.Contains(date),
                 _onSelectDate));
         }
+
+        RefreshAgendaDays();
     }
 
     /// <summary>Re-reads the dots for the week on screen, after a note was added or removed.</summary>
@@ -106,9 +122,9 @@ public sealed partial class WeekStripViewModel : ObservableObject, ILanguageAwar
 
     void ILanguageAware.OnLanguageChanged()
     {
-        for (int i = 0; i < Days.Count; i++)
+        foreach (WeekStripDayViewModel day in Days)
         {
-            Days[i].WeekdayLabel = WeekdayLabel(i);
+            day.WeekdayLabel = WeekdayLabel((int)LocalDates.ToDateOnly(day.Date).DayOfWeek);
         }
     }
 
@@ -165,6 +181,14 @@ public sealed partial class WeekStripDayViewModel : ObservableObject
     public bool IsSunday => LocalDates.ToDateOnly(Date).DayOfWeek == DayOfWeek.Sunday;
 
     public bool HasNotes { get; }
+
+    /// <summary>A dated to-do or event falls on the day (see <see cref="WeekStripViewModel.AgendaDays"/>).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsDot))]
+    private bool _hasAgenda;
+
+    /// <summary>The dot under the day: notes, or something on the agenda.</summary>
+    public bool ShowsDot => HasNotes || HasAgenda;
 
     [RelayCommand]
     private Task Select() => _onSelect(Date);

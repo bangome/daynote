@@ -136,7 +136,9 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
         AgendaOutstandingView owed = AgendaOutstanding.For(DateOnly.FromDateTime(now.DateTime), All);
 
         // The lists first, because selecting one that has since been deleted has to fall back to
-        // "all" before the rows below are filtered by it.
+        // "all" before the rows below are filtered by it. A name being typed survives the rebuild:
+        // a refresh set off by something else must not throw away a rename half done.
+        AgendaListRowViewModel? renaming = Lists.FirstOrDefault(static list => list.IsRenaming);
         Lists.Clear();
         foreach (AgendaListRow list in AgendaListCounts.For(lists, owed))
         {
@@ -149,6 +151,12 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
             {
                 Color = ListColor(list.List.Id),
             });
+        }
+
+        if (renaming is not null && Lists.FirstOrDefault(list => list.Id == renaming.Id) is { } again)
+        {
+            again.RenameCommand.Execute(null);
+            again.DraftName = renaming.DraftName;
         }
 
         if (SelectedListId is { } selected && lists.All(list => list.Id != selected))

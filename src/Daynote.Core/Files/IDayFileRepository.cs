@@ -15,6 +15,9 @@ public interface IDayFileRepository
         LocalDate localDate,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Every attachment on every date, newest date first — the files library and the month view.</summary>
+    ValueTask<IReadOnlyList<DayFile>> GetAllAsync(CancellationToken cancellationToken = default);
+
     ValueTask<DayFileDeleteResult> DeleteAsync(
         Guid id,
         CancellationToken cancellationToken = default);

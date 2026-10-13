@@ -26,6 +26,28 @@
     Windows a thin strip at the top of the main column carries the caption buttons.
   -->
 
+  <Window.Resources>
+    <!-- One line in the month view's day card: a ring (or the file's type), the title, its time or size. -->
+    <DataTemplate x:Key="BoardHoverRow" x:DataType="pvm:CalendarBoardItem">
+      <Button Classes="row" CornerRadius="8" Padding="8,0" MinHeight="30" Command="{Binding OpenCommand}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Panel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
+            <Ellipse Width="9" Height="9" StrokeThickness="2" Stroke="{Binding ListColor}" IsVisible="{Binding IsEvent}" />
+            <Panel IsVisible="{Binding IsTodo}">
+              <Ellipse Width="13" Height="13" StrokeThickness="2" Stroke="{Binding ListColor}" />
+              <Ellipse Width="13" Height="13" Fill="{Binding ListColor}" IsVisible="{Binding IsDone}" />
+            </Panel>
+            <Border Width="22" Height="16" CornerRadius="4" Background="{DynamicResource Daynote.Product.Brush.Seg}" IsVisible="{Binding IsFile}">
+              <TextBlock Classes="muted" FontSize="8" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Ext}" />
+            </Border>
+          </Panel>
+          <TextBlock Grid.Column="1" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Classes.done="{Binding IsDone}" Text="{Binding Title}" />
+          <TextBlock Grid.Column="2" Classes="faint" FontSize="11.5" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center" FontFeatures="+tnum" Text="{Binding Meta}" />
+        </Grid>
+      </Button>
+    </DataTemplate>
+  </Window.Resources>
+
   <Grid x:Name="Root" ColumnDefinitions="Auto,*">
 
     <!-- ── Sidebar ───────────────────────────────────────────────────────────────────────── -->
@@ -76,16 +98,27 @@
               <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavTimeline]}" />
             </Grid>
           </Button>
-          <Button x:Name="TutTabTodo" Classes="navitem" Classes.active="{Binding IsNavTodo}" Command="{Binding ShowAllTodosCommand}">
+          <Button x:Name="NavCalendar" Classes="navitem" Classes.active="{Binding IsNavCalendar}" Command="{Binding ShowCalendarCommand}">
             <Grid ColumnDefinitions="Auto,*,Auto">
+              <Border Grid.Column="0" Classes="mark" />
+              <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavCalendar]}" />
+            </Grid>
+          </Button>
+          <Button x:Name="TutTabTodo" Classes="navitem" Classes.active="{Binding IsNavTodo}" Command="{Binding ShowAllTodosCommand}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
               <Border Grid.Column="0" Classes="mark" />
               <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavTodo]}" />
               <TextBlock Grid.Column="2" Classes="count" VerticalAlignment="Center" Text="{Binding Todo.OpenCount}" />
+              <!-- The lists fold away behind this, and open by themselves while one narrows the view. -->
+              <Button x:Name="SidebarListsToggle" Grid.Column="3" Classes="navchev" Margin="6,0,-4,0" Command="{Binding ToggleSidebarListsCommand}"
+                      ToolTip.Tip="{Binding SidebarListsTip}" AutomationProperties.Name="{Binding SidebarListsTip}">
+                <Path Classes="icon" StrokeThickness="1.8" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" Classes.closed="{Binding !AreSidebarListsShown}" />
+              </Button>
             </Grid>
           </Button>
           <!-- The lists under 할 일: a ring in the list's colour, its name, what is owed in it. A list
                narrows the 할 일 view; right-click renames it in place or deletes it. -->
-          <ItemsControl x:Name="SidebarLists" ItemsSource="{Binding Todo.Lists}">
+          <ItemsControl x:Name="SidebarLists" ItemsSource="{Binding Todo.Lists}" IsVisible="{Binding AreSidebarListsShown}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="pvm:AgendaListRowViewModel">
                 <Panel>
@@ -116,7 +149,7 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button x:Name="NewAgendaListButton" Classes="navitem sub new" Command="{Binding NewAgendaListCommand}">
+          <Button x:Name="NewAgendaListButton" Classes="navitem sub new" Command="{Binding NewAgendaListCommand}" IsVisible="{Binding AreSidebarListsShown}">
             <TextBlock VerticalAlignment="Center" Text="{Binding Strings[AgendaListNew]}" />
           </Button>
           <Button x:Name="TutTabFavorites" Classes="navitem" Classes.active="{Binding IsNavFavorites}"
@@ -140,7 +173,7 @@
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Border Grid.Column="0" Classes="mark" />
               <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavFiles]}" />
-              <TextBlock Grid.Column="2" Classes="count" VerticalAlignment="Center" Text="{Binding Files.Items.Count}" />
+              <TextBlock Grid.Column="2" Classes="count" VerticalAlignment="Center" Text="{Binding Files.LibraryCount}" />
             </Grid>
           </Button>
         </StackPanel>
@@ -162,23 +195,24 @@
                 <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
               </Button>
             </Grid>
-            <UniformGrid Columns="7">
-              <UniformGrid.Styles>
+            <ItemsControl ItemsSource="{Binding Calendar.WeekdayHeadings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.Styles>
                 <Style Selector="TextBlock">
                   <Setter Property="FontSize" Value="10.5" />
                   <Setter Property="HorizontalAlignment" Value="Center" />
                   <Setter Property="Margin" Value="0,3" />
                   <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
                 </Style>
-              </UniformGrid.Styles>
-              <TextBlock Text="{Binding Strings.WeekdaySun}" />
-              <TextBlock Text="{Binding Strings.WeekdayMon}" />
-              <TextBlock Text="{Binding Strings.WeekdayTue}" />
-              <TextBlock Text="{Binding Strings.WeekdayWed}" />
-              <TextBlock Text="{Binding Strings.WeekdayThu}" />
-              <TextBlock Text="{Binding Strings.WeekdayFri}" />
-              <TextBlock Text="{Binding Strings.WeekdaySat}" />
-            </UniformGrid>
+              </ItemsControl.Styles>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:WeekdayHeading">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <ItemsControl x:Name="MiniCalendar" ItemsSource="{Binding Calendar.Cells}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
@@ -193,7 +227,7 @@
                         <TextBlock Text="{Binding DayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                       </Border>
                       <Ellipse Width="3" Height="3" Fill="{DynamicResource Daynote.Desk.Brush.Sun}" VerticalAlignment="Bottom"
-                               HorizontalAlignment="Center" Margin="0,0,0,-1" IsVisible="{Binding HasNotes}" />
+                               HorizontalAlignment="Center" Margin="0,0,0,-1" IsVisible="{Binding ShowsDot}" />
                     </Panel>
                   </Button>
                 </DataTemplate>
@@ -229,21 +263,22 @@
       <!-- Header: the big date, the week, and the view toggles. The week strip moves to a row of its
            own when the header is too narrow for one line (MainWindow.Header.cs), as the design's
            flex-wrap does. -->
-      <Border x:Name="Header" Grid.Row="1" Padding="28,18,28,16" Background="Transparent"
+      <Border x:Name="Header" Grid.Row="1" Padding="28,18,28,0" Background="Transparent" ZIndex="1"
               BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-        <Grid x:Name="HeaderGrid" ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto">
+        <Grid RowDefinitions="Auto,Auto">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
           <Button Grid.Column="0" Classes="ghost outlined" Margin="0,0,24,0" IsVisible="{Binding LeftCollapsed}"
                   Command="{Binding ToggleLeftCommand}" ToolTip.Tip="{Binding Strings[SidebarsExpand]}"
                   AutomationProperties.Name="{Binding Strings[SidebarsExpand]}">
             <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
           </Button>
 
-          <Button x:Name="BigDate" Grid.Column="1" Theme="{StaticResource Daynote.Bare}" Command="{Binding GoToTodayCommand}"
-                  ToolTip.Tip="{Binding TodayTip}" AutomationProperties.Name="{Binding Strings[GoToToday]}">
+          <Button x:Name="BigDate" Grid.Column="1" Theme="{StaticResource Daynote.Bare}" Width="228" HorizontalContentAlignment="Left"
+                  Command="{Binding GoToTodayCommand}" ToolTip.Tip="{Binding TodayTip}" AutomationProperties.Name="{Binding Strings[GoToToday]}">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <!-- line-height:1 in the design; Avalonia sets the glyphs lower in a line box shorter than
                    the font's own, so the margin puts the digits back where the browser draws them. -->
-              <TextBlock FontSize="44" FontWeight="ExtraBold" LetterSpacing="-2.2" LineHeight="44" VerticalAlignment="Center"
+              <TextBlock Width="58" TextAlignment="Right" FontSize="44" FontWeight="ExtraBold" LetterSpacing="-2.2" LineHeight="44" VerticalAlignment="Center"
                          Margin="0,-8,0,8" FontFeatures="+tnum" Text="{Binding BigDay}" />
               <StackPanel VerticalAlignment="Center">
                 <TextBlock FontSize="15" FontWeight="Bold" LetterSpacing="-0.3" Text="{Binding BigMeta}" />
@@ -257,7 +292,7 @@
             </StackPanel>
           </Button>
 
-          <StackPanel x:Name="WeekStrip" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="24,0"
+          <StackPanel x:Name="WeekStrip" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="24,0,0,0"
                       HorizontalAlignment="Center" VerticalAlignment="Center">
             <Button Classes="weekstep" Command="{Binding Week.PreviousWeekCommand}" AutomationProperties.Name="{Binding Strings[DeskPreviousWeek]}">
               <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
@@ -269,7 +304,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="pvm:WeekStripDayViewModel">
                   <Button Classes="weekday" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsTodayRing}"
-                          Classes.sunday="{Binding IsSunday}" Classes.notes="{Binding HasNotes}" Command="{Binding SelectCommand}">
+                          Classes.sunday="{Binding IsSunday}" Classes.notes="{Binding ShowsDot}" Command="{Binding SelectCommand}">
                     <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center">
                       <TextBlock Classes="wd" HorizontalAlignment="Center" Text="{Binding WeekdayLabel}" />
                       <TextBlock FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Text="{Binding DayText}" />
@@ -284,28 +319,159 @@
             </Button>
           </StackPanel>
 
-          <StackPanel x:Name="HeaderActions" Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <Button Classes="tool" Classes.primaryon="{Binding IsTimelineMode}" Padding="12,0" Command="{Binding ToggleTimelineCommand}"
-                    ToolTip.Tip="{Binding Strings.TimelineToggle}" Content="{Binding Strings[DeskTimelineButton]}" />
-            <Button Classes="tool" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{Binding ThemeTip}"
-                    AutomationProperties.Name="{Binding Strings.ThemeToggle}">
-              <Panel>
-                <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Moon}" IsVisible="{Binding !IsDark}" />
-                <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Sun}" IsVisible="{Binding IsDark}" />
+        </Grid>
+
+        <!-- The second line, on the header's rule: the day's note tabs in the editor, or the view's
+             name and a word about it elsewhere; the view toggles at the right behind a rule. -->
+        <Grid x:Name="HeaderBottom" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,16,0,0" Height="44">
+          <Grid Grid.Column="0" Margin="0,0,4,0" IsVisible="{Binding IsEditorMode}">
+<Grid ColumnDefinitions="*,Auto">
+              <!-- No bar: the wheel (either direction) and the round steps at the ends scroll it. -->
+              <ScrollViewer x:Name="NoteTabsScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                  <ItemsControl x:Name="NoteTabs" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="notes:NoteTabViewModel">
+                        <!-- A projection (the blank "노트 1" of an empty day) is not a note yet, so it
+                             gets no tab; the empty-day card stands in for it. -->
+                        <Button Classes="notetab" Classes.selected="{Binding IsSelected}" IsVisible="{Binding !IsProjection}"
+                                Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
+                                CommandParameter="{Binding}">
+                          <Button.KeyBindings>
+                            <KeyBinding Gesture="Delete"
+                                        Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                          </Button.KeyBindings>
+                          <Button.ContextMenu>
+                            <ContextMenu>
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuRename]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).RenameDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDuplicate]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DuplicateDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                              <Separator />
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDelete]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                            </ContextMenu>
+                          </Button.ContextMenu>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
+                                  VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+              </ScrollViewer>
+              <!-- Each end, while there is more past it: the page fading over the tabs, and a step. -->
+              <Panel x:Name="NoteTabsLeft" Grid.Column="0" Width="72" HorizontalAlignment="Left" IsVisible="False">
+                <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                  <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                      <GradientStop Offset="0.42" Color="Black" />
+                      <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                  </Border.OpacityMask>
+                </Border>
+                <Button Classes="tabstep" HorizontalAlignment="Left" Click="OnNoteTabsLeft"
+                        ToolTip.Tip="{Binding Strings[NoteTabsPrevious]}" AutomationProperties.Name="{Binding Strings[NoteTabsPrevious]}">
+                  <Path Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
+                </Button>
               </Panel>
-            </Button>
-            <Button Classes="tool" Classes.on="{Binding !RightCollapsed}" Command="{Binding ToggleRightCommand}"
-                    ToolTip.Tip="{Binding DayPanelTip}" AutomationProperties.Name="{Binding DayPanelTip}">
-              <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.Panel}" />
-            </Button>
-            <Button Classes="accent" Height="34" Padding="14,0" Margin="4,0,0,0" Command="{Binding NewNoteCommand}"
-                    ToolTip.Tip="{Binding NewNoteTip}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Path Classes="icon" StrokeThickness="1.7" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
-                <TextBlock VerticalAlignment="Center" Text="{Binding Strings[NewNote]}" />
-              </StackPanel>
-            </Button>
-          </StackPanel>
+              <Panel x:Name="NoteTabsRight" Grid.Column="0" Width="72" HorizontalAlignment="Right" IsVisible="False">
+                <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                  <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,0%">
+                      <GradientStop Offset="0.42" Color="Black" />
+                      <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                  </Border.OpacityMask>
+                </Border>
+                <Button Classes="tabstep" HorizontalAlignment="Right" Click="OnNoteTabsRight"
+                        ToolTip.Tip="{Binding Strings[NoteTabsNext]}" AutomationProperties.Name="{Binding Strings[NoteTabsNext]}">
+                  <Path Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
+                </Button>
+              </Panel>
+              <!-- "1 / 8 ▾": every note of the day in a menu, then +; a rule before them (design v2). -->
+              <Border Grid.Column="1" Margin="6,8,0,8" Padding="10,0,0,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                  <Button x:Name="TabMenuButton" Classes="tabmenu" Classes.open="{Binding IsTabMenuOpen}" Command="{Binding ToggleTabMenuCommand}"
+                          ToolTip.Tip="{Binding Strings[DeskTabMenuTip]}" AutomationProperties.Name="{Binding Strings[DeskTabMenuTip]}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock VerticalAlignment="Center" FontFeatures="+tnum" Text="{Binding TabPositionText}" />
+                      <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="ghost small" Command="{Binding NewNoteCommand}"
+                          ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
+                    <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                  </Button>
+                </StackPanel>
+              </Border>
+              </Grid>
+          </Grid>
+          <Grid Grid.Column="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,8,0" IsVisible="{Binding !IsEditorMode}">
+            <Border Grid.Column="0" Classes="viewtab" VerticalAlignment="Stretch" BorderBrush="{DynamicResource Daynote.Desk.Brush.Sun}" BorderThickness="0,0,0,2">
+              <TextBlock x:Name="ViewTitleText" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding ViewTitle}" />
+            </Border>
+            <TextBlock Grid.Column="1" Classes="muted" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Text="{Binding ViewSubtitle}" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <!-- 리스트 삭제: its to-dos move to the built-in list, so it is not asked twice. -->
+              <Button x:Name="DeleteListButton" Classes="link faint" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                      IsVisible="{Binding CanDeleteSelectedList}" Content="{Binding Strings[AgendaListDelete]}"
+                      Command="{Binding DeleteSelectedListCommand}" />
+              <!-- On the 할 일 view: the full card, on today, in the list being looked at. -->
+              <Button x:Name="ListAddTodo" Classes="ghost small" VerticalAlignment="Center" IsVisible="{Binding IsNavTodoView}"
+                      Command="{Binding AddListTodoCommand}" ToolTip.Tip="{Binding Strings[TodoAddTitle]}"
+                      AutomationProperties.Name="{Binding Strings[TodoAddTitle]}">
+                <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+              </Button>
+            </StackPanel>
+          </Grid>
+
+          <Border Grid.Column="1" Padding="8,0,0,5" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
+            <StackPanel x:Name="HeaderActions" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button x:Name="TimelineToggle" Classes="tool square" Classes.primaryon="{Binding IsTimelineMode}" Command="{Binding ToggleTimelineCommand}"
+                      ToolTip.Tip="{Binding Strings[DeskTimelineViewTip]}" AutomationProperties.Name="{Binding Strings[DeskTimelineViewTip]}">
+                <Panel>
+                  <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.TimelineView}" />
+                  <Path Data="{StaticResource Daynote.Desk.Geo.TimelineDots}" Fill="{Binding $parent[Button].Foreground}" />
+                </Panel>
+              </Button>
+              <Button x:Name="CalendarToggle" Classes="tool square" Classes.primaryon="{Binding IsCalendarMode}" Command="{Binding ToggleCalendarCommand}"
+                      ToolTip.Tip="{Binding Strings[DeskCalendarViewTip]}" AutomationProperties.Name="{Binding Strings[DeskCalendarViewTip]}">
+                <Panel>
+                  <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.Calendar}" />
+                  <Path Data="{StaticResource Daynote.Desk.Geo.CalendarCells}" Fill="{Binding $parent[Button].Foreground}" />
+                </Panel>
+              </Button>
+              <Button Classes="tool square" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{Binding ThemeTip}"
+                      AutomationProperties.Name="{Binding Strings.ThemeToggle}">
+                <Panel>
+                  <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Moon}" IsVisible="{Binding !IsDark}" />
+                  <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Sun}" IsVisible="{Binding IsDark}" />
+                </Panel>
+              </Button>
+              <Button Classes="tool square" Classes.on="{Binding !RightCollapsed}" Command="{Binding ToggleRightCommand}"
+                      ToolTip.Tip="{Binding DayPanelTip}" AutomationProperties.Name="{Binding DayPanelTip}">
+                <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.Panel}" />
+              </Button>
+              <Button Classes="accent" Height="34" Padding="14,0" Margin="4,0,0,0" Command="{Binding NewNoteCommand}"
+                      ToolTip.Tip="{Binding NewNoteTip}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon" StrokeThickness="1.7" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                  <TextBlock VerticalAlignment="Center" Text="{Binding Strings[NewNote]}" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+        </Grid>
         </Grid>
       </Border>
 
@@ -313,59 +479,7 @@
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
 
         <!-- Editor -->
-        <Grid x:Name="TutEditor" Grid.Column="0" RowDefinitions="Auto,*" IsVisible="{Binding IsEditorMode}">
-          <!-- The day's notes as tabs, the selected one underlined in sun. Right-click a tab to rename,
-               copy or delete it; Delete on a focused tab deletes it. -->
-          <Border Grid.Row="0" Padding="28,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-              <StackPanel Orientation="Horizontal" Spacing="2">
-                <ItemsControl x:Name="NoteTabs" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="notes:NoteTabViewModel">
-                      <!-- A projection (the blank "노트 1" of an empty day) is not a note yet, so it
-                           gets no tab; the empty-day card stands in for it. -->
-                      <Button Classes="notetab" Classes.selected="{Binding IsSelected}" IsVisible="{Binding !IsProjection}"
-                              Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
-                              CommandParameter="{Binding}">
-                        <Button.KeyBindings>
-                          <KeyBinding Gesture="Delete"
-                                      Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                        </Button.KeyBindings>
-                        <Button.ContextMenu>
-                          <ContextMenu>
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuRename]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).RenameDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDuplicate]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DuplicateDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                            <Separator />
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDelete]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                          </ContextMenu>
-                        </Button.ContextMenu>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                          <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
-                                VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
-                          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        </StackPanel>
-                      </Button>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button Classes="ghost small" Margin="4,0,0,6" VerticalAlignment="Bottom" Command="{Binding NewNoteCommand}"
-                        ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
-                  <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
-                </Button>
-              </StackPanel>
-            </ScrollViewer>
-          </Border>
-
+        <Grid x:Name="TutEditor" Grid.Column="0" RowDefinitions="0,*" IsVisible="{Binding IsEditorMode}">
           <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->
           <Grid x:Name="NoteColumn" Grid.Row="1" RowDefinitions="Auto,*,Auto" MaxWidth="760" IsVisible="{Binding !IsDayEmpty}">
             <StackPanel Grid.Row="0" Margin="48,35,48,0">
@@ -615,20 +729,104 @@
           </StackPanel>
         </ScrollViewer>
 
+        <!-- 캘린더: the month of the selected day, each day with its events, to-dos and files; the
+             filters at the right hide a kind. Resting on a day brings up its whole card. -->
+        <Grid x:Name="CalendarView" Grid.Column="0" RowDefinitions="Auto,Auto,*" Margin="24,18,24,18" IsVisible="{Binding IsCalendarMode}">
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" FontSize="24" FontWeight="ExtraBold" LetterSpacing="-0.7" VerticalAlignment="Center" Text="{Binding Calendar.MonthLabel}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="14,0,0,0" VerticalAlignment="Center">
+              <Button Classes="ghost outlined board" Command="{Binding Calendar.PreviousMonthCommand}" AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
+                <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
+              </Button>
+              <Button Classes="ghost outlined board" Command="{Binding Calendar.NextMonthCommand}" AutomationProperties.Name="{Binding Strings[NextMonth]}">
+                <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
+              </Button>
+              <Button x:Name="CalendarTodayButton" Classes="tool boardtoday" Command="{Binding CalendarTodayCommand}" Content="{Binding Strings.Today}" />
+            </StackPanel>
+            <ItemsControl Grid.Column="3" ItemsSource="{Binding CalendarBoard.Filters}" VerticalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:CalendarBoardFilter">
+                  <Button Classes="boardfilter" Classes.on="{Binding IsOn}" Command="{Binding ToggleCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                      <TextBlock VerticalAlignment="Center" FontWeight="Normal" Opacity="0.75" Text="{Binding CountText}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+          <Border Grid.Row="1" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
+            <ItemsControl ItemsSource="{Binding Calendar.WeekdayHeadings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:WeekdayHeading">
+                  <TextBlock Classes="boardwd" Classes.sunday="{Binding IsSunday}" Classes.saturday="{Binding IsSaturday}" Text="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <Border Grid.Row="2" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
+            <ItemsControl x:Name="CalendarBoardGrid" ItemsSource="{Binding CalendarBoard.Cells}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:CalendarBoardDay">
+                  <Button Classes="boardcell" Classes.inmonth="{Binding IsInMonth}" Classes.selected="{Binding IsSelected}"
+                          Command="{Binding SelectCommand}" PointerEntered="OnBoardCellEntered" PointerExited="OnBoardCellExited">
+                    <StackPanel Spacing="2">
+                      <Grid ColumnDefinitions="Auto,*,Auto" Height="22">
+                        <Button Grid.Column="0" Classes="boardnum" Classes.today="{Binding IsToday}" Classes.sunday="{Binding IsSunday}"
+                                Classes.selected="{Binding IsSelected}" Classes.inmonth="{Binding IsInMonth}"
+                                Command="{Binding OpenCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskCalendarOpenDay]}">
+                          <TextBlock Text="{Binding DayText}" FontFeatures="+tnum" />
+                        </Button>
+                        <TextBlock Grid.Column="2" Classes="faint" FontSize="10.5" VerticalAlignment="Center" Text="{Binding NoteText}" IsVisible="{Binding HasNotes}" />
+                      </Grid>
+                      <ItemsControl ItemsSource="{Binding Lines}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="pvm:CalendarBoardItem">
+                            <Button Classes="boardline" Classes.allday="{Binding IsAllDay}" Classes.past="{Binding IsPast}" Classes.done="{Binding IsDone}"
+                                    Classes.todo="{Binding IsTodo}" Classes.file="{Binding IsFile}" Command="{Binding OpenCommand}" ToolTip.Tip="{Binding Title}">
+                              <Grid ColumnDefinitions="Auto,Auto,*">
+                                <Panel Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center">
+                                  <Ellipse Width="7" Height="7" StrokeThickness="2" Stroke="{Binding ListColor}" IsVisible="{Binding IsEvent}" />
+                                  <Panel IsVisible="{Binding IsTodo}">
+                                    <Ellipse Width="9" Height="9" StrokeThickness="1.5" Stroke="{Binding ListColor}" />
+                                    <Ellipse Width="9" Height="9" Fill="{Binding ListColor}" IsVisible="{Binding IsDone}" />
+                                  </Panel>
+                                  <Path Classes="icon" Width="10" Height="10" Stretch="Uniform" StrokeThickness="1.2" Data="{StaticResource Daynote.Desk.Geo.Clip}"
+                                        Stroke="{DynamicResource Daynote.Desk.Brush.Text3}" IsVisible="{Binding IsFile}" />
+                                </Panel>
+                                <TextBlock Grid.Column="1" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center" FontFeatures="+tnum" Text="{Binding Time}"
+                                           IsVisible="{Binding HasTime}" />
+                                <TextBlock Grid.Column="2" Classes="title" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Classes="faint" FontSize="11" FontWeight="Bold" Margin="5,0" Text="{Binding MoreText}" IsVisible="{Binding HasMore}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </Grid>
+
         <!-- Lists: to-dos, favourites, tags, files. -->
         <ScrollViewer Grid.Column="0" Padding="28,32,28,48" IsVisible="{Binding IsListMode}">
           <StackPanel MaxWidth="760">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="0,0,0,20">
-              <TextBlock Grid.Column="0" FontSize="26" FontWeight="ExtraBold" LetterSpacing="-0.8" VerticalAlignment="Bottom" Text="{Binding ListTitle}" />
-              <TextBlock Grid.Column="1" Classes="muted" FontSize="13" VerticalAlignment="Bottom" Margin="10,0,0,4" Text="{Binding ListSubtitle}" />
-              <!-- 리스트 삭제: its to-dos move to the built-in list, so it is not asked twice. -->
-              <Button Grid.Column="3" x:Name="DeleteListButton" Classes="link faint" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Bottom"
-                      Margin="0,0,14,4" IsVisible="{Binding CanDeleteSelectedList}" Content="{Binding Strings[AgendaListDelete]}"
-                      Command="{Binding DeleteSelectedListCommand}" />
-              <!-- On the 할 일 view: a to-do on today, in the list being looked at. -->
-              <Button Grid.Column="4" x:Name="ListAddTodo" Classes="accent pill small" VerticalAlignment="Bottom"
-                      IsVisible="{Binding TabIsTodo}" Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddListTodoCommand}" />
-            </Grid>
 
             <!-- To-dos, every note on every date. -->
             <StackPanel IsVisible="{Binding TabIsTodo}">
@@ -660,7 +858,7 @@
                                    IsVisible="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Todo.SelectedListId, Converter={x:Static ObjectConverters.IsNull}}" />
                         <Border Grid.Column="3" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="6" Padding="8,3"
                                 Margin="14,0,0,0" VerticalAlignment="Center" IsVisible="{Binding HasDue}">
-                          <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="12" FontWeight="Bold" Text="{Binding DueLabel}" />
+                          <TextBlock Classes="chipdue" Classes.overdue="{Binding Overdue}" FontSize="12" FontWeight="Bold" Text="{Binding ListDueLabel}" />
                         </Border>
                       </Grid>
                     </Button>
@@ -752,55 +950,83 @@
               <TextBlock Classes="empty" Text="{Binding Strings.TagPanelEmpty}" IsVisible="{Binding TagPanel.IsEmpty}" />
             </StackPanel>
 
-            <!-- Files on the selected day: a drop zone, then the cards. -->
+            <!-- Every date's files, newest first, under the date they belong to; a search over their
+                 names, and + to add to the day being looked at. Dropping files still adds them there. -->
             <StackPanel IsVisible="{Binding TabIsFiles}">
-              <Button x:Name="FileDropZone" Theme="{StaticResource Daynote.Bare}" HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Stretch" Margin="0,0,0,12"
-                      Command="{Binding Files.AddFilesCommand}" DragDrop.AllowDrop="True">
-                <Panel>
-                  <Rectangle RadiusX="14" RadiusY="14" Stroke="{DynamicResource Daynote.Product.Brush.Stroke}" StrokeThickness="1.5"
-                             StrokeDashArray="4,3" Fill="Transparent" />
-                  <TextBlock Classes="muted" FontSize="13" Margin="22" HorizontalAlignment="Center" TextWrapping="Wrap"
-                             Text="{Binding FilesDropText}" />
-                </Panel>
-              </Button>
-              <ItemsControl ItemsSource="{Binding Files.Items}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><views:AutoFillGrid MinItemWidth="200" Gap="12" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+              <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,22">
+                <Border Grid.Column="0" Height="38" Padding="12,0" CornerRadius="10" Background="{DynamicResource Daynote.Product.Brush.Card}"
+                        BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke}" BorderThickness="1">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Path Grid.Column="0" Classes="icon" Margin="0,0,9,0" StrokeThickness="1.5" Stroke="{DynamicResource Daynote.Desk.Brush.Text3}"
+                          Data="{StaticResource Daynote.Desk.Geo.Search}" />
+                    <TextBox Grid.Column="1" x:Name="FileSearch" Classes="bare" FontSize="13.5" VerticalAlignment="Center"
+                             Text="{Binding Files.LibraryQuery, Mode=TwoWay}" PlaceholderText="{Binding Strings[DeskFilesSearchPlaceholder]}" />
+                    <Button Grid.Column="2" Classes="ghost tiny" IsVisible="{Binding Files.HasLibraryQuery}" Command="{Binding Files.ClearLibraryQueryCommand}">
+                      <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Close}" />
+                    </Button>
+                  </Grid>
+                </Border>
+                <Button Grid.Column="1" x:Name="FileDropZone" Classes="accent" Height="38" Padding="14,0" CornerRadius="10" Margin="10,0,0,0"
+                        Command="{Binding Files.AddFilesCommand}" DragDrop.AllowDrop="True">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Classes="icon" StrokeThickness="1.7" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Files.LibraryAddText}" />
+                  </StackPanel>
+                </Button>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Files.Groups}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="pvm:FileItemViewModel">
-                    <!-- Double-tap writes a copy wherever the user points: the stored bytes live under a
-                         hashed name, so this is the only way an attachment gets back out. -->
-                    <Border Classes="panel" ClipToBounds="True" DoubleTapped="OnFileCardDoubleTapped"
-                            ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileTip]}">
-                      <StackPanel>
-                        <Panel Height="96" Background="{DynamicResource Daynote.Product.Brush.Seg}">
-                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
-                          <TextBlock Classes="faint" FontSize="13" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                     Text="{Binding Ext}" IsVisible="{Binding !HasThumbnail}" />
-                        </Panel>
-                        <Grid ColumnDefinitions="*,Auto" Margin="12,10">
-                          <StackPanel Grid.Column="0">
-                            <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
-                            <TextBlock Classes="faint" FontSize="11.5" Margin="0,1,0,0" Text="{Binding SizeLabel}" IsVisible="{Binding !WasSaved}" />
-                            <TextBlock FontSize="11.5" Foreground="{DynamicResource Daynote.Product.Brush.Ok}" TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SavedTo}" IsVisible="{Binding WasSaved}" />
-                            <TextBlock FontSize="11.5" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" IsVisible="{Binding SaveFailed}"
-                                       Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileFailed]}" />
-                            <!-- Another device attached this and the bytes are still coming. -->
-                            <TextBlock Classes="faint" FontSize="11.5" IsVisible="{Binding IsAwaitingDownload}"
-                                       Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[FileAwaitingDownload]}" />
-                          </StackPanel>
-                          <Button Grid.Column="1" Classes="link faint" FontSize="11.5" VerticalAlignment="Center" Margin="8,0,0,0"
-                                  Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskFileDelete]}"
-                                  Command="{Binding DeleteCommand}" />
-                        </Grid>
-                      </StackPanel>
-                    </Border>
+                  <DataTemplate x:DataType="pvm:FileDateGroupViewModel">
+                    <StackPanel Margin="0,0,0,26">
+                      <Button Classes="link" Margin="0,0,0,10" Command="{Binding OpenCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Heading}" />
+                          <TextBlock Classes="faint" FontSize="12" VerticalAlignment="Bottom" Text="{Binding CountText}" />
+                        </StackPanel>
+                      </Button>
+                      <ItemsControl ItemsSource="{Binding Files}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><views:AutoFillGrid MinItemWidth="200" Gap="12" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pvm:FileItemViewModel">
+                              <!-- Double-tap writes a copy wherever the user points: the stored bytes live under a
+                                   hashed name, so this is the only way an attachment gets back out. -->
+                              <Border Classes="panel" ClipToBounds="True" DoubleTapped="OnFileCardDoubleTapped"
+                                      ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileTip]}">
+                                <StackPanel>
+                                  <Panel Height="96" Background="{DynamicResource Daynote.Product.Brush.Seg}">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
+                                    <TextBlock Classes="faint" FontSize="13" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Text="{Binding Ext}" IsVisible="{Binding !HasThumbnail}" />
+                                  </Panel>
+                                  <Grid ColumnDefinitions="*,Auto" Margin="12,10">
+                                    <StackPanel Grid.Column="0">
+                                      <TextBlock FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                                      <TextBlock Classes="faint" FontSize="11.5" Margin="0,1,0,0" Text="{Binding SizeLabel}" IsVisible="{Binding !WasSaved}" />
+                                      <TextBlock FontSize="11.5" Foreground="{DynamicResource Daynote.Product.Brush.Ok}" TextTrimming="CharacterEllipsis"
+                                                 Text="{Binding SavedTo}" IsVisible="{Binding WasSaved}" />
+                                      <TextBlock FontSize="11.5" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" IsVisible="{Binding SaveFailed}"
+                                                 Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[SaveFileFailed]}" />
+                                      <!-- Another device attached this and the bytes are still coming. -->
+                                      <TextBlock Classes="faint" FontSize="11.5" IsVisible="{Binding IsAwaitingDownload}"
+                                                 Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[FileAwaitingDownload]}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="link faint" FontSize="11.5" VerticalAlignment="Center" Margin="8,0,0,0"
+                                            Content="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskFileDelete]}"
+                                            Command="{Binding DeleteCommand}" />
+                                  </Grid>
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <TextBlock Classes="muted" FontSize="13" HorizontalAlignment="Center" Margin="0,48" Text="{Binding Files.LibraryEmptyText}"
+                         IsVisible="{Binding Files.IsLibraryEmpty}" />
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
@@ -839,12 +1065,25 @@
                             <Path Classes="repeat" IsVisible="{Binding IsRepeat}"
                                   ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskRepeatTip]}" />
                           </StackPanel>
-                          <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,1,0,0"
-                                     Text="{Binding DueLabel}" IsVisible="{Binding HasDue}" />
+                          <TextBlock Classes="daysub" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,1,0,0"
+                                     Text="{Binding DaySubLabel}" IsVisible="{Binding HasDaySub}" />
                         </StackPanel>
                       </Grid>
                     </Button>
                   </Panel>
+                </DataTemplate>
+                <!-- A to-do owed on another day, under "남은 할 일 전체": its when, red once it has passed. -->
+                <DataTemplate x:Key="OtherTodoRow" x:DataType="vm:PanelAgendaRow">
+                  <Button Classes="row" Padding="10,7" Command="{Binding Row.JumpCommand}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <views:DeskTodoCheck Grid.Column="0" Margin="0,1,10,0" IsChecked="{Binding Row.Checked}" Toggle="{Binding Row.ToggleCommand}"
+                                           Key="{Binding Row.Key}" Tint="{Binding Row.ListColor}" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock FontSize="13" LineHeight="18.2" TextWrapping="Wrap" Text="{Binding Row.Text}" />
+                        <TextBlock Classes="daysub" Classes.overdue="{Binding IsLate}" FontSize="11.5" Margin="0,1,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Sub}" />
+                      </StackPanel>
+                    </Grid>
+                  </Button>
                 </DataTemplate>
               </StackPanel.Resources>
 
@@ -860,13 +1099,20 @@
 
               <!-- 일정: this date's events, all-day first, then by start. -->
               <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,16,14,4">
-                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Center" Text="{Binding Strings[DeskDayEventTitle]}" />
+                <Button Grid.Column="0" x:Name="DayEventsToggle" Classes="sectionhead" Command="{Binding ToggleDayEventsCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Path Classes="icon sectionchev" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" Classes.closed="{Binding !IsDayEventsOpen}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Strings[DeskDayEventTitle]}" />
+                  </StackPanel>
+                </Button>
                 <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Center" Margin="8,1,0,0" Text="{Binding DayEventCountText}" />
                 <Button Grid.Column="3" x:Name="DayAddEvent" Classes="ghost tiny" Command="{Binding AddDayEventCommand}"
                         ToolTip.Tip="{Binding Strings[DeskAddTip]}" AutomationProperties.Name="{Binding Strings[DeskAddTip]}">
                   <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
                 </Button>
               </Grid>
+              <StackPanel IsVisible="{Binding IsDayEventsOpen}">
+              <TextBlock Classes="grouplabel" Text="{Binding DayGroupLabel}" />
               <ItemsControl x:Name="DayEventList" ItemsSource="{Binding DayEvents}" Margin="10,0">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:TodoItemViewModel">
@@ -896,18 +1142,47 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <TextBlock Classes="faint" FontSize="12.5" Margin="20,2,20,6" Text="{Binding Strings[DeskDayEventNone]}" IsVisible="{Binding IsDayEventEmpty}" />
+              <StackPanel IsVisible="{Binding HasUpcoming}">
+                <TextBlock Classes="grouplabel" Text="{Binding UpcomingHeading}" />
+                <ItemsControl x:Name="UpcomingEventList" ItemsSource="{Binding UpcomingEvents}" Margin="10,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PanelAgendaRow">
+                      <Button Classes="row" Padding="10,6" Command="{Binding Row.JumpCommand}">
+                        <Grid ColumnDefinitions="42,8,*">
+                          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock FontSize="12" FontWeight="Bold" Text="{Binding Lead}" />
+                            <TextBlock Classes="faint" FontSize="11" Text="{Binding Sub}" />
+                          </StackPanel>
+                          <Grid Grid.Column="2" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                            <Ellipse Grid.Column="0" Classes="eventring" Margin="0,0,7,0" Stroke="{Binding Row.ListColor}" />
+                            <TextBlock Grid.Column="1" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Text="{Binding Row.Text}" />
+                          </Grid>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              </StackPanel>
 
               <Border Height="1" Margin="20,10,20,0" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
               <!-- 할 일: what is left on this date, a line to add one, then what was finished behind its count. -->
               <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,12,14,4">
-                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Center" Text="{Binding Strings[DeskDayTodoHeading]}" />
+                <Button Grid.Column="0" x:Name="DayTodosToggle" Classes="sectionhead" Command="{Binding ToggleDayTodosSectionCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Path Classes="icon sectionchev" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" Classes.closed="{Binding !IsDayTodosOpen}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Strings[DeskDayTodoHeading]}" />
+                  </StackPanel>
+                </Button>
                 <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Center" Margin="8,1,0,0" Text="{Binding DayTodoCountText}" />
                 <Button Grid.Column="3" x:Name="DayAddTodo" Classes="ghost tiny" Command="{Binding AddDayTodoCommand}"
                         ToolTip.Tip="{Binding Strings[DeskAddTip]}" AutomationProperties.Name="{Binding Strings[DeskAddTip]}">
                   <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
                 </Button>
               </Grid>
+              <StackPanel IsVisible="{Binding IsDayTodosOpen}">
+              <TextBlock Classes="grouplabel" Text="{Binding DayGroupLabel}" />
               <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
               <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0" ItemTemplate="{StaticResource DayTodoRow}"
                             motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}"
@@ -916,7 +1191,7 @@
                 <Path Grid.Column="0" Classes="icon" Width="17" Margin="0,0,10,0" StrokeThickness="1.5"
                       Stroke="{DynamicResource Daynote.Desk.Brush.Text3}" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
                 <TextBox Grid.Column="1" x:Name="DayQuickAdd" Classes="bare quickadd" Text="{Binding DayQuickText, Mode=TwoWay}"
-                         PlaceholderText="{Binding Strings[DeskQuickAddDay]}">
+                         PlaceholderText="{Binding DayQuickPlaceholder}">
                   <TextBox.KeyBindings>
                     <KeyBinding Gesture="Enter" Command="{Binding QuickAddDayCommand}" />
                   </TextBox.KeyBindings>
@@ -932,14 +1207,27 @@
               </Button>
               <ItemsControl x:Name="DayDoneList" ItemsSource="{Binding DayTodosDone}" Margin="10,0" ItemTemplate="{StaticResource DayTodoRow}"
                             IsVisible="{Binding IsDayDoneOpen}" />
+              <StackPanel IsVisible="{Binding HasOtherTodos}">
+                <Border Height="1" Margin="20,8,20,2" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+                <TextBlock Classes="grouplabel" Text="{Binding OtherTodosHeading}" />
+                <ItemsControl x:Name="OtherTodoList" ItemsSource="{Binding OtherTodos}" Margin="10,0" ItemTemplate="{StaticResource OtherTodoRow}" />
+              </StackPanel>
+              </StackPanel>
 
               <Border Height="1" Margin="20,14" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
-              <Grid ColumnDefinitions="*,Auto" Margin="20,0,20,10">
-                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" Text="{Binding Strings[DeskNavFiles]}" />
-                <Button Grid.Column="1" Classes="link sun" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Bottom"
+              <Grid ColumnDefinitions="*,Auto,Auto" Margin="20,0,20,10">
+                <Button Grid.Column="0" x:Name="DayFilesToggle" Classes="sectionhead" HorizontalAlignment="Left" Command="{Binding ToggleDayFilesCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Path Classes="icon sectionchev" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" Classes.closed="{Binding !IsDayFilesOpen}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Strings[DeskNavFiles]}" />
+                  </StackPanel>
+                </Button>
+                <TextBlock Grid.Column="1" Classes="faint" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Text="{Binding Files.Items.Count}" />
+                <Button Grid.Column="2" Classes="link sun" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                         Content="{Binding Strings[DeskFilesAdd]}" Command="{Binding Files.AddFilesCommand}" />
               </Grid>
+              <StackPanel IsVisible="{Binding IsDayFilesOpen}">
               <ItemsControl ItemsSource="{Binding Files.Items}" Margin="10,0,10,20">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:FileItemViewModel">
@@ -971,6 +1259,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <TextBlock Classes="empty" Margin="20,-16,20,20" Text="{Binding Strings[DeskFilesEmpty]}" IsVisible="{Binding Files.IsEmpty}" />
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </Border>
@@ -978,6 +1267,75 @@
     </Grid>
 
     <!-- ── Overlays ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- The day's notes, from "1 / 8 ▾": number, title, a star, the first line; a sun dot on the open
+         one. A press anywhere else closes it. Placed under its button by MainWindow.NoteTabs.cs. -->
+    <Panel x:Name="TabMenuLayer" Grid.ColumnSpan="2" ZIndex="19" IsVisible="{Binding IsTabMenuOpen}" Background="Transparent"
+           PointerPressed="OnTabMenuLayerPressed">
+      <Border x:Name="TabMenu" Classes="popmenu" Width="320" MaxHeight="380" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="10,8,10,6">
+              <TextBlock FontSize="12" FontWeight="ExtraBold" VerticalAlignment="Bottom" Text="{Binding TabMenuHeading}" />
+              <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Bottom" Text="{Binding TabMenuCountText}" />
+            </StackPanel>
+            <ItemsControl x:Name="TabMenuList" ItemsSource="{Binding Notes.Tabs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="notes:NoteTabViewModel">
+                  <Button Classes="row menuitem" Classes.current="{Binding IsSelected}" Padding="10,9" IsVisible="{Binding !IsProjection}"
+                          Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).PickTabMenuNoteCommand}" CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="18,10,*,Auto">
+                      <TextBlock Grid.Column="0" Classes="faint" FontSize="11" FontWeight="Bold" Margin="0,2,0,0" VerticalAlignment="Top" Text="{Binding DisplayNumber}" />
+                      <StackPanel Grid.Column="2">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <TextBlock FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+                          <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}" VerticalAlignment="Center"
+                                IsVisible="{Binding IsFavorite}" />
+                        </StackPanel>
+                        <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+                      </StackPanel>
+                      <Ellipse Grid.Column="3" Width="6" Height="6" Margin="10,6,0,0" VerticalAlignment="Top"
+                               Fill="{DynamicResource Daynote.Desk.Brush.Sun}" IsVisible="{Binding IsSelected}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Panel>
+
+    <!-- The month view's day card: everything on the day under the pointer, by kind. It stays while
+         the pointer moves onto it; its heading opens the day. -->
+    <Border x:Name="BoardHover" Grid.ColumnSpan="2" Classes="popmenu" ZIndex="18" Width="288" MaxHeight="380" Padding="6,8"
+            HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding CalendarBoard.Hover, Converter={x:Static ObjectConverters.IsNotNull}}"
+            PointerEntered="OnBoardHoverEntered" PointerExited="OnBoardCellExited">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel DataContext="{Binding CalendarBoard.Hover}" x:DataType="pvm:CalendarBoardDay">
+          <Button Classes="link" Margin="8,4" Command="{Binding OpenCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Heading}" />
+              <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Bottom" Text="{Binding NoteText}" IsVisible="{Binding HasNotes}" />
+            </StackPanel>
+          </Button>
+          <TextBlock Classes="hovhead" IsVisible="{Binding HasEvents}">
+            <Run Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskDayEventTitle]}" /><Run Text=" " /><Run FontWeight="Normal" Text="{Binding EventCountText}" />
+          </TextBlock>
+          <ItemsControl ItemsSource="{Binding Events}" ItemTemplate="{StaticResource BoardHoverRow}" />
+          <TextBlock Classes="hovhead" IsVisible="{Binding HasTodos}">
+            <Run Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskDayTodoHeading]}" /><Run Text=" " /><Run FontWeight="Normal" Text="{Binding TodoCountText}" />
+          </TextBlock>
+          <ItemsControl ItemsSource="{Binding Todos}" ItemTemplate="{StaticResource BoardHoverRow}" />
+          <TextBlock Classes="hovhead" IsVisible="{Binding HasFiles}">
+            <Run Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskNavFiles]}" /><Run Text=" " /><Run FontWeight="Normal" Text="{Binding FileCountText}" />
+          </TextBlock>
+          <ItemsControl ItemsSource="{Binding Files}" ItemTemplate="{StaticResource BoardHoverRow}" />
+          <TextBlock Classes="faint" FontSize="12.5" Margin="8,6,8,4" IsVisible="{Binding IsEmpty}"
+                     Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskCalendarHoverEmpty]}" />
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
 
     <!-- Settings: a 760x560 dialog with the four sections down its left. -->
     <!-- Each overlay opens and closes as the motion spec's desktop M6 has it (Popover). -->
@@ -1174,15 +1532,16 @@
                         <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
                       </Button>
                     </Grid>
-                    <UniformGrid Columns="7">
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySun}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayMon}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayTue}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayWed}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayThu}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdayFri}" />
-                      <TextBlock Classes="wd" Text="{Binding Strings.WeekdaySat}" />
-                    </UniformGrid>
+                    <ItemsControl ItemsSource="{Binding TodoEntry.Calendar.WeekdayHeadings}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:WeekdayHeading">
+                          <TextBlock Classes="wd" Text="{Binding Label}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <ItemsControl ItemsSource="{Binding TodoEntry.Calendar.Cells}">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>

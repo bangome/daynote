@@ -124,7 +124,7 @@ public sealed partial class DesktopShellViewModel
     {
         RightTab.Favorites => Format(AppStrings.DeskCountFormat, Favorites.Items.Count),
         RightTab.Tags => Format(AppStrings.DeskCountFormat, TagPanel.Tags.Count),
-        RightTab.Files => LocalDates.DisplayDayHeading(SelectedDate),
+        RightTab.Files => Format(AppStrings.DeskFilesAllFormat, Files.LibraryCount),
         _ => SelectedAgendaList is { } list
             ? Format(AppStrings.DeskListAllDatesFormat, list.CountText)
             : Format(AppStrings.DeskListAllDatesFormat, Todo.OpenCount),
@@ -255,8 +255,8 @@ public sealed partial class DesktopShellViewModel
             OnTimelineRowsChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         };
         Timeline.Rows.CollectionChanged += OnTimelineRowsChanged;
-        Favorites.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
-        TagPanel.Tags.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
+        Favorites.Items.CollectionChanged += (_, _) => RaiseHeaderLine();
+        TagPanel.Tags.CollectionChanged += (_, _) => RaiseHeaderLine();
         Todo.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TodoPanelViewModel.OpenCount))
@@ -281,6 +281,8 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(IsEditorMode));
         OnPropertyChanged(nameof(IsNavEditor));
         OnPropertyChanged(nameof(IsNavTimeline));
+        OnPropertyChanged(nameof(IsNavCalendar));
+        OnPropertyChanged(nameof(AreSidebarListsShown));
         OnPropertyChanged(nameof(IsNavTodo));
         OnPropertyChanged(nameof(IsNavFavorites));
         OnPropertyChanged(nameof(IsNavTags));
@@ -288,6 +290,7 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(ListTitle));
         OnPropertyChanged(nameof(ListSubtitle));
         RaiseListState();
+        RaiseHeaderLine();
     }
 
     /// <summary>"오늘의 노트": back to the editor on whatever day is selected.</summary>
@@ -296,6 +299,7 @@ public sealed partial class DesktopShellViewModel
     {
         IsTimelineMode = false;
         IsListMode = false;
+        IsCalendarMode = false;
     }
 
     /// <summary>Opens the timeline (the sidebar's and the palette's way in; the header button toggles).</summary>
@@ -327,6 +331,12 @@ public sealed partial class DesktopShellViewModel
         ActiveTab = tab;
         IsTimelineMode = false;
         IsListMode = true;
+        IsCalendarMode = false;
+        if (tab == RightTab.Files)
+        {
+            await Files.LoadLibraryAsync().ConfigureAwait(true);
+            RaiseHeaderLine();
+        }
     }
 
     [RelayCommand]
@@ -358,6 +368,8 @@ public sealed partial class DesktopShellViewModel
         }
 
         IsListMode = false;
+
+        IsCalendarMode = false;
         await SelectDateAsync(group.Date).ConfigureAwait(true);
     }
 
@@ -426,6 +438,7 @@ public sealed partial class DesktopShellViewModel
             DayTodosDone.Add(Todo.Row(row, now, TodoRowScope.Day));
         }
 
+        RefreshPanelExtras(LocalDates.ToDateOnly(SelectedDate), now);
         DayEventCountText = DayEvents.Count.ToString(CultureInfo.CurrentCulture);
         IsDayEventEmpty = DayEvents.Count == 0;
 

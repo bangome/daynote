@@ -112,6 +112,42 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public bool Overdue => row.IsOverdue(now);
 
+    /// <summary>
+    /// The day panel's line under a to-do in v2: its clock spelled the long way, "오전 8:00". Empty
+    /// for a to-do with only a day.
+    /// </summary>
+    public string DaySubLabel => row.At is { } at
+        ? at.Value.ToString(AppStrings.DeskEventTimeFormat, CultureInfo.CurrentCulture)
+        : string.Empty;
+
+    public bool HasDaySub => DaySubLabel.Length > 0;
+
+    /// <summary>
+    /// The desktop 할 일 view's chip: a repeat says how it repeats, "매일 08:00" or "매주 금요일",
+    /// where the next occurrence's date would say less; anything else is <see cref="DueLabel"/>.
+    /// </summary>
+    public string ListDueLabel
+    {
+        get
+        {
+            if (!row.IsOccurrence || row.Item.Rrule is not { } rrule)
+            {
+                return DueLabel;
+            }
+
+            CultureInfo culture = CultureInfo.CurrentCulture;
+            string rule = Notes.AgendaRuleText.Describe(rrule);
+            if (string.Equals(rule, AppStrings.AgendaRuleWeekly, StringComparison.Ordinal) && row.Falls is { } day)
+            {
+                rule = string.Format(culture, AppStrings.TodoEntryRepeatWeeklyOn, culture.DateTimeFormat.GetDayName(day.Value.DayOfWeek));
+            }
+
+            return row.At is { } at
+                ? string.Create(culture, $"{rule} {at.Value.ToString(AppStrings.TodoRowTimeFormat, culture)}")
+                : rule;
+        }
+    }
+
     public bool IsEvent => row.Item.Kind == AgendaKind.Event;
 
     public bool IsTask => !IsEvent;

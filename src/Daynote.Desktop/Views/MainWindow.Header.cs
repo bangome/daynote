@@ -4,10 +4,10 @@ using Avalonia.Controls;
 namespace Daynote.Desktop.Views;
 
 /// <summary>
-/// The header's one responsive rule. The design lays the date, the week strip and the actions out
-/// with <c>flex-wrap</c>: when the three do not fit on one line, the week strip drops to a line of its
-/// own under them. A Grid does not wrap, so this moves the strip between the two rows as the header
-/// is resized; the columns never change.
+/// The header's one responsive rule. The design lays the date and the week strip out with
+/// <c>flex-wrap</c>: when the two do not fit on one line, the week strip drops to a line of its own
+/// under the date (the view toggles have their own line in v2). A Grid does not wrap, so this moves
+/// the strip between the two rows as the header is resized; the columns never change.
 /// </summary>
 public partial class MainWindow
 {
@@ -22,13 +22,12 @@ public partial class MainWindow
     private const double WeekStripWidth = (7 * 48) + (6 * 4) + (2 * 28) + (2 * 4);
 
     /// <remarks>
-    /// Re-checked when the actions change width too (a language switch relabels them) and when the
-    /// header's padding moves with the sidebar (ApplyHeaderInset), neither of which resizes the header.
+    /// Re-checked when the date changes width too and when the header's padding moves with the
+    /// sidebar (ApplyHeaderInset), neither of which resizes the header.
     /// </remarks>
     private void AttachHeaderWrap()
     {
         Header.SizeChanged += (_, _) => UpdateHeaderWrap();
-        HeaderActions.SizeChanged += (_, _) => UpdateHeaderWrap();
         BigDate.SizeChanged += (_, _) => UpdateHeaderWrap();
     }
 
@@ -40,13 +39,13 @@ public partial class MainWindow
             return;
         }
 
-        // The date and the actions sit in Auto columns, so their desired widths are their natural ones
-        // wherever the strip is; the decision is stable and moving the strip cannot flip it back.
+        // The date sits in Auto columns, so its desired width is its natural one wherever the strip
+        // is; the decision is stable and moving the strip cannot flip it back.
         double lead = HeaderGrid.Children
             .OfType<Control>()
             .Where(static child => Grid.GetColumn(child) < 2 && Grid.GetRow(child) == 0 && child.IsVisible)
             .Sum(static child => child.DesiredSize.Width);
-        double needed = lead + WeekStripWidth + (2 * WeekStripGap) + HeaderActions.DesiredSize.Width;
+        double needed = lead + WeekStripWidth + WeekStripGap;
         bool wrap = needed > available;
 
         int row = wrap ? 1 : 0;
@@ -57,7 +56,7 @@ public partial class MainWindow
 
         Grid.SetRow(WeekStrip, row);
         Grid.SetColumn(WeekStrip, wrap ? 0 : 2);
-        Grid.SetColumnSpan(WeekStrip, wrap ? 4 : 1);
-        WeekStrip.Margin = wrap ? new Thickness(0, 14, 0, 0) : new Thickness(WeekStripGap, 0, WeekStripGap, 0);
+        Grid.SetColumnSpan(WeekStrip, wrap ? 3 : 1);
+        WeekStrip.Margin = wrap ? new Thickness(0, 14, 0, 0) : new Thickness(WeekStripGap, 0, 0, 0);
     }
 }

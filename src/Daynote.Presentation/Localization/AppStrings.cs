@@ -295,6 +295,8 @@ public static class AppStrings
 
     // Note list
     public static string NewNote => LocalizationService.Instance[nameof(NewNote)];
+    public static string NoteTabsPrevious => LocalizationService.Instance[nameof(NoteTabsPrevious)];
+    public static string NoteTabsNext => LocalizationService.Instance[nameof(NoteTabsNext)];
     /// <summary>{0} = note count.</summary>
     public static string NoteCountFormat => LocalizationService.Instance[nameof(NoteCountFormat)];
     public static string DayNotesEmpty => LocalizationService.Instance[nameof(DayNotesEmpty)];
@@ -1010,6 +1012,35 @@ public static class AppStrings
     public static string TodoEntryEnd => LocalizationService.Instance[nameof(TodoEntryEnd)];
     public static string TodoEntryList => LocalizationService.Instance[nameof(TodoEntryList)];
     public static string TodoEntryAdd => LocalizationService.Instance[nameof(TodoEntryAdd)];
+    public static string DeskSettingsWeekStart => LocalizationService.Instance[nameof(DeskSettingsWeekStart)];
+    public static string DeskSettingsWeekStartDesc => LocalizationService.Instance[nameof(DeskSettingsWeekStartDesc)];
+    public static string DeskSettingsSunday => LocalizationService.Instance[nameof(DeskSettingsSunday)];
+    public static string DeskSettingsMonday => LocalizationService.Instance[nameof(DeskSettingsMonday)];
+    public static string SearchKindTodo => LocalizationService.Instance[nameof(SearchKindTodo)];
+    public static string SearchKindEvent => LocalizationService.Instance[nameof(SearchKindEvent)];
+    public static string DeskPanelDayFormat => LocalizationService.Instance[nameof(DeskPanelDayFormat)];
+    public static string DeskPanelUpcomingFormat => LocalizationService.Instance[nameof(DeskPanelUpcomingFormat)];
+    public static string DeskPanelOtherTodosFormat => LocalizationService.Instance[nameof(DeskPanelOtherTodosFormat)];
+    public static string DeskPanelPastFormat => LocalizationService.Instance[nameof(DeskPanelPastFormat)];
+    public static string DeskFilesNoMatchFormat => LocalizationService.Instance[nameof(DeskFilesNoMatchFormat)];
+    public static string DeskFilesNone => LocalizationService.Instance[nameof(DeskFilesNone)];
+    public static string DeskFilesAddToFormat => LocalizationService.Instance[nameof(DeskFilesAddToFormat)];
+    public static string DeskFilesTodayFormat => LocalizationService.Instance[nameof(DeskFilesTodayFormat)];
+    public static string DeskFilesCountFormat => LocalizationService.Instance[nameof(DeskFilesCountFormat)];
+    public static string DeskFilesSearchPlaceholder => LocalizationService.Instance[nameof(DeskFilesSearchPlaceholder)];
+    public static string DeskFilesAllFormat => LocalizationService.Instance[nameof(DeskFilesAllFormat)];
+    public static string DeskNavCalendar => LocalizationService.Instance[nameof(DeskNavCalendar)];
+    public static string DeskCalendarViewTip => LocalizationService.Instance[nameof(DeskCalendarViewTip)];
+    public static string DeskCalendarViewSubFormat => LocalizationService.Instance[nameof(DeskCalendarViewSubFormat)];
+    public static string DeskCalendarMoreFormat => LocalizationService.Instance[nameof(DeskCalendarMoreFormat)];
+    public static string DeskCalendarHoverEmpty => LocalizationService.Instance[nameof(DeskCalendarHoverEmpty)];
+    public static string DeskCalendarOpenDay => LocalizationService.Instance[nameof(DeskCalendarOpenDay)];
+    public static string DeskListsExpand => LocalizationService.Instance[nameof(DeskListsExpand)];
+    public static string DeskListsCollapse => LocalizationService.Instance[nameof(DeskListsCollapse)];
+    public static string DeskTabMenuTip => LocalizationService.Instance[nameof(DeskTabMenuTip)];
+    public static string DeskTimelineViewTip => LocalizationService.Instance[nameof(DeskTimelineViewTip)];
+    public static string DeskTimelineViewSub => LocalizationService.Instance[nameof(DeskTimelineViewSub)];
+    public static string DeskTabMenuDateFormat => LocalizationService.Instance[nameof(DeskTabMenuDateFormat)];
     public static string DeskDayEventTitle => LocalizationService.Instance[nameof(DeskDayEventTitle)];
     public static string DeskDayTodoHeading => LocalizationService.Instance[nameof(DeskDayTodoHeading)];
     public static string DeskDayEventNone => LocalizationService.Instance[nameof(DeskDayEventNone)];

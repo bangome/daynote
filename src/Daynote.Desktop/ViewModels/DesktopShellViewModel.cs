@@ -70,6 +70,9 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
         Timeline = new TimelineViewModel(repository, agenda, OpenFromTimelineAsync);
         AttachViews(clock, repository);
+        AttachCalendar();
+        Files.OpenDay = OpenFileDayAsync;
+        Search.Agenda = () => Todo.All;
 
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;
@@ -201,7 +204,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     [ObservableProperty]
     private Daynote.App.Onboarding.TutorialViewModel? _tutorial;
 
-    public bool IsEditorMode => !IsTimelineMode && !IsListMode;
+    public bool IsEditorMode => !IsTimelineMode && !IsListMode && !IsCalendarMode;
 
     public bool HasOpenNote => Notes.SelectedTab is { IsProjection: false };
 
@@ -232,6 +235,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
             LeftCollapsed = false;
             IsTimelineMode = false;
             IsListMode = false;
+            IsCalendarMode = false;
         }
     }
 
@@ -365,6 +369,10 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
             _themeApplier.Apply(IsDark);
             RightCollapsed = await _settings.GetBoolAsync(RightCollapsedKey, false, cancellationToken).ConfigureAwait(true);
             LeftCollapsed = await _settings.GetBoolAsync(LeftCollapsedKey, false, cancellationToken).ConfigureAwait(true);
+            await LoadSidebarListsAsync(cancellationToken).ConfigureAwait(true);
+            await LoadPanelSectionsAsync(cancellationToken).ConfigureAwait(true);
+            string? weekStart = await _settings.GetAsync(DesktopSettingsViewModel.WeekStartKey, cancellationToken).ConfigureAwait(true);
+            CalendarWeekStart.Set(string.Equals(weekStart, "monday", StringComparison.Ordinal) ? DayOfWeek.Monday : DayOfWeek.Sunday);
         }
         finally
         {
@@ -497,6 +505,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         // A new note is something to write in, so it opens in the editor whichever view was up.
         IsTimelineMode = false;
         IsListMode = false;
+        IsCalendarMode = false;
         if (await Notes.AddNoteAsync().ConfigureAwait(true))
         {
             RefreshHeader();
@@ -648,6 +657,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
         await Timeline.LoadAsync().ConfigureAwait(true);
         IsListMode = false;
+        IsCalendarMode = false;
         IsTimelineMode = true;
     }
 
@@ -707,6 +717,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         IsDayEmpty = count == 0;
         OnPropertyChanged(nameof(HasOpenNote));
         RefreshDayViews();
+        RaiseHeaderLine();
     }
 
     void ILanguageAware.OnLanguageChanged()

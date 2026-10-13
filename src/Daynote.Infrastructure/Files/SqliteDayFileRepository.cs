@@ -47,6 +47,13 @@ public sealed class SqliteDayFileRepository : IDayFileRepository
             SqliteDayFileStatements.ReadForDate(connection, localDate));
     }
 
+    public ValueTask<IReadOnlyList<DayFile>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using SqliteConnection connection = database.OpenReadConnection();
+        return ValueTask.FromResult<IReadOnlyList<DayFile>>(SqliteDayFileStatements.ReadAll(connection));
+    }
+
     public ValueTask<DayFileDeleteResult> DeleteAsync(
         Guid id,
         CancellationToken cancellationToken = default)
