@@ -28,6 +28,12 @@ public readonly record struct AgendaOutstandingView(
 /// row because the day is a record of itself; this list is a queue, and a queue of things already
 /// done is not a queue.
 /// </para>
+/// <para>
+/// <b>Events are absent too.</b> A block of time is booked, not owed: there is nothing to tick
+/// off at a meeting, so a list of what is still to do — and the counts the sidebar and the
+/// phone's chips take from it — is to-dos only (design v2, <c>todoItems</c> / <c>pend</c>). The
+/// day panel, the timeline and the widgets show events, on their days.
+/// </para>
 /// </remarks>
 public static class AgendaOutstanding
 {
@@ -45,6 +51,7 @@ public static class AgendaOutstanding
         var rows = new List<AgendaDayRow>();
         var foldedIn = new HashSet<Guid>();
 
+        items = [.. items.Where(static item => item.Kind == AgendaKind.Task)];
         foreach (AgendaItem series in items.Where(static item => item.IsSeries))
         {
             AgendaItem[] overrides = [.. items.Where(other => other.SeriesId == series.Id)];

@@ -63,6 +63,16 @@ public sealed partial class AgendaListRowViewModel : ObservableObject
     /// </summary>
     public bool CanDelete { get; }
 
+    /// <summary>The list's colour as <c>#rrggbb</c>, for the theme it was built in (<see cref="AgendaListPalette"/>).</summary>
+    public string Color { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Selected and on screen: the desktop lights a sidebar row only while the 할 일 view it narrows
+    /// is the one showing. Set by the shell; the phone's chips read <see cref="IsSelected"/>.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsCurrent { get; set; }
+
     [ObservableProperty]
     public partial bool IsRenaming { get; private set; }
 

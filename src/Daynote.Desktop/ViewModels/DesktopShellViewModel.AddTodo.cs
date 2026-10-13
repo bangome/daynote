@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Daynote.App.Composition;
+using Daynote.App.Localization;
 using Daynote.App.Shell.Product;
 using Daynote.Core.Agenda;
 using Daynote.Core.Domain;
@@ -28,18 +29,28 @@ public sealed partial class DesktopShellViewModel
     [ObservableProperty]
     private bool _isAddTodoOpen;
 
+    /// <summary>The card's top right while making one: the day it opened on, "10월 13일 (화)".</summary>
+    [ObservableProperty]
+    private string _addTodoSource = string.Empty;
+
     /// <summary>The day panel's + 할 일: a to-do on the selected date.</summary>
     [RelayCommand]
-    private Task AddDayTodo() => OpenAddTodoAsync(SelectedDate, listId: null);
+    private Task AddDayTodo() => OpenAddTodoAsync(SelectedDate, listId: null, AgendaKind.Task);
 
     /// <summary>The 할 일 view's + 할 일: a to-do on today, in the list being looked at.</summary>
     [RelayCommand]
-    private Task AddListTodo() => OpenAddTodoAsync(LocalDates.Today(_clock), Todo.SelectedListId);
+    private Task AddListTodo() => OpenAddTodoAsync(LocalDates.Today(_clock), Todo.SelectedListId, AgendaKind.Task);
 
-    private async Task OpenAddTodoAsync(LocalDate date, Guid? listId)
+    private async Task OpenAddTodoAsync(LocalDate date, Guid? listId, AgendaKind kind = AgendaKind.Task)
     {
         IsPaletteOpen = false;
         await TodoEntry.ResetAsync(LocalDates.ToDateOnly(date), Todo.Lists, IsDark, listId).ConfigureAwait(true);
+        AddTodoSource = LocalDates.ToDateOnly(date).ToString(AppStrings.TodoEntryDateFormat, LocalizationService.Instance.Culture);
+        if (kind == AgendaKind.Event)
+        {
+            TodoEntry.SelectKindCommand.Execute(AgendaKind.Event);
+        }
+
         IsAddTodoOpen = true;
     }
 
@@ -67,11 +78,19 @@ public sealed partial class DesktopShellViewModel
         ClockSnapshot snapshot = _clock.Read();
         AgendaItem made = TodoEntry.Compose(Guid.NewGuid(), snapshot.UtcInstant);
         IsAddTodoOpen = false;
+        await SaveMadeAsync(made).ConfigureAwait(true);
+    }
 
-        await _agenda.SaveAsync(made).ConfigureAwait(true);
+    /// <summary>삭제, in the card's editing face: the item it was opened on, in the scope it was opened in.</summary>
+    [RelayCommand]
+    private async Task DeleteEditedTodo()
+    {
+        if (!IsAddTodoOpen || !TodoEntry.IsEditing || _actionRow is not { } row)
+        {
+            return;
+        }
 
-        // No note is saved along with it, so nothing else is going to set a sync off.
-        _syncScheduler?.NotifySaved();
-        await Todo.RefreshAsync().ConfigureAwait(true);
+        IsAddTodoOpen = false;
+        await DeleteNowAsync(row, _editScope).ConfigureAwait(true);
     }
 }

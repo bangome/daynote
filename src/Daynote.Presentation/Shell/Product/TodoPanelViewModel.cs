@@ -28,6 +28,7 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
     private readonly Func<AgendaDayRow, Task>? onEdit;
     private readonly Func<AgendaDayRow, Task>? onDelete;
     private IReadOnlyDictionary<Guid, string> listNames = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, (string Light, string Dark)> listColors = new Dictionary<Guid, (string Light, string Dark)>();
 
     public TodoPanelViewModel(
         IAgendaRepository agenda,
@@ -99,6 +100,12 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
     [ObservableProperty]
     private bool _isEmpty = true;
 
+    /// <summary>
+    /// Which of a list's two colours the rows carry. Set by a shell that draws list colours; a
+    /// change shows on the next refresh.
+    /// </summary>
+    public bool IsDark { get; set; }
+
     /// <summary>Tab header label "할 일 (N)"; recomputed whenever the open count changes.</summary>
     public string TabLabel => string.Format(
         System.Globalization.CultureInfo.CurrentCulture, AppStrings.TabTodoFormat, OpenCount);
@@ -122,6 +129,9 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
         listNames = lists
             .Where(static list => !list.HasBuiltInName)
             .ToDictionary(static list => list.Id, static list => list.Name);
+        listColors = lists
+            .Select(static (list, position) => (list.Id, Color: AgendaListPalette.ForPosition(position)))
+            .ToDictionary(static pair => pair.Id, static pair => pair.Color);
 
         AgendaOutstandingView owed = AgendaOutstanding.For(DateOnly.FromDateTime(now.DateTime), All);
 
@@ -135,7 +145,10 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
                 list.List.Id == SelectedListId,
                 SelectListAsync,
                 RenameListAsync,
-                async row => await DeleteListAsync(row.Id).ConfigureAwait(true)));
+                async row => await DeleteListAsync(row.Id).ConfigureAwait(true))
+            {
+                Color = ListColor(list.List.Id),
+            });
         }
 
         if (SelectedListId is { } selected && lists.All(list => list.Id != selected))
@@ -223,5 +236,18 @@ public sealed partial class TodoPanelViewModel : ObservableObject, ILanguageAwar
 
     /// <summary>Builds one row, in whichever scope the caller is showing.</summary>
     public TodoItemViewModel Row(AgendaDayRow row, DateTime now, TodoRowScope scope = TodoRowScope.AllDates) =>
-        new(row, scope, listNames.GetValueOrDefault(row.Item.ListId, string.Empty), now, onToggle, onJump, onEdit, onDelete);
+        new(row, scope, listNames.GetValueOrDefault(row.Item.ListId, string.Empty), now, onToggle, onJump, onEdit, onDelete, ListColor(row.Item.ListId));
+
+    /// <summary>
+    /// A list's colour in the current theme: its place in the sidebar's order
+    /// (<see cref="AgendaListPalette"/>). A list that has gone takes the built-in one's, which is
+    /// where its to-dos went.
+    /// </summary>
+    public string ListColor(Guid listId)
+    {
+        (string light, string dark) = listColors.TryGetValue(listId, out (string Light, string Dark) found)
+            ? found
+            : AgendaListPalette.ForPosition(0);
+        return IsDark ? dark : light;
+    }
 }

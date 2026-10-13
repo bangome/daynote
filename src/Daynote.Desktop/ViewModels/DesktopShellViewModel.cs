@@ -299,6 +299,14 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
     partial void OnIsDarkChanged(bool value)
     {
         _themeApplier.Apply(value);
+
+        // A list's colour is a pair; the rows carry the one for the theme they were built in.
+        Todo.IsDark = value;
+        if (!_loading)
+        {
+            _ = Todo.RefreshAsync();
+        }
+
         OnPropertyChanged(nameof(ThemeGlyph));
         OnPropertyChanged(nameof(BrandLogo));
         OnPropertyChanged(nameof(ThemeName));
@@ -310,6 +318,8 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
 
     partial void OnRightCollapsedChanged(bool value)
     {
+        OnPropertyChanged(nameof(IsNoticeInPanel));
+        OnPropertyChanged(nameof(IsNoticeInFooter));
         if (!_loading)
         {
             _ = _settings.SetBoolAsync(RightCollapsedKey, value);

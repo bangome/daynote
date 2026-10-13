@@ -40,6 +40,27 @@ public sealed class AgendaOutstandingTests
     }
 
     [TestMethod]
+    public void An_event_is_booked_not_owed_and_is_absent()
+    {
+        // The list and its counts are what is still to do; a meeting is not ticked off.
+        AgendaItem meeting = Dated(1, "디자인 리뷰", new DateTime(2026, 10, 7, 16, 0, 0)) with
+        {
+            Kind = AgendaKind.Event,
+            StartsAt = new WallClock(new DateTime(2026, 10, 7, 16, 0, 0)),
+            EndsAt = new WallClock(new DateTime(2026, 10, 7, 17, 0, 0)),
+            DueAt = null,
+            HasDueTime = false,
+        };
+        AgendaItem standup = meeting with { Id = Guid.NewGuid(), Title = "스탠드업", Rrule = "FREQ=DAILY" };
+        AgendaItem task = Dated(2, "회의실 예약 확인", new DateTime(2026, 10, 7, 17, 0, 0));
+
+        AgendaOutstandingView view = AgendaOutstanding.For(Today, [meeting, standup, task]);
+
+        Assert.AreEqual(1, view.Count);
+        Assert.AreEqual("회의실 예약 확인", view.Today.Single().Item.Title);
+    }
+
+    [TestMethod]
     public void A_finished_item_is_absent_rather_than_collapsed()
     {
         // The day panel keeps finished rows behind a count because the day is a record of itself.

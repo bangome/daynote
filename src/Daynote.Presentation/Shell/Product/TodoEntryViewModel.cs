@@ -80,6 +80,12 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     private bool _dark;
 
+    /// <summary>True while a picker or a reset sets <see cref="When"/>, so the phrase is not read back over it.</summary>
+    private bool _settingWhen;
+
+    /// <summary>The last 언제 reading moved a bare time that had passed onto tomorrow.</summary>
+    private bool _rolled;
+
     public TodoEntryViewModel(IClock clock, INoteRepository repository)
     {
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -89,13 +95,18 @@ public sealed partial class TodoEntryViewModel : ObservableObject
             .. new[] { TodoRepeat.None, TodoRepeat.Daily, TodoRepeat.Weekdays, TodoRepeat.Weekly, TodoRepeat.Monthly, TodoRepeat.Yearly }
                 .Select(static repeat => new TodoRepeatOption(repeat)),
         ];
+        TimelineOptions =
+        [
+            .. new[] { TimelineVisibility.Auto, TimelineVisibility.Always, TimelineVisibility.Never }
+                .Select(static visibility => new TimelineVisibilityOption(visibility)),
+        ];
     }
 
     /// <summary>The month grid under the date row: the month sheet's own, picking for the draft instead of the day.</summary>
     public CalendarMonthViewModel Calendar { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsTask), nameof(IsEvent), nameof(TitlePlaceholder))]
+    [NotifyPropertyChangedFor(nameof(IsTask), nameof(IsEvent), nameof(TitlePlaceholder), nameof(Readback), nameof(ShowsTimelineChoice))]
     private AgendaKind _kind = AgendaKind.Task;
 
     public bool IsTask => Kind == AgendaKind.Task;
@@ -107,8 +118,80 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanAdd))]
     private string _title = string.Empty;
 
-    /// <summary>추가 waits for a title: an item with no name is a row nobody can identify.</summary>
-    public bool CanAdd => !string.IsNullOrWhiteSpace(Title);
+    /// <summary>
+    /// 추가 waits for a title — an item with no name is a row nobody can identify — and for a 언제
+    /// that reads as a date, since otherwise what would be made is a guess.
+    /// </summary>
+    public bool CanAdd => !string.IsNullOrWhiteSpace(Title) && !IsWhenUnreadable;
+
+    /// <summary>
+    /// 언제: the desktop card's one line for the day, the time and the repeat, read the way the
+    /// watch and the menu bar read a phrase (<see cref="AgendaPhraseParser"/>). Empty is the day the
+    /// card opened on with no time. The fields it fills are the pickers' own, so a picker can still
+    /// change any of them after.
+    /// </summary>
+    [ObservableProperty]
+    private string _when = string.Empty;
+
+    /// <summary>Something was typed in 언제 and none of it reads as a date.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanAdd), nameof(Readback))]
+    private bool _isWhenUnreadable;
+
+    /// <summary>What 언제 could not account for, said under the readback: words left over, a time read as tomorrow.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<string> _whenWarnings = [];
+
+    /// <summary>
+    /// The line under 언제 that says what will be made: "내일 오후 3:00 마감", "10월 9일 (금) 오후
+    /// 3:00–4:00", "매일 오전 8:00 · 10월 14일 (화)부터". A sentence rather than fields, so a
+    /// misreading is visible before Enter (<see cref="AgendaReadback"/>).
+    /// </summary>
+    public string Readback
+    {
+        get
+        {
+            if (IsWhenUnreadable)
+            {
+                return AppStrings.TodoEntryWhenUnreadable;
+            }
+
+            if (Date is not { } day)
+            {
+                return AppStrings.TodoEntryNoDate;
+            }
+
+            CultureInfo culture = LocalizationService.Instance.Culture;
+            DateTime at = day.ToDateTime(Time ?? TimeOnly.MinValue);
+            if (Repeats)
+            {
+                string every = HasTime
+                    ? string.Create(culture, $"{RepeatText} {at.ToString(AppStrings.DeskEventTimeFormat, culture)}")
+                    : RepeatText;
+                return string.Format(culture, AppStrings.TodoEntryReadbackRepeatFormat, every, DateText);
+            }
+
+            AgendaReadbackLines lines = AgendaReadback.Describe(
+                new AgendaPhrase(new WallClock(at), HasTime, null, _rolled, 0), ReadbackWidth.Full);
+            return IsEvent ? lines.Event : lines.Task;
+        }
+    }
+
+    /// <summary>타임라인 표시, which only a repeating to-do is asked: everything else shows (docs/TODOS.md §11).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TimelineHint))]
+    private TimelineVisibility _timelineVisibility;
+
+    public bool ShowsTimelineChoice => IsTask && Repeats;
+
+    public IReadOnlyList<TimelineVisibilityOption> TimelineOptions { get; }
+
+    public string TimelineHint => TimelineVisibility switch
+    {
+        TimelineVisibility.Always => AppStrings.TodoEntryTimelineAlwaysHint,
+        TimelineVisibility.Never => AppStrings.TodoEntryTimelineNeverHint,
+        _ => AppStrings.TodoEntryTimelineAutoHint,
+    };
 
     /// <summary>내용. A few optional lines kept with the item, never in its title.</summary>
     [ObservableProperty]
@@ -118,7 +201,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>The day, or null for a to-do with none.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasDate), nameof(DateText), nameof(CanPickTime), nameof(CanRepeat), nameof(RepeatText))]
+    [NotifyPropertyChangedFor(nameof(HasDate), nameof(DateText), nameof(CanPickTime), nameof(CanRepeat), nameof(RepeatText), nameof(Readback))]
     private DateOnly? _date;
 
     public bool HasDate => Date is not null;
@@ -129,7 +212,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>A to-do's time, or an event's start. Null is 시간 없음, which only a to-do can be.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasTime), nameof(TimeText), nameof(EndText))]
+    [NotifyPropertyChangedFor(nameof(HasTime), nameof(TimeText), nameof(EndText), nameof(Readback))]
     private TimeOnly? _time;
 
     public bool HasTime => Time is not null;
@@ -157,7 +240,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>How it repeats. Only with a date: a rule needs a day to count from.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Repeats), nameof(RepeatText))]
+    [NotifyPropertyChangedFor(nameof(Repeats), nameof(RepeatText), nameof(Readback), nameof(ShowsTimelineChoice))]
     private TodoRepeat _repeat;
 
     public bool Repeats => Repeat != TodoRepeat.None;
@@ -170,6 +253,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>True while the sheet is editing an item that exists rather than making one.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsFields))]
     private bool _isEditing;
 
     /// <summary>
@@ -217,8 +301,14 @@ public sealed partial class TodoEntryViewModel : ObservableObject
     };
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDatePickerOpen), nameof(IsTimePickerOpen), nameof(IsRepeatPickerOpen))]
+    [NotifyPropertyChangedFor(nameof(IsDatePickerOpen), nameof(IsTimePickerOpen), nameof(IsRepeatPickerOpen), nameof(ShowsFields))]
     private TodoEntryPicker _picker;
+
+    /// <summary>
+    /// The field rows: always while editing, and on the desktop card's making face only once its
+    /// calendar or clock has opened a picker, since 언제 is that face's way to the same fields.
+    /// </summary>
+    public bool ShowsFields => IsEditing || Picker != TodoEntryPicker.None;
 
     public bool IsDatePickerOpen => Picker == TodoEntryPicker.Date;
 
@@ -261,6 +351,9 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Time = null;
         Repeat = TodoRepeat.None;
         MarkRepeat();
+        TimelineVisibility = TimelineVisibility.Auto;
+        MarkTimeline();
+        SetWhenQuietly(string.Empty);
         Picker = TodoEntryPicker.None;
         IsEditing = false;
         IsOccurrenceEdit = false;
@@ -300,6 +393,9 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         Time = item.HasClockTime && (row.At ?? item.Anchor) is { } at ? TimeOnly.FromDateTime(at.Value) : null;
         Repeat = IsOccurrenceEdit ? TodoRepeat.None : RepeatOf(item.Rrule);
         MarkRepeat();
+        TimelineVisibility = item.TimelineVisibility;
+        MarkTimeline();
+        SetWhenQuietly(string.Empty);
         Picker = TodoEntryPicker.None;
         FillLists(lists, item.ListId);
         await Calendar.ShowSelectedAsync(LocalDates.FromDateOnly(_startDate)).ConfigureAwait(true);
@@ -338,7 +434,8 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     /// <summary>
     /// 할 일 or 일정. An event needs a day and a start, so switching to one fills them in — the
-    /// sheet's day and the next whole hour — and switching back takes away a time it filled in.
+    /// sheet's day and the next whole hour, unless 언제 has already said there is none — and
+    /// switching back takes away a time it filled in.
     /// </summary>
     [RelayCommand]
     private void SelectKind(AgendaKind kind)
@@ -347,7 +444,9 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         if (kind == AgendaKind.Event)
         {
             Date ??= _startDate;
-            if (Time is null)
+
+            // A 언제 that named a day and no hour is an all-day event; only an empty one is filled in.
+            if (Time is null && string.IsNullOrWhiteSpace(When))
             {
                 Time = NextWholeHour();
                 _timeFilledIn = true;
@@ -453,6 +552,14 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         MarkRepeat();
     }
 
+    /// <summary>타임라인 표시's three pills.</summary>
+    [RelayCommand]
+    private void PickTimeline(TimelineVisibility visibility)
+    {
+        TimelineVisibility = visibility;
+        MarkTimeline();
+    }
+
     [RelayCommand]
     private void PickList(Guid id)
     {
@@ -483,6 +590,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
             SourceNoteId = null,
             ListId = ListId,
             Description = Description.Trim(),
+            TimelineVisibility = ShowsTimelineChoice ? TimelineVisibility : TimelineVisibility.Auto,
         };
         if (IsEvent && HasTime)
         {
@@ -500,6 +608,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     private Task PickDateAsync(LocalDate date)
     {
+        SetWhenQuietly(string.Empty);
         Date = LocalDates.ToDateOnly(date);
         Calendar.SyncSelection(date);
         Picker = TodoEntryPicker.None;
@@ -515,6 +624,7 @@ public sealed partial class TodoEntryViewModel : ObservableObject
 
     private void SetPicked(int hour, int minute)
     {
+        SetWhenQuietly(string.Empty);
         var picked = new TimeOnly(hour, minute);
         if (Picker == TodoEntryPicker.End && Time is { } start)
         {
@@ -549,6 +659,138 @@ public sealed partial class TodoEntryViewModel : ObservableObject
         foreach (TimeOption option in MinuteOptions)
         {
             option.IsCurrent = shown is { } time && option.Value == time.Minute;
+        }
+    }
+
+    /// <summary>
+    /// A to-do titled <paramref name="title"/> on <paramref name="date"/> with no time, in
+    /// <paramref name="listId"/>: the quick-add line's item, made the way the card makes one with
+    /// only a title typed.
+    /// </summary>
+    public static AgendaItem ComposeQuick(string title, DateOnly date, Guid listId, Guid itemId, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        var reading = new AgendaPhrase(
+            new WallClock(date.ToDateTime(TimeOnly.MinValue)), HasTime: false, Rrule: null, RolledToTomorrow: false, Length: 0);
+        var state = new AgendaCaptureState(0, 0, title.Trim(), string.Empty, reading);
+        return AgendaCapture.Compose(state, AgendaKind.Task, Guid.Empty, itemId, now) with
+        {
+            SourceNoteId = null,
+            ListId = listId,
+        };
+    }
+
+    partial void OnWhenChanged(string value)
+    {
+        if (!_settingWhen)
+        {
+            ReadWhen(value);
+        }
+    }
+
+    /// <summary>
+    /// Fills the day, the time and the repeat from 언제. A bare time ("3시") is on the card's own
+    /// day, as the rest of the card is; a day word or a date is read against today, as the phrase
+    /// says. Nothing it cannot read changes a field: the readback says so instead.
+    /// </summary>
+    private void ReadWhen(string value)
+    {
+        string text = value.Trim();
+        _rolled = false;
+        if (text.Length == 0)
+        {
+            IsWhenUnreadable = false;
+            WhenWarnings = [];
+            Date = _startDate;
+            Time = IsEvent ? Time : null;
+            Repeat = TodoRepeat.None;
+            MarkRepeat();
+            return;
+        }
+
+        DateTime now = Now();
+        if (AgendaPhraseParser.Parse(text, now) is not { } phrase)
+        {
+            IsWhenUnreadable = true;
+            WhenWarnings = [];
+            return;
+        }
+
+        string read = text[..Math.Min(phrase.Length, text.Length)];
+        DateOnly day = DateOnly.FromDateTime(phrase.At.Value);
+        bool bareTime = phrase.Rrule is null && !NamesADay(read);
+        if (bareTime && _startDate != DateOnly.FromDateTime(now))
+        {
+            day = _startDate;
+        }
+        else
+        {
+            _rolled = phrase.RolledToTomorrow;
+        }
+
+        IsWhenUnreadable = false;
+        _timeFilledIn = false;
+        Date = day;
+        Time = phrase.HasTime ? TimeOnly.FromDateTime(phrase.At.Value) : null;
+        Repeat = RepeatOf(phrase.Rrule);
+        MarkRepeat();
+        OnPropertyChanged(nameof(Readback));
+
+        var warnings = new List<string>();
+        string left = text[read.Length..].Trim();
+        if (left.Length > 0)
+        {
+            warnings.Add(string.Format(LocalizationService.Instance.Culture, AppStrings.TodoEntryWhenLeftoverFormat, left));
+        }
+
+        if (_rolled && AgendaReadback.Describe(phrase, ReadbackWidth.Full).Note is { Length: > 0 } note)
+        {
+            warnings.Add(note);
+        }
+
+        WhenWarnings = warnings;
+    }
+
+    /// <summary>
+    /// Whether the part of 언제 that was read names a day — a word for one, a date, a weekday —
+    /// rather than being a clock alone.
+    /// </summary>
+    private static bool NamesADay(string read)
+    {
+        string lower = read.ToLowerInvariant();
+        return lower.Contains('/') ||
+            new[] { "오늘", "내일", "모레", "월", "화", "수", "목", "금", "토", "일요일", "today", "tomorrow", "mon", "tue", "wed", "thu", "fri", "sat", "sun" }
+                .Any(word => lower.Contains(word, StringComparison.Ordinal));
+    }
+
+    /// <summary>Sets 언제 without reading it: a picker, a reset or a load has already set the fields.</summary>
+    private void SetWhenQuietly(string value)
+    {
+        _settingWhen = true;
+        try
+        {
+            When = value;
+            IsWhenUnreadable = false;
+            WhenWarnings = [];
+            _rolled = false;
+        }
+        finally
+        {
+            _settingWhen = false;
+        }
+    }
+
+    private DateTime Now()
+    {
+        ClockSnapshot snapshot = _clock.Read();
+        return snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset).DateTime;
+    }
+
+    private void MarkTimeline()
+    {
+        foreach (TimelineVisibilityOption option in TimelineOptions)
+        {
+            option.IsCurrent = option.Visibility == TimelineVisibility;
         }
     }
 
@@ -597,6 +839,17 @@ public sealed partial class TodoRepeatOption(TodoRepeat repeat) : ObservableObje
     public TodoRepeat Repeat { get; } = repeat;
 
     public string Label => LocalizationService.Instance["TodoEntryRepeat" + Repeat];
+
+    [ObservableProperty]
+    private bool _isCurrent;
+}
+
+/// <summary>One pill in 타임라인 표시: 자동, 항상, 안 함.</summary>
+public sealed partial class TimelineVisibilityOption(TimelineVisibility visibility) : ObservableObject
+{
+    public TimelineVisibility Visibility { get; } = visibility;
+
+    public string Label => LocalizationService.Instance["TodoEntryTimeline" + Visibility];
 
     [ObservableProperty]
     private bool _isCurrent;

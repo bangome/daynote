@@ -572,6 +572,22 @@ The order that makes that safe:
          "+ 할 일" in its day panel and 할 일 view. The Windows (WPF) editor's `@` popup and the note
          workspace's capture half are removed. The menu bar's quick capture is split into 할 일 and 노트
          modes, with no `@` reading.
+   - [x] **2026-10-13: the Avalonia desktop on Desktop B v2.** The day panel splits into 일정
+         (all-day first, then by start; past ones faded) and 할 일 (rings in the list's colour, ↻ on
+         a repeat, a "할 일 추가" line, 완료 N collapsed), each with its own +. The add card is the
+         v2 creation modal: 할 일 / 일정, 제목, and one 언제 line read by `AgendaPhraseParser` with
+         a readback sentence and warnings under it — a bare time stays on the card's day, a day
+         word is read against today — whose calendar and clock open the field pickers. Editing
+         keeps the field rows and gains 삭제 and 타임라인 표시 (자동 / 항상 / 안 함, repeating
+         to-dos only, now saved by `EditAgendaItem`). An item made for a day not on screen says
+         "M/D에 추가됨 · 보기" (in the footer when the panel is closed). The sidebar lists the lists
+         under 할 일 with their counts, renames in place and makes "+ 새 리스트"; the 할 일 view
+         has "오늘 할 일 추가" and 리스트 삭제. The Timeline folds in events and the to-dos whose
+         `timeline_visibility` allows (§11): a "시각 없음" box, the notes, then the hours with a
+         now line; a day with only one-off items gets a group. `AgendaOutstanding` no longer lists
+         events — a meeting is booked, not owed — so the 할 일 view and every list count are
+         to-dos only. Not taken from the design: the editor's `@` (superseded above), "노트
+         열기" from an item, and the popover at the pointer (the edit card is centred).
 4. `ReminderPlanner.FireTime` keeps its shape; only its input changes from `TodoLine` to the entity.
    The lead-time hook its comment already describes is where `VALARM` triggers arrive.
 

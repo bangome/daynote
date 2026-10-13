@@ -98,7 +98,6 @@ public sealed class EditAgendaItem(IAgendaRepository repository, Func<DateTimeOf
         Status = original.Status,
         CompletedUtc = original.CompletedUtc,
         Priority = original.Priority,
-        TimelineVisibility = original.TimelineVisibility,
         SourceNoteId = original.SourceNoteId,
         Zone = original.Zone,
         ExceptionDates = original.ExceptionDates,

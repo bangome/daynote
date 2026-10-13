@@ -46,9 +46,11 @@ public sealed partial class TodoItemViewModel : ObservableObject
         Func<AgendaDayRow, Task> onToggle,
         Func<AgendaDayRow, Task> onJump,
         Func<AgendaDayRow, Task>? onEdit = null,
-        Func<AgendaDayRow, Task>? onDelete = null)
+        Func<AgendaDayRow, Task>? onDelete = null,
+        string listColor = "")
     {
         this.row = row;
+        ListColor = listColor;
         this.scope = scope;
         this.listName = listName;
         this.now = now;
@@ -109,6 +111,65 @@ public sealed partial class TodoItemViewModel : ObservableObject
     }
 
     public bool Overdue => row.IsOverdue(now);
+
+    public bool IsEvent => row.Item.Kind == AgendaKind.Event;
+
+    public bool IsTask => !IsEvent;
+
+    /// <summary>An event with a start and no end: the whole day (<see cref="AgendaDay"/>'s model of it).</summary>
+    public bool IsAllDay => IsEvent && row.Item.EndsAt is null;
+
+    /// <summary>
+    /// True when it is pinned to an hour. An all-day event and a to-do with only a day are not,
+    /// which is what puts them in the timeline's "시각 없음" box rather than in the run of hours.
+    /// </summary>
+    public bool IsTimed => row.At is not null && !IsAllDay;
+
+    /// <summary>The list's colour as <c>#rrggbb</c>: the check's ring and an event's dot (체크 링 색 = 리스트 색).</summary>
+    public string ListColor { get; }
+
+    /// <summary>"09:00", the clock it falls at, for the timeline's hour column. Empty when it has none.</summary>
+    public string TimeLabel => IsTimed && row.At is { } at
+        ? at.Value.ToString(AppStrings.TodoRowTimeFormat, CultureInfo.CurrentCulture)
+        : string.Empty;
+
+    /// <summary>An event's start in the day panel's left column: "09:00", or "종일".</summary>
+    public string StartLabel => IsAllDay ? AppStrings.DeskEventAllDay : TimeLabel;
+
+    /// <summary>An event's end under its start, "09:30". Empty for an all-day one.</summary>
+    public string EndLabel => End is { } end
+        ? end.ToString(AppStrings.TodoRowTimeFormat, CultureInfo.CurrentCulture)
+        : string.Empty;
+
+    /// <summary>An event's span spelled out, "오전 9:00 – 오전 9:30", or "하루 종일".</summary>
+    public string RangeLabel
+    {
+        get
+        {
+            if (IsAllDay || row.At is not { } at)
+            {
+                return AppStrings.DeskEventAllDayLong;
+            }
+
+            CultureInfo culture = CultureInfo.CurrentCulture;
+            string start = at.Value.ToString(AppStrings.DeskEventTimeFormat, culture);
+            return End is { } end
+                ? string.Format(culture, AppStrings.DeskEventRangeFormat, start, end.ToString(AppStrings.DeskEventTimeFormat, culture))
+                : start;
+        }
+    }
+
+    /// <summary>An event that is over, which the day panel and the timeline draw faded.</summary>
+    public bool IsPast => IsEvent && (End ?? row.Falls?.Value.Date.AddDays(1)) is { } over && over <= now;
+
+    /// <summary>
+    /// When an event ends. An occurrence ends as long after its own start as the rule's first one
+    /// did, since the item it carries is the series with the series' times.
+    /// </summary>
+    private DateTime? End =>
+        IsEvent && row.At is { } at && row.Item.StartsAt is { } start && row.Item.EndsAt is { } end
+            ? at.Value + (end.Value - start.Value)
+            : null;
 
     /// <summary>
     /// Which list it is in. The built-in one has no stored name and contributes nothing: saying

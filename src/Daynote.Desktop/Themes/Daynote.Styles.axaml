@@ -337,6 +337,39 @@
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Side2}" />
   </Style>
+  <!-- A to-do list under 할 일: indented, a ring in the list's colour, a size smaller (design v2 navItems). -->
+  <Style Selector="Button.navitem.sub">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="26,0,10,0" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Button.navitem.sub.new">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+  <Style Selector="Button.navitem Ellipse.ring">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.listrename">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Margin" Value="18,0,0,0" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SideText}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideActive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.SideStroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="TextBox.listrename:pointerover /template/ Border#PART_BorderElement, TextBox.listrename:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SideActive}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
+  </Style>
 
   <!-- Mini month cell: a 26px rounded square in a 30px row. -->
   <Style Selector="Button.minicell">
@@ -487,6 +520,12 @@
     <Setter Property="Height" Value="30" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+  </Style>
+  <!-- The day panel's section +: a 24px square (design v2, 일정 / 할 일 headers). -->
+  <Style Selector="Button.ghost.tiny">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="CornerRadius" Value="7" />
   </Style>
   <Style Selector="Button.ghost.outlined">
     <Setter Property="Width" Value="34" />
@@ -696,6 +735,60 @@
     <Setter Property="Opacity" Value="0" />
     <Setter Property="IsHitTestVisible" Value="False" />
     <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SunSoft}" />
+  </Style>
+
+  <!-- An event that is over, in the day panel and the timeline (design v2: opacity 0.55). -->
+  <Style Selector=":is(Control).past">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+  <!-- An event's dot: a ring in its list's colour. -->
+  <Style Selector="Ellipse.eventring">
+    <Setter Property="Width" Value="9" />
+    <Setter Property="Height" Value="9" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The timeline's hour column: a to-do's hour in Text2, an event's in Text, now in red. -->
+  <Style Selector="TextBlock.tltime">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Margin" Value="0,9,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="TextBlock.tltime.event">
+    <Setter Property="Margin" Value="0,12,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <Style Selector="TextBlock.tltime.now">
+    <Setter Property="Margin" Value="0,1,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Danger}" />
+  </Style>
+  <Style Selector="Path.closed">
+    <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+  </Style>
+  <Style Selector="Path.repeat">
+    <Setter Property="Data" Value="{StaticResource Daynote.Desk.Geo.Repeat}" />
+    <Setter Property="Stroke" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+    <Setter Property="StrokeThickness" Value="1.4" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Width" Value="11" />
+    <Setter Property="Height" Value="11" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- "할 일 추가": a plus and a bare line under a list of to-dos. -->
+  <Style Selector="TextBox.quickadd">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="0,4" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <!-- "10/16에 추가됨 · 보기", on the sun wash (design v2 notice). -->
+  <Style Selector="Border.notice">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SunSoft}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="12,0,6,0" />
   </Style>
 
   <Style Selector="TextBlock.done">

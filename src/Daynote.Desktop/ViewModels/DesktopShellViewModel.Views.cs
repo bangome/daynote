@@ -101,7 +101,8 @@ public sealed partial class DesktopShellViewModel
 
     public bool IsNavTimeline => IsTimelineMode;
 
-    public bool IsNavTodo => IsListMode && ActiveTab == RightTab.Todo;
+    /// <summary>할 일 itself, lit only while no list narrows it: a list's own row is lit instead.</summary>
+    public bool IsNavTodo => IsListMode && ActiveTab == RightTab.Todo && Todo.SelectedListId is null;
 
     public bool IsNavFavorites => IsListMode && ActiveTab == RightTab.Favorites;
 
@@ -115,7 +116,7 @@ public sealed partial class DesktopShellViewModel
         RightTab.Favorites => AppStrings.DeskNavFavorites,
         RightTab.Tags => AppStrings.DeskNavTags,
         RightTab.Files => AppStrings.DeskNavFiles,
-        _ => AppStrings.DeskNavTodo,
+        _ => SelectedAgendaList?.Name ?? AppStrings.DeskNavTodo,
     };
 
     /// <summary>The line beside the heading: how many are open, how many there are, or which day.</summary>
@@ -124,7 +125,9 @@ public sealed partial class DesktopShellViewModel
         RightTab.Favorites => Format(AppStrings.DeskCountFormat, Favorites.Items.Count),
         RightTab.Tags => Format(AppStrings.DeskCountFormat, TagPanel.Tags.Count),
         RightTab.Files => LocalDates.DisplayDayHeading(SelectedDate),
-        _ => Format(AppStrings.DeskTodoOpenFormat, Todo.OpenCount),
+        _ => SelectedAgendaList is { } list
+            ? Format(AppStrings.DeskListAllDatesFormat, list.CountText)
+            : Format(AppStrings.DeskListAllDatesFormat, Todo.OpenCount),
     };
 
     /// <summary>The drop zone's sentence in the files list, naming the day the files will land on.</summary>
@@ -245,7 +248,12 @@ public sealed partial class DesktopShellViewModel
     private void AttachViews(Core.Time.IClock clock, Core.Notes.INoteRepository repository)
     {
         Week = new WeekStripViewModel(clock, repository, date => SelectDateAsync(date));
-        Todo.Refreshed += (_, _) => RefreshDayTodos();
+        Todo.Refreshed += (_, _) =>
+        {
+            RefreshDayTodos();
+            RaiseListState();
+            OnTimelineRowsChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        };
         Timeline.Rows.CollectionChanged += OnTimelineRowsChanged;
         Favorites.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
         TagPanel.Tags.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
@@ -279,6 +287,7 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(IsNavFiles));
         OnPropertyChanged(nameof(ListTitle));
         OnPropertyChanged(nameof(ListSubtitle));
+        RaiseListState();
     }
 
     /// <summary>"오늘의 노트": back to the editor on whatever day is selected.</summary>
@@ -377,8 +386,14 @@ public sealed partial class DesktopShellViewModel
     /// name before there is anything to put in it.
     /// </remarks>
     [RelayCommand]
-    private async Task NewAgendaList() =>
-        await Todo.CreateListAsync(AppStrings.AgendaListNewName).ConfigureAwait(true);
+    private async Task NewAgendaList()
+    {
+        AgendaList made = await Todo.CreateListAsync(AppStrings.AgendaListNewName).ConfigureAwait(true);
+        _syncScheduler?.NotifySaved();
+        await ShowListCommand.ExecuteAsync(RightTab.Todo).ConfigureAwait(true);
+        RaiseListState();
+        Todo.Lists.FirstOrDefault(list => list.Id == made.Id)?.RenameCommand.Execute(null);
+    }
 
     private void RefreshDayTodos()
     {
@@ -389,17 +404,30 @@ public sealed partial class DesktopShellViewModel
         DateTime now = snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset).DateTime;
         AgendaDayView day = AgendaDay.For(LocalDates.ToDateOnly(SelectedDate), Todo.All);
 
+        // Events have a section of their own above the to-dos (design v2, 이 날 패널); a block of
+        // time is not something owed, so it is never in the 남은 count or under 완료.
+        DayEvents.Clear();
+        foreach (AgendaDayRow row in day.Open.Concat(day.Done)
+                     .Where(static row => row.Item.Kind == AgendaKind.Event)
+                     .OrderBy(static row => row.Item.EndsAt is null ? DateTime.MinValue : row.At?.Value ?? DateTime.MaxValue))
+        {
+            DayEvents.Add(Todo.Row(row, now, TodoRowScope.Day));
+        }
+
         DayTodos.Clear();
-        foreach (AgendaDayRow row in day.Open)
+        foreach (AgendaDayRow row in day.Open.Where(static row => row.Item.Kind == AgendaKind.Task))
         {
             DayTodos.Add(Todo.Row(row, now, TodoRowScope.Day));
         }
 
         DayTodosDone.Clear();
-        foreach (AgendaDayRow row in day.Done)
+        foreach (AgendaDayRow row in day.Done.Where(static row => row.Item.Kind == AgendaKind.Task))
         {
             DayTodosDone.Add(Todo.Row(row, now, TodoRowScope.Day));
         }
+
+        DayEventCountText = DayEvents.Count.ToString(CultureInfo.CurrentCulture);
+        IsDayEventEmpty = DayEvents.Count == 0;
 
         DayTodoCountText = string.Format(
             CultureInfo.CurrentCulture, AppStrings.DeskDayTodoRemainingFormat, DayTodos.Count);
@@ -424,9 +452,16 @@ public sealed partial class DesktopShellViewModel
             _timelineRegroupPending = false;
             TimelineGroups.Clear();
 
+            // The agenda folds in on the days it falls (docs/TODOS.md §11): events, and the to-dos
+            // whose own setting puts them there. Rows are the day panel's, so a tick or a click
+            // in the timeline goes where one there does.
+            ClockSnapshot snapshot = _clock.Read();
+            DateTime now = snapshot.UtcInstant.ToOffset(snapshot.LocalUtcOffset).DateTime;
+            var agenda = new TimelineAgenda(Todo.All, now, Timeline.HasMore, row => Todo.Row(row, now, TodoRowScope.Day));
+
             // Over a snapshot: the fold is posted, so a page still arriving can add to Rows while
             // it walks them, and the walk throws. Caught by the test that folds a loaded timeline.
-            foreach (TimelineDayGroup group in TimelineGrouping.Group([.. Timeline.Rows]))
+            foreach (TimelineDayGroup group in TimelineGrouping.Group([.. Timeline.Rows], agenda))
             {
                 TimelineGroups.Add(group);
             }

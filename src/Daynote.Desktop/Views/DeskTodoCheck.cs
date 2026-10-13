@@ -22,6 +22,10 @@ public sealed class DeskTodoCheck : TickButton
     /// <summary>The check's length in its 10-unit box, both segments.</summary>
     private const double MarkLength = 10.7;
 
+    /// <summary>The ring and the fill, when the row's list has a colour (체크 링 색 = 리스트 색).</summary>
+    public static readonly StyledProperty<IBrush?> TintProperty =
+        AvaloniaProperty.Register<DeskTodoCheck, IBrush?>(nameof(Tint));
+
     private readonly Ellipse _fill;
     private readonly Path _mark;
 
@@ -40,7 +44,31 @@ public sealed class DeskTodoCheck : TickButton
         Content = new Panel { Children = { _fill, _mark } };
     }
 
+    public IBrush? Tint
+    {
+        get => GetValue(TintProperty);
+        set => SetValue(TintProperty, value);
+    }
+
     protected override Visual Fill => _fill;
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == TintProperty)
+        {
+            if (Tint is { } tint)
+            {
+                BorderBrush = tint;
+                _fill.Fill = tint;
+            }
+            else
+            {
+                ClearValue(BorderBrushProperty);
+                _fill.ClearValue(Shape.FillProperty);
+            }
+        }
+    }
 
     protected override Visual? Pulse => null;
 

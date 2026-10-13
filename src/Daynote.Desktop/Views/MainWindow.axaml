@@ -30,7 +30,7 @@
 
     <!-- ── Sidebar ───────────────────────────────────────────────────────────────────────── -->
     <Border x:Name="Sidebar" Grid.Column="0" Classes="sidebar" Width="256" IsVisible="{Binding !LeftCollapsed}">
-      <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+      <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 
         <!-- Brand: the mark, the name, and the collapse chevron. Background="Transparent" is
              load-bearing: it is a drag handle on macOS, and a Grid with no brush takes no clicks. -->
@@ -61,7 +61,9 @@
         </Button>
 
         <!-- The views: today's notes, the timeline, and the four lists that used to be right-rail tabs. -->
-        <StackPanel Grid.Row="2" Spacing="1" Margin="12,4">
+        <!-- Scrolls when there are more lists than room; the calendar below keeps its place. -->
+        <ScrollViewer Grid.Row="2" VerticalAlignment="Top" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="1" Margin="12,4">
           <Button Classes="navitem" Classes.active="{Binding IsNavEditor}" Command="{Binding ShowEditorCommand}">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Border Grid.Column="0" Classes="mark" />
@@ -74,13 +76,48 @@
               <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavTimeline]}" />
             </Grid>
           </Button>
-          <Button x:Name="TutTabTodo" Classes="navitem" Classes.active="{Binding IsNavTodo}"
-                  Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Todo}">
+          <Button x:Name="TutTabTodo" Classes="navitem" Classes.active="{Binding IsNavTodo}" Command="{Binding ShowAllTodosCommand}">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Border Grid.Column="0" Classes="mark" />
               <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Strings[DeskNavTodo]}" />
               <TextBlock Grid.Column="2" Classes="count" VerticalAlignment="Center" Text="{Binding Todo.OpenCount}" />
             </Grid>
+          </Button>
+          <!-- The lists under 할 일: a ring in the list's colour, its name, what is owed in it. A list
+               narrows the 할 일 view; right-click renames it in place or deletes it. -->
+          <ItemsControl x:Name="SidebarLists" ItemsSource="{Binding Todo.Lists}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pvm:AgendaListRowViewModel">
+                <Panel>
+                  <Button Classes="navitem sub" IsVisible="{Binding !IsRenaming}" Classes.active="{Binding IsCurrent}"
+                          Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).ShowAgendaListCommand}"
+                          CommandParameter="{Binding}">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[AgendaListRename]}" Command="{Binding RenameCommand}" />
+                        <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[AgendaListDelete]}" Command="{Binding DeleteCommand}"
+                                  IsVisible="{Binding CanDelete}" />
+                      </ContextMenu>
+                    </Button.ContextMenu>
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Ellipse Grid.Column="0" Classes="ring" Stroke="{Binding Color}" />
+                      <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                      <TextBlock Grid.Column="2" Classes="count" VerticalAlignment="Center" Text="{Binding CountText}" />
+                    </Grid>
+                  </Button>
+                  <TextBox Classes="listrename" IsVisible="{Binding IsRenaming}" Text="{Binding DraftName, Mode=TwoWay}"
+                           PropertyChanged="OnListRenamePropertyChanged" LostFocus="OnListRenameLostFocus">
+                    <TextBox.KeyBindings>
+                      <KeyBinding Gesture="Enter" Command="{Binding CommitRenameCommand}" />
+                      <KeyBinding Gesture="Escape" Command="{Binding CancelRenameCommand}" />
+                    </TextBox.KeyBindings>
+                  </TextBox>
+                </Panel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button x:Name="NewAgendaListButton" Classes="navitem sub new" Command="{Binding NewAgendaListCommand}">
+            <TextBlock VerticalAlignment="Center" Text="{Binding Strings[AgendaListNew]}" />
           </Button>
           <Button x:Name="TutTabFavorites" Classes="navitem" Classes.active="{Binding IsNavFavorites}"
                   Command="{Binding ShowListCommand}" CommandParameter="{x:Static pvm:RightTab.Favorites}">
@@ -107,6 +144,7 @@
             </Grid>
           </Button>
         </StackPanel>
+        </ScrollViewer>
 
         <!-- Mini month: the selected day a sun square, today a lighter one, a dot under days with notes. -->
         <Border x:Name="TutCalendar" Grid.Row="4" Margin="12,0" Padding="6,14,6,12"
@@ -405,16 +443,24 @@
                        VerticalContentAlignment="Top" Foreground="Transparent" PlaceholderText="{Binding Strings.EditorEmptyHint}" />
             </Grid>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="48,10,48,14">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+            <Grid Grid.Row="2" ColumnDefinitions="Auto,12,Auto,*,Auto" Margin="48,10,48,14">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
                 <Ellipse Width="6" Height="6" VerticalAlignment="Center"
                          Fill="{DynamicResource Daynote.Desk.Brush.Saved}" IsVisible="{Binding IsSaveSettled}" />
                 <Ellipse Width="6" Height="6" VerticalAlignment="Center"
                          Fill="{DynamicResource Daynote.Desk.Brush.Text3}" IsVisible="{Binding !IsSaveSettled}" />
                 <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Center" Text="{Binding SaveFooterText}" />
               </StackPanel>
-              <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Center" Text="{Binding CharLineText}" />
-            </StackPanel>
+              <TextBlock Grid.Column="2" Classes="faint" FontSize="11.5" VerticalAlignment="Center" Text="{Binding CharLineText}" />
+              <!-- With the day panel closed, where something just made went is said here instead. -->
+              <StackPanel Grid.Column="4" x:Name="FooterNotice" Orientation="Horizontal" IsVisible="False"
+                          motion:Popover.IsOpen="{Binding IsNoticeInFooter}">
+                <TextBlock FontSize="11.5" VerticalAlignment="Center" Text="{Binding NoticeText}" />
+                <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Center" Text=" · " />
+                <Button Classes="link sun" FontSize="11.5" FontWeight="Bold" VerticalAlignment="Center"
+                        Content="{Binding Strings[DeskNoticeView]}" Command="{Binding ViewNoticeCommand}" />
+              </StackPanel>
+            </Grid>
           </Grid>
 
           <!-- An empty day: say so, and offer the one thing to do about it. -->
@@ -442,30 +488,121 @@
                           <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,0" Text="{Binding CountText}" />
                         </StackPanel>
                       </Button>
-                      <ItemsControl Grid.Column="2" ItemsSource="{Binding Notes}">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate><StackPanel Spacing="12" /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="pvm:TimelineNoteRow">
-                            <Border Classes="panel" Padding="20,18">
-                              <StackPanel>
-                                <Button Classes="link" Command="{Binding OpenCommand}">
-                                  <StackPanel Orientation="Horizontal" Spacing="7">
-                                    <TextBlock FontSize="16" FontWeight="Bold" LetterSpacing="-0.3" Text="{Binding Title}" />
-                                    <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
-                                          VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
+                      <!-- The day's record and its schedule in one column (docs/TODOS.md §11): what has no
+                           hour in a box above, the notes, then the hours in order with the now line. -->
+                      <StackPanel Grid.Column="2" Spacing="10">
+                        <Grid ColumnDefinitions="44,12,*" IsVisible="{Binding HasUntimed}">
+                          <TextBlock Grid.Column="0" Classes="faint" FontSize="11" FontWeight="Bold" TextAlignment="Right" Margin="0,10,0,0"
+                                     Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskTimelineUntimed]}" />
+                          <Border Grid.Column="2" Background="{DynamicResource Daynote.Product.Brush.Panel}" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}"
+                                  BorderThickness="1" CornerRadius="12" Padding="5">
+                            <ItemsControl ItemsSource="{Binding Untimed}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="pvm:TodoItemViewModel">
+                                  <Button Classes="row" CornerRadius="8" Padding="8,0" MinHeight="32" Command="{Binding JumpCommand}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                      <Panel Grid.Column="0" Width="16" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <views:DeskTodoCheck VerticalAlignment="Center" IsVisible="{Binding IsTask}" IsChecked="{Binding Checked}"
+                                                             Toggle="{Binding ToggleCommand}" Key="{Binding Key}" Tint="{Binding ListColor}" />
+                                        <Ellipse Classes="eventring" HorizontalAlignment="Center" IsVisible="{Binding IsEvent}" Stroke="{Binding ListColor}" />
+                                      </Panel>
+                                      <Panel Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock FontSize="13" TextTrimming="CharacterEllipsis" Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                                        <Border Classes="strike" Margin="0,9,0,0" />
+                                      </Panel>
+                                      <Path Grid.Column="2" Classes="repeat" Margin="6,0,0,0" IsVisible="{Binding IsRepeat}" />
+                                      <Panel Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Classes="faint" FontSize="11" FontWeight="Bold" IsVisible="{Binding IsTask}"
+                                                   Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskTimelineTodoTag]}" />
+                                        <TextBlock Classes="faint" FontSize="11" FontWeight="Bold" IsVisible="{Binding IsEvent}"
+                                                   Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskEventAllDay]}" />
+                                      </Panel>
+                                    </Grid>
+                                  </Button>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </Border>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Notes}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pvm:TimelineNoteRow">
+                              <Grid ColumnDefinitions="44,12,*">
+                                <Border Grid.Column="2" Classes="panel" Padding="20,18">
+                                  <StackPanel>
+                                    <Button Classes="link" Command="{Binding OpenCommand}">
+                                      <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <TextBlock FontSize="16" FontWeight="Bold" LetterSpacing="-0.3" Text="{Binding Title}" />
+                                        <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
+                                              VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
+                                      </StackPanel>
+                                    </Button>
+                                    <TextBlock Classes="muted" FontSize="13.5" LineHeight="24.3" TextWrapping="Wrap" Margin="0,8,0,0"
+                                               Text="{Binding DisplayBody}" />
+                                    <Button Classes="link sun" FontSize="12.5" FontWeight="SemiBold" Margin="0,8,0,0"
+                                            Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}" IsVisible="{Binding IsTruncated}" />
                                   </StackPanel>
+                                </Border>
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding Timed}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pvm:TimelineSlot">
+                              <!-- An event's card and a to-do's row stretch to 440 and no further (design v2). -->
+                              <Grid>
+                                <Grid.ColumnDefinitions>
+                                  <ColumnDefinition Width="44" />
+                                  <ColumnDefinition Width="12" />
+                                  <ColumnDefinition Width="1000*" MaxWidth="440" />
+                                  <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Classes="tltime" Classes.now="{Binding IsNow}" Classes.event="{Binding IsEvent}"
+                                           TextAlignment="Right" Text="{Binding Time}" />
+                                <!-- Now: a red dot and a line across the column. -->
+                                <Grid Grid.Column="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" Height="18" IsVisible="{Binding IsNow}">
+                                  <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{DynamicResource Daynote.Product.Brush.Danger}" VerticalAlignment="Center" />
+                                  <Border Grid.Column="1" Height="1.5" Background="{DynamicResource Daynote.Product.Brush.Danger}" VerticalAlignment="Center" />
+                                </Grid>
+                                <!-- An event: a narrow card with its span. -->
+                                <Button Grid.Column="2" Classes="card" Classes.past="{Binding Row.IsPast}"
+                                        CornerRadius="12" Padding="14,10" IsVisible="{Binding IsEvent}" Command="{Binding Row.JumpCommand}">
+                                  <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Ellipse Grid.Column="0" Classes="eventring" Width="10" Height="10" Margin="0,0,11,0" Stroke="{Binding Row.ListColor}" />
+                                    <StackPanel Grid.Column="1">
+                                      <TextBlock FontSize="14" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Row.Text}" />
+                                      <TextBlock Classes="muted" FontSize="12" Margin="0,1,0,0" Text="{Binding Row.RangeLabel}" />
+                                    </StackPanel>
+                                    <Path Grid.Column="2" Classes="repeat" Margin="8,0,0,0" IsVisible="{Binding Row.IsRepeat}" />
+                                  </Grid>
                                 </Button>
-                                <TextBlock Classes="muted" FontSize="13.5" LineHeight="24.3" TextWrapping="Wrap" Margin="0,8,0,0"
-                                           Text="{Binding DisplayBody}" />
-                                <Button Classes="link sun" FontSize="12.5" FontWeight="SemiBold" Margin="0,8,0,0"
-                                        Content="{Binding ExpandLabel}" Command="{Binding ToggleExpandCommand}" IsVisible="{Binding IsTruncated}" />
-                              </StackPanel>
-                            </Border>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
+                                <!-- A to-do at an hour: its ring, its title, "할 일". -->
+                                <Button Grid.Column="2" Classes="row" CornerRadius="10" MinHeight="34" Padding="10,0"
+                                        IsVisible="{Binding IsTodo}" Command="{Binding Row.JumpCommand}">
+                                  <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <views:DeskTodoCheck Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center" IsChecked="{Binding Row.Checked}"
+                                                         Toggle="{Binding Row.ToggleCommand}" Key="{Binding Row.Key}" Tint="{Binding Row.ListColor}" />
+                                    <Panel Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                      <TextBlock FontSize="13.5" TextTrimming="CharacterEllipsis" Classes.done="{Binding Row.Checked}" Text="{Binding Row.Text}" />
+                                      <Border Classes="strike" Margin="0,9.5,0,0" />
+                                    </Panel>
+                                    <Path Grid.Column="2" Classes="repeat" Margin="6,0,0,0" IsVisible="{Binding Row.IsRepeat}" />
+                                    <TextBlock Grid.Column="3" Classes="faint" FontSize="11" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"
+                                               Text="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskTimelineTodoTag]}" />
+                                  </Grid>
+                                </Button>
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -481,11 +618,15 @@
         <!-- Lists: to-dos, favourites, tags, files. -->
         <ScrollViewer Grid.Column="0" Padding="28,32,28,48" IsVisible="{Binding IsListMode}">
           <StackPanel MaxWidth="760">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,20">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="0,0,0,20">
               <TextBlock Grid.Column="0" FontSize="26" FontWeight="ExtraBold" LetterSpacing="-0.8" VerticalAlignment="Bottom" Text="{Binding ListTitle}" />
               <TextBlock Grid.Column="1" Classes="muted" FontSize="13" VerticalAlignment="Bottom" Margin="10,0,0,4" Text="{Binding ListSubtitle}" />
+              <!-- 리스트 삭제: its to-dos move to the built-in list, so it is not asked twice. -->
+              <Button Grid.Column="3" x:Name="DeleteListButton" Classes="link faint" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Bottom"
+                      Margin="0,0,14,4" IsVisible="{Binding CanDeleteSelectedList}" Content="{Binding Strings[AgendaListDelete]}"
+                      Command="{Binding DeleteSelectedListCommand}" />
               <!-- On the 할 일 view: a to-do on today, in the list being looked at. -->
-              <Button Grid.Column="3" x:Name="ListAddTodo" Classes="accent pill small" VerticalAlignment="Bottom"
+              <Button Grid.Column="4" x:Name="ListAddTodo" Classes="accent pill small" VerticalAlignment="Bottom"
                       IsVisible="{Binding TabIsTodo}" Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddListTodoCommand}" />
             </Grid>
 
@@ -504,17 +645,20 @@
                           <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
                         </ContextMenu>
                       </Button.ContextMenu>
-                      <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                         <views:DeskTodoCheck Grid.Column="0" Classes="large" Margin="0,0,14,0"
-                                             IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                             IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" Tint="{Binding ListColor}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                           <Panel HorizontalAlignment="Left">
                             <TextBlock FontSize="14" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
                             <Border Classes="strike" Margin="0,9.5,0,0" />
                           </Panel>
-                          <TextBlock Classes="faint" FontSize="12" Margin="0,2,0,0" Text="{Binding NoteLabel}" />
+                          <Path Classes="repeat" IsVisible="{Binding IsRepeat}" />
                         </StackPanel>
-                        <Border Grid.Column="2" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="6" Padding="8,3"
+                        <!-- The list's name, while the view shows every list. -->
+                        <TextBlock Grid.Column="2" Classes="faint" FontSize="12" Margin="14,0,0,0" VerticalAlignment="Center" Text="{Binding NoteLabel}"
+                                   IsVisible="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Todo.SelectedListId, Converter={x:Static ObjectConverters.IsNull}}" />
+                        <Border Grid.Column="3" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="6" Padding="8,3"
                                 Margin="14,0,0,0" VerticalAlignment="Center" IsVisible="{Binding HasDue}">
                           <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="12" FontWeight="Bold" Text="{Binding DueLabel}" />
                         </Border>
@@ -523,13 +667,24 @@
                   </Border>
                 </DataTemplate>
               </StackPanel.Resources>
-              <Border Classes="panel" ClipToBounds="True" IsVisible="{Binding !Todo.IsEmpty}">
+              <Border Classes="panel" ClipToBounds="True">
                 <StackPanel>
                   <ItemsControl ItemsSource="{Binding Todo.TodayItems}" ItemTemplate="{StaticResource TodoListRow}" />
                   <ItemsControl ItemsSource="{Binding Todo.Items}" ItemTemplate="{StaticResource TodoListRow}" />
+                  <!-- 오늘 할 일 추가: a to-do for today, in the list being looked at. -->
+                  <Grid ColumnDefinitions="Auto,*" Margin="18,10">
+                    <Path Grid.Column="0" Classes="icon" Width="19" Margin="0,0,14,0" StrokeThickness="1.5"
+                          Stroke="{DynamicResource Daynote.Desk.Brush.Text3}" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                    <TextBox Grid.Column="1" x:Name="ListQuickAdd" Classes="bare quickadd" FontSize="14" Text="{Binding ListQuickText, Mode=TwoWay}"
+                             PlaceholderText="{Binding Strings[DeskQuickAddToday]}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding QuickAddListCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                  </Grid>
                 </StackPanel>
               </Border>
-              <TextBlock Classes="empty" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding Todo.IsEmpty}" />
+              <TextBlock Classes="empty" Margin="0,14,0,0" Text="{Binding Strings.TodoEmpty}" IsVisible="{Binding Todo.IsEmpty}" />
             </StackPanel>
 
             <!-- Favourites, as cards. -->
@@ -656,55 +811,127 @@
                 IsVisible="{Binding !RightCollapsed}" DragDrop.AllowDrop="True">
           <ScrollViewer>
             <StackPanel x:Name="DayPanelContent">
-              <!-- + 할 일: the way to a to-do on this date. A note's body never makes one. -->
-              <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,20,20,10">
-                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Bottom" Text="{Binding Strings[DeskDayTodoTitle]}" />
-                <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Bottom" Margin="8,0,0,1" Text="{Binding DayTodoCountText}" />
-                <Button Grid.Column="3" x:Name="DayAddTodo" Classes="link sun" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Bottom"
-                        Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddDayTodoCommand}" />
+              <StackPanel.Resources>
+                <!-- One to-do in the day panel: the ring in its list's colour, the title with ↻ on a
+                     repeat, the time under it. A click edits; the ring ticks (motion spec M3). -->
+                <DataTemplate x:Key="DayTodoRow" x:DataType="pvm:TodoItemViewModel">
+                  <Panel Classes="todorow">
+                    <Border Classes="rowflash" />
+                    <Button Classes="row rowcontent" Padding="10,7" Command="{Binding JumpCommand}">
+                      <Button.KeyBindings>
+                        <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
+                      </Button.KeyBindings>
+                      <Button.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowEdit]}" Command="{Binding EditCommand}" />
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
+                        </ContextMenu>
+                      </Button.ContextMenu>
+                      <Grid ColumnDefinitions="Auto,*">
+                        <views:DeskTodoCheck Grid.Column="0" Margin="0,1,10,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}"
+                                             Key="{Binding Key}" Tint="{Binding ListColor}" />
+                        <StackPanel Grid.Column="1">
+                          <StackPanel Orientation="Horizontal" Spacing="5">
+                            <Panel HorizontalAlignment="Left">
+                              <TextBlock FontSize="13" LineHeight="18.2" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
+                              <Border Classes="strike" Margin="0,9.1,0,0" />
+                            </Panel>
+                            <Path Classes="repeat" IsVisible="{Binding IsRepeat}"
+                                  ToolTip.Tip="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[DeskRepeatTip]}" />
+                          </StackPanel>
+                          <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,1,0,0"
+                                     Text="{Binding DueLabel}" IsVisible="{Binding HasDue}" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </Panel>
+                </DataTemplate>
+              </StackPanel.Resources>
+
+              <!-- Where something just made went, when it is not on this day: 보기 goes there. -->
+              <Border x:Name="DayNotice" Classes="notice" Margin="14,14,14,0" IsVisible="False"
+                      motion:Popover.IsOpen="{Binding IsNoticeInPanel}">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding NoticeText}" />
+                  <Button Grid.Column="1" x:Name="DayNoticeView" Classes="link sun" FontSize="12.5" FontWeight="Bold" Padding="6"
+                          VerticalAlignment="Center" Content="{Binding Strings[DeskNoticeView]}" Command="{Binding ViewNoticeCommand}" />
+                </Grid>
+              </Border>
+
+              <!-- 일정: this date's events, all-day first, then by start. -->
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,16,14,4">
+                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Center" Text="{Binding Strings[DeskDayEventTitle]}" />
+                <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Center" Margin="8,1,0,0" Text="{Binding DayEventCountText}" />
+                <Button Grid.Column="3" x:Name="DayAddEvent" Classes="ghost tiny" Command="{Binding AddDayEventCommand}"
+                        ToolTip.Tip="{Binding Strings[DeskAddTip]}" AutomationProperties.Name="{Binding Strings[DeskAddTip]}">
+                  <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                </Button>
               </Grid>
-              <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
-              <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0"
-                            motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}"
-                            motion:RowArrivals.KnownItems="{Binding DayTodosDone}">
+              <ItemsControl x:Name="DayEventList" ItemsSource="{Binding DayEvents}" Margin="10,0">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="pvm:TodoItemViewModel">
-                    <Panel Classes="todorow">
-                      <Border Classes="rowflash" />
-                      <Button Classes="row rowcontent" Padding="10,9" Command="{Binding JumpCommand}">
-                        <Button.KeyBindings>
-                          <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
-                        </Button.KeyBindings>
-                        <Button.ContextMenu>
-                          <ContextMenu>
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowEdit]}" Command="{Binding EditCommand}" />
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
-                          </ContextMenu>
-                        </Button.ContextMenu>
-                        <Grid ColumnDefinitions="Auto,*">
-                          <views:DeskTodoCheck Grid.Column="0" Margin="0,1,11,0" IsChecked="{Binding Checked}" Toggle="{Binding ToggleCommand}" Key="{Binding Key}" />
-                          <StackPanel Grid.Column="1">
-                            <Panel HorizontalAlignment="Left">
-                              <TextBlock FontSize="13" LineHeight="18.85" TextWrapping="Wrap" Classes.done="{Binding Checked}" Text="{Binding Text}" />
-                              <Border Classes="strike" Margin="0,9.4,0,0" />
-                            </Panel>
-                            <TextBlock Classes="due" Classes.overdue="{Binding Overdue}" FontSize="11.5" Margin="0,2,0,0"
-                                       Text="{Binding DueLabel}" IsVisible="{Binding HasDue}" />
-                          </StackPanel>
+                    <Button Classes="row" Classes.past="{Binding IsPast}" Padding="10,6" Command="{Binding JumpCommand}">
+                      <Button.KeyBindings>
+                        <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
+                      </Button.KeyBindings>
+                      <Button.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowEdit]}" Command="{Binding EditCommand}" />
+                          <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[TodoRowDelete]}" Command="{Binding DeleteCommand}" />
+                        </ContextMenu>
+                      </Button.ContextMenu>
+                      <Grid ColumnDefinitions="42,8,*">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                          <TextBlock FontSize="12" FontWeight="Bold" Text="{Binding StartLabel}" />
+                          <TextBlock Classes="faint" FontSize="11" Text="{Binding EndLabel}" IsVisible="{Binding !IsAllDay}" />
+                        </StackPanel>
+                        <Grid Grid.Column="2" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                          <Ellipse Grid.Column="0" Classes="eventring" Margin="0,0,7,0" Stroke="{Binding ListColor}" />
+                          <TextBlock Grid.Column="1" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Text="{Binding Text}" />
+                          <Path Grid.Column="2" Classes="repeat" Margin="5,0,0,0" IsVisible="{Binding IsRepeat}" />
                         </Grid>
-                      </Button>
-                    </Panel>
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <!-- No fixed LineHeight: the code chip is an inline box taller than the text, and a fixed
-                   line height clips the words beside it. -->
-              <TextBlock Classes="empty" Margin="20,6,20,10" LineHeight="NaN" IsVisible="{Binding IsDayTodoEmpty}">
-                <Run Text="{Binding Strings[TodoEmptyPrefix]}" /><InlineUIContainer BaselineAlignment="Center"><Border
-                    Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="4" Padding="5,1" Margin="0,2"><TextBlock
-                    Classes="mono muted" FontSize="11.5" Text="{Binding Strings[TodoEmptyCode]}" /></Border></InlineUIContainer><Run
-                    Text="{Binding Strings[DeskDayTodoEmptySuffix]}" />
-              </TextBlock>
+              <TextBlock Classes="faint" FontSize="12.5" Margin="20,2,20,6" Text="{Binding Strings[DeskDayEventNone]}" IsVisible="{Binding IsDayEventEmpty}" />
+
+              <Border Height="1" Margin="20,10,20,0" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+
+              <!-- 할 일: what is left on this date, a line to add one, then what was finished behind its count. -->
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="20,12,14,4">
+                <TextBlock Grid.Column="0" FontSize="14" FontWeight="ExtraBold" LetterSpacing="-0.3" VerticalAlignment="Center" Text="{Binding Strings[DeskDayTodoHeading]}" />
+                <TextBlock Grid.Column="1" Classes="faint" FontSize="12" VerticalAlignment="Center" Margin="8,1,0,0" Text="{Binding DayTodoCountText}" />
+                <Button Grid.Column="3" x:Name="DayAddTodo" Classes="ghost tiny" Command="{Binding AddDayTodoCommand}"
+                        ToolTip.Tip="{Binding Strings[DeskAddTip]}" AutomationProperties.Name="{Binding Strings[DeskAddTip]}">
+                  <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                </Button>
+              </Grid>
+              <!-- A to-do made since the panel last showed arrives (motion spec M2); a tick draws itself (M3). -->
+              <ItemsControl x:Name="DayTodoList" ItemsSource="{Binding DayTodos}" Margin="10,0" ItemTemplate="{StaticResource DayTodoRow}"
+                            motion:RowArrivals.IsEnabled="True" motion:RowArrivals.Context="{Binding SelectedDate}"
+                            motion:RowArrivals.KnownItems="{Binding DayTodosDone}" />
+              <Grid ColumnDefinitions="Auto,*" Margin="20,2,20,0">
+                <Path Grid.Column="0" Classes="icon" Width="17" Margin="0,0,10,0" StrokeThickness="1.5"
+                      Stroke="{DynamicResource Daynote.Desk.Brush.Text3}" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                <TextBox Grid.Column="1" x:Name="DayQuickAdd" Classes="bare quickadd" Text="{Binding DayQuickText, Mode=TwoWay}"
+                         PlaceholderText="{Binding Strings[DeskQuickAddDay]}">
+                  <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding QuickAddDayCommand}" />
+                  </TextBox.KeyBindings>
+                </TextBox>
+              </Grid>
+              <Button x:Name="DayDoneToggle" Classes="link faint" Margin="20,8,20,4" FontSize="12" FontWeight="Bold"
+                      IsVisible="{Binding HasDayDone}" Command="{Binding ToggleDayDoneCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock VerticalAlignment="Center" Text="{Binding DayDoneCountText}" />
+                  <Path Classes="icon" Width="9" Height="9" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}"
+                        Stretch="Uniform" Classes.closed="{Binding !IsDayDoneOpen}" />
+                </StackPanel>
+              </Button>
+              <ItemsControl x:Name="DayDoneList" ItemsSource="{Binding DayTodosDone}" Margin="10,0" ItemTemplate="{StaticResource DayTodoRow}"
+                            IsVisible="{Binding IsDayDoneOpen}" />
 
               <Border Height="1" Margin="20,14" Background="{DynamicResource Daynote.Product.Brush.Stroke2}" />
 
@@ -814,45 +1041,63 @@
     -->
     <Border x:Name="AddTodoScrim" Grid.ColumnSpan="2" Classes="scrim" ZIndex="22" IsVisible="False"
             motion:Popover.IsOpen="{Binding IsAddTodoOpen}" PointerPressed="OnAddTodoScrimPressed">
-      <Border x:Name="AddTodoCard" Classes="modal" Width="460" MaxHeight="660" Margin="24" Padding="22,18,22,18"
-              VerticalAlignment="Center" HorizontalAlignment="Center">
+      <Border x:Name="AddTodoCard" Classes="modal" Width="460" MaxHeight="680" Margin="24,110,24,24" Padding="0" CornerRadius="16"
+              Background="{DynamicResource Daynote.Product.Brush.Card}" VerticalAlignment="Top" HorizontalAlignment="Center">
         <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <TextBlock Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoAddTitle]}"
-                       IsVisible="{Binding !TodoEntry.IsEditing}" />
-            <TextBlock x:Name="EditTodoHeading" Grid.Column="0" Classes="h1" VerticalAlignment="Center" Text="{Binding Strings[TodoEditTitle]}"
-                       IsVisible="{Binding TodoEntry.IsEditing}" />
-            <Button Grid.Column="1" Classes="ghost small" Command="{Binding CloseAddTodoCommand}"
+          <!-- 할 일 / 일정, and where it is going: the day it opened on, or "할 일 편집". -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="18,16,14,0">
+            <Border Grid.Column="0" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="9" Padding="2">
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="AddTodoKindTask" Classes="kind" Classes.on="{Binding TodoEntry.IsTask}"
+                        Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock FontSize="11" VerticalAlignment="Center" Text="✓" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Strings[AgendaCaptureTask]}" />
+                  </StackPanel>
+                </Button>
+                <Button x:Name="AddTodoKindEvent" Classes="kind" Classes.on="{Binding TodoEntry.IsEvent}"
+                        Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock FontSize="11" VerticalAlignment="Center" Text="▦" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Strings[AgendaCaptureEvent]}" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Border>
+            <TextBlock Grid.Column="1" Classes="faint" FontSize="12" Margin="10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" Text="{Binding AddTodoSource}" IsVisible="{Binding !TodoEntry.IsEditing}" />
+            <TextBlock x:Name="EditTodoHeading" Grid.Column="1" FontSize="13" FontWeight="Bold" Margin="10,0" HorizontalAlignment="Right"
+                       VerticalAlignment="Center" Text="{Binding Strings[TodoEditTitle]}" IsVisible="{Binding TodoEntry.IsEditing}" />
+            <Button Grid.Column="2" Classes="ghost tiny" Command="{Binding CloseAddTodoCommand}"
                     AutomationProperties.Name="{Binding Strings[TodoEntryCancel]}">
               <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Close}" />
             </Button>
           </Grid>
 
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,12">
-            <Button x:Name="AddTodoKindTask" Classes="opt" Classes.on="{Binding TodoEntry.IsTask}"
-                    Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Task}"
-                    Content="{Binding Strings[AgendaCaptureTask]}" />
-            <Button x:Name="AddTodoKindEvent" Classes="opt" Classes.on="{Binding TodoEntry.IsEvent}"
-                    Command="{Binding TodoEntry.SelectKindCommand}" CommandParameter="{x:Static agenda:AgendaKind.Event}"
-                    Content="{Binding Strings[AgendaCaptureEvent]}" />
-          </StackPanel>
-
-          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" Margin="0,14,0,0">
-            <Button Grid.Column="1" Classes="quiet" Margin="0,0,8,0" Padding="16,8" FontSize="13"
-                    Command="{Binding CloseAddTodoCommand}" Content="{Binding Strings[TodoEntryCancel]}" />
-            <Button Grid.Column="2" x:Name="AddTodoCommit" Classes="accent" Padding="20,8"
-                    IsEnabled="{Binding TodoEntry.CanAdd}" Command="{Binding CommitAddTodoCommand}">
-              <Panel>
-                <TextBlock Text="{Binding Strings[TodoEntryAdd]}" IsVisible="{Binding !TodoEntry.IsEditing}" />
-                <TextBlock Text="{Binding Strings[TodoEditSave]}" IsVisible="{Binding TodoEntry.IsEditing}" />
-              </Panel>
-            </Button>
-          </Grid>
+          <!-- The foot: what the keys do, 취소 and 만들기; editing, 삭제 in their place. -->
+          <Border DockPanel.Dock="Bottom" Margin="0,16,0,0" Padding="18,10,14,10"
+                  BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <TextBlock Grid.Column="0" Classes="faint" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                         Text="{Binding Strings[TodoEntryKeysHint]}" IsVisible="{Binding !TodoEntry.IsEditing}" />
+              <Button Grid.Column="0" x:Name="AddTodoDelete" Classes="link faint" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                      Content="{Binding Strings[TodoEntryDelete]}" Command="{Binding DeleteEditedTodoCommand}" IsVisible="{Binding TodoEntry.IsEditing}" />
+              <Button Grid.Column="1" Classes="quiet" Margin="0,0,8,0" Padding="12,0" Height="32" FontSize="13"
+                      Command="{Binding CloseAddTodoCommand}" Content="{Binding Strings[TodoEntryCancel]}" />
+              <Button Grid.Column="2" x:Name="AddTodoCommit" Classes="accent" Padding="14,0" Height="32" CornerRadius="9"
+                      IsEnabled="{Binding TodoEntry.CanAdd}" Command="{Binding CommitAddTodoCommand}">
+                <Panel>
+                  <TextBlock Text="{Binding Strings[TodoEntryCreate]}" IsVisible="{Binding !TodoEntry.IsEditing}" />
+                  <TextBlock Text="{Binding Strings[TodoEditSave]}" IsVisible="{Binding TodoEntry.IsEditing}" />
+                </Panel>
+              </Button>
+            </Grid>
+          </Border>
 
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="10">
-              <!-- 제목. Enter adds, as the phone's return key does. -->
-              <TextBox x:Name="AddTodoTitle" Classes="inline" FontSize="14" MinHeight="38"
+            <StackPanel Spacing="0">
+              <!-- 제목. Enter makes it, as the phone's return key does. -->
+              <TextBox x:Name="AddTodoTitle" Classes="bare" FontSize="20" FontWeight="ExtraBold" LetterSpacing="-0.4" Margin="18,14,18,8"
                        Text="{Binding TodoEntry.Title, Mode=TwoWay}" PlaceholderText="{Binding TodoEntry.TitlePlaceholder}"
                        AutomationProperties.Name="{Binding Strings[TodoEntryTitle]}">
                 <TextBox.KeyBindings>
@@ -860,7 +1105,55 @@
                 </TextBox.KeyBindings>
               </TextBox>
 
-              <Border Classes="panel" CornerRadius="12">
+              <!-- 언제: the day, the hour and the repeat in words, read back underneath. The calendar and
+                   the clock open the same pickers the fields below use. -->
+              <StackPanel IsVisible="{Binding !TodoEntry.IsEditing}">
+                <Border Margin="18,4,18,0" Height="40" Padding="12,0,5,0" CornerRadius="10" Background="{DynamicResource Daynote.Product.Brush.Seg}">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                    <TextBlock Grid.Column="0" FontSize="12" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Daynote.Product.Brush.Text2}" Text="{Binding Strings[TodoEntryWhen]}" />
+                    <TextBox Grid.Column="1" x:Name="AddTodoWhen" Classes="bare" FontSize="14" VerticalAlignment="Center"
+                             Text="{Binding TodoEntry.When, Mode=TwoWay}" PlaceholderText="{Binding Strings[TodoEntryWhenPlaceholder]}"
+                             AutomationProperties.Name="{Binding Strings[TodoEntryWhen]}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding CommitAddTodoCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <Border Grid.Column="2" Width="1" Margin="6,8" Background="{DynamicResource Daynote.Product.Brush.Stroke}" />
+                    <Button Grid.Column="3" x:Name="AddTodoPickDate" Classes="ghost small" Classes.lit="{Binding TodoEntry.IsDatePickerOpen}"
+                            Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Date}"
+                            ToolTip.Tip="{Binding Strings[TodoEntryPickDate]}" AutomationProperties.Name="{Binding Strings[TodoEntryPickDate]}">
+                      <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Calendar}" />
+                    </Button>
+                    <Button Grid.Column="4" x:Name="AddTodoPickTime" Classes="ghost small" Classes.lit="{Binding TodoEntry.IsTimePickerOpen}"
+                            Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Time}"
+                            ToolTip.Tip="{Binding Strings[TodoEntryPickTime]}" AutomationProperties.Name="{Binding Strings[TodoEntryPickTime]}">
+                      <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Clock}" />
+                    </Button>
+                  </Grid>
+                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="18,10,18,0" MinHeight="20">
+                  <Panel VerticalAlignment="Center">
+                    <TextBlock FontSize="13" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="✓" IsVisible="{Binding TodoEntry.IsTask}" />
+                    <TextBlock FontSize="13" FontWeight="ExtraBold" Foreground="{DynamicResource Daynote.Desk.Brush.SunInk}" Text="▦" IsVisible="{Binding TodoEntry.IsEvent}" />
+                  </Panel>
+                  <TextBlock x:Name="AddTodoReadback" Classes="readback" Classes.bad="{Binding TodoEntry.IsWhenUnreadable}" FontSize="13" FontWeight="Bold"
+                             VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding TodoEntry.Readback}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding TodoEntry.WhenWarnings}" Margin="18,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <Grid ColumnDefinitions="Auto,*" Margin="0,6,0,0">
+                        <TextBlock Grid.Column="0" FontSize="12" FontWeight="ExtraBold" Margin="0,0,7,0" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" Text="!" />
+                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="17.4" TextWrapping="Wrap" Foreground="{DynamicResource Daynote.Product.Brush.Danger}" Text="{Binding}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Spacing="10" Margin="18,12,18,0">
+              <Border Classes="panel" CornerRadius="12" IsVisible="{Binding TodoEntry.ShowsFields}">
                 <StackPanel>
                   <Button x:Name="AddTodoDateRow" Classes="field" Classes.open="{Binding TodoEntry.IsDatePickerOpen}"
                           Command="{Binding TodoEntry.TogglePickerCommand}" CommandParameter="{x:Static pvm:TodoEntryPicker.Date}">
@@ -989,8 +1282,8 @@
                 </StackPanel>
               </Border>
 
-              <!-- 내용: a few lines kept with the item, apart from its title. -->
-              <TextBox x:Name="AddTodoNotes" Classes="inline" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxHeight="140"
+              <!-- 내용: a few lines kept with the item, apart from its title. Editing only: making one is title and when. -->
+              <TextBox x:Name="AddTodoNotes" Classes="inline" IsVisible="{Binding TodoEntry.IsEditing}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxHeight="140"
                        VerticalContentAlignment="Top" Text="{Binding TodoEntry.Description, Mode=TwoWay}"
                        PlaceholderText="{Binding Strings[TodoEntryNotesPlaceholder]}"
                        AutomationProperties.Name="{Binding Strings[TodoEntryNotes]}" />
@@ -1016,10 +1309,74 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
+              <!-- 타임라인 표시: only a repeating to-do is asked (docs/TODOS.md §11). -->
+              <Border Classes="timelinechoice" IsVisible="{Binding TodoEntry.ShowsTimelineChoice}">
+                <StackPanel>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" FontSize="12" FontWeight="Bold" VerticalAlignment="Center">
+                      <Run Text="{Binding Strings[TodoEntryTimeline]}" />
+                      <Run Text=" " />
+                      <Run FontWeight="Normal" Foreground="{DynamicResource Daynote.Desk.Brush.Text3}" Text="{Binding Strings[TodoEntryTimelineScope]}" />
+                    </TextBlock>
+                    <Border Grid.Column="1" Background="{DynamicResource Daynote.Product.Brush.Seg}" CornerRadius="8" Padding="2">
+                      <ItemsControl ItemsSource="{Binding TodoEntry.TimelineOptions}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="pvm:TimelineVisibilityOption">
+                            <Button Classes="kind small" Classes.on="{Binding IsCurrent}" Content="{Binding Label}"
+                                    Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).TodoEntry.PickTimelineCommand}"
+                                    CommandParameter="{Binding Visibility}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </Grid>
+                  <TextBlock Classes="muted" FontSize="11.5" LineHeight="17" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding TodoEntry.TimelineHint}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </DockPanel>
         <Border.Styles>
+          <!-- A face of a segmented control: the kind, 타임라인 표시. Lit on the card colour. -->
+          <Style Selector="Button.kind">
+            <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+          </Style>
+          <Style Selector="Button.kind.small">
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="9,0" />
+            <Setter Property="FontSize" Value="11.5" />
+          </Style>
+          <Style Selector="Button.kind.on">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+          </Style>
+          <Style Selector="Button.ghost.lit">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.SunInk}" />
+          </Style>
+          <Style Selector="TextBlock.readback">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+          </Style>
+          <Style Selector="TextBlock.readback.bad">
+            <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Danger}" />
+          </Style>
+          <Style Selector="Border.timelinechoice">
+            <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Panel}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke2}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10" />
+          </Style>
           <Style Selector="Button.opt">
             <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
             <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />

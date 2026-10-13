@@ -12,6 +12,7 @@ using Daynote.Core.Domain;
 using Daynote.Core.Notes;
 using Daynote.Desktop.ViewModels;
 using Daynote.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Daynote.Desktop.Tests;
@@ -156,15 +157,22 @@ public sealed class DesignFrameTests
 
     /// <summary>
     /// The prototype's <c>sampleData()</c>: six notes over nine days, two favourites, three files, the
-    /// to-dos with due dates relative to today.
+    /// to-dos and events with dates relative to today.
     /// </summary>
     private static void Seed(DesktopShellViewModel shell)
     {
         LocalDate today = shell.SelectedDate;
-        string Md(int offset)
+
+        // The to-dos and events are entities of their own, in the design's three lists; the
+        // notes' bodies are only text (docs/TODOS.md, 2026-10-10).
+        var agenda = TestServices.CurrentProvider!.GetRequiredService<Daynote.Core.Agenda.IAgendaRepository>();
+        Guid work = WaitFor(shell.Todo.CreateListAsync(AgendaSeed.Work)).Id;
+        Guid life = WaitFor(shell.Todo.CreateListAsync(AgendaSeed.Life)).Id;
+        Guid shopping = WaitFor(shell.Todo.CreateListAsync(AgendaSeed.Shopping)).Id;
+        Wait(shell.Todo.SelectListAsync(shell.Todo.SelectedListId));
+        foreach (Daynote.Core.Agenda.AgendaItem item in AgendaSeed.Sample(LocalDates.ToDateOnly(today), work, life, shopping))
         {
-            DateOnly day = LocalDates.ToDateOnly(LocalDates.AddDays(today, offset));
-            return day.ToString("MM/dd", CultureInfo.InvariantCulture);
+            Wait(agenda.SaveAsync(item).AsTask());
         }
 
         var notes = new (int Offset, string Title, bool Favorite, string[] Tags, string Body)[]
@@ -174,13 +182,13 @@ public sealed class DesignFrameTests
             (-4, "뉴스클리핑", false, ["뉴스클리핑"],
                 "오늘의 업계 뉴스 정리\n\n- 관리단위 식별·연결 ID 플랫폼 사업 공고\n- NFC 기반 모바일 순찰관리 서비스 사례\n- 현장근무자용 모바일 업무 플랫폼 동향"),
             (-1, "고객 미팅 메모", false, ["고객"],
-                $"A사 정기 미팅\n\n- 대시보드 로딩 속도 개선 요청\n- 엑셀 내보내기 기능 문의 → 8월 로드맵 안내\n- 계약 갱신은 9월 초 논의 예정\n\n-[] 속도 개선 이슈 티켓 생성 ({Md(1)} 12:00)"),
+                $"A사 정기 미팅\n\n- 대시보드 로딩 속도 개선 요청\n- 엑셀 내보내기 기능 문의 → 8월 로드맵 안내\n- 계약 갱신은 9월 초 논의 예정"),
             (2, "휴가 전 인수인계", false, ["일정"],
-                $"8월 첫째 주 휴가 전 정리할 것\n\n-[] 담당 이슈 재배정 ({Md(2)} 18:00)\n-[] 자동응답 설정"),
+                "8월 첫째 주 휴가 전 정리할 것\n\n- 담당 이슈 재배정\n- 자동응답 설정"),
             (0, "주간회의 준비", true, ["회의", "기획"],
-                $"이번 주 주간회의 안건 정리\n\n1. 2분기 지표 리뷰\n2. 신규 기능 우선순위 논의\n3. 채용 진행 상황 공유\n\n-[] 회의자료 초안 공유 ({Md(1)} 10:00)\n-[] 회의실 예약 확인 ({Md(0)} 17:00)\n-[x] 지난주 액션아이템 정리"),
+                $"이번 주 주간회의 안건 정리\n\n1. 2분기 지표 리뷰\n2. 신규 기능 우선순위 논의\n3. 채용 진행 상황 공유"),
             (0, "배포 체크리스트", false, ["배포"],
-                $"v2.4.0 배포 전 확인사항\n\n-[] 스테이징 회귀 테스트 ({Md(2)} 14:00)\n-[] 릴리즈 노트 작성\n-[x] DB 마이그레이션 스크립트 리뷰\n\n※ 배포 후 30분간 에러 모니터링 필수"),
+                "v2.4.0 배포 전 확인사항\n\n※ 배포 후 30분간 에러 모니터링 필수"),
         };
 
         foreach (var note in notes)
@@ -259,6 +267,12 @@ public sealed class DesignFrameTests
     }
 
     private static void Wait<T>(Task<T> work) => Wait((Task)work);
+
+    private static T WaitFor<T>(Task<T> work)
+    {
+        Wait((Task)work);
+        return work.Result;
+    }
 
     private static void Pump(Window? window = null)
     {
