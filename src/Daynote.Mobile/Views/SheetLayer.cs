@@ -28,6 +28,25 @@ public sealed class SheetLayer : Panel
     public static readonly StyledProperty<bool> IsOpenProperty =
         AvaloniaProperty.Register<SheetLayer, bool>(nameof(IsOpen));
 
+    /// <summary>
+    /// Run when the strip is pushed up rather than pulled down: the month sheet becomes the month's
+    /// calendar (Mobile B v2). Null where a sheet only closes.
+    /// </summary>
+    public static readonly StyledProperty<System.Windows.Input.ICommand?> ExpandCommandProperty =
+        AvaloniaProperty.Register<SheetLayer, System.Windows.Input.ICommand?>(nameof(ExpandCommand));
+
+    /// <summary>
+    /// Run instead of closing when the strip is pulled down from an expanded sheet: it goes back to
+    /// its half rather than away. Null where a pull closes it.
+    /// </summary>
+    public static readonly StyledProperty<System.Windows.Input.ICommand?> CollapseCommandProperty =
+        AvaloniaProperty.Register<SheetLayer, System.Windows.Input.ICommand?>(nameof(CollapseCommand));
+
+    /// <summary>How far, in points, the strip has to travel up (or down from expanded) to mean it.</summary>
+    private const double ExpandDistance = 40;
+
+    private double _rawDy;
+
     /// <summary>How much of the sheet's top answers to a drag, in points.</summary>
     private const double GrabHeight = 56;
 
@@ -67,6 +86,18 @@ public sealed class SheetLayer : Panel
     {
         get => GetValue(IsOpenProperty);
         set => SetValue(IsOpenProperty, value);
+    }
+
+    public System.Windows.Input.ICommand? ExpandCommand
+    {
+        get => GetValue(ExpandCommandProperty);
+        set => SetValue(ExpandCommandProperty, value);
+    }
+
+    public System.Windows.Input.ICommand? CollapseCommand
+    {
+        get => GetValue(CollapseCommandProperty);
+        set => SetValue(CollapseCommandProperty, value);
     }
 
     private Button? Scrim => Children.Count > 0 ? Children[0] as Button : null;
@@ -178,6 +209,7 @@ public sealed class SheetLayer : Panel
 
         Point now = e.GetPosition(this);
         double dy = now.Y - start.Y;
+        _rawDy = dy;
         if (!_dragging)
         {
             if (Math.Abs(dy) < DragSlop || Math.Abs(dy) < Math.Abs(now.X - start.X))
@@ -216,12 +248,27 @@ public sealed class SheetLayer : Panel
         }
 
         e.Pointer.Capture(null);
+        if (ExpandCommand is { } expand && _rawDy < -ExpandDistance)
+        {
+            e.Handled = true;
+            _ = MotionPlayer.Play(this, "m6", Choreography.SheetSettle(sheet, _offset));
+            expand.Execute(null);
+            return;
+        }
+
         if (_offset <= 0.5)
         {
             return;
         }
 
         e.Handled = true;
+        if (CollapseCommand is { } collapse && _rawDy > ExpandDistance)
+        {
+            _ = MotionPlayer.Play(this, "m6", Choreography.SheetSettle(sheet, _offset));
+            collapse.Execute(null);
+            return;
+        }
+
         if (Choreography.ShouldDismiss(_offset, Travel, _velocity))
         {
             _ = DismissAsync(_offset);

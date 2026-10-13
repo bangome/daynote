@@ -246,6 +246,14 @@
     <Setter Property="BorderThickness" Value="1.5" />
     <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Pri}" />
   </Style>
+  <!-- v2's home rows: a round check, its ring in the list's colour (Tint). -->
+  <Style Selector="Button.check.round Border.checkbox">
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Button.check.round Border.checkfill, Button.check.round Border.checkpulse">
+    <Setter Property="CornerRadius" Value="11" />
+  </Style>
   <!-- The strikethrough the tick draws across the row, left to right; at rest the text's own decoration does it. -->
   <Style Selector="Border.strike">
     <Setter Property="Height" Value="1.5" />

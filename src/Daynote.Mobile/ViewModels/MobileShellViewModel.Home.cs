@@ -114,12 +114,14 @@ public sealed partial class MobileShellViewModel
 
         LocalDate today = LocalDates.Today(_clock);
         string[] labels = WeekdayLabels();
+        _weekNoteDays = withNotes;
+        IReadOnlySet<LocalDate> agenda = AgendaDaySet();
         Week.Clear();
         for (int offset = 0; offset < 7; offset++)
         {
             LocalDate date = LocalDates.FromDateOnly(start.AddDays(offset));
             Week.Add(new WeekDayViewModel(
-                date, labels[offset], date == SelectedDate, date == today, withNotes.Contains(date), SelectDateFromCalendarAsync));
+                date, labels[offset], date == SelectedDate, date == today, withNotes.Contains(date) || agenda.Contains(date), SelectDateFromCalendarAsync));
         }
     }
 
@@ -173,6 +175,7 @@ public sealed partial class MobileShellViewModel
 
         DayTodoCountText = string.Create(
             CultureInfo.CurrentCulture, $"{today.Done.Count}/{DayTodos.Count}");
+        RefreshHomeAgenda(now.DateTime, Row);
 
         OnPropertyChanged(nameof(HasDayTodos));
         OnPropertyChanged(nameof(IsTodoListEmpty));

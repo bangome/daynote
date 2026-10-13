@@ -31,7 +31,9 @@ public sealed partial class WeekDayViewModel(
 
     public bool IsSunday { get; } = Daynote.App.Composition.LocalDates.ToDateOnly(date).DayOfWeek == DayOfWeek.Sunday;
 
-    public bool HasNotes { get; } = hasNotes;
+    /// <summary>The dot under the day: notes on it, or a dated to-do or event (Mobile B v2 <c>byDate</c>).</summary>
+    [ObservableProperty]
+    public partial bool HasNotes { get; set; } = hasNotes;
 
     [RelayCommand]
     private Task Select() => onSelect(Date);

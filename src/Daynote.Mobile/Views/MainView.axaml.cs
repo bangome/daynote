@@ -19,6 +19,7 @@ public partial class MainView : UserControl
     static MainView()
     {
         Daynote.Motion.RowArrivals.RegisterKey<ViewModels.TodoRowViewModel>(static row => row.Item.Key);
+        Daynote.Motion.RowArrivals.RegisterKey<ViewModels.HomeAgendaRow>(static row => row.Item.Key);
         Daynote.Motion.RowArrivals.RegisterKey<Daynote.App.Shell.Product.TodoItemViewModel>(static todo => todo.Key);
     }
 
@@ -181,8 +182,9 @@ public partial class MainView : UserControl
         if (this.FindControl<Border>("Sheet") is { } sheet)
         {
             // When the sheet is taller than the screen it scrolls; this keeps a sliver of scrim above
-            // it, so it still reads as a sheet and the tap-to-close area never vanishes.
-            sheet.Margin = new Thickness(0, 24, 0, sheet.Margin.Bottom);
+            // it, so it still reads as a sheet and the tap-to-close area never vanishes. Pushed up into the
+            // month's calendar it takes the whole screen under the status bar.
+            sheet.Margin = new Thickness(0, sheet.Classes.Contains("full") ? 0 : 24, 0, sheet.Margin.Bottom);
         }
 
         this.FindControl<EditorPage>("Editor")?.SetBottomInset(bottom, keyboard);
@@ -278,6 +280,11 @@ public partial class MainView : UserControl
                 {
                     // An edit opens on what is there to read; the keyboard would cover most of it.
                     FocusTodoText();
+                }
+                else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsMonthBoardOpen))
+                {
+                    // After the binding has set the sheet's "full" class.
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => Apply(TopLevel.GetTopLevel(this)));
                 }
                 else if (args.PropertyName == nameof(ViewModels.MobileShellViewModel.IsUndoShown))
                 {

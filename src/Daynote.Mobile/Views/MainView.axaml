@@ -122,16 +122,135 @@
       Every sheet here is a SheetLayer: it rises and closes as the motion spec's M6 has it, and its
       top strip can be dragged down to close it.
     -->
-    <views:SheetLayer IsOpen="{Binding IsMonthPickerOpen}">
+    <views:SheetLayer x:Name="MonthSheetLayer" IsOpen="{Binding IsMonthPickerOpen}"
+                      ExpandCommand="{Binding MonthSheetExpand}" CollapseCommand="{Binding MonthSheetCollapse}">
       <Button Classes="scrim" Command="{Binding CloseMonthPickerCommand}"
               AutomationProperties.Name="{Binding Strings[WindowClose]}" />
-      <Border x:Name="Sheet" Classes="sheet" VerticalAlignment="Bottom">
+      <Border x:Name="Sheet" Classes="sheet" Classes.full="{Binding IsMonthBoardOpen}">
+        <Panel>
+        <!-- Pushed up (or the handle tapped): the month's calendar, and the selected day's agenda under it. -->
+        <Grid x:Name="MonthBoardView" RowDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsMonthBoardOpen}">
+          <Button Grid.Row="0" x:Name="MonthBoardHandle" Classes="sheethandle" Command="{Binding ToggleMonthBoardCommand}"
+                  AutomationProperties.Name="{Binding Strings[MobileMonthSheetHint]}">
+            <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" />
+          </Button>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" Margin="20,0,12,8">
+            <TextBlock Grid.Column="0" FontSize="22" FontWeight="ExtraBold" LetterSpacing="-0.66" VerticalAlignment="Center"
+                       Text="{Binding Calendar.MonthLabel}" />
+            <Button Grid.Column="1" Width="40" Height="40" CornerRadius="12" Command="{Binding MonthBoardPreviousCommand}"
+                    AutomationProperties.Name="{Binding Strings[PreviousMonth]}">
+              <views:Glyph Kind="ChevronLeft" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
+            </Button>
+            <Button Grid.Column="2" Width="40" Height="40" CornerRadius="12" Command="{Binding MonthBoardNextCommand}"
+                    AutomationProperties.Name="{Binding Strings[NextMonth]}">
+              <views:Glyph Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource Mobile.Text2}" />
+            </Button>
+            <Button Grid.Column="3" x:Name="MonthBoardClose" Classes="pill" Height="34" Padding="13,0" Margin="4,0,0,0"
+                    Command="{Binding CloseMonthBoardCommand}">
+              <TextBlock FontSize="13.5" FontWeight="Bold" Text="{Binding Strings[MobileMonthBoardClose]}" />
+            </Button>
+          </Grid>
+          <Border Grid.Row="2" Margin="6,0" BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,0,0,1">
+            <ItemsControl ItemsSource="{Binding Calendar.WeekdayHeadings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="pvm:WeekdayHeading">
+                  <TextBlock Classes="boardwd" Classes.sunday="{Binding IsSunday}" Text="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <ItemsControl Grid.Row="3" x:Name="MonthBoardGrid" Margin="6,0" ItemsSource="{Binding MonthBoard.Cells}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pvm:CalendarBoardDay">
+                <Button Classes="boardcell" Classes.selected="{Binding IsSelected}" Classes.outside="{Binding !IsInMonth}"
+                        Height="{Binding $parent[UserControl].((vm:MobileShellViewModel)DataContext).MonthBoardRowHeight}"
+                        Command="{Binding SelectCommand}">
+                  <StackPanel Spacing="2">
+                    <Border Classes="boardnum" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsToday}"
+                            Classes.sunday="{Binding IsSunday}" HorizontalAlignment="Center">
+                      <TextBlock Text="{Binding DayText}" />
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Lines}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pvm:CalendarBoardItem">
+                          <Border Classes="boardchip" Classes.event="{Binding IsEvent}" Classes.done="{Binding IsDone}"
+                                  Background="{Binding TintColor}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                              <Ellipse Width="6" Height="6" StrokeThickness="1.3" Stroke="{Binding ListColor}" VerticalAlignment="Center"
+                                       IsVisible="{Binding IsTodo}" />
+                              <TextBlock Classes="chiptitle" VerticalAlignment="Center" Text="{Binding Title}" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="boardmore" Text="{Binding MoreShortText}" IsVisible="{Binding HasMore}" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+            <StackPanel Margin="18,12,18,40">
+              <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                  <TextBlock FontSize="15" FontWeight="ExtraBold" VerticalAlignment="Bottom" Text="{Binding MonthAgendaTitle}" />
+                  <TextBlock Classes="count" FontSize="12.5" VerticalAlignment="Bottom" Text="{Binding MonthAgendaSubtitle}" />
+                </StackPanel>
+                <Button Grid.Column="2" x:Name="MonthAgendaOpen" Padding="0" CornerRadius="0" Command="{Binding OpenMonthAgendaDayCommand}">
+                  <TextBlock FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Mobile.SunInk}" Text="{Binding Strings[MobileMonthAgendaOpen]}" />
+                </Button>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding MonthAgenda}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:HomeAgendaRow">
+                    <Border Classes="agendaline" Classes.first="{Binding IsFirst}">
+                      <Grid ColumnDefinitions="44,10,22,10,*,Auto" MinHeight="40">
+                        <TextBlock Grid.Column="0" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Mobile.Text2}" Text="{Binding TimeColumn}" />
+                        <views:TodoCheck Grid.Column="2" Classes="round" IsVisible="{Binding Item.IsTask}" IsChecked="{Binding Item.Checked}"
+                                         Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" Tint="{Binding Item.ListColor}" />
+                        <Ellipse Grid.Column="2" Width="9" Height="9" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Stroke="{Binding Item.ListColor}" IsVisible="{Binding Item.IsEvent}" />
+                        <Button Grid.Column="4" Classes="row" MinHeight="40" HorizontalContentAlignment="Left" Command="{Binding Row.OpenCommand}">
+                          <TextBlock Classes="todo line agendatitle" Classes.event="{Binding Item.IsEvent}" Classes.done="{Binding Item.Checked}"
+                                     FontSize="14.5" Text="{Binding Item.Text}" />
+                        </Button>
+                        <views:Glyph Grid.Column="5" Kind="Repeat" Width="11" Height="11" VerticalAlignment="Center"
+                                     Foreground="{DynamicResource Mobile.Text3}" IsVisible="{Binding Item.IsRepeat}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="faint" FontSize="13.5" Margin="0,6" Text="{Binding Strings[MobileMonthAgendaEmpty]}" IsVisible="{Binding IsMonthAgendaEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
         <!-- Scrolls only when the screen is shorter than the sheet: a phone on its side, or a
              split-screen window, would otherwise push the year header off the top and the last
              week into the home indicator. -->
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16,10,16,0">
-          <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" Margin="0,0,0,12" />
+        <ScrollViewer x:Name="MonthSheetHalf" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                      IsVisible="{Binding !IsMonthBoardOpen}">
+        <StackPanel Margin="16,0,16,0">
+          <!-- The handle: pushed up, or tapped, it opens the month's calendar (Mobile B v2). -->
+          <Button x:Name="MonthSheetHandle" Classes="sheethandle" Command="{Binding ToggleMonthBoardCommand}"
+                  AutomationProperties.Name="{Binding Strings[MobileMonthSheetHint]}">
+            <StackPanel Spacing="5">
+              <Border Width="40" Height="5" CornerRadius="3" Background="{DynamicResource Mobile.Stroke}" HorizontalAlignment="Center" />
+              <TextBlock FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource Mobile.Text3}"
+                         Text="{Binding Strings[MobileMonthSheetHint]}" />
+            </StackPanel>
+          </Button>
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="4,0,4,10">
             <Button Grid.Column="0" Width="40" Height="40" Command="{Binding PickerPreviousYearCommand}"
                     AutomationProperties.Name="{Binding Strings[MobilePreviousYear]}">
@@ -182,8 +301,8 @@
                     <Border Classes="cellday">
                       <TextBlock Text="{Binding DayText}" />
                     </Border>
-                    <Ellipse Width="4" Height="4" Fill="{DynamicResource Mobile.Sun}" IsVisible="{Binding HasNotes}" />
-                    <Border Width="4" Height="4" IsVisible="{Binding !HasNotes}" />
+                    <Ellipse Width="4" Height="4" Fill="{DynamicResource Mobile.Sun}" IsVisible="{Binding ShowsDot}" />
+                    <Border Width="4" Height="4" IsVisible="{Binding !ShowsDot}" />
                   </StackPanel>
                 </Button>
               </DataTemplate>
@@ -191,6 +310,7 @@
           </ItemsControl>
         </StackPanel>
         </ScrollViewer>
+        </Panel>
       </Border>
     </views:SheetLayer>
 
@@ -815,6 +935,116 @@
       <Setter Property="Background" Value="{DynamicResource Mobile.Panel}" />
       <Setter Property="CornerRadius" Value="28,28,0,0" />
       <Setter Property="BoxShadow" Value="0 -10 40 0 #33000000" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+    </Style>
+    <!-- The month sheet pushed up: the whole screen under the status bar, square at the top. -->
+    <Style Selector="Border.sheet.full">
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.sheethandle">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="0,10,0,10" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.boardwd">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,2,0,6" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="TextBlock.boardwd.sunday">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Sunday}" />
+    </Style>
+    <!-- A day of the month's calendar: its number over its lines, a rule under the week. -->
+    <Style Selector="Button.boardcell">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+      <Setter Property="Padding" Value="2,3,2,0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="ClipToBounds" Value="True" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Button.boardcell.selected">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Hover}" />
+    </Style>
+    <Style Selector="Button.boardcell.outside">
+      <Setter Property="Opacity" Value="0.38" />
+    </Style>
+    <Style Selector="Border.boardnum">
+      <Setter Property="MinWidth" Value="20" />
+      <Setter Property="Height" Value="20" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="3,0" />
+    </Style>
+    <Style Selector="Border.boardnum TextBlock">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.boardnum.sunday TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Sunday}" />
+    </Style>
+    <Style Selector="Border.boardnum.today">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Sun}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="Border.boardnum.today TextBlock">
+      <Setter Property="FontWeight" Value="ExtraBold" />
+    </Style>
+    <Style Selector="Border.boardnum.selected">
+      <Setter Property="Background" Value="{DynamicResource Mobile.Pri}" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Border.boardnum.selected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.OnPri}" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+    </Style>
+    <Style Selector="Border.boardchip">
+      <Setter Property="Height" Value="12" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="3,0" />
+      <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style Selector="Border.boardchip:not(.event)">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.boardchip TextBlock.chiptitle">
+      <Setter Property="FontSize" Value="9.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+    </Style>
+    <Style Selector="Border.boardchip.event TextBlock.chiptitle">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text}" />
+    </Style>
+    <Style Selector="Border.boardchip.done TextBlock.chiptitle">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+      <Setter Property="TextDecorations" Value="Strikethrough" />
+    </Style>
+    <Style Selector="TextBlock.boardmore">
+      <Setter Property="FontSize" Value="9.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="3,0,0,0" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text3}" />
+    </Style>
+    <Style Selector="Border.agendaline">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Border.agendaline.first">
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.agendatitle">
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="TextBlock.agendatitle.event">
+      <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="TextBlock.sheetwd">
       <Setter Property="FontSize" Value="11.5" />

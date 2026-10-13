@@ -289,7 +289,9 @@ public sealed class DeviceSafeAreaTests
 
     /// <summary>
     /// The ways to a new to-do — the day's + 할 일, the 할 일 tab's +, the tablet panel's row — clear
-    /// of the floating tab bar wherever they are on screen: one under the bar cannot be tapped.
+    /// of the floating tab bar wherever they are on screen: one under the bar cannot be tapped. One in a
+    /// page that scrolls (the day's + 할 일 heads its section under 일정 since Mobile B v2) can be
+    /// scrolled clear, as any row there can.
     /// </summary>
     private static IEnumerable<string> AddButtonsClear(Control view)
     {
@@ -302,7 +304,9 @@ public sealed class DeviceSafeAreaTests
 
         var bar = new Rect(dockAt, dock.Bounds.Size);
         foreach (Button button in view.GetVisualDescendants().OfType<Button>()
-            .Where(button => button.Name is "AddTodoButton" or "AddListTodoButton" or "AddTodoRow" && button.IsEffectivelyVisible))
+            .Where(button => button.Name is "AddTodoButton" or "AddListTodoButton" or "AddTodoRow" && button.IsEffectivelyVisible)
+            .Where(button => button.FindAncestorOfType<ScrollViewer>() is not { } scroller
+                || scroller.Extent.Height <= scroller.Viewport.Height + 0.5))
         {
             if (OnScreen(button, root) is { } rect && rect.Intersects(bar))
             {

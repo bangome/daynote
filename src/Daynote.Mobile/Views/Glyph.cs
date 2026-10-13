@@ -28,6 +28,7 @@ public enum GlyphKind
     Photo,
     Document,
     Menu,
+    Repeat,
 }
 
 /// <summary>
@@ -172,6 +173,7 @@ public sealed class Glyph : Control
         GlyphKind.Document => (22, 1.7, (c, p, _) =>
             c.DrawGeometry(null, p, G("M6 2.5 H12.5 L17 7 V18 A1.5 1.5 0 0 1 15.5 19.5 H6 A1.5 1.5 0 0 1 4.5 18 V4 A1.5 1.5 0 0 1 6 2.5 Z M12.5 2.5 V7 H17 M8 11.5 H13.5 M8 15 H13.5"))),
         GlyphKind.Menu => (18, 1.8, (c, p, _) => c.DrawGeometry(null, p, G("M3 5 H15 M3 9 H15 M3 13 H15"))),
+        GlyphKind.Repeat => (12, 1.4, (c, p, _) => c.DrawGeometry(null, p, G("M10.2 6 A4.2 4.2 0 1 1 8.7 2.8 M9.4 0.8 L9.1 3.3 L6.6 3.1"))),
         _ => (1, 1, (_, _, _) => { }),
     };
 

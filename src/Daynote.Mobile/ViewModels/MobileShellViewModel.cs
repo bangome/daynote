@@ -80,6 +80,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
         AttachFiles(filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
+        Calendar.AgendaDays = AgendaDaySet;
 
         _selectedDate = LocalDates.Today(clock);
         Notes.PropertyChanged += OnNotesPropertyChanged;
@@ -201,6 +202,10 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     partial void OnIsMonthPickerOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowDock));
+        if (!value)
+        {
+            IsMonthBoardOpen = false;
+        }
 
         // Closed without a day picked, after browsing another month: the home header reads the
         // calendar's month, so put it back on the selected day's.
@@ -414,6 +419,14 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
     partial void OnIsDarkChanged(bool value)
     {
         _themeApplier.Apply(value);
+
+        // A list's colour is a pair; the rows carry the one for the theme they were built in.
+        Todo.IsDark = value;
+        if (!_loading)
+        {
+            _ = RefreshTodosAsync();
+        }
+
         if (!_loading)
         {
             _ = _settings.SetAsync(ThemeKey, value ? "dark" : "light");
@@ -430,6 +443,7 @@ public sealed partial class MobileShellViewModel : ObservableObject, ILanguageAw
             IsDark = string.Equals(theme, "dark", StringComparison.Ordinal);
             _themeApplier.Apply(IsDark);
             await LoadReminderSettingAsync(cancellationToken).ConfigureAwait(true);
+            await LoadHomeSectionsAsync(cancellationToken).ConfigureAwait(true);
         }
         finally
         {

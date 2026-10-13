@@ -102,113 +102,217 @@
       <Panel x:Name="DayBody">
       <StackPanel x:Name="DayContent">
 
-      <!-- 노트 n -->
-      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
-        <TextBlock Classes="section" Text="{Binding Strings[MobileNotesHeader]}" VerticalAlignment="Bottom" />
-        <TextBlock Classes="count" Text="{Binding DayCards.Count}" VerticalAlignment="Bottom" Margin="0,0,0,1" />
+      <!--
+        일정 n, 할 일 n, 노트 n (Mobile B v2): the day's agenda before its notes, each section folding
+        under its heading. The events and to-dos sit in cards grouped by "오늘" (or the day) and what
+        lies beyond it - the next week's events, every other to-do still open.
+      -->
+      <!-- A tablet keeps its day panel (DayTodoPanel) for these; v2 is the phone's. -->
+      <StackPanel IsVisible="{Binding !IsTabletLayout}">
+      <Button x:Name="HomeEventsToggle" Classes="sectionhead" Command="{Binding ToggleHomeEventsCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <views:Glyph Kind="ChevronDown" Width="10" Height="10" VerticalAlignment="Center" Classes="sectionchev"
+                       Classes.closed="{Binding !IsHomeEventsOpen}" Foreground="{DynamicResource Mobile.Text3}" />
+          <TextBlock Classes="section" VerticalAlignment="Center" Text="{Binding Strings[MobileHomeEvents]}" />
+          <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding HomeEventCountText}" />
+        </StackPanel>
+      </Button>
+      <StackPanel IsVisible="{Binding IsHomeEventsOpen}" Spacing="10" Margin="0,0,0,10">
+        <ItemsControl x:Name="HomeEventGroups" ItemsSource="{Binding EventGroups}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:HomeAgendaGroup">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,4,2,7">
+                  <TextBlock Classes="grouplabel" Classes.primary="{Binding IsPrimary}" Text="{Binding Label}" />
+                  <TextBlock Classes="count" FontSize="12" Text="{Binding CountText}" />
+                </StackPanel>
+                <Border Classes="card" CornerRadius="18" ClipToBounds="True">
+                  <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HomeAgendaRow">
+                        <Button Classes="row agendarow" Classes.first="{Binding IsFirst}" Classes.past="{Binding Item.IsPast}"
+                                Command="{Binding Row.OpenCommand}">
+                          <Grid ColumnDefinitions="54,8,*">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                              <TextBlock FontSize="14" FontWeight="ExtraBold" Text="{Binding Start}" />
+                              <TextBlock Classes="faint" FontSize="11.5" Text="{Binding Item.EndLabel}" IsVisible="{Binding !Item.IsAllDay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                              <StackPanel Orientation="Horizontal" Spacing="7">
+                                <Ellipse Width="9" Height="9" StrokeThickness="2" VerticalAlignment="Center" Stroke="{Binding Item.ListColor}" />
+                                <TextBlock Classes="line" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding Item.Text}" />
+                                <views:Glyph Kind="Repeat" Width="11" Height="11" VerticalAlignment="Center"
+                                             Foreground="{DynamicResource Mobile.Text3}" IsVisible="{Binding Item.IsRepeat}" />
+                              </StackPanel>
+                              <TextBlock Classes="muted" FontSize="12.5" Margin="16,2,0,0" Text="{Binding Sub}" IsVisible="{Binding HasSub}" />
+                            </StackPanel>
+                          </Grid>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="faint" FontSize="13.5" Margin="2,0,2,6" Text="{Binding Strings[MobileHomeEventsEmpty]}" IsVisible="{Binding IsHomeEventsEmpty}" />
       </StackPanel>
 
-      <ItemsControl ItemsSource="{Binding DayCards}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0" x:Name="HomeTodosToggle" Classes="sectionhead" Command="{Binding ToggleHomeTodosCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <views:Glyph Kind="ChevronDown" Width="10" Height="10" VerticalAlignment="Center" Classes="sectionchev"
+                         Classes.closed="{Binding !IsHomeTodosOpen}" Foreground="{DynamicResource Mobile.Text3}" />
+            <TextBlock Classes="section" VerticalAlignment="Center" Text="{Binding Strings[MobileHomeTodos]}" />
+            <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding HomeTodoCountText}" />
+          </StackPanel>
+        </Button>
+        <!-- The full to-do sheet, for a to-do with a time, a repeat or a list; the add line below takes a title alone. -->
+        <Button Grid.Column="2" x:Name="AddTodoButton" Classes="pill sun" Height="30" Padding="12,0" FontSize="13"
+                IsVisible="{Binding !IsTabletLayout}" Command="{Binding AddDayTodoCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <views:Glyph Kind="Plus" Width="12" Height="12" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Mobile.SunInk}" />
+            <TextBlock Text="{Binding Strings[MobileTodoAddShort]}" FontWeight="Bold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <ItemsControl x:Name="HomeTodoGroups" ItemsSource="{Binding TodoGroupsHome}" IsVisible="{Binding IsHomeTodosOpen}" Margin="0,0,0,10">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:DayNoteCardViewModel">
-            <Button Classes="row" CornerRadius="20"
-                    Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).OpenNoteCommand}"
-                    CommandParameter="{Binding Tab}">
-              <Border Classes="card" Padding="18">
+          <DataTemplate x:DataType="vm:HomeAgendaGroup">
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="2,4,2,7">
+                <TextBlock Classes="grouplabel" Classes.primary="{Binding IsPrimary}" Text="{Binding Label}" />
+                <TextBlock Classes="count" FontSize="12" Text="{Binding CountText}" />
+              </StackPanel>
+              <Border Classes="card" CornerRadius="18" ClipToBounds="True">
                 <StackPanel>
-                  <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Grid.Column="0" Classes="line" FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.43"
-                               Text="{Binding Tab.Title}" />
-                    <views:Glyph Grid.Column="1" Kind="Star" Width="13" Height="13" Margin="6,0,0,0" VerticalAlignment="Center"
-                                 Foreground="{DynamicResource Mobile.Sun}" Fill="{DynamicResource Mobile.Sun}"
-                                 IsVisible="{Binding Tab.IsFavorite}" />
-                  </Grid>
-                  <TextBlock Classes="muted" FontSize="14" LineHeight="22.4" Margin="0,6,0,0" MaxLines="3"
-                             TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,14,0,0"
-                        IsVisible="{Binding HasFooter}">
-                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Tab.Tags}" VerticalAlignment="Center">
-                      <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
-                      </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                          <TextBlock Classes="line" FontSize="12.5" FontWeight="SemiBold"
-                                     Foreground="{DynamicResource Mobile.SunInk}" Text="{Binding StringFormat='#{0}'}" />
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                  <!-- A row made since the list was last seen arrives (motion spec M2); a tick draws itself (M3). -->
+                  <ItemsControl ItemsSource="{Binding Rows}" motion:RowArrivals.IsEnabled="True"
+                                motion:RowArrivals.Context="{Binding $parent[UserControl].((vm:MobileShellViewModel)DataContext).SelectedDate}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HomeAgendaRow">
+                        <Border Classes="homerow" Classes.first="{Binding IsFirst}">
+                          <views:SwipeRow DataContext="{Binding Row}" DeleteCommand="{Binding DeleteCommand}"
+                                          AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
+                            <Panel Classes="todorow">
+                              <Border Classes="rowflash" />
+                              <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="48" Margin="16,0">
+                                <views:TodoCheck Grid.Column="0" Classes="round" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}"
+                                                 Key="{Binding Item.Key}" Tint="{Binding Item.ListColor}" />
+                                <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
+                                        Command="{Binding OpenCommand}">
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Panel HorizontalAlignment="Left">
+                                      <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
+                                      <Border Classes="strike" />
+                                    </Panel>
+                                    <views:Glyph Kind="Repeat" Width="11" Height="11" VerticalAlignment="Center"
+                                                 Foreground="{DynamicResource Mobile.Text3}" IsVisible="{Binding Item.IsRepeat}" />
+                                  </StackPanel>
+                                </Button>
+                                <TextBlock Grid.Column="2" Classes="homedue" Classes.overdue="{Binding $parent[Border].((vm:HomeAgendaRow)DataContext).IsLate}"
+                                           Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Text="{Binding $parent[Border].((vm:HomeAgendaRow)DataContext).Due}"
+                                           IsVisible="{Binding $parent[Border].((vm:HomeAgendaRow)DataContext).HasDue}" />
+                              </Grid>
+                            </Panel>
+                          </views:SwipeRow>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <!-- 할 일 추가: a to-do with this title on the day. -->
+                  <Grid ColumnDefinitions="22,*" MinHeight="48" Margin="16,0" IsVisible="{Binding HasAddLine}">
+                    <Border Grid.ColumnSpan="2" Margin="-16,0" BorderBrush="{DynamicResource Mobile.Stroke2}" BorderThickness="0,1,0,0"
+                            IsVisible="{Binding HasRows}" />
+                    <views:Glyph Grid.Column="0" Kind="Plus" Width="12" Height="12" Foreground="{DynamicResource Mobile.Text3}" />
+                    <TextBox Grid.Column="1" x:Name="HomeQuickAdd" Classes="bare" FontSize="15" Margin="12,0,0,0" VerticalAlignment="Center"
+                             Text="{Binding $parent[UserControl].((vm:MobileShellViewModel)DataContext).HomeQuickText, Mode=TwoWay}"
+                             PlaceholderText="{Binding $parent[UserControl].((vm:MobileShellViewModel)DataContext).Strings[MobileHomeQuickAdd]}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding $parent[UserControl].((vm:MobileShellViewModel)DataContext).HomeQuickAddCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
                   </Grid>
                 </StackPanel>
               </Border>
-            </Button>
+            </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- A day with nothing on it: the dashed card that starts the first note. -->
-      <Button Classes="row" CornerRadius="20" IsVisible="{Binding IsDayEmpty}" Command="{Binding NewNoteCommand}">
-        <Panel>
-          <Rectangle RadiusX="20" RadiusY="20" StrokeThickness="1.5" StrokeDashArray="3,2"
-                     Stroke="{DynamicResource Mobile.Stroke}" />
-          <StackPanel Margin="18,30" Spacing="4">
-            <TextBlock FontSize="15" FontWeight="Bold" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyTitle]}" />
-            <TextBlock Classes="muted" FontSize="13" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyHint]}" />
-          </StackPanel>
-        </Panel>
-      </Button>
+      </StackPanel>
 
-      <!--
-        이 날의 할 일: this day's to-dos, ticked off here, and + 할 일 for another on this day - the
-        way in to a to-do, since a note's text never makes one. Built like 파일 below it. A tablet
-        shows them in its day panel instead (DayTodoPanel).
-      -->
-      <StackPanel IsVisible="{Binding !IsTabletLayout}">
-        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,26,0,10">
-          <TextBlock Grid.Column="0" Classes="section" Text="{Binding Strings[MobileDayTodosHeader]}" VerticalAlignment="Bottom" />
-          <TextBlock Grid.Column="1" Classes="count" Text="{Binding DayTodoCountText}" VerticalAlignment="Bottom" Margin="8,0,0,1"
-                     IsVisible="{Binding HasDayTodos}" />
-          <Button Grid.Column="3" x:Name="AddTodoButton" Classes="pill sun" Height="30" Padding="12,0" FontSize="13"
-                  Command="{Binding AddDayTodoCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <views:Glyph Kind="Plus" Width="12" Height="12" VerticalAlignment="Center"
-                           Foreground="{DynamicResource Mobile.SunInk}" />
-              <TextBlock Text="{Binding Strings[MobileTodoAddShort]}" FontWeight="Bold" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-        </Grid>
-        <!-- A row made since the list was last seen arrives (motion spec M2); a tick draws itself (M3). -->
-        <ItemsControl ItemsSource="{Binding DayTodos}" IsVisible="{Binding HasDayTodos}" motion:RowArrivals.IsEnabled="True"
-                      motion:RowArrivals.Context="{Binding SelectedDate}">
+      <Button x:Name="HomeNotesToggle" Classes="sectionhead" Command="{Binding ToggleHomeNotesCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <views:Glyph Kind="ChevronDown" Width="10" Height="10" VerticalAlignment="Center" Classes="sectionchev"
+                       Classes.closed="{Binding !IsHomeNotesOpen}" Foreground="{DynamicResource Mobile.Text3}" />
+          <TextBlock Classes="section" VerticalAlignment="Center" Text="{Binding Strings[MobileNotesHeader]}" />
+          <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding DayCards.Count}" />
+        </StackPanel>
+      </Button>
+      <StackPanel IsVisible="{Binding IsHomeNotesOpen}" Spacing="10">
+      <ItemsControl ItemsSource="{Binding DayCards}">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:TodoRowViewModel">
-              <views:SwipeRow DeleteCommand="{Binding DeleteCommand}"
-                AsksBeforeDelete="{Binding Item.IsRepeat}" IsDone="{Binding Item.Checked}">
-                <Panel Classes="todorow">
-                  <Border Classes="rowflash" />
-                  <Grid Classes="rowcontent" ColumnDefinitions="22,*,Auto" MinHeight="44">
-                    <views:TodoCheck Grid.Column="0" IsChecked="{Binding Item.Checked}" Toggle="{Binding Item.ToggleCommand}" Key="{Binding Item.Key}" />
-                    <Button Grid.Column="1" Classes="row" Margin="12,0,0,0" MinHeight="44" HorizontalContentAlignment="Left"
-                            Command="{Binding OpenCommand}">
-                      <Panel HorizontalAlignment="Left">
-                        <TextBlock Classes="todo line" Classes.done="{Binding Item.Checked}" FontSize="15" Text="{Binding Item.Text}" />
-                        <Border Classes="strike" />
-                      </Panel>
-                    </Button>
-                    <TextBlock Grid.Column="2" Classes="due" Classes.overdue="{Binding Item.Overdue}" Margin="12,0,0,0"
-                               VerticalAlignment="Center" Text="{Binding Item.DueLabel}" IsVisible="{Binding Item.HasDue}" />
-                  </Grid>
-                </Panel>
-              </views:SwipeRow>
+            <DataTemplate x:DataType="vm:DayNoteCardViewModel">
+              <Button Classes="row" CornerRadius="20"
+                      Command="{Binding $parent[ItemsControl].((vm:MobileShellViewModel)DataContext).OpenNoteCommand}"
+                      CommandParameter="{Binding Tab}">
+                <Border Classes="card" Padding="18">
+                  <StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" Classes="line" FontSize="17" FontWeight="ExtraBold" LetterSpacing="-0.43"
+                                 Text="{Binding Tab.Title}" />
+                      <views:Glyph Grid.Column="1" Kind="Star" Width="13" Height="13" Margin="6,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Mobile.Sun}" Fill="{DynamicResource Mobile.Sun}"
+                                   IsVisible="{Binding Tab.IsFavorite}" />
+                    </Grid>
+                    <TextBlock Classes="muted" FontSize="14" LineHeight="22.4" Margin="0,6,0,0" MaxLines="3"
+                               TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,14,0,0"
+                          IsVisible="{Binding HasFooter}">
+                      <ItemsControl Grid.Column="0" ItemsSource="{Binding Tab.Tags}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="x:String">
+                            <TextBlock Classes="line" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Mobile.SunInk}" Text="{Binding StringFormat='#{0}'}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <!-- A day with nothing on it: the dashed card that starts the first note. -->
+        <Button Classes="row" CornerRadius="20" IsVisible="{Binding IsDayEmpty}" Command="{Binding NewNoteCommand}">
+          <Panel>
+            <Rectangle RadiusX="20" RadiusY="20" StrokeThickness="1.5" StrokeDashArray="3,2"
+                       Stroke="{DynamicResource Mobile.Stroke}" />
+            <StackPanel Margin="18,30" Spacing="4">
+              <TextBlock FontSize="15" FontWeight="Bold" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyTitle]}" />
+              <TextBlock Classes="muted" FontSize="13" TextAlignment="Center" Text="{Binding Strings[MobileDayEmptyHint]}" />
+            </StackPanel>
+          </Panel>
+        </Button>
+
       </StackPanel>
 
       <!--
@@ -275,6 +379,58 @@
   </ScrollViewer>
 
   <UserControl.Styles>
+    <!-- The section headings of v2: a chevron that folds the section, its name and count. -->
+    <Style Selector="Button.sectionhead">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="views|Glyph.sectionchev">
+      <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="views|Glyph.sectionchev.closed">
+      <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+    </Style>
+    <Style Selector="TextBlock.grouplabel">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+    </Style>
+    <Style Selector="TextBlock.grouplabel.primary">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text}" />
+    </Style>
+    <Style Selector="Button.agendarow">
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="Padding" Value="16,8" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Button.agendarow.first">
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.agendarow.past">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="Border.homerow">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mobile.Stroke2}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Border.homerow.first">
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.homedue">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Text2}" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+    <Style Selector="TextBlock.homedue.overdue">
+      <Setter Property="Foreground" Value="{DynamicResource Mobile.Danger}" />
+    </Style>
     <Style Selector="Border.filetile">
       <Setter Property="Width" Value="40" />
       <Setter Property="Height" Value="40" />
