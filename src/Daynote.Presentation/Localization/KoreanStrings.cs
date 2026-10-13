@@ -305,6 +305,8 @@ internal static class KoreanStrings
 
         // Note list
         ["NewNote"] = "새 노트",
+        ["NoteTabsPrevious"] = "이전 노트",
+        ["NoteTabsNext"] = "다음 노트",
         ["NoteCountFormat"] = "노트 {0}개",
         ["NoteCountFormatOne"] = "노트 {0}개",
         ["DayNotesEmpty"] = "이 날짜에 노트가 없습니다",

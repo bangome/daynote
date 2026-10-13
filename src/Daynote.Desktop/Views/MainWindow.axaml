@@ -317,8 +317,9 @@
           <!-- The day's notes as tabs, the selected one underlined in sun. Right-click a tab to rename,
                copy or delete it; Delete on a focused tab deletes it. -->
           <Border Grid.Row="0" Padding="28,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-              <StackPanel Orientation="Horizontal" Spacing="2">
+            <Grid ColumnDefinitions="*,Auto">
+            <!-- No bar: the wheel (either direction) and the round steps at the ends scroll it. -->
+            <ScrollViewer x:Name="NoteTabsScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
                 <ItemsControl x:Name="NoteTabs" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
@@ -358,12 +359,41 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button Classes="ghost small" Margin="4,0,0,6" VerticalAlignment="Bottom" Command="{Binding NewNoteCommand}"
-                        ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
-                  <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
-                </Button>
-              </StackPanel>
             </ScrollViewer>
+            <!-- Each end, while there is more past it: the page fading over the tabs, and a step. -->
+            <Panel x:Name="NoteTabsLeft" Grid.Column="0" Width="72" HorizontalAlignment="Left" IsVisible="False">
+              <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                <Border.OpacityMask>
+                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                    <GradientStop Offset="0.42" Color="Black" />
+                    <GradientStop Offset="1" Color="Transparent" />
+                  </LinearGradientBrush>
+                </Border.OpacityMask>
+              </Border>
+              <Button Classes="tabstep" HorizontalAlignment="Left" Click="OnNoteTabsLeft"
+                      ToolTip.Tip="{Binding Strings[NoteTabsPrevious]}" AutomationProperties.Name="{Binding Strings[NoteTabsPrevious]}">
+                <Path Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
+              </Button>
+            </Panel>
+            <Panel x:Name="NoteTabsRight" Grid.Column="0" Width="72" HorizontalAlignment="Right" IsVisible="False">
+              <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                <Border.OpacityMask>
+                  <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,0%">
+                    <GradientStop Offset="0.42" Color="Black" />
+                    <GradientStop Offset="1" Color="Transparent" />
+                  </LinearGradientBrush>
+                </Border.OpacityMask>
+              </Border>
+              <Button Classes="tabstep" HorizontalAlignment="Right" Click="OnNoteTabsRight"
+                      ToolTip.Tip="{Binding Strings[NoteTabsNext]}" AutomationProperties.Name="{Binding Strings[NoteTabsNext]}">
+                <Path Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
+              </Button>
+            </Panel>
+            <Button Grid.Column="1" Classes="ghost small" Margin="4,0,0,6" VerticalAlignment="Bottom" Command="{Binding NewNoteCommand}"
+                    ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
+              <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+            </Button>
+            </Grid>
           </Border>
 
           <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->

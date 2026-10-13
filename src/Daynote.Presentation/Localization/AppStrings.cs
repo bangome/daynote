@@ -295,6 +295,8 @@ public static class AppStrings
 
     // Note list
     public static string NewNote => LocalizationService.Instance[nameof(NewNote)];
+    public static string NoteTabsPrevious => LocalizationService.Instance[nameof(NoteTabsPrevious)];
+    public static string NoteTabsNext => LocalizationService.Instance[nameof(NoteTabsNext)];
     /// <summary>{0} = note count.</summary>
     public static string NoteCountFormat => LocalizationService.Instance[nameof(NoteCountFormat)];
     public static string DayNotesEmpty => LocalizationService.Instance[nameof(DayNotesEmpty)];

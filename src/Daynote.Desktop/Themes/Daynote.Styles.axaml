@@ -569,6 +569,35 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Sun}" />
   </Style>
 
+  <!-- The round steps over the ends of an overflowing tab strip: a 28px card circle on a fade of
+       the page, as in the design. -->
+  <Style Selector="Button.tabstep">
+    <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.tabstep:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Desk.Brush.Text3}" />
+  </Style>
+  <Style Selector="Button.tabstep Path">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+  </Style>
+
   <!-- The design drew the heading at 32. Against a 15.5px body in a 760px column that reads as a
        poster rather than a note, so it is 24 here and in the WPF shell. -->
   <Style Selector="TextBox.title">

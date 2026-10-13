@@ -316,6 +316,8 @@ internal static class EnglishStrings
 
         // Note list
         ["NewNote"] = "New note",
+        ["NoteTabsPrevious"] = "Earlier notes",
+        ["NoteTabsNext"] = "More notes",
         ["NoteCountFormat"] = "{0} notes",
         ["NoteCountFormatOne"] = "{0} note",
         ["DayNotesEmpty"] = "No notes on this date",
