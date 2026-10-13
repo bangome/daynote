@@ -242,5 +242,7 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(CanDeleteSelectedList));
         OnPropertyChanged(nameof(ListTitle));
         OnPropertyChanged(nameof(ListSubtitle));
+        OnPropertyChanged(nameof(ViewTitle));
+        OnPropertyChanged(nameof(ViewSubtitle));
     }
 }

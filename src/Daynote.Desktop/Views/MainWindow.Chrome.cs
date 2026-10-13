@@ -102,7 +102,7 @@ public partial class MainWindow
     private void ApplyHeaderInset()
     {
         bool underLights = OperatingSystem.IsMacOS() && _chromeShell is { LeftCollapsed: true };
-        Header.Padding = new Thickness(underLights ? TrafficLightInset : HeaderInset, 18, 28, 16);
+        Header.Padding = new Thickness(underLights ? TrafficLightInset : HeaderInset, 18, 28, 0);
         UpdateHeaderWrap();
     }
 

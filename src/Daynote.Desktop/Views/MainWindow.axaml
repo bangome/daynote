@@ -229,21 +229,22 @@
       <!-- Header: the big date, the week, and the view toggles. The week strip moves to a row of its
            own when the header is too narrow for one line (MainWindow.Header.cs), as the design's
            flex-wrap does. -->
-      <Border x:Name="Header" Grid.Row="1" Padding="28,18,28,16" Background="Transparent"
+      <Border x:Name="Header" Grid.Row="1" Padding="28,18,28,0" Background="Transparent" ZIndex="1"
               BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-        <Grid x:Name="HeaderGrid" ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto">
+        <Grid RowDefinitions="Auto,Auto">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
           <Button Grid.Column="0" Classes="ghost outlined" Margin="0,0,24,0" IsVisible="{Binding LeftCollapsed}"
                   Command="{Binding ToggleLeftCommand}" ToolTip.Tip="{Binding Strings[SidebarsExpand]}"
                   AutomationProperties.Name="{Binding Strings[SidebarsExpand]}">
             <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
           </Button>
 
-          <Button x:Name="BigDate" Grid.Column="1" Theme="{StaticResource Daynote.Bare}" Command="{Binding GoToTodayCommand}"
-                  ToolTip.Tip="{Binding TodayTip}" AutomationProperties.Name="{Binding Strings[GoToToday]}">
+          <Button x:Name="BigDate" Grid.Column="1" Theme="{StaticResource Daynote.Bare}" Width="228" HorizontalContentAlignment="Left"
+                  Command="{Binding GoToTodayCommand}" ToolTip.Tip="{Binding TodayTip}" AutomationProperties.Name="{Binding Strings[GoToToday]}">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <!-- line-height:1 in the design; Avalonia sets the glyphs lower in a line box shorter than
                    the font's own, so the margin puts the digits back where the browser draws them. -->
-              <TextBlock FontSize="44" FontWeight="ExtraBold" LetterSpacing="-2.2" LineHeight="44" VerticalAlignment="Center"
+              <TextBlock Width="58" TextAlignment="Right" FontSize="44" FontWeight="ExtraBold" LetterSpacing="-2.2" LineHeight="44" VerticalAlignment="Center"
                          Margin="0,-8,0,8" FontFeatures="+tnum" Text="{Binding BigDay}" />
               <StackPanel VerticalAlignment="Center">
                 <TextBlock FontSize="15" FontWeight="Bold" LetterSpacing="-0.3" Text="{Binding BigMeta}" />
@@ -257,7 +258,7 @@
             </StackPanel>
           </Button>
 
-          <StackPanel x:Name="WeekStrip" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="24,0"
+          <StackPanel x:Name="WeekStrip" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="24,0,0,0"
                       HorizontalAlignment="Center" VerticalAlignment="Center">
             <Button Classes="weekstep" Command="{Binding Week.PreviousWeekCommand}" AutomationProperties.Name="{Binding Strings[DeskPreviousWeek]}">
               <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
@@ -284,28 +285,152 @@
             </Button>
           </StackPanel>
 
-          <StackPanel x:Name="HeaderActions" Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <Button Classes="tool" Classes.primaryon="{Binding IsTimelineMode}" Padding="12,0" Command="{Binding ToggleTimelineCommand}"
-                    ToolTip.Tip="{Binding Strings.TimelineToggle}" Content="{Binding Strings[DeskTimelineButton]}" />
-            <Button Classes="tool" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{Binding ThemeTip}"
-                    AutomationProperties.Name="{Binding Strings.ThemeToggle}">
-              <Panel>
-                <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Moon}" IsVisible="{Binding !IsDark}" />
-                <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Sun}" IsVisible="{Binding IsDark}" />
+        </Grid>
+
+        <!-- The second line, on the header's rule: the day's note tabs in the editor, or the view's
+             name and a word about it elsewhere; the view toggles at the right behind a rule. -->
+        <Grid x:Name="HeaderBottom" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,14,0,0" Height="41">
+          <Grid Grid.Column="0" Margin="0,0,4,0" IsVisible="{Binding IsEditorMode}">
+<Grid ColumnDefinitions="*,Auto">
+              <!-- No bar: the wheel (either direction) and the round steps at the ends scroll it. -->
+              <ScrollViewer x:Name="NoteTabsScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                  <ItemsControl x:Name="NoteTabs" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="notes:NoteTabViewModel">
+                        <!-- A projection (the blank "노트 1" of an empty day) is not a note yet, so it
+                             gets no tab; the empty-day card stands in for it. -->
+                        <Button Classes="notetab" Classes.selected="{Binding IsSelected}" IsVisible="{Binding !IsProjection}"
+                                Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
+                                CommandParameter="{Binding}">
+                          <Button.KeyBindings>
+                            <KeyBinding Gesture="Delete"
+                                        Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                          </Button.KeyBindings>
+                          <Button.ContextMenu>
+                            <ContextMenu>
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuRename]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).RenameDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDuplicate]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DuplicateDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                              <Separator />
+                              <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDelete]}"
+                                        Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
+                                        CommandParameter="{Binding}" />
+                            </ContextMenu>
+                          </Button.ContextMenu>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
+                                  VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+              </ScrollViewer>
+              <!-- Each end, while there is more past it: the page fading over the tabs, and a step. -->
+              <Panel x:Name="NoteTabsLeft" Grid.Column="0" Width="72" HorizontalAlignment="Left" IsVisible="False">
+                <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                  <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                      <GradientStop Offset="0.42" Color="Black" />
+                      <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                  </Border.OpacityMask>
+                </Border>
+                <Button Classes="tabstep" HorizontalAlignment="Left" Click="OnNoteTabsLeft"
+                        ToolTip.Tip="{Binding Strings[NoteTabsPrevious]}" AutomationProperties.Name="{Binding Strings[NoteTabsPrevious]}">
+                  <Path Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
+                </Button>
               </Panel>
-            </Button>
-            <Button Classes="tool" Classes.on="{Binding !RightCollapsed}" Command="{Binding ToggleRightCommand}"
-                    ToolTip.Tip="{Binding DayPanelTip}" AutomationProperties.Name="{Binding DayPanelTip}">
-              <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.Panel}" />
-            </Button>
-            <Button Classes="accent" Height="34" Padding="14,0" Margin="4,0,0,0" Command="{Binding NewNoteCommand}"
-                    ToolTip.Tip="{Binding NewNoteTip}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Path Classes="icon" StrokeThickness="1.7" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
-                <TextBlock VerticalAlignment="Center" Text="{Binding Strings[NewNote]}" />
-              </StackPanel>
-            </Button>
-          </StackPanel>
+              <Panel x:Name="NoteTabsRight" Grid.Column="0" Width="72" HorizontalAlignment="Right" IsVisible="False">
+                <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
+                  <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,0%">
+                      <GradientStop Offset="0.42" Color="Black" />
+                      <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                  </Border.OpacityMask>
+                </Border>
+                <Button Classes="tabstep" HorizontalAlignment="Right" Click="OnNoteTabsRight"
+                        ToolTip.Tip="{Binding Strings[NoteTabsNext]}" AutomationProperties.Name="{Binding Strings[NoteTabsNext]}">
+                  <Path Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
+                </Button>
+              </Panel>
+              <!-- "1 / 8 ▾": every note of the day in a menu, then +; a rule before them (design v2). -->
+              <Border Grid.Column="1" Margin="6,8,0,8" Padding="10,0,0,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                  <Button x:Name="TabMenuButton" Classes="tabmenu" Classes.open="{Binding IsTabMenuOpen}" Command="{Binding ToggleTabMenuCommand}"
+                          ToolTip.Tip="{Binding Strings[DeskTabMenuTip]}" AutomationProperties.Name="{Binding Strings[DeskTabMenuTip]}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock VerticalAlignment="Center" FontFeatures="+tnum" Text="{Binding TabPositionText}" />
+                      <Path Classes="icon" StrokeThickness="1.6" Data="{StaticResource Daynote.Desk.Geo.ChevronDown}" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="ghost small" Command="{Binding NewNoteCommand}"
+                          ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
+                    <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                  </Button>
+                </StackPanel>
+              </Border>
+              </Grid>
+          </Grid>
+          <Grid Grid.Column="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,8,0" IsVisible="{Binding !IsEditorMode}">
+            <Border Grid.Column="0" Classes="viewtab" VerticalAlignment="Stretch" BorderBrush="{DynamicResource Daynote.Desk.Brush.Sun}" BorderThickness="0,0,0,2">
+              <TextBlock x:Name="ViewTitleText" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding ViewTitle}" />
+            </Border>
+            <TextBlock Grid.Column="1" Classes="muted" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Text="{Binding ViewSubtitle}" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <!-- 리스트 삭제: its to-dos move to the built-in list, so it is not asked twice. -->
+              <Button x:Name="DeleteListButton" Classes="link faint" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                      IsVisible="{Binding CanDeleteSelectedList}" Content="{Binding Strings[AgendaListDelete]}"
+                      Command="{Binding DeleteSelectedListCommand}" />
+              <!-- On the 할 일 view: the full card, on today, in the list being looked at. -->
+              <Button x:Name="ListAddTodo" Classes="ghost small" VerticalAlignment="Center" IsVisible="{Binding IsNavTodoView}"
+                      Command="{Binding AddListTodoCommand}" ToolTip.Tip="{Binding Strings[TodoAddTitle]}"
+                      AutomationProperties.Name="{Binding Strings[TodoAddTitle]}">
+                <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+              </Button>
+            </StackPanel>
+          </Grid>
+
+          <Border Grid.Column="1" Padding="8,0,0,5" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="1,0,0,0">
+            <StackPanel x:Name="HeaderActions" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button x:Name="TimelineToggle" Classes="tool square" Classes.primaryon="{Binding IsTimelineMode}" Command="{Binding ToggleTimelineCommand}"
+                      ToolTip.Tip="{Binding Strings[DeskTimelineViewTip]}" AutomationProperties.Name="{Binding Strings[DeskTimelineViewTip]}">
+                <Panel>
+                  <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.TimelineView}" />
+                  <Path Data="{StaticResource Daynote.Desk.Geo.TimelineDots}" Fill="{Binding $parent[Button].Foreground}" />
+                </Panel>
+              </Button>
+              <Button Classes="tool square" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{Binding ThemeTip}"
+                      AutomationProperties.Name="{Binding Strings.ThemeToggle}">
+                <Panel>
+                  <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Moon}" IsVisible="{Binding !IsDark}" />
+                  <Path Classes="icon" StrokeThickness="1.4" Data="{StaticResource Daynote.Desk.Geo.Sun}" IsVisible="{Binding IsDark}" />
+                </Panel>
+              </Button>
+              <Button Classes="tool square" Classes.on="{Binding !RightCollapsed}" Command="{Binding ToggleRightCommand}"
+                      ToolTip.Tip="{Binding DayPanelTip}" AutomationProperties.Name="{Binding DayPanelTip}">
+                <Path Classes="icon" StrokeThickness="1.3" Data="{StaticResource Daynote.Desk.Geo.Panel}" />
+              </Button>
+              <Button Classes="accent" Height="34" Padding="14,0" Margin="4,0,0,0" Command="{Binding NewNoteCommand}"
+                      ToolTip.Tip="{Binding NewNoteTip}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon" StrokeThickness="1.7" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
+                  <TextBlock VerticalAlignment="Center" Text="{Binding Strings[NewNote]}" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+        </Grid>
         </Grid>
       </Border>
 
@@ -313,89 +438,7 @@
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
 
         <!-- Editor -->
-        <Grid x:Name="TutEditor" Grid.Column="0" RowDefinitions="Auto,*" IsVisible="{Binding IsEditorMode}">
-          <!-- The day's notes as tabs, the selected one underlined in sun. Right-click a tab to rename,
-               copy or delete it; Delete on a focused tab deletes it. -->
-          <Border Grid.Row="0" Padding="28,0" BorderBrush="{DynamicResource Daynote.Product.Brush.Stroke2}" BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="*,Auto">
-            <!-- No bar: the wheel (either direction) and the round steps at the ends scroll it. -->
-            <ScrollViewer x:Name="NoteTabsScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl x:Name="NoteTabs" ItemsSource="{Binding Notes.Tabs}" VerticalAlignment="Bottom">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="notes:NoteTabViewModel">
-                      <!-- A projection (the blank "노트 1" of an empty day) is not a note yet, so it
-                           gets no tab; the empty-day card stands in for it. -->
-                      <Button Classes="notetab" Classes.selected="{Binding IsSelected}" IsVisible="{Binding !IsProjection}"
-                              Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).SelectDayNoteCommand}"
-                              CommandParameter="{Binding}">
-                        <Button.KeyBindings>
-                          <KeyBinding Gesture="Delete"
-                                      Command="{Binding $parent[ItemsControl].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                        </Button.KeyBindings>
-                        <Button.ContextMenu>
-                          <ContextMenu>
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuRename]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).RenameDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDuplicate]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DuplicateDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                            <Separator />
-                            <MenuItem Header="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).Strings[NoteMenuDelete]}"
-                                      Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).DeleteDayNoteCommand}"
-                                      CommandParameter="{Binding}" />
-                          </ContextMenu>
-                        </Button.ContextMenu>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                          <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}"
-                                VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" />
-                          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        </StackPanel>
-                      </Button>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-            <!-- Each end, while there is more past it: the page fading over the tabs, and a step. -->
-            <Panel x:Name="NoteTabsLeft" Grid.Column="0" Width="72" HorizontalAlignment="Left" IsVisible="False">
-              <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
-                <Border.OpacityMask>
-                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                    <GradientStop Offset="0.42" Color="Black" />
-                    <GradientStop Offset="1" Color="Transparent" />
-                  </LinearGradientBrush>
-                </Border.OpacityMask>
-              </Border>
-              <Button Classes="tabstep" HorizontalAlignment="Left" Click="OnNoteTabsLeft"
-                      ToolTip.Tip="{Binding Strings[NoteTabsPrevious]}" AutomationProperties.Name="{Binding Strings[NoteTabsPrevious]}">
-                <Path Data="{StaticResource Daynote.Desk.Geo.ChevronLeft}" />
-              </Button>
-            </Panel>
-            <Panel x:Name="NoteTabsRight" Grid.Column="0" Width="72" HorizontalAlignment="Right" IsVisible="False">
-              <Border Background="{DynamicResource Daynote.Product.Brush.Bg1}" IsHitTestVisible="False">
-                <Border.OpacityMask>
-                  <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,0%">
-                    <GradientStop Offset="0.42" Color="Black" />
-                    <GradientStop Offset="1" Color="Transparent" />
-                  </LinearGradientBrush>
-                </Border.OpacityMask>
-              </Border>
-              <Button Classes="tabstep" HorizontalAlignment="Right" Click="OnNoteTabsRight"
-                      ToolTip.Tip="{Binding Strings[NoteTabsNext]}" AutomationProperties.Name="{Binding Strings[NoteTabsNext]}">
-                <Path Data="{StaticResource Daynote.Desk.Geo.ChevronRight}" />
-              </Button>
-            </Panel>
-            <Button Grid.Column="1" Classes="ghost small" Margin="4,0,0,6" VerticalAlignment="Bottom" Command="{Binding NewNoteCommand}"
-                    ToolTip.Tip="{Binding Strings[NewNote]}" AutomationProperties.Name="{Binding Strings[NewNote]}">
-              <Path Classes="icon" Data="{StaticResource Daynote.Desk.Geo.Plus}" />
-            </Button>
-            </Grid>
-          </Border>
-
+        <Grid x:Name="TutEditor" Grid.Column="0" RowDefinitions="0,*" IsVisible="{Binding IsEditorMode}">
           <!-- The note: a 760px column, title and actions, the meta line, the body, the footer. -->
           <Grid x:Name="NoteColumn" Grid.Row="1" RowDefinitions="Auto,*,Auto" MaxWidth="760" IsVisible="{Binding !IsDayEmpty}">
             <StackPanel Grid.Row="0" Margin="48,35,48,0">
@@ -648,17 +691,6 @@
         <!-- Lists: to-dos, favourites, tags, files. -->
         <ScrollViewer Grid.Column="0" Padding="28,32,28,48" IsVisible="{Binding IsListMode}">
           <StackPanel MaxWidth="760">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="0,0,0,20">
-              <TextBlock Grid.Column="0" FontSize="26" FontWeight="ExtraBold" LetterSpacing="-0.8" VerticalAlignment="Bottom" Text="{Binding ListTitle}" />
-              <TextBlock Grid.Column="1" Classes="muted" FontSize="13" VerticalAlignment="Bottom" Margin="10,0,0,4" Text="{Binding ListSubtitle}" />
-              <!-- 리스트 삭제: its to-dos move to the built-in list, so it is not asked twice. -->
-              <Button Grid.Column="3" x:Name="DeleteListButton" Classes="link faint" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Bottom"
-                      Margin="0,0,14,4" IsVisible="{Binding CanDeleteSelectedList}" Content="{Binding Strings[AgendaListDelete]}"
-                      Command="{Binding DeleteSelectedListCommand}" />
-              <!-- On the 할 일 view: a to-do on today, in the list being looked at. -->
-              <Button Grid.Column="4" x:Name="ListAddTodo" Classes="accent pill small" VerticalAlignment="Bottom"
-                      IsVisible="{Binding TabIsTodo}" Content="{Binding Strings[TodoAddButton]}" Command="{Binding AddListTodoCommand}" />
-            </Grid>
 
             <!-- To-dos, every note on every date. -->
             <StackPanel IsVisible="{Binding TabIsTodo}">
@@ -1008,6 +1040,44 @@
     </Grid>
 
     <!-- ── Overlays ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- The day's notes, from "1 / 8 ▾": number, title, a star, the first line; a sun dot on the open
+         one. A press anywhere else closes it. Placed under its button by MainWindow.NoteTabs.cs. -->
+    <Panel x:Name="TabMenuLayer" Grid.ColumnSpan="2" ZIndex="19" IsVisible="{Binding IsTabMenuOpen}" Background="Transparent"
+           PointerPressed="OnTabMenuLayerPressed">
+      <Border x:Name="TabMenu" Classes="popmenu" Width="320" MaxHeight="380" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="10,8,10,6">
+              <TextBlock FontSize="12" FontWeight="ExtraBold" VerticalAlignment="Bottom" Text="{Binding TabMenuHeading}" />
+              <TextBlock Classes="faint" FontSize="11.5" VerticalAlignment="Bottom" Text="{Binding TabMenuCountText}" />
+            </StackPanel>
+            <ItemsControl x:Name="TabMenuList" ItemsSource="{Binding Notes.Tabs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="notes:NoteTabViewModel">
+                  <Button Classes="row menuitem" Classes.current="{Binding IsSelected}" Padding="10,9" IsVisible="{Binding !IsProjection}"
+                          Command="{Binding $parent[Window].((vm:DesktopShellViewModel)DataContext).PickTabMenuNoteCommand}" CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="18,10,*,Auto">
+                      <TextBlock Grid.Column="0" Classes="faint" FontSize="11" FontWeight="Bold" Margin="0,2,0,0" VerticalAlignment="Top" Text="{Binding DisplayNumber}" />
+                      <StackPanel Grid.Column="2">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <TextBlock FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+                          <Path Data="{StaticResource Daynote.Desk.Geo.Star}" Fill="{DynamicResource Daynote.Desk.Brush.Sun}" VerticalAlignment="Center"
+                                IsVisible="{Binding IsFavorite}" />
+                        </StackPanel>
+                        <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+                      </StackPanel>
+                      <Ellipse Grid.Column="3" Width="6" Height="6" Margin="10,6,0,0" VerticalAlignment="Top"
+                               Fill="{DynamicResource Daynote.Desk.Brush.Sun}" IsVisible="{Binding IsSelected}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Panel>
 
     <!-- Settings: a 760x560 dialog with the four sections down its left. -->
     <!-- Each overlay opens and closes as the motion spec's desktop M6 has it (Popover). -->

@@ -707,6 +707,7 @@ public sealed partial class DesktopShellViewModel : ObservableObject, ILanguageA
         IsDayEmpty = count == 0;
         OnPropertyChanged(nameof(HasOpenNote));
         RefreshDayViews();
+        RaiseHeaderLine();
     }
 
     void ILanguageAware.OnLanguageChanged()

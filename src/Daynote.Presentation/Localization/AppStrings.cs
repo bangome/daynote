@@ -1012,6 +1012,10 @@ public static class AppStrings
     public static string TodoEntryEnd => LocalizationService.Instance[nameof(TodoEntryEnd)];
     public static string TodoEntryList => LocalizationService.Instance[nameof(TodoEntryList)];
     public static string TodoEntryAdd => LocalizationService.Instance[nameof(TodoEntryAdd)];
+    public static string DeskTabMenuTip => LocalizationService.Instance[nameof(DeskTabMenuTip)];
+    public static string DeskTimelineViewTip => LocalizationService.Instance[nameof(DeskTimelineViewTip)];
+    public static string DeskTimelineViewSub => LocalizationService.Instance[nameof(DeskTimelineViewSub)];
+    public static string DeskTabMenuDateFormat => LocalizationService.Instance[nameof(DeskTabMenuDateFormat)];
     public static string DeskDayEventTitle => LocalizationService.Instance[nameof(DeskDayEventTitle)];
     public static string DeskDayTodoHeading => LocalizationService.Instance[nameof(DeskDayTodoHeading)];
     public static string DeskDayEventNone => LocalizationService.Instance[nameof(DeskDayEventNone)];

@@ -500,6 +500,55 @@
     <Setter Property="Foreground" Value="{DynamicResource Daynote.Desk.Brush.OnPri}" />
   </Style>
 
+  <!-- v2: the view toggles are 34px squares; their glyphs are drawn in a 16px box. -->
+  <Style Selector="Button.tool.square">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="MinWidth" Value="34" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.tool.square Panel > Path">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <!-- "1 / 8 ▾" beside the note tabs: lit on the segment colour while its menu is open. -->
+  <Style Selector="Button.tabmenu">
+    <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="10,0,8,0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text2}" />
+  </Style>
+  <Style Selector="Button.tabmenu:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Hover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <Style Selector="Button.tabmenu.open">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Seg}" />
+    <Setter Property="Foreground" Value="{DynamicResource Daynote.Product.Brush.Text}" />
+  </Style>
+  <!-- A card that drops from a control (the note menu, the calendar's day): v2's pop shadow. -->
+  <Style Selector="Border.popmenu">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Product.Brush.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Daynote.Product.Brush.Stroke}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Daynote.Desk.Shadow.Pop}" />
+  </Style>
+  <Style Selector="Button.row.menuitem.current">
+    <Setter Property="Background" Value="{DynamicResource Daynote.Desk.Brush.SunSoft}" />
+  </Style>
+  <!-- Outside the editor, the header's second line names the view on a sun underline. -->
+  <Style Selector="Border.viewtab">
+    <Setter Property="Padding" Value="2,0" />
+  </Style>
+
   <!-- A 34px square ghost (the editor's favourite, post-it and delete; the expand chevron). -->
   <Style Selector="Button.ghost">
     <Setter Property="Theme" Value="{StaticResource Daynote.Bare}" />

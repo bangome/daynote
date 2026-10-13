@@ -152,7 +152,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (shell.IsPaletteOpen)
+        if (shell.IsTabMenuOpen)
+        {
+            shell.CloseTabMenuCommand.Execute(null);
+        }
+        else if (shell.IsPaletteOpen)
         {
             shell.ClosePaletteCommand.Execute(null);
         }

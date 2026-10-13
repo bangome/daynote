@@ -20,6 +20,13 @@ public partial class MainWindow
         NoteTabsScroll.AddHandler(PointerWheelChangedEvent, OnNoteTabsWheel, RoutingStrategies.Tunnel);
         NoteTabsScroll.ScrollChanged += (_, _) => UpdateNoteTabSteps();
         NoteTabsScroll.SizeChanged += (_, _) => UpdateNoteTabSteps();
+        TabMenuLayer.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == IsVisibleProperty && TabMenuLayer.IsVisible)
+            {
+                PlaceTabMenu();
+            }
+        };
     }
 
     private void OnNoteTabsWheel(object? sender, PointerWheelEventArgs e)
@@ -47,6 +54,28 @@ public partial class MainWindow
     {
         double max = Math.Max(0, NoteTabsScroll.Extent.Width - NoteTabsScroll.Viewport.Width);
         NoteTabsScroll.Offset = new Vector(Math.Clamp(x, 0, max), NoteTabsScroll.Offset.Y);
+    }
+
+    /// <summary>Puts the note menu under its button, its right edge 14px in from the button's.</summary>
+    private void PlaceTabMenu()
+    {
+        if (TabMenuButton.TranslatePoint(new Point(TabMenuButton.Bounds.Width, TabMenuButton.Bounds.Height), TabMenuLayer) is not { } corner)
+        {
+            return;
+        }
+
+        double left = Math.Max(12, corner.X + 14 - TabMenu.Width);
+        TabMenu.Margin = new Thickness(left, corner.Y + 14, 0, 0);
+    }
+
+    /// <summary>A press beside the menu closes it, as the design's full-window catcher does.</summary>
+    private void OnTabMenuLayerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (ReferenceEquals(e.Source, sender) && _shell is { } shell)
+        {
+            shell.CloseTabMenuCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void UpdateNoteTabSteps()

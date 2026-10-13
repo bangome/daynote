@@ -921,6 +921,12 @@ internal static class KoreanStrings
         ["TodoEntryTimelineAlwaysHint"] = "이 할 일은 반복될 때마다 타임라인에 보여요.",
         ["TodoEntryTimelineNeverHint"] = "이 할 일은 타임라인에 보이지 않아요. 할 일 패널에는 그대로 있어요.",
 
+        // Desktop B v2 header: the note menu and the view line.
+        ["DeskTabMenuTip"] = "이 날의 노트 전체 보기",
+        ["DeskTimelineViewTip"] = "타임라인 보기",
+        ["DeskTimelineViewSub"] = "노트 · 일정 · 할 일을 시간순으로",
+        ["DeskTabMenuDateFormat"] = "M월 d일 (ddd)",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote 백업 (*.zip)|*.zip",
     };

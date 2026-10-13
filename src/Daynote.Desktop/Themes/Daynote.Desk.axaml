@@ -142,6 +142,8 @@
   <StreamGeometry x:Key="Daynote.Desk.Geo.Repeat">M10.2,6 A4.2,4.2 0 1 1 8.7,2.8 M9.4,0.8 L9.1,3.3 L6.6,3.1</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Desk.Geo.Calendar">M4.2,3 H11.8 A2.2,2.2 0 0 1 14,5.2 V11.8 A2.2,2.2 0 0 1 11.8,14 H4.2 A2.2,2.2 0 0 1 2,11.8 V5.2 A2.2,2.2 0 0 1 4.2,3 Z M2,6.5 H14 M5.5,1.6 V4.2 M10.5,1.6 V4.2</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Desk.Geo.Clock">M8,2 A6,6 0 1 1 8,14 A6,6 0 1 1 8,2 Z M8,4.6 V8 L10.4,9.4</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Desk.Geo.TimelineView">M4,2.5 V13.5 M7.5,4.5 H13.5 M7.5,11.5 H11.5 M7.5,8 H12.5</StreamGeometry>
+  <StreamGeometry x:Key="Daynote.Desk.Geo.TimelineDots">M5.6,4.5 A1.6,1.6 0 1 1 2.4,4.5 A1.6,1.6 0 1 1 5.6,4.5 Z M5.6,11.5 A1.6,1.6 0 1 1 2.4,11.5 A1.6,1.6 0 1 1 5.6,11.5 Z</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Desk.Geo.ChevronDown">M3,4.5 L6,7.5 L9,4.5</StreamGeometry>
   <StreamGeometry x:Key="Daynote.Desk.Geo.Trash">M2,3.5 H12 M5.5,3.5 V2 H8.5 V3.5 M3.5,3.5 L4.2,12 H9.8 L10.5,3.5</StreamGeometry>
 </ResourceDictionary>

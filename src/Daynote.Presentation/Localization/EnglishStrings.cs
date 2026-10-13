@@ -929,6 +929,12 @@ internal static class EnglishStrings
         ["TodoEntryTimelineAlwaysHint"] = "This to-do shows in the timeline every time it repeats.",
         ["TodoEntryTimelineNeverHint"] = "This to-do never shows in the timeline. It stays in the to-do panel.",
 
+        // Desktop B v2 header: the note menu and the view line.
+        ["DeskTabMenuTip"] = "All of this day's notes",
+        ["DeskTimelineViewTip"] = "Timeline",
+        ["DeskTimelineViewSub"] = "Notes, events and to-dos in time order",
+        ["DeskTabMenuDateFormat"] = "ddd, MMM d",
+
         // File-dialog filter (pipe-delimited Win32 syntax; only the label is translated)
         ["BackupZipFilter"] = "Daynote backup (*.zip)|*.zip",
     };

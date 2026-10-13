@@ -255,8 +255,8 @@ public sealed partial class DesktopShellViewModel
             OnTimelineRowsChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         };
         Timeline.Rows.CollectionChanged += OnTimelineRowsChanged;
-        Favorites.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
-        TagPanel.Tags.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListSubtitle));
+        Favorites.Items.CollectionChanged += (_, _) => RaiseHeaderLine();
+        TagPanel.Tags.CollectionChanged += (_, _) => RaiseHeaderLine();
         Todo.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TodoPanelViewModel.OpenCount))
@@ -288,6 +288,7 @@ public sealed partial class DesktopShellViewModel
         OnPropertyChanged(nameof(ListTitle));
         OnPropertyChanged(nameof(ListSubtitle));
         RaiseListState();
+        RaiseHeaderLine();
     }
 
     /// <summary>"오늘의 노트": back to the editor on whatever day is selected.</summary>
