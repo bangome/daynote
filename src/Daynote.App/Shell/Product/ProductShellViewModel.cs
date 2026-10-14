@@ -67,7 +67,7 @@ public sealed partial class ProductShellViewModel : ObservableObject, IAsyncDisp
         TagPanel = new TagPanelViewModel(repository, JumpToTagAsync);
         Files = new FilesPanelViewModel(addDayFile, listDayFiles, deleteDayFile, fileAssetStore, filePicker, thumbnails);
         Search = new SearchDropdownViewModel(searchService, repository, NavigateAsync);
-        Timeline = new TimelineViewModel(repository, OpenFromTimelineAsync);
+        Timeline = new TimelineViewModel(repository, agenda, OpenFromTimelineAsync);
         AttachViews(clock, repository);
 
         _selectedDate = LocalDates.Today(clock);

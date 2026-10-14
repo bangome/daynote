@@ -43,7 +43,7 @@ public sealed class TimelineViewModelTests
     }
 
     private static TimelineViewModel Create(IReadOnlyList<NoteSummary> notes, Func<Guid, LocalDate, Task>? open = null)
-        => new(new StubNoteRepository(notes), open ?? ((_, _) => Task.CompletedTask));
+        => new(new StubNoteRepository(notes), null!, open ?? ((_, _) => Task.CompletedTask));
 
     [TestMethod]
     public async Task LoadAsync_GroupsByDate_NewestFirst_WithHeaderCounts()

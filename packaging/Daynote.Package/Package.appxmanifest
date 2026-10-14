@@ -48,7 +48,7 @@
     <!-- Must EXACTLY match a name reserved in Partner Center (Product identity). The app tile can still
          show a shorter name via Application/VisualElements/DisplayName below. -->
     <DisplayName>데이노트 - Daynote</DisplayName>
-    <PublisherDisplayName>Bread Jinhwa Jeong</PublisherDisplayName>
+    <PublisherDisplayName>Withcube</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
 

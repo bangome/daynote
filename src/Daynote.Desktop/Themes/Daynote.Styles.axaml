@@ -851,7 +851,6 @@
   </Style>
   <Style Selector="TextBlock.editorhighlight">
     <Setter Property="FontSize" Value="15.5" />
-    <Setter Property="LineHeight" Value="29.45" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Margin" Value="0" />
