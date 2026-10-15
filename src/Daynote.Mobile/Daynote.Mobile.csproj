@@ -26,7 +26,7 @@
     -->
     <RuntimeIdentifiers>$(RuntimeIdentifiers);android-arm64;android-x64</RuntimeIdentifiers>
     <!-- The version the settings page shows. Keep in step with ApplicationDisplayVersion in both heads. -->
-    <Version>1.5.0</Version>
+    <Version>1.7.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

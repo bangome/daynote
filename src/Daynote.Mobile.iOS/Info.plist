@@ -5,8 +5,8 @@
   <key>CFBundleDisplayName</key><string>Daynote</string>
   <key>CFBundleName</key><string>Daynote</string>
   <key>CFBundleIdentifier</key><string>cc.arachat.daynote</string>
-  <key>CFBundleShortVersionString</key><string>1.6.0</string>
-  <key>CFBundleVersion</key><string>24</string>
+  <key>CFBundleShortVersionString</key><string>1.7.0</string>
+  <key>CFBundleVersion</key><string>25</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>15.0</string>
   <key>UILaunchScreen</key><dict/>
